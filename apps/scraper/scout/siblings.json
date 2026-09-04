@@ -1,0 +1,179 @@
+[
+ {
+  "kommun": "Burlöv",
+  "region": "skane",
+  "host": "bibliotek.burlov.se",
+  "why": "gissad",
+  "finalUrl": "https://bibliotek.burlov.se/",
+  "sig": [
+   {
+    "kind": "AXIELL-inline"
+   }
+  ]
+ },
+ {
+  "kommun": "Hallstahammar",
+  "region": "vastmanland",
+  "host": "visithallstahammar.se",
+  "why": "gissad",
+  "finalUrl": "https://visithallstahammar.se/",
+  "sig": [
+   {
+    "kind": "RESTAPP",
+    "url": "https://visithallstahammar.se/rest-api/events-rest/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "n": 61
+   }
+  ]
+ },
+ {
+  "kommun": "Kungsör",
+  "region": "vastmanland",
+  "host": "visitkungsor.se",
+  "why": "gissad",
+  "finalUrl": "https://visitkungsor.se/",
+  "sig": [
+   {
+    "kind": "RESTAPP",
+    "url": "https://visitvastramalardalen.se/rest-api/evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "n": 200
+   }
+  ]
+ },
+ {
+  "kommun": "Köping",
+  "region": "vastmanland",
+  "host": "visitkoping.se",
+  "why": "gissad",
+  "finalUrl": "https://visitkoping.se/",
+  "sig": [
+   {
+    "kind": "RESTAPP",
+    "url": "https://visitvastramalardalen.se/rest-api/evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "n": 200
+   }
+  ]
+ },
+ {
+  "kommun": "Lerum",
+  "region": "vastragotaland",
+  "host": "visitlerum.se",
+  "why": "gissad",
+  "finalUrl": "https://www.vastsverige.com/lerum/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://www.vastsverige.com/Sitemap.xml",
+    "events": 1765,
+    "subs": []
+   }
+  ]
+ },
+ {
+  "kommun": "Orust",
+  "region": "vastragotaland",
+  "host": "visitorust.se",
+  "why": "gissad",
+  "finalUrl": "https://www.vastsverige.com/orust/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://www.vastsverige.com/Sitemap.xml",
+    "events": 1765,
+    "subs": []
+   }
+  ]
+ },
+ {
+  "kommun": "Orust",
+  "region": "vastragotaland",
+  "host": "visitorust.com",
+  "why": "gissad",
+  "finalUrl": "https://www.vastsverige.com/orust/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://www.vastsverige.com/Sitemap.xml",
+    "events": 1765,
+    "subs": []
+   }
+  ]
+ },
+ {
+  "kommun": "Torsås",
+  "region": "kalmar",
+  "host": "visittorsas.se",
+  "why": "gissad",
+  "finalUrl": "https://visittorsas.se/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://visittorsas.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://visittorsas.se/krea_evenemang-sitemap.xml",
+     "https://visittorsas.se/evenemangskategorier-sitemap.xml"
+    ]
+   }
+  ]
+ },
+ {
+  "kommun": "Torsås",
+  "region": "kalmar",
+  "host": "visittorsas.com",
+  "why": "gissad",
+  "finalUrl": "https://visittorsas.se/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://visittorsas.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://visittorsas.se/krea_evenemang-sitemap.xml",
+     "https://visittorsas.se/evenemangskategorier-sitemap.xml"
+    ]
+   }
+  ]
+ },
+ {
+  "kommun": "Vaggeryd",
+  "region": "jonkoping",
+  "host": "bibliotek.vaggeryd.se",
+  "why": "gissad",
+  "finalUrl": "https://bibliotek.vaggeryd.se/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://bibliotek.vaggeryd.se/sitemap.xml",
+    "events": 0,
+    "subs": [
+     "https://bibliotek.vaggeryd.se/wp-sitemap-posts-ai1ec_event-1.xml",
+     "https://bibliotek.vaggeryd.se/wp-sitemap-taxonomies-events_categories-1.xml"
+    ]
+   }
+  ]
+ },
+ {
+  "kommun": "Åre",
+  "region": "jamtland",
+  "host": "visitare.se",
+  "why": "gissad",
+  "finalUrl": "https://aresweden.com/",
+  "sig": [
+   {
+    "kind": "WP",
+    "url": "https://aresweden.com/wp-json/tribe/events/v1/events?per_page=5",
+    "len": 26216
+   },
+   {
+    "kind": "SITEMAP",
+    "url": "https://aresweden.com/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://aresweden.com/tribe_events-sitemap.xml",
+     "https://aresweden.com/tribe_event_series-sitemap.xml",
+     "https://aresweden.com/tribe_events_cat-sitemap.xml"
+    ]
+   }
+  ]
+ }
+]

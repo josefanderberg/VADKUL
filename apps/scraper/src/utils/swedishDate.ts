@@ -114,7 +114,7 @@ export function parseSwedishDate(dateStr: string, now: Date = new Date()): Date 
 
     // "(weekday)? DD month (YYYY)? (kl)? HH:MM"
     const re = new RegExp(
-        `(?:${WEEKDAY_PATTERN})?\\s*(\\d{1,2})\\s+(${MONTH_PATTERN})(?:\\s+(\\d{4}))?(?:[\\s,]+(?:kl\\.?\\s*|·\\s*)?(\\d{1,2})[:.](\\d{2}))?`,
+        `(?:${WEEKDAY_PATTERN})?\\s*(\\d{1,2})\\s+(${MONTH_PATTERN})(?:,?\\s+(\\d{4}))?(?:[\\s,]+(?:kl\\.?\\s*|·\\s*)?(\\d{1,2})[:.](\\d{2}))?`,
     );
     const m = s.match(re);
     if (m) {
@@ -150,6 +150,14 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
 
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
     const candidates: Date[] = [];
+    // Dag+månad som står med UTSKRIVET år någonstans i texten. År-gissade
+    // träffar på samma dag+månad hoppas över i steg 3 — annars föddes ett
+    // spök-event ett år fram varje gång brödtexten upprepade ett PASSERAT
+    // datum utan år ("8 juni, 2026" i faktarutan + "Den 8 juni intar han
+    // scenen" i ingressen → 2027-06-08 vann som "första framtida datum").
+    const datedKeys = new Set<string>();
+    const dayKey = (d: Date) => `${d.getMonth()}-${d.getDate()}`;
+    const pushDated = (d: Date) => { candidates.push(d); datedKeys.add(dayKey(d)); };
 
     // 1. ISO (med eller utan tid)
     const isoRe = /(\d{4})-(\d{2})-(\d{2})(?:t(\d{1,2}):(\d{2}))?/g;
@@ -159,12 +167,12 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
             parseInt(i[3], 10), parseInt(i[2], 10) - 1, parseInt(i[1], 10),
             i[4] ? parseInt(i[4], 10) : 0, i[5] ? parseInt(i[5], 10) : 0,
         );
-        if (d) candidates.push(d);
+        if (d) pushDated(d);
     }
 
     // 2. "DD MONTH YYYY [HH:MM]"
     const yearRe = new RegExp(
-        `(\\d{1,2})\\s+(${MONTH_PATTERN})\\s+(\\d{4})(?:[\\s,]+(?:kl\\.?\\s*)?(\\d{1,2})[:.](\\d{2}))?`,
+        `(\\d{1,2})\\s+(${MONTH_PATTERN}),?\\s+(\\d{4})(?:[\\s,]+(?:kl\\.?\\s*)?(\\d{1,2})[:.](\\d{2}))?`,
         'g',
     );
     let y: RegExpExecArray | null;
@@ -173,7 +181,7 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
             parseInt(y[1], 10), MONTH_MAP[y[2]], parseInt(y[3], 10),
             y[4] ? parseInt(y[4], 10) : 0, y[5] ? parseInt(y[5], 10) : 0,
         );
-        if (d) candidates.push(d);
+        if (d) pushDated(d);
     }
 
     // 2b. "MONTH DD, YYYY [HH:MM:SS [fm/em]]" — amerikansk ordning, ofta hos
@@ -194,7 +202,7 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
             parseInt(u[2], 10), MONTH_MAP[u[1]], parseInt(u[3], 10),
             hour, minute,
         );
-        if (d) candidates.push(d);
+        if (d) pushDated(d);
     }
 
     // 3. "DD MONTH [HH:MM]" utan år — gissa år framåt
@@ -208,7 +216,7 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
             parseInt(n[1], 10), MONTH_MAP[n[2]],
             n[3] ? parseInt(n[3], 10) : 0, n[4] ? parseInt(n[4], 10) : 0, now,
         );
-        if (d) candidates.push(d);
+        if (d && !datedKeys.has(dayKey(d))) candidates.push(d);
     }
 
     if (candidates.length === 0) return null;

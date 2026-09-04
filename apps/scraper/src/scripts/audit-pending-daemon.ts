@@ -26,6 +26,9 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
+import { looksLikeCinema } from '../utils/cinema';
+import { ruleEmojiFor } from '../utils/emojiRules';
+import { isTrustedTicketSource } from '../utils/ticketSources';
 import { setEventAuditWithCategory, setHidden } from '../utils/sqliteHelper';
 import { db as firestoreDb } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
@@ -117,6 +120,12 @@ async function processBatch(rows: Row[]): Promise<number> {
                 continue;
             }
 
+            // Biovisning → scen oavsett LLM:ens val (utils/cinema, samma regel som audit-events);
+            // regel-emoji (🎬 bio, 🥏 discgolf …) går före LLM:ens val (utils/emojiRules).
+            if (looksLikeCinema(r.title, r.locationName)) { result.category = 'stage'; result.categoryConfidence = 'high'; }
+            const ruleEmoji = ruleEmojiFor(r.title, r.locationName);
+            if (ruleEmoji) result.emoji = ruleEmoji;
+
             const swFlag = result.inSweden ? '' : ' [EJ-SE]';
             const priceTag = result.price ? ` 💰${result.price}` : '';
             log(`  [${i + 1}/${total}] ${result.emoji} ${result.verdict}/${result.confidence}${swFlag}`
@@ -131,7 +140,11 @@ async function processBatch(rows: Row[]): Promise<number> {
                     emoji: result.emoji,
                     price: result.price,
                 });
-                const autoHide = result.verdict === 'junk' && (result.confidence === 'high' || !result.inSweden);
+                // Biljettsystemen är kuraterade — en lokal LLM får inte
+                // junk-döma dem. Se utils/ticketSources.ts.
+                const autoHide = !isTrustedTicketSource(r.url)
+                    && result.verdict === 'junk'
+                    && (result.confidence === 'high' || !result.inSweden);
                 if (autoHide) {
                     setHidden(r.url, true);
                     log(`           ↳ 🙈 auto-hidden`);

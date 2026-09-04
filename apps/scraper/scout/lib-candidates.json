@@ -1,0 +1,142 @@
+[
+ {
+  "kommun": "Botkyrka",
+  "region": "stockholm",
+  "url": "https://bibliotek.botkyrka.se/evenemang",
+  "finalUrl": "https://bibliotek.botkyrka.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Danderyd",
+  "region": "stockholm",
+  "url": "https://bibliotek.danderyd.se/evenemang",
+  "finalUrl": "https://bibliotek.danderyd.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Ekerö",
+  "region": "stockholm",
+  "url": "https://bibliotek.ekero.se/evenemang",
+  "finalUrl": "https://bibliotek.ekero.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Gnosjö",
+  "region": "jonkoping",
+  "url": "https://bibliotek.gnosjo.se/evenemang",
+  "finalUrl": "https://bibliotek.gnosjo.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Huddinge",
+  "region": "stockholm",
+  "url": "https://bibliotek.huddinge.se/evenemang",
+  "finalUrl": "https://bibliotek.huddinge.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Härnösand",
+  "region": "vasternorrland",
+  "url": "https://bibliotek.harnosand.se/evenemang",
+  "finalUrl": "https://bibliotek.harnosand.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Härryda",
+  "region": "vastragotaland",
+  "url": "https://bibliotek.harryda.se/evenemang",
+  "finalUrl": "https://bibliotek.harryda.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Högsby",
+  "region": "kalmar",
+  "url": "https://bibliotek.hogsby.se/evenemang",
+  "finalUrl": "https://bibliotek.hogsby.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Kungsbacka",
+  "region": "halland",
+  "url": "https://bibliotek.kungsbacka.se/evenemang",
+  "finalUrl": "https://bibliotek.kungsbacka.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Kävlinge",
+  "region": "skane",
+  "url": "https://bibliotek.kavlinge.se/evenemang",
+  "finalUrl": "https://bibliotek.kavlinge.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Markaryd",
+  "region": "kronoberg",
+  "url": "https://bibliotek.markaryd.se/evenemang",
+  "finalUrl": "https://bibliotek.markaryd.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Sjöbo",
+  "region": "skane",
+  "url": "https://bibliotek.sjobo.se/evenemang",
+  "finalUrl": "https://www.biblioteksso.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Solna",
+  "region": "stockholm",
+  "url": "https://bibliotek.solna.se/evenemang",
+  "finalUrl": "https://bibliotek.solna.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Strängnäs",
+  "region": "sodermanland",
+  "url": "https://bibliotek.strangnas.se/evenemang",
+  "finalUrl": "https://bibliotek.strangnas.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Timrå",
+  "region": "vasternorrland",
+  "url": "https://bibliotek.timra.se/evenemang",
+  "finalUrl": "https://bibliotek.timra.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Värnamo",
+  "region": "jonkoping",
+  "url": "https://bibliotek.varnamo.se/evenemang",
+  "finalUrl": "https://bibliotek.varnamo.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Åre",
+  "region": "jamtland",
+  "url": "https://bibliotek.are.se/evenemang",
+  "finalUrl": "https://bibliotek.are.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Örnsköldsvik",
+  "region": "vasternorrland",
+  "url": "https://bibliotek.ornskoldsvik.se/evenemang",
+  "finalUrl": "https://bibliotek.ornskoldsvik.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Österåker",
+  "region": "stockholm",
+  "url": "https://bibliotek.osteraker.se/evenemang",
+  "finalUrl": "https://bibliotek.osteraker.se/evenemang",
+  "arena": true
+ },
+ {
+  "kommun": "Östhammar",
+  "region": "uppsala",
+  "url": "https://bibliotek.osthammar.se/evenemang",
+  "finalUrl": "https://bibliotek.osthammar.se/evenemang",
+  "arena": true
+ }
+]

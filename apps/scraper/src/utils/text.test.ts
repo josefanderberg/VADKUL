@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanDescription, cleanLocationName } from './text';
+import { cleanDescription, cleanLocationName, truncateAtBoundary } from './text';
 
 describe('cleanDescription', () => {
     it('strippar HTML-taggar, avkodar entities, kollapsar whitespace', () => {
@@ -14,14 +14,40 @@ describe('cleanDescription', () => {
         expect(cleanDescription('a<br/>b<br />c')).toBe('a\nb\nc');
     });
 
-    it('tar bort WP-excerpt-rester', () => {
-        expect(cleanDescription('Läs mer […]')).toBe('Läs mer');
-        expect(cleanDescription('Läs mer [...]')).toBe('Läs mer');
+    it('tar bort "Läs mer"-svansar ur utdrag', () => {
+        expect(cleanDescription('Bra konsert i kyrkan. Läs mer »')).toBe('Bra konsert i kyrkan.');
+        expect(cleanDescription('Great show.\nRead more')).toBe('Great show.');
+        expect(cleanDescription('Läs mer om oss på hemsidan.')).toBe('Läs mer om oss på hemsidan.');
     });
 
-    it('klipper till maxlängd (default 500)', () => {
-        expect(cleanDescription('x'.repeat(600))).toHaveLength(500);
-        expect(cleanDescription('abcdef', 3)).toBe('abc');
+    it('tar bort WP-excerpt-rester', () => {
+        expect(cleanDescription('Mer info […]')).toBe('Mer info');
+        expect(cleanDescription('Mer info [...]')).toBe('Mer info');
+    });
+
+    it('klipper vid ordgräns med ellips — aldrig mitt i ett ord (default 1500)', () => {
+        const long = cleanDescription('ord '.repeat(600));
+        expect(long.length).toBeLessThanOrEqual(1500);
+        expect(long.endsWith('ord…')).toBe(true);
+        expect(cleanDescription('abc def ghi', 8)).toBe('abc def…');
+        expect(cleanDescription('x'.repeat(600), 500)).toHaveLength(500);   // inget ord att bryta vid
+        expect(cleanDescription('kort text')).toBe('kort text');
+    });
+
+    it('föredrar meningsslut framför ordgräns när det finns i bakre halvan', () => {
+        expect(cleanDescription('Första meningen är här. Andra meningen är lång och fortsätter länge.', 40))
+            .toBe('Första meningen är här.');
+    });
+
+    it('tar bort ersättningstecken och ensamma surrogathalvor men behåller emoji', () => {
+        expect(cleanDescription('Hej \uFFFD världen \uFFFD\uFFFD')).toBe('Hej världen');
+        expect(cleanDescription('Fest 🎉 i kväll')).toBe('Fest 🎉 i kväll');
+        expect(cleanDescription('trasig \uD83C halva')).toBe('trasig halva');
+    });
+
+    it('klipper aldrig mitt i ett emoji', () => {
+        expect(cleanDescription('🎉'.repeat(10), 5)).toBe('🎉🎉…');
+        expect(cleanDescription('🎉'.repeat(10), 4)).toBe('🎉…');
     });
 
     it('tål null/undefined/icke-strängar', () => {
@@ -48,5 +74,15 @@ describe('cleanLocationName', () => {
     it('rör inte rena namn', () => {
         expect(cleanLocationName('Kulturhuset Spira')).toBe('Kulturhuset Spira');
         expect(cleanLocationName('Vreta klosterkyrka, Linköping')).toBe('Vreta klosterkyrka, Linköping');
+    });
+});
+
+describe('truncateAtBoundary', () => {
+    it('returnerar text som ryms orörd', () => {
+        expect(truncateAtBoundary('hej', 10)).toBe('hej');
+        expect(truncateAtBoundary('exakt', 5)).toBe('exakt');
+    });
+    it('trimmar hängande skiljetecken före ellipsen', () => {
+        expect(truncateAtBoundary('Konsert med kören, orkestern och solister', 30)).toBe('Konsert med kören, orkestern…');
     });
 });

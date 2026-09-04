@@ -29,6 +29,41 @@ export interface CityEventRow {
     lng: number;
 }
 
+/* ── Opt-in-källorna ──────────────────────────────────────────────────────── */
+
+/**
+ * Svenska kyrkan, PRO och Korpen är OPT-IN på kartan — en utloggad besökare
+ * ser dem inte alls förrän hen kryssar i dem (utils/categoryDefaults, 31/8).
+ * De bär samtidigt ~2/3 av eventmängden i storstadsområdena.
+ *
+ * Ett stadsinlägg fyllt av dem lovar därför något länken inte levererar:
+ * Stockholm-inlägget 1/9 hade 11 av 12 rader ur kyrkan/PRO, och den som
+ * klickade sig in såg inget av dem. Källorna hålls helt utanför inläggen
+ * (ägarbeslut 1/9) — inlägget ska spegla kartan en ny besökare möter.
+ *
+ * Speglar apps/web/src/utils/sources.ts (SOURCE_DEFS). Ändras den ena måste
+ * den andra med, annars glider inlägg och karta isär igen.
+ */
+export function isOptInSource(url: string): boolean {
+    let host: string;
+    try { host = new URL(url).hostname.toLowerCase(); } catch { return false; }
+    return host.includes('svenskakyrkan')
+        || host === 'pro.se' || host.endsWith('.pro.se')
+        || host.includes('korpen');
+}
+
+/**
+ * Biljettsläppta event är dragplåster per definition — någon har redan
+ * bestämt att de är värda att ta betalt för. Ticketmaster väger tyngst
+ * (ägarens prioritet 1/9); affiliatelänkarna går via ticketmaster.evyy.net,
+ * därför substrängmatchning och inte exakt värdnamn.
+ */
+export function ticketBoost(url: string): number {
+    if (/ticketmaster/i.test(url)) return 6;
+    if (/tickster|billetto|nortic|ticketpress|eventbrite/i.test(url)) return 3;
+    return 0;
+}
+
 /* ── Brusfiltret ──────────────────────────────────────────────────────────── */
 
 /**
@@ -37,13 +72,29 @@ export interface CityEventRow {
  * Lärdomen från Söderhamn 7/8 (3 av 5 rader var PRO/kyrko-rutiner) — rutinerna
  * finns på kartan, men de säljer inte ett inlägg.
  */
+/**
+ * Körrep känns igen på att titeln ÄR körens namn. Den gamla regeln krävde
+ * ordet "övar" och släppte därför igenom nästan allihop — "Diskantkören",
+ * "Körrep Kyrkokören", "Västlands kyrkokör", "Stalakören" heter precis så i
+ * datat (Eksjö-inlägget 5/9: 5 av 11 rader var körrep).
+ *
+ * Konsertord räddar raden: en kör som faktiskt uppträder hör hemma i
+ * inlägget, det är veckorepetitionen som inte gör det.
+ */
+const CHOIR = /kör(en|rep|övning)\b|kyrkokör|[a-zåäö]{3,}kören\b|ungdomskör|diskantkör|sånggrupp|ensemblen övar/i;
+const CHOIR_PERFORMS = /konsert|framträd|uppträd|allsång|festival|sjunger för|julkonsert|luciakonsert/i;
+
+export function isChoirRehearsal(title: string): boolean {
+    return CHOIR.test(title) && !CHOIR_PERFORMS.test(title);
+}
+
 export function isNoiseEvent(e: Pick<CityEventRow, 'title' | 'category'>): boolean {
     const t = e.title;
     if (e.category === 'sport' && /\s[-–]\s/.test(t) && !/parkrun|lopp|tävling|cup|race|\bSM\b|festival|träff/i.test(t)) {
         return true;    // seriematch "Lag - Lag" utan publikvärde
     }
-    if (/(kören|ensemblen|kyrkokör\w*) övar|körövning/i.test(t)) return true;   // körens veckorep
-    return /^(kyrkan (är )?öppen|kyrkkaffe|öppen förskola|öppna förskolan|mässa|högmässa|gudstjänst|morgonbön|laudes|veckomässa|sinnesromässa|lunchmässa|morgonmässa|kvällsmässa|måltid med mening|bibelstudie|bibelsamtal|konfirmandanmälan)/i.test(t);
+    if (isChoirRehearsal(t)) return true;                                       // körens veckorep
+    return /^(kyrkan (är )?öppen|butiken är öppen|kyrkkaffe|kyrkis|öppen kyrkis|öppna kyrkis|sångstund|öppen förskola|öppna förskolan|mässa|högmässa|gudstjänst|morgonbön|laudes|veckomässa|sinnesromässa|lunchmässa|morgonmässa|kvällsmässa|måltid med mening|bibelstudie|bibelsamtal|konfirmandanmälan)/i.test(t);
 }
 
 /** Dragplåster-vikt per kategori — musik/scen/marknad bär inlägget. */
@@ -54,6 +105,25 @@ const CATEGORY_RANK: Record<string, number> = {
 
 export function rankCategory(category: string): number {
     return CATEGORY_RANK[category] ?? 1;
+}
+
+/**
+ * Dragplåster-poäng: vad som förtjänar en av inläggets tolv rader.
+ *
+ * Ersätter den gamla sorteringen "kategori, sedan tidigast först". Den lät
+ * tiden avgöra inom varje kategori, vilket systematiskt gav förmiddagen
+ * tidigt i veckan företräde framför lördagskvällen — kyrkomusiken på
+ * tisdag kl 9 slog varje konsert på fredag kl 19 (Stockholm 1/9).
+ *
+ * Kategorin väger fortfarande tyngst (×10), biljettsläppet näst, och
+ * kvällstid sist: kl 17–22 är när man faktiskt går ut.
+ */
+export function dragScore(e: Pick<CityEventRow, 'category' | 'url' | 'time'>): number {
+    let score = rankCategory(e.category) * 10 + ticketBoost(e.url);
+    const hour = new Date(e.time).getHours();
+    if (hour >= 17 && hour <= 22) score += 3;
+    else if (hour >= 12 && hour < 17) score += 1;
+    return score;
 }
 
 /* ── Urvalet: två sektioner ───────────────────────────────────────────────── */
@@ -76,34 +146,66 @@ export function endOfPublishWeek(publishAt: number): number {
 /** Titel-nyckel för dubblettrensning — samma event ligger ofta dubbelt i
  *  datat med små varianter ("Wilmer X" / "Wilmer X - Kackelstugan Ute").
  *  Dubblett = den ena nyckeln är prefix av den andra. */
-const titleKey = (t: string) => t.toLowerCase().replace(/[^a-zåäö0-9]/g, '').slice(0, 28);
+const titleKey = (t: string) => t.toLowerCase()
+    // Ledorden skiljer sig mellan källorna och lurade prefix-jämförelsen:
+    // Ticketmasters "Konsert: Jacob Karlzon Questar" och arrangörens "Jacob
+    // Karlzon QUESTAR" stod båda i Älmhult-inlägget 2/9.
+    //
+    // Separatorn och lookahead:en är inte pynt: utan dem åt regexen upp en
+    // titel som BARA är ledordet ("Konsert"), och en tom nyckel är prefix av
+    // allt — hela sektionen hade räknats som en enda dubblett.
+    .replace(/^(konsert|live|biljetter|föreställning|show)\s*[:–-]\s*(?=\S)/, '')
+    .replace(/[^a-zåäö0-9]/g, '').slice(0, 28);
 const isDupTitle = (key: string, seen: string[]) =>
-    seen.some(s => s.startsWith(key) || key.startsWith(s));
+    // Tom nyckel (titel utan bokstäver) jämförs aldrig — den är prefix av allt.
+    key !== '' && seen.some(s => s !== '' && (s.startsWith(key) || key.startsWith(s)));
 
-function pickSection(events: CityEventRow[], max: number): CityEventRow[] {
+function pickSection(events: CityEventRow[], max: number, seenTitles: string[]): CityEventRow[] {
     // Bäst dragplåster först, sedan sprid över dagar/platser som förr.
     const ranked = [...events].sort((a, b) =>
-        rankCategory(b.category) - rankCategory(a.category) ||
+        dragScore(b) - dragScore(a) ||
         a.time.localeCompare(b.time));
 
-    const seenTitles: string[] = [];
     const seenDay = new Map<string, number>();
+    const seenCategory = new Map<string, number>();
     const seenVenue = new Set<string>();
     const picked: CityEventRow[] = [];
 
-    for (const e of ranked) {
-        if (picked.length >= max) break;
-        const tk = titleKey(e.title);
-        if (isDupTitle(tk, seenTitles)) continue;
-        const day = e.time.slice(0, 10);
-        const venue = (e.locationName ?? '').toLowerCase().trim();
-        if ((seenDay.get(day) ?? 0) >= 3) continue;
-        if (venue && seenVenue.has(venue)) continue;
-        picked.push(e);
-        seenTitles.push(tk);
-        seenDay.set(day, (seenDay.get(day) ?? 0) + 1);
-        if (venue) seenVenue.add(venue);
-    }
+    const take = (pool: CityEventRow[], limit: number, categoryCap: number) => {
+        for (const e of pool) {
+            if (picked.length >= limit) return;
+            const tk = titleKey(e.title);
+            if (isDupTitle(tk, seenTitles)) continue;
+            const day = e.time.slice(0, 10);
+            const venue = (e.locationName ?? '').toLowerCase().trim();
+            if ((seenDay.get(day) ?? 0) >= 3) continue;
+            if ((seenCategory.get(e.category) ?? 0) >= categoryCap) continue;
+            if (venue && seenVenue.has(venue)) continue;
+            picked.push(e);
+            seenTitles.push(tk);
+            seenDay.set(day, (seenDay.get(day) ?? 0) + 1);
+            seenCategory.set(e.category, (seenCategory.get(e.category) ?? 0) + 1);
+            if (venue) seenVenue.add(venue);
+        }
+    };
+
+    // RUNDA 1 — Ticketmaster får förtur (ägarens prioritet 1/9). En poängbonus
+    // räckte inte: kategoritaket kunde ändå knuffa ut dem. Halva sektionen är
+    // taket, annars blir inlägget en ren biljettannons i stället för ett
+    // tvärsnitt av vad orten erbjuder.
+    const ticketed = ranked.filter(e => ticketBoost(e.url) >= 6);
+    take(ticketed, Math.max(1, Math.floor(max / 2)), Math.max(2, Math.ceil(max / 3)));
+
+    // RUNDA 2 — hårt kategoritak, så bredden får företräde framför rankningen.
+    // En ren topplista blir en genrelista: Stockholm gav bara "music, stage"
+    // trots 3000 event att välja bland.
+    take(ranked, max, Math.max(1, Math.ceil(max / 4)));
+
+    // RUNDA 3 — taket lyft, fyller resten. För de tunna orterna: har Åmål bara
+    // konserter ska inlägget få bestå av konserter, hellre än att kapas av ett
+    // tak som var tänkt för storstadens överflöd.
+    if (picked.length < max) take(ranked, max, Infinity);
+
     // Läsordningen är kronologisk även om urvalet var ranking-styrt.
     return picked.sort((a, b) => a.time.localeCompare(b.time));
 }
@@ -117,7 +219,7 @@ export function pickCityRows(
     publishAt: number,
     { maxThisWeek = 7, maxNextWeek = 5 }: { maxThisWeek?: number; maxNextWeek?: number } = {},
 ): PickedRows {
-    const clean = events.filter(e => !isNoiseEvent(e));
+    const clean = events.filter(e => !isOptInSource(e.url) && !isNoiseEvent(e));
     const weekEnd = endOfPublishWeek(publishAt);
     const nextWeekEnd = weekEnd + 7 * DAY_MS;
 
@@ -126,10 +228,32 @@ export function pickCityRows(
         return !isNaN(t) && t >= from && t <= to;
     };
 
-    return {
-        thisWeek: pickSection(clean.filter(e => inWindow(e, publishAt, weekEnd)), maxThisWeek),
-        nextWeek: pickSection(clean.filter(e => inWindow(e, weekEnd, nextWeekEnd)), maxNextWeek),
-    };
+    // Titel-dubbletterna räknas över BÅDA sektionerna: en pjäs som spelas varje
+    // helg stod annars en gång i "i veckan" och en gång i "nästa vecka"
+    // (Stockholm 2/9: MAMMA MIA! THE PARTY två gånger).
+    const seenTitles: string[] = [];
+    const thisWeek = pickSection(clean.filter(e => inWindow(e, publishAt, weekEnd)), maxThisWeek, seenTitles);
+    const nextWeek = pickSection(clean.filter(e => inWindow(e, weekEnd, nextWeekEnd)), maxNextWeek, seenTitles);
+    return { thisWeek, nextWeek };
+}
+
+/**
+ * Kvalitetsgolvet (ägarbeslut 1/9): en ort som inte kan fylla inlägget med
+ * riktiga event ska hoppas över helt, inte postas med ett tunt eller
+ * rutindominerat inlägg. Beställningen var "de städer som har de allra
+ * bästa och mest varierade eventen".
+ *
+ * Två krav, båda på det FILTRERADE urvalet: tillräckligt många rader, och
+ * tillräcklig bredd. Bredden är det som skiljer ett inlägg som visar vad
+ * orten erbjuder från en lista med tolv konserter.
+ */
+export function meetsQualityFloor(
+    rows: PickedRows,
+    { minRows = 8, minCategories = 3 }: { minRows?: number; minCategories?: number } = {},
+): boolean {
+    const all = [...rows.thisWeek, ...rows.nextWeek];
+    if (all.length < minRows) return false;
+    return new Set(all.map(e => e.category)).size >= minCategories;
 }
 
 /* ── Radformatet ──────────────────────────────────────────────────────────── */
@@ -221,4 +345,32 @@ export function buildCityPostText(
         CLOSERS[s % CLOSERS.length],
     );
     return parts.join('\n');
+}
+
+/* ── Instagram-varianten ──────────────────────────────────────────────────── */
+
+/** IG:s tak för bildtext. Stadsinläggen ligger på ~1000, men en ort med
+ *  många rader ska kapas i stället för att avvisas av Meta. */
+export const IG_CAPTION_MAX = 2200;
+
+/** "Västerås" → "västerås", "Upplands Väsby" → "upplandsväsby". */
+export function hashtagFor(townName: string): string {
+    return townName.toLowerCase().replace(/[^a-zåäöéü0-9]/g, '');
+}
+
+/**
+ * Samma inlägg, anpassat för Instagram.
+ *
+ * Texten är ORÖRD — den är kurerad för hand (se docs/outreach/stadsinlagg-*)
+ * och ska se likadan ut på båda ytorna. Skillnaden är hashtaggarna: FB
+ * rankar dem inte, IG hittar inlägget genom dem. Länken i texten blir inte
+ * klickbar på Instagram, men den säger fortfarande vart man ska.
+ */
+export function buildIgCaption(postText: string, townName: string): string {
+    const tags = ['#vadkul', `#${hashtagFor(townName)}`, '#evenemang', '#dethänder'].join(' ');
+    const full = `${postText.trimEnd()}\n\n${tags}`;
+    if (full.length <= IG_CAPTION_MAX) return full;
+    // Kapa brödtexten, aldrig taggarna — de är hela poängen med IG-varianten.
+    const room = IG_CAPTION_MAX - tags.length - 4;
+    return `${postText.slice(0, room).trimEnd()}…\n\n${tags}`;
 }

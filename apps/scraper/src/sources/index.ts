@@ -42,7 +42,17 @@ import { cbisEngine } from '../scrapers/cbis';
 import { fhpEngine } from '../scrapers/fhp';
 import { goteborgStadEngine } from '../scrapers/goteborgstad';
 import { gotlandComEngine } from '../scrapers/gotlandcom';
+import { skordefestEngine } from '../scrapers/skordefest';
 import { bergmancenterEngine } from '../scrapers/bergmancenter';
+import { turidEngine } from '../scrapers/turid';
+import { hbgEventEngine } from '../scrapers/hbgevent';
+import { bestEventEngine } from '../scrapers/bestevent';
+import { accentFeedEngine } from '../scrapers/accentfeed';
+import { optimizelyEventsEngine } from '../scrapers/optimizely-events';
+import { sportalityEngine } from '../scrapers/sportality';
+import { sportomediaEngine } from '../scrapers/sportomedia';
+import { gotEventEngine } from '../scrapers/gotevent';
+import { visitLuleaEngine } from '../scrapers/visitlulea';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
 
@@ -104,8 +114,18 @@ export const ENGINES: Record<string, Engine> = {
     'slagthuset': slagthusetEngine,
     'nortic': norticEngine,
     'cbis': cbisEngine,
+    'skordefest': skordefestEngine,
     'fhp': fhpEngine,
     'goteborgstad': goteborgStadEngine,
     'gotlandcom': gotlandComEngine,
     'bergmancenter': bergmancenterEngine,
+    'turid': turidEngine,
+    'hbgevent': hbgEventEngine,
+    'bestevent': bestEventEngine,
+    'accentfeed': accentFeedEngine,
+    'optimizely-events': optimizelyEventsEngine,
+    'sportality': sportalityEngine,
+    'sportomedia': sportomediaEngine,
+    'gotevent': gotEventEngine,
+    'visitlulea': visitLuleaEngine,
 };

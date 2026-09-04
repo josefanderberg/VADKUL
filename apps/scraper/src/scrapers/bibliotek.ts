@@ -25,7 +25,7 @@
 
 import { RawEvent, Engine } from '../sources/types';
 import { mapPool } from '../utils/mapPool';
-import { decodeHtmlEntities } from '../utils/text';
+import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../utils/text';
 
 const API_BASE = 'https://api.axiell.com/event/api';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -125,6 +125,12 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'varberg',       customerId: '62431e61ae077e04267bebc4', eventsUrl: 'https://bibliotek.varberg.se/kalender',      name: 'Varbergs bibliotek',           cityHint: 'Varberg' },
     { id: 'blekinge',      customerId: '61447a53e9a84303da337d16', eventsUrl: 'https://blekingebiblioteken.se/evenemang',   name: 'Blekingebiblioteken',
       cities: ['Karlskrona', 'Karlshamn', 'Ronneby', 'Sölvesborg', 'Olofström'] },
+    // Runda 5 (2026-08-26, kommun-svans-svepet): fyra Arena-tenants till ur
+    // otäckta kommuner. Sjöbo ligger på biblioteksso.se (inte bibliotek.sjobo.se).
+    { id: 'sjobo',         customerId: '5dceb8149cf47722f2bb9838', eventsUrl: 'https://www.biblioteksso.se/evenemang',     name: 'Sjöbo bibliotek',              cityHint: 'Sjöbo' },
+    { id: 'osthammar',     customerId: '64f194758094f34fdca7fb02', eventsUrl: 'https://bibliotek.osthammar.se/evenemang',  name: 'Östhammars bibliotek',         cityHint: 'Östhammar' },
+    { id: 'timra',         customerId: '60c9e48d4cfcfc2892c167d4', eventsUrl: 'https://bibliotek.timra.se/evenemang',      name: 'Timrå bibliotek',              cityHint: 'Timrå' },
+    { id: 'are',           customerId: '68b68fa7a2fccd7fbf6612a6', eventsUrl: 'https://bibliotek.are.se/evenemang',        name: 'Åre bibliotek',                cityHint: 'Åre' },
 ];
 
 interface AxiellHit {
@@ -179,7 +185,7 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         venueName: branch || undefined,
         city: tenant.cityHint ?? branchCity(branch, tenant.cities),
         imageUrl: image ? image.replace(/^http:\/\//, 'https://') : undefined,
-        description: [stripHtml(e.description).slice(0, 600), audiences ? `Målgrupp: ${audiences}.` : '']
+        description: [truncateAtBoundary(stripHtml(e.description), DEFAULT_DESCRIPTION_MAX), audiences ? `Målgrupp: ${audiences}.` : '']
             .filter(Boolean).join(' '),
         hostName: branch || tenant.name,
         hasSpecificTime: true,   // API:t levererar riktiga klockslag (UTC)

@@ -176,7 +176,7 @@ function itemToRawEvent(item: any, cfg: NextjsDataConfig, baseUrl: string): RawE
 
     const descRaw = cfg.fieldMap?.description ? getPath(item, cfg.fieldMap.description) : pickField(item, ['description', 'excerpt', 'summary']);
     // cleanDescription strippar taggar OCH avkodar entities (&auml; → ä).
-    const description = typeof descRaw === 'string' ? cleanDescription(descRaw, 600) || undefined : undefined;
+    const description = typeof descRaw === 'string' ? cleanDescription(descRaw) || undefined : undefined;
 
     return { title, startDate, endDate: endDate && !isNaN(endDate.getTime()) ? endDate : undefined, url, venueName, city, description, imageUrl };
 }

@@ -235,7 +235,7 @@ function itemToRawEvent(item: any, cfg: NuxtDataConfig, baseUrl: string): RawEve
     const descRaw = pickField(item, ['description', 'excerpt', 'summary']);
     // cleanDescription strippar taggar OCH avkodar entities (&auml; → ä).
     const descHtml = unwrapRendered(descRaw);
-    const description = descHtml ? cleanDescription(descHtml, 600) || undefined : undefined;
+    const description = descHtml ? cleanDescription(descHtml) || undefined : undefined;
 
     return { title, startDate, endDate: endDate && !isNaN(endDate.getTime()) ? endDate : undefined, url, venueName, city, description, imageUrl };
 }

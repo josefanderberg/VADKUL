@@ -1,0 +1,470 @@
+[
+ {
+  "name": "Botkyrka",
+  "region": "stockholm",
+  "rootDom": "botkyrka.se",
+  "url": "https://www.botkyrka.se/evenemang"
+ },
+ {
+  "name": "Danderyd",
+  "region": "stockholm",
+  "rootDom": "danderyd.se",
+  "url": "https://www.danderyd.se/uppleva-och-gora/sommarlov"
+ },
+ {
+  "name": "Ekerö",
+  "region": "stockholm",
+  "rootDom": "ekero.se",
+  "url": "https://www.ekero.se/uppleva-gora/ekebyhovs-slott"
+ },
+ {
+  "name": "Huddinge",
+  "region": "stockholm",
+  "rootDom": "huddinge.se",
+  "url": "https://www.huddinge.se/kommunkalender"
+ },
+ {
+  "name": "Solna",
+  "region": "stockholm",
+  "rootDom": "solna.se",
+  "url": "https://www.solna.se/uppleva--gora/evenemang"
+ },
+ {
+  "name": "Vallentuna",
+  "region": "stockholm",
+  "rootDom": "vallentuna.se",
+  "url": "https://www.vallentuna.se/evenemang"
+ },
+ {
+  "name": "Värmdö",
+  "region": "stockholm",
+  "rootDom": "varmdo.se",
+  "url": "https://www.varmdo.se/upplevaochgora/evenemang.4.62b6567e177d2c33d13c3489.html"
+ },
+ {
+  "name": "Österåker",
+  "region": "stockholm",
+  "rootDom": "osteraker.se",
+  "url": "https://osteraker.se/evenemang"
+ },
+ {
+  "name": "Strängnäs",
+  "region": "sodermanland",
+  "rootDom": "strangnas.se",
+  "url": "https://www.strangnas.se/evenemang"
+ },
+ {
+  "name": "Boxholm",
+  "region": "ostergotland",
+  "rootDom": "boxholm.se",
+  "url": "https://www.boxholm.se/uppleva-och-gora/bibliotek/intresseanmalan-volontar-sprakcafe"
+ },
+ {
+  "name": "Kinda",
+  "region": "ostergotland",
+  "rootDom": "kinda.se",
+  "url": "https://www.kinda.se/upplevaochgora/friluftsliv/badplatser.4.15d59a7c151bb4254b7e7147.html"
+ },
+ {
+  "name": "Mjölby",
+  "region": "ostergotland",
+  "rootDom": "mjolby.se",
+  "url": "https://www.mjolby.se/uppleva-och-gora"
+ },
+ {
+  "name": "Söderköping",
+  "region": "ostergotland",
+  "rootDom": "soderkoping.se",
+  "url": "https://soderkoping.se/evenemang"
+ },
+ {
+  "name": "Vadstena",
+  "region": "ostergotland",
+  "rootDom": "vadstena.se",
+  "url": "https://vadstena.se/evenemang"
+ },
+ {
+  "name": "Åtvidaberg",
+  "region": "ostergotland",
+  "rootDom": "atvidaberg.se",
+  "url": "https://www.atvidaberg.se/uppleva-och-gora"
+ },
+ {
+  "name": "Ödeshög",
+  "region": "ostergotland",
+  "rootDom": "odeshog.se",
+  "url": "https://www.odeshog.se/forskolaskolaochutbildning/kulturskolan/kulturskolansevenemang.106.1256cf2c195adccf7597a15.html"
+ },
+ {
+  "name": "Aneby",
+  "region": "jonkoping",
+  "rootDom": "aneby.se",
+  "url": "https://aneby.se/arkiv/evenemang.html"
+ },
+ {
+  "name": "Gnosjö",
+  "region": "jonkoping",
+  "rootDom": "gnosjo.se",
+  "url": "https://gnosjo.se/uppleva-och-gora"
+ },
+ {
+  "name": "Vaggeryd",
+  "region": "jonkoping",
+  "rootDom": "vaggeryd.se",
+  "url": "https://www.vaggeryd.se/uppleva-och-gora/upplev-vaggeryds--kommun.html"
+ },
+ {
+  "name": "Värnamo",
+  "region": "jonkoping",
+  "rootDom": "varnamo.se",
+  "url": "https://varnamo.se/evenemang"
+ },
+ {
+  "name": "Markaryd",
+  "region": "kronoberg",
+  "rootDom": "markaryd.se",
+  "url": "https://www.markaryd.se/sidor/uppleva-och-gora/bad/hannabadet.html"
+ },
+ {
+  "name": "Högsby",
+  "region": "kalmar",
+  "rootDom": "hogsby.se",
+  "url": "https://hogsby.se/evenemang"
+ },
+ {
+  "name": "Torsås",
+  "region": "kalmar",
+  "rootDom": "torsas.se",
+  "url": "https://www.torsas.se/evenemang"
+ },
+ {
+  "name": "Bromölla",
+  "region": "skane",
+  "rootDom": "bromolla.se",
+  "url": "https://bromolla.se/evenemang"
+ },
+ {
+  "name": "Burlöv",
+  "region": "skane",
+  "rootDom": "burlov.se",
+  "url": "https://burlov.se/evenemang"
+ },
+ {
+  "name": "Kävlinge",
+  "region": "skane",
+  "rootDom": "kavlinge.se",
+  "url": "https://www.kavlinge.se/evenemang"
+ },
+ {
+  "name": "Lomma",
+  "region": "skane",
+  "rootDom": "lomma.se",
+  "url": "https://lomma.se/upplevaochgora.770.html"
+ },
+ {
+  "name": "Simrishamn",
+  "region": "skane",
+  "rootDom": "simrishamn.se",
+  "url": "https://www.simrishamn.se/evenemangskalender"
+ },
+ {
+  "name": "Skurup",
+  "region": "skane",
+  "rootDom": "skurup.se",
+  "url": "https://www.skurup.se/barn-och-utbildning/grundskola/kulturskola/aktuellt-schema-kalender"
+ },
+ {
+  "name": "Vellinge",
+  "region": "skane",
+  "rootDom": "vellinge.se",
+  "url": "https://vellinge.se/evenemang"
+ },
+ {
+  "name": "Åstorp",
+  "region": "skane",
+  "rootDom": "astorp.se",
+  "url": "https://astorp.se/evenemang"
+ },
+ {
+  "name": "Hylte",
+  "region": "halland",
+  "rootDom": "hylte.se",
+  "url": "https://www.hylte.se/uppleva-och-gora/ornahallens-halsocenter/kontakt-och-oppettider"
+ },
+ {
+  "name": "Kungsbacka",
+  "region": "halland",
+  "rootDom": "kungsbacka.se",
+  "url": "https://kungsbacka.se/uppleva-och-gora/evenemang/importerade-evenemang/guidning-brackan---gravarna"
+ },
+ {
+  "name": "Bollebygd",
+  "region": "vastragotaland",
+  "rootDom": "bollebygd.se",
+  "url": "https://www.bollebygd.se/upplevaochgora/evenemangskalender.4.17a5ac7215f413283d8601e2.html"
+ },
+ {
+  "name": "Dals-Ed",
+  "region": "vastragotaland",
+  "rootDom": "dalsed.se",
+  "url": "https://www.dalsed.se/uppleva-och-gora/turism/evenemangskalender"
+ },
+ {
+  "name": "Essunga",
+  "region": "vastragotaland",
+  "rootDom": "essunga.se",
+  "url": "https://essunga.se/evenemang"
+ },
+ {
+  "name": "Färgelanda",
+  "region": "vastragotaland",
+  "rootDom": "fargelanda.se",
+  "url": "https://fargelanda.se/uppleva-och-gora/evenemang"
+ },
+ {
+  "name": "Grästorp",
+  "region": "vastragotaland",
+  "rootDom": "grastorp.se",
+  "url": "https://www.grastorp.se/evenemang"
+ },
+ {
+  "name": "Gullspång",
+  "region": "vastragotaland",
+  "rootDom": "gullspang.se",
+  "url": "https://gullspang.se/uppleva-och-gora"
+ },
+ {
+  "name": "Härryda",
+  "region": "vastragotaland",
+  "rootDom": "harryda.se",
+  "url": "https://www.harryda.se/evenemang"
+ },
+ {
+  "name": "Kungälv",
+  "region": "vastragotaland",
+  "rootDom": "kungalv.se",
+  "url": "https://www.kungalv.se/kultur--fritid/evenemang-kungalv/oppet-hus-pa-nordiska-folkhogskolan"
+ },
+ {
+  "name": "Lerum",
+  "region": "vastragotaland",
+  "rootDom": "lerum.se",
+  "url": "https://kalender.lerum.se/events/familjegympa-MjMwNTM5LDIwMjYtMDgtMjcgMTI6MzA="
+ },
+ {
+  "name": "Mariestad",
+  "region": "vastragotaland",
+  "rootDom": "mariestad.se",
+  "url": "https://mariestad.se/uppleva-och-gora/bibliotek/slaktforskning"
+ },
+ {
+  "name": "Mark",
+  "region": "vastragotaland",
+  "rootDom": "mark.se",
+  "url": "https://www.mark.se/kommunkalender/kommunkalender/2026-08-10-valkommen-pa-ljusmanifestation-i---skene-kyrka"
+ },
+ {
+  "name": "Mellerud",
+  "region": "vastragotaland",
+  "rootDom": "mellerud.se",
+  "url": "https://mellerud.se/evenemang"
+ },
+ {
+  "name": "Munkedal",
+  "region": "vastragotaland",
+  "rootDom": "munkedal.se",
+  "url": "https://munkedal.se/evenemang"
+ },
+ {
+  "name": "Orust",
+  "region": "vastragotaland",
+  "rootDom": "orust.se",
+  "url": "https://www.orust.se/uppleva-och-gora"
+ },
+ {
+  "name": "Sotenäs",
+  "region": "vastragotaland",
+  "rootDom": "sotenas.se",
+  "url": "https://sotenas.se/evenemang"
+ },
+ {
+  "name": "Stenungsund",
+  "region": "vastragotaland",
+  "rootDom": "stenungsund.se",
+  "url": "https://www.stenungsund.se/uppleva-och-gora"
+ },
+ {
+  "name": "Tidaholm",
+  "region": "vastragotaland",
+  "rootDom": "tidaholm.se",
+  "url": "https://www.tidaholm.se/upplevaochgora/evenemangtidaholmskommun.702.html"
+ },
+ {
+  "name": "Trollhättan",
+  "region": "vastragotaland",
+  "rootDom": "trollhattan.se",
+  "url": "https://www.trollhattan.se/evenemang"
+ },
+ {
+  "name": "Töreboda",
+  "region": "vastragotaland",
+  "rootDom": "toreboda.se",
+  "url": "https://toreboda.se/uppleva-och-gora/bibliotek/oppettider-och-kontakt"
+ },
+ {
+  "name": "Degerfors",
+  "region": "orebro",
+  "rootDom": "degerfors.se",
+  "url": "https://degerfors.se/naringsliv-och-arbete/evenemang.html"
+ },
+ {
+  "name": "Hällefors",
+  "region": "orebro",
+  "rootDom": "hellefors.se",
+  "url": "https://hellefors.se/evenemang"
+ },
+ {
+  "name": "Laxå",
+  "region": "orebro",
+  "rootDom": "laxa.se",
+  "url": "https://www.laxa.se/Kalendern.html"
+ },
+ {
+  "name": "Nora",
+  "region": "orebro",
+  "rootDom": "nora.se",
+  "url": "https://www.nora.se/upplevagora/sommarinora.4.49ed30a3162eafaa0dedff55.html"
+ },
+ {
+  "name": "Sala",
+  "region": "vastmanland",
+  "rootDom": "sala.se",
+  "url": "https://www.sala.se/evenemang"
+ },
+ {
+  "name": "Skinnskatteberg",
+  "region": "vastmanland",
+  "rootDom": "skinnskatteberg.se",
+  "url": "https://www.skinnskatteberg.se/gora-och-uppleva"
+ },
+ {
+  "name": "Avesta",
+  "region": "dalarna",
+  "rootDom": "avesta.se",
+  "url": "https://avesta.se/gora-och-uppleva"
+ },
+ {
+  "name": "Ludvika",
+  "region": "dalarna",
+  "rootDom": "ludvika.se",
+  "url": "https://www.ludvika.se/jobb-och-foretagande/foretagande/aktuellt-fran-naringslivet/naringsliv---kalendarium"
+ },
+ {
+  "name": "Smedjebacken",
+  "region": "dalarna",
+  "rootDom": "smedjebacken.se",
+  "url": "https://www.smedjebacken.se/pa-gang/2026-08-19-fortidsrostning.html"
+ },
+ {
+  "name": "Hofors",
+  "region": "gavleborg",
+  "rootDom": "hofors.se",
+  "url": "https://hofors.se/uppleva--gora.html"
+ },
+ {
+  "name": "Hudiksvall",
+  "region": "gavleborg",
+  "rootDom": "hudiksvall.se",
+  "url": "https://hudiksvall.se/Sidor/Uppleva-och-gora.html"
+ },
+ {
+  "name": "Ljusdal",
+  "region": "gavleborg",
+  "rootDom": "ljusdal.se",
+  "url": "https://www.ljusdal.se/upplevagora/bibliotek.4.19618b314ae81f501e6cd35.html"
+ },
+ {
+  "name": "Ockelbo",
+  "region": "gavleborg",
+  "rootDom": "ockelbo.se",
+  "url": "https://ockelbo.se/evenemang"
+ },
+ {
+  "name": "Ovanåker",
+  "region": "gavleborg",
+  "rootDom": "ovanaker.se",
+  "url": "https://www.ovanaker.se/kulturochfritid/upplevovanakerskommun/dettahander.11286.html"
+ },
+ {
+  "name": "Härnösand",
+  "region": "vasternorrland",
+  "rootDom": "harnosand.se",
+  "url": "https://harnosand.se/evenemang"
+ },
+ {
+  "name": "Ånge",
+  "region": "vasternorrland",
+  "rootDom": "ange.se",
+  "url": "https://www.ange.se/evenemang"
+ },
+ {
+  "name": "Örnsköldsvik",
+  "region": "vasternorrland",
+  "rootDom": "ornskoldsvik.se",
+  "url": "https://www.ornskoldsvik.se/evenemang"
+ },
+ {
+  "name": "Bräcke",
+  "region": "jamtland",
+  "rootDom": "bracke.se",
+  "url": "https://www.bracke.se/evenemang"
+ },
+ {
+  "name": "Ragunda",
+  "region": "jamtland",
+  "rootDom": "ragunda.se",
+  "url": "https://ragunda.se/upplevaochgora.605.html"
+ },
+ {
+  "name": "Lycksele",
+  "region": "vasterbotten",
+  "rootDom": "lycksele.se",
+  "url": "https://lycksele.se/evenemang"
+ },
+ {
+  "name": "Malå",
+  "region": "vasterbotten",
+  "rootDom": "mala.se",
+  "url": "https://www.mala.se/evenemang"
+ },
+ {
+  "name": "Sorsele",
+  "region": "vasterbotten",
+  "rootDom": "sorsele.se",
+  "url": "https://portal.sorsele.se/kalender/lagets-oppettider"
+ },
+ {
+  "name": "Vindeln",
+  "region": "vasterbotten",
+  "rootDom": "vindeln.se",
+  "url": "https://vindeln.se/vara-aktiviteter/aktiviteter-evenemangsmall/2026-06-18-kvallsoppet-pa-retra-aterbruksbutik"
+ },
+ {
+  "name": "Vännäs",
+  "region": "vasterbotten",
+  "rootDom": "vannas.se",
+  "url": "https://vannas.se/aktivitetskalendern/vara-aktiviteter/2026-07-20-nyinflyttarkvall-i-vannas-8-september"
+ },
+ {
+  "name": "Kalix",
+  "region": "norrbotten",
+  "rootDom": "kalix.se",
+  "url": "https://www.kalix.se/evenemang"
+ },
+ {
+  "name": "Överkalix",
+  "region": "norrbotten",
+  "rootDom": "overkalix.se",
+  "url": "https://www.overkalix.se/evenemangskalender"
+ }
+]

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit,
+    parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem, mapEventServiceItem, isMunicipalMeeting,
     parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
 } from './sitevision';
 
@@ -343,5 +343,178 @@ describe('parseSearchAppDetail', () => {
 
     it('sida utan fälten → tomt objekt, inget kast', () => {
         expect(parseSearchAppDetail('<html><body><p>404</p></body></html>')).toEqual({});
+    });
+});
+
+describe('pickCityFromVenue', () => {
+    const CITIES = ['Köping', 'Arboga', 'Kungsör'];
+
+    it('plockar orten ur venue-namnets suffix', () => {
+        expect(pickCityFromVenue('Mötesplats Tallåsgården, Kungsör', CITIES, 'Köping')).toBe('Kungsör');
+    });
+
+    it('matchar orten var som helst i namnet', () => {
+        expect(pickCityFromVenue('Arboga bibliotek', CITIES, 'Köping')).toBe('Arboga');
+        expect(pickCityFromVenue('Medborgarhuset Arboga', CITIES, 'Köping')).toBe('Arboga');
+    });
+
+    it('faller tillbaka på defaultCity utan träff', () => {
+        expect(pickCityFromVenue('Malmberga Loge', CITIES, 'Köping')).toBe('Köping');
+        expect(pickCityFromVenue(undefined, CITIES, 'Köping')).toBe('Köping');
+    });
+
+    it('rör inte källor utan cities-lista', () => {
+        expect(pickCityFromVenue('Arboga bibliotek', undefined, 'Eskilstuna')).toBe('Eskilstuna');
+        expect(pickCityFromVenue('Arboga bibliotek', [], 'Eskilstuna')).toBe('Eskilstuna');
+    });
+
+    it('längsta träffen vinner när ett ortnamn är prefix till ett annat', () => {
+        expect(pickCityFromVenue('Bygdegården i Västra Ämtervik', ['Ämtervik', 'Västra Ämtervik'], 'Sunne'))
+            .toBe('Västra Ämtervik');
+    });
+
+    it('är skiftlägesokänslig', () => {
+        expect(pickCityFromVenue('KÖPINGS STADSHOTELL', CITIES, 'Arboga')).toBe('Köping');
+    });
+});
+
+describe('cleanCardTitle', () => {
+    const OPTS = { titleStripRe: /^Evenemang\s+/i, stripVenue: true };
+
+    it('tar bort både kategorietikett och venue-svans (vaggeryd.se)', () => {
+        expect(cleanCardTitle('Evenemang Mareld - Piratlajv Berghems Lajvby, Skillingaryd', 'Berghems Lajvby, Skillingaryd', OPTS))
+            .toBe('Mareld - Piratlajv');
+        expect(cleanCardTitle('Evenemang Bokcirklar för ungdomar Vaggeryds bibliotek', 'Vaggeryds bibliotek', OPTS))
+            .toBe('Bokcirklar för ungdomar');
+    });
+
+    it('rör inte titeln utan opt-in', () => {
+        const raw = 'Evenemang Bio: Marsuplami Folkets hus i Vaggeryd';
+        expect(cleanCardTitle(raw, 'Folkets hus i Vaggeryd')).toBe(raw);
+    });
+
+    it('behåller venue-namnet när det hör till titeln', () => {
+        expect(cleanCardTitle('Konsert i Berghems Lajvby', 'Berghems Lajvby', OPTS))
+            .toBe('Konsert i Berghems Lajvby');
+    });
+
+    it('kapar inte när för lite blir kvar', () => {
+        expect(cleanCardTitle('Bio Folkets hus', 'Folkets hus', OPTS)).toBe('Bio Folkets hus');
+    });
+
+    it('matchar venue skiftlägesokänsligt och normaliserar blanksteg', () => {
+        expect(cleanCardTitle('Evenemang  Shared   reading   VAGGERYDS BIBLIOTEK', 'Vaggeryds bibliotek', OPTS))
+            .toBe('Shared reading');
+    });
+
+    it('klarar saknad venue', () => {
+        expect(cleanCardTitle('Evenemang WIK-dagen 2026', undefined, OPTS)).toBe('WIK-dagen 2026');
+    });
+});
+
+describe('mapPageApiItem', () => {
+    const BASE = 'https://www.varmdo.se/upplevaochgora/evenemang.html';
+    const ITEM = {
+        id: '5.3a37c4d819e632d26612cf',
+        displayName: 'Pratb&auml;nk p&aring; Gustavsg&aring;rden',
+        URI: '/upplevaochgora/evenemang/pratbank.5.467d267619ed4689c71472.html',
+        startDate: 1787832000000,
+        endDate: 1787835600000,
+        img: '/images/200.360bac7a19ed441e94fd67/fotoparken.jpg',
+        text: 'Kom och prata bort en stund.',
+    };
+
+    it('läser epoch-ms som riktig tid', () => {
+        const e = mapPageApiItem(ITEM, BASE, 'Gustavsberg')!;
+        expect(e.startDate.getTime()).toBe(1787832000000);
+        expect(e.endDate?.getTime()).toBe(1787835600000);
+    });
+
+    it('avkodar entiteter i titeln', () => {
+        expect(mapPageApiItem(ITEM, BASE, 'Gustavsberg')!.title).toBe('Pratbänk på Gustavsgården');
+    });
+
+    it('gör URI och bild absoluta', () => {
+        const e = mapPageApiItem(ITEM, BASE, 'Gustavsberg')!;
+        expect(e.url).toBe('https://www.varmdo.se/upplevaochgora/evenemang/pratbank.5.467d267619ed4689c71472.html');
+        expect(e.imageUrl).toBe('https://www.varmdo.se/images/200.360bac7a19ed441e94fd67/fotoparken.jpg');
+    });
+
+    it('struntar i sluttid som inte ligger efter starttid', () => {
+        expect(mapPageApiItem({ ...ITEM, endDate: ITEM.startDate }, BASE, 'X')!.endDate).toBeUndefined();
+        expect(mapPageApiItem({ ...ITEM, endDate: undefined }, BASE, 'X')!.endDate).toBeUndefined();
+    });
+
+    it('avvisar poster utan titel, URI eller giltig epoch', () => {
+        expect(mapPageApiItem({ ...ITEM, displayName: '' }, BASE, 'X')).toBeNull();
+        expect(mapPageApiItem({ ...ITEM, URI: undefined }, BASE, 'X')).toBeNull();
+        expect(mapPageApiItem({ ...ITEM, startDate: 0 }, BASE, 'X')).toBeNull();
+        expect(mapPageApiItem({ ...ITEM, startDate: undefined }, BASE, 'X')).toBeNull();
+    });
+});
+
+describe('mapEventServiceItem', () => {
+    const BASE = 'https://www.vansbro.se/arkiv/evenemang.html';
+    const IT = {
+        identifier: '5.4755fb0619b828d3dbd7cb0b',
+        name: 'Vansbro Bio &ndash; Five Nights at Freddy&apos;s 2',
+        uri: 'https://www.vansbro.se/arkiv/evenemang/evenemang/2026-01-08-vansbro-bio.html',
+        startDate: '2026-01-09T21:00:00+01:00',
+        endDate: '2026-01-09T22:44:00+01:00',
+        startTime: '21:00',
+        location: 'Medborgarhuset, Norra Allégatan 30, 78631 Vansbro',
+        description: 'Skräckfenomenet är tillbaka.',
+        image: { uri: 'https://www.vansbro.se/images/18.x/fnaf.jpg' },
+    };
+
+    it('läser ISO-datum med offset och full adress', () => {
+        const e = mapEventServiceItem(IT, BASE, 'Vansbro')!;
+        expect(e.startDate.toISOString()).toBe('2026-01-09T20:00:00.000Z');
+        expect(e.endDate?.toISOString()).toBe('2026-01-09T21:44:00.000Z');
+        expect(e.address).toBe('Medborgarhuset, Norra Allégatan 30, 78631 Vansbro');
+        expect(e.city).toBe('Vansbro');
+        expect(e.hasSpecificTime).toBe(true);
+    });
+
+    it('avkodar entiteter i titeln', () => {
+        expect(mapEventServiceItem(IT, BASE, 'Vansbro')!.title).toBe("Vansbro Bio – Five Nights at Freddy's 2");
+    });
+
+    it('litar inte på klockslag utan startTime', () => {
+        expect(mapEventServiceItem({ ...IT, startTime: '' }, BASE, 'X')!.hasSpecificTime).toBeUndefined();
+    });
+
+    it('avvisar poster utan namn, uri eller startDate', () => {
+        expect(mapEventServiceItem({ ...IT, name: '' }, BASE, 'X')).toBeNull();
+        expect(mapEventServiceItem({ ...IT, uri: undefined }, BASE, 'X')).toBeNull();
+        expect(mapEventServiceItem({ ...IT, startDate: undefined }, BASE, 'X')).toBeNull();
+        expect(mapEventServiceItem({ ...IT, startDate: 'aldrig' }, BASE, 'X')).toBeNull();
+    });
+});
+
+describe('isMunicipalMeeting', () => {
+    it('fångar nämnder och sammanträden i titeln', () => {
+        expect(isMunicipalMeeting('Arbetsmarknads- och vuxenutbildningsnämnden sammanträder')).toBe(true);
+        expect(isMunicipalMeeting('Kommunstyrelsen sammaträder')).toBe(true);
+        expect(isMunicipalMeeting('Kommunfullmäktige')).toBe(true);
+        expect(isMunicipalMeeting('Socialnämnden')).toBe(true);
+        expect(isMunicipalMeeting('Årsmöte i föreningen')).toBe(true);
+    });
+
+    it('fångar dem via URL:en när titeln är intetsägande', () => {
+        expect(isMunicipalMeeting('Möte', 'https://x.se/2026-08-10-kommunstyrelsen')).toBe(true);
+        expect(isMunicipalMeeting('Möte', 'https://x.se/2026-08-10-sammantrade')).toBe(true);
+    });
+
+    it('släpper igenom publika event', () => {
+        expect(isMunicipalMeeting('Schackklubb')).toBe(false);
+        expect(isMunicipalMeeting('Open Mic Night med Mariama Jobe')).toBe(false);
+        expect(isMunicipalMeeting('Promenad med korvgrillning')).toBe(false);
+        expect(isMunicipalMeeting('Politiska ideologier – snabbkurs för förstagångsväljare')).toBe(false);
+    });
+
+    it('klarar både a och ä i stavningarna', () => {
+        expect(isMunicipalMeeting('Barn- och utbildningsnamnden')).toBe(true);
+        expect(isMunicipalMeeting('Barn- och utbildningsnämnden')).toBe(true);
     });
 });

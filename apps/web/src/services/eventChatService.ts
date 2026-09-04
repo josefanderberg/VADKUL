@@ -43,8 +43,10 @@ export const eventChatService = {
 /**
  * Chatt för KART-event (linkEvents). Deras id:n är URL:er (innehåller '/',
  * ogiltigt i dokument-id) — nyckeln URL-enkodas och chatten bor i den egna
- * kollektionen eventChats/{nyckel}/messages (öppen läsning, skrivning kräver
- * konto — se firestore.rules 8b).
+ * kollektionen eventChats/{nyckel}/messages (firestore.rules 8b: läsning
+ * fortfarande öppen på REGELNIVÅ, skrivning kräver konto). UI:t låser chatten
+ * bakom inloggning sedan 31/8 — EventChatPanel startar ingen prenumeration
+ * alls för utloggade, så subscribeToMessages anropas bara med konto.
  */
 const chatKeyFor = (eventId: string) => encodeURIComponent(eventId).slice(0, 1400);
 

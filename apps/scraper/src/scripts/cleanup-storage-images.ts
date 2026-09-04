@@ -8,10 +8,17 @@
  *
  * Kör nightly via cron eller manuellt.
  *
+ * Med --sweep-orphans görs dessutom ett bucket-svep: alla objekt under
+ * scraped-events/ (inkl. shared/) som INGET event i spegeln refererar
+ * och som är äldre än GRACE_DAYS raderas. Det är så delade bilder
+ * (shared/, hashade på bild-URL, kan ha många ägare) städas — de rörs
+ * aldrig av per-event-raderingen ovan.
+ *
  * Användning:
  *   npx ts-node src/scripts/cleanup-storage-images.ts                # dry-run
  *   npx ts-node src/scripts/cleanup-storage-images.ts --apply
  *   npx ts-node src/scripts/cleanup-storage-images.ts --apply --days=14
+ *   npx ts-node src/scripts/cleanup-storage-images.ts --apply --sweep-orphans
  */
 
 import path from 'path';
@@ -75,10 +82,48 @@ async function main() {
         }
     }
 
+    let orphansDeleted = 0;
+    let orphanBytes = 0;
+    if (args['sweep-orphans']) {
+        console.log(`\n=== Orphan-svep (objekt utan refererande event, äldre än ${GRACE_DAYS}d) ===`);
+        // Alla refererade storage-paths ur spegeln (ALLA rader — även dolda/
+        // passerade: så länge raden pekar på bilden är den inte föräldralös).
+        const referenced = new Set(
+            (sqliteDb.prepare(
+                `SELECT coverImage FROM link_events WHERE coverImage LIKE 'https://storage.googleapis.com/%'`,
+            ).all() as any[]).map(r =>
+                String(r.coverImage).replace(/^https:\/\/storage\.googleapis\.com\/[^/]+\//, '')),
+        );
+        const { bucket } = await import('../config/firebase');
+        if (!bucket) throw new Error('Ingen bucket');
+        const ageCutoff = Date.now() - GRACE_DAYS * 86400000;
+        let pageToken: string | undefined;
+        do {
+            const [files, next] = await (bucket as any).getFiles({
+                prefix: 'scraped-events/', maxResults: 1000, pageToken, autoPaginate: false,
+            });
+            for (const f of files) {
+                if (referenced.has(f.name)) continue;
+                const created = Date.parse(f.metadata?.timeCreated || '') || 0;
+                if (created > ageCutoff) continue; // nyuppladdad — kan ha event på väg in
+                const size = parseInt(String(f.metadata?.size || '0'), 10);
+                if (args.apply) {
+                    try { await f.delete(); orphansDeleted++; orphanBytes += size; }
+                    catch { failed++; }
+                } else {
+                    orphansDeleted++; orphanBytes += size;
+                }
+            }
+            pageToken = next?.pageToken;
+        } while (pageToken);
+        console.log(`  ${args.apply ? 'Raderade' : '(dry) skulle radera'}: ${orphansDeleted} objekt, ${(orphanBytes / 1e6).toFixed(1)} MB`);
+    }
+
     sqliteDb.close();
     console.log(`\n=== Sammanfattning ===`);
     console.log(`  Storage-objekt raderade: ${deleted}`);
     console.log(`  DB-poster uppdaterade:   ${dbUpdated}`);
+    console.log(`  Orphans raderade:        ${orphansDeleted}`);
     console.log(`  Misslyckade:             ${failed}`);
     console.log(args.apply ? '' : '\n(dry-run — kör med --apply för att radera)');
     process.exit(0);

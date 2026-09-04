@@ -1,7 +1,7 @@
 /**
- * teams-daily-report.ts
+ * daily-report.ts (hette teams-daily-report.ts t.o.m. 2026-09-04)
  *
- * Daglig Teams-rapport byggd på `scrape_runs`-tabellen (inte logg-grep).
+ * Daglig Telegram-rapport byggd på `scrape_runs`-tabellen (inte logg-grep).
  * Ger en per-scraper-bild av senaste dygnets körningar:
  *
  *   🤖 VADKUL Scraper · 2026-06-11 07:15
@@ -20,11 +20,11 @@
  *                 medvetet körs glesare (weekly/every-3d) syns som förväntade.
  *
  * Körning:
- *   npm run daily-report          # postar till TEAMS_WEBHOOK_URL
+ *   npm run daily-report          # postar till Telegram (TG_BOT_TOKEN + TG_CHAT_ID)
  *   npm run daily-report -- --dry # bygger + skriver ut, postar INGET
  *
  * Beroenden:
- *   - TEAMS_WEBHOOK_URL i miljön (sätts av run-daily.sh från ~/.vadkul-secrets/env)
+ *   - TG_BOT_TOKEN + TG_CHAT_ID i miljön (sätts av run-daily.sh från ~/.vadkul-secrets/env)
  *   - events.db i scraper-roten (samma som recordScrapeRun skriver till)
  */
 
@@ -32,11 +32,12 @@ import Database from 'better-sqlite3';
 import * as path from 'path';
 import 'dotenv/config';
 import { SOURCES } from '../sources/registry';
+import { sendMessage, isTelegramConfigured } from '../utils/telegram';
+import { preBlock, clampTelegram } from '../utils/telegramReport';
 
 const DB_PATH = process.env.SCRAPER_SQLITE_PATH
     ? path.resolve(process.env.SCRAPER_SQLITE_PATH)
     : path.resolve(__dirname, '../../events.db');
-const WEBHOOK = process.env.TEAMS_WEBHOOK_URL;
 
 const WINDOW = "-1 day";   // "senaste 24h"
 
@@ -218,74 +219,7 @@ function shortName(name: string, max = 22): string {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  Adaptive Card
-// ───────────────────────────────────────────────────────────────────────────
-
-function buildCard(rep: Report) {
-    const status = rep.errors === 0
-        ? { emoji: '✅', text: 'OK', color: 'good' }
-        : { emoji: '⚠️', text: `${rep.errors} fel`, color: 'warning' };
-
-    const body: any[] = [
-        { type: 'TextBlock', text: `🤖 VADKUL Scraper · ${fmtNow()}`,
-          weight: 'Bolder', size: 'Large', color: 'accent' },
-
-        { type: 'TextBlock', spacing: 'Small', wrap: true,
-          text: `${status.emoji} **${status.text}** · ${n(rep.runs)} körningar · ${fmtSpan(rep.spanMs)}` },
-        { type: 'TextBlock', spacing: 'None', wrap: true,
-          text: `📊 Aktiva **${n(rep.activeCount)}** / 😴 Inaktiva **${n(rep.inactiveCount)}**` },
-        { type: 'TextBlock', spacing: 'None', wrap: true, isSubtle: true,
-          text: `found ${n(rep.found)} → saved ${n(rep.saved)} · hidden ${n(rep.hidden)} · fel ${n(rep.errors)}` },
-    ];
-
-    // 🏆 Mest produktiva
-    body.push({ type: 'TextBlock', text: '🏆 Mest produktiva', weight: 'Bolder', spacing: 'Medium' });
-    body.push({ type: 'FactSet', facts: rep.topProducers.length
-        ? rep.topProducers.map(s => ({ title: shortName(s.hostName), value: `${n(s.saved)} nya` }))
-        : [{ title: '—', value: 'Inga events sparade senaste dygnet' }] });
-
-    // ⚠️ Behöver ses över
-    if (rep.needsReview.length) {
-        body.push({ type: 'TextBlock', text: '⚠️ Behöver ses över', weight: 'Bolder', spacing: 'Medium',
-                    color: 'warning' });
-        body.push({ type: 'TextBlock', isSubtle: true, spacing: 'None', size: 'Small',
-                    text: 'hög found men 0 saved' });
-        body.push({ type: 'FactSet', facts: rep.needsReview.map(s => ({
-            title: shortName(s.hostName),
-            value: `${n(s.found)} found · ${n(s.saved)} saved`,
-        })) });
-    }
-
-    // 😴 Inaktiva >24h
-    if (rep.inactive.length) {
-        const CAP = 15;
-        const shown = rep.inactive.slice(0, CAP)
-            .map(s => `${s.hostName}${s.freq !== 'daily' ? ` _(${s.freq})_` : ''}`)
-            .join(', ');
-        const extra = rep.inactive.length > CAP ? ` …+${rep.inactive.length - CAP} till` : '';
-        body.push({ type: 'TextBlock', text: `😴 Inaktiva >24h (${n(rep.inactive.length)})`,
-                    weight: 'Bolder', spacing: 'Medium' });
-        body.push({ type: 'TextBlock', wrap: true, isSubtle: true, size: 'Small',
-                    text: shown + extra });
-    }
-
-    return {
-        type: 'message',
-        attachments: [{
-            contentType: 'application/vnd.microsoft.card.adaptive',
-            content: {
-                $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
-                type: 'AdaptiveCard',
-                version: '1.4',
-                msteams: { width: 'Full' },
-                body,
-            },
-        }],
-    };
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-//  Plain-text rendering (för --dry / loggar)
+//  Plain-text rendering (Telegram <pre>, --dry och loggar)
 // ───────────────────────────────────────────────────────────────────────────
 
 function renderText(rep: Report): string {
@@ -335,31 +269,20 @@ async function main() {
         db.close();
     }
 
-    if (dry) {
-        console.log(renderText(rep));
-        console.log('\n── Adaptive Card JSON ──');
-        console.log(JSON.stringify(buildCard(rep), null, 2));
-        return;
-    }
+    const text = renderText(rep);
+    console.log(text);
+    if (dry) return;
 
-    if (!WEBHOOK) {
-        console.error('⚠️ TEAMS_WEBHOOK_URL inte satt — skippar Teams-postningen.');
-        console.log(renderText(rep));
+    if (!isTelegramConfigured()) {
+        console.error('⚠️ TG_BOT_TOKEN/TG_CHAT_ID inte satta — skippar Telegram-postningen.');
         process.exit(0);
     }
-
-    const res = await fetch(WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildCard(rep)),
-    });
-
-    if (res.status !== 200 && res.status !== 202) {
-        const txt = await res.text().catch(() => '');
-        console.error(`❌ Teams POST → HTTP ${res.status}: ${txt.slice(0, 300)}`);
+    const id = await sendMessage(clampTelegram(preBlock(text)));
+    if (!id) {
+        console.error('❌ Telegram: sendMessage misslyckades.');
         process.exit(1);
     }
-    console.log(`✅ Daglig scraper-rapport postad (HTTP ${res.status})`);
+    console.log(`✅ Daglig scraper-rapport postad till Telegram (msg ${id})`);
 }
 
 main().catch(err => {

@@ -39,6 +39,12 @@ export interface RawEvent {
     organizer?: string;
     /** Kategori om källan vet (annars klassificerar runnern via title+desc) */
     category?: string;
+    /**
+     * Extra ord till klassificeraren (WP-termer, genre-hintar) som INTE ska
+     * sparas i beskrivningen. Förr klistrades de på description och läckte
+     * ut på korten som taggsoppa.
+     */
+    classifyHints?: string;
     price?: string;
     /**
      * Per-event-värd för paraply-källor (församling, klubb, lokalkrets).
@@ -185,8 +191,9 @@ export type EngineName =
     // Nätverks-engines: en per paraply-API (hela nätverket = EN källa i registryt)
     | 'hembygd' | 'svenskakyrkan' | 'naturskyddsforeningen' | 'rotary' | 'rodakorset'
     | 'friluftsframjandet' | 'pro' | 'korpen' | 'riksteatern' | 'bibliotek' | 'raceid'
-    | 'bilda' | 'medborgarskolan' | 'abf' | 'slagthuset' | 'sv-vuxenskolan' | 'nortic' | 'cbis' | 'fhp'
-    | 'goteborgstad' | 'gotlandcom' | 'bergmancenter';
+    | 'bilda' | 'medborgarskolan' | 'abf' | 'slagthuset' | 'sv-vuxenskolan' | 'nortic' | 'cbis' | 'skordefest' | 'fhp'
+    | 'goteborgstad' | 'gotlandcom' | 'bergmancenter' | 'turid' | 'hbgevent' | 'bestevent' | 'accentfeed' | 'optimizely-events' | 'sportality' | 'sportomedia'
+    | 'gotevent' | 'visitlulea';
 
 /**
  * Skickas in i engine vid körning — tid, loggning, fetch.

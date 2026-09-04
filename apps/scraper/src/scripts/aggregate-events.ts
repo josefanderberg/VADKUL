@@ -1,38 +1,5 @@
-/**
- * Publik länk = rå URL minus FRÄMMANDE affiliate-parametrar. Ticketmaster-
- * skrapern klistrade 31 maj–28 jul ?c=8469859&ac=1 på länkarna — koden är
- * inte vår (Impact-publisher 7528311) och att servera den är precis vad
- * TM/Impact-compliance underkänner vid programansökan. URL:en i DB rörs
- * inte (primärnyckel + share-slug-bas); städningen sker här i utkanten.
- * När vårt Impact-program är godkänt: lägg den RIKTIGA spårningslänken här.
- */
-const FOREIGN_AFFILIATE_PARAMS: Record<string, string[]> = {
-    'ticketmaster.': ['c', 'ac'],
-    'universe.com': ['c', 'ac', 'ref'],
-};
-/** Impact Radius-/affiliate-redirectdomäner: länken bär destinationen i ?u= */
-const AFFILIATE_REDIRECT_HOST = /\.(evyy\.net|sjv\.io|pxf\.io|7eer\.net|ojrq\.net|i\d+\.net|prf\.hn|go2cloud\.org)$/i;
-export function publicUrl(raw: string): string {
-    try {
-        let u = new URL(raw);
-        // Någon ANNANS Impact-redirect ("ticketmaster.evyy.net/c/8469859/…?u=…"):
-        // packa upp till den riktiga sidan — vi ska aldrig skicka trafik genom
-        // främmande spårningslänkar, oavsett vems.
-        if (AFFILIATE_REDIRECT_HOST.test(u.hostname)) {
-            const inner = u.searchParams.get('u') || u.searchParams.get('url');
-            if (inner && /^https?:\/\//.test(inner)) u = new URL(inner);
-        }
-        for (const [hostPart, params] of Object.entries(FOREIGN_AFFILIATE_PARAMS)) {
-            if (!u.hostname.includes(hostPart)) continue;
-            if (u.searchParams.get('c') !== '8469859' && !u.searchParams.has('ref')) continue;
-            params.forEach((k) => u.searchParams.delete(k));
-        }
-        if (u.searchParams.get('utm_medium') === 'affiliate') u.searchParams.delete('utm_medium');
-        return u.toString().replace(/\?$/, '');
-    } catch { return raw; }
-}
-
 import { db } from '../config/firebase';
+import { publicUrl } from '../utils/affiliateUrl';
 import { sqlite } from '../utils/sqliteHelper';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -252,15 +219,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             }
             if (current.length > 0) shards.push(current);
             console.log(`      ℹ️  Destinations är ${(destBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar (byte-budget)`);
-            await db.collection('aggregatedEvents').doc('destinations').set({
-                updatedAt, shardCount: shards.length, totalEvents: destinations.length,
-            });
-            for (let i = 0; i < shards.length; i++) {
-                await db.collection('aggregatedEvents').doc(`destinations_${i}`).set({
-                    updatedAt, shardIndex: i, events: shards[i],
-                });
-            }
-            await deleteShards(db, 'destinations_', shards.length);
+            await uploadShardedLayer(db, 'destinations',
+                { updatedAt, shardCount: shards.length, totalEvents: destinations.length },
+                shards.map((events, i) => ({ updatedAt, shardIndex: i, events })));
             console.log(`      ✅ Uploaded "destinations" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -284,15 +245,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
                 shards.push(cards.slice(i, i + SHARD_SIZE));
             }
             console.log(`      ℹ️  Cards är ${(cardsBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
-            await db.collection('aggregatedEvents').doc('cards').set({
-                updatedAt, shardCount: shards.length, totalEvents: cards.length,
-            });
-            for (let i = 0; i < shards.length; i++) {
-                await db.collection('aggregatedEvents').doc(`cards_${i}`).set({
-                    updatedAt, shardIndex: i, events: shards[i],
-                });
-            }
-            await deleteShards(db, 'cards_', shards.length);
+            await uploadShardedLayer(db, 'cards',
+                { updatedAt, shardCount: shards.length, totalEvents: cards.length },
+                shards.map((events, i) => ({ updatedAt, shardIndex: i, events })));
             console.log(`      ✅ Uploaded "cards" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -330,15 +285,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             }
             if (Object.keys(current).length > 0) shards.push(current);
             console.log(`      ℹ️  Descriptions är ${(descBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
-            await db.collection('aggregatedEvents').doc('descriptions').set({
-                updatedAt, shardCount: shards.length, totalEntries: entries.length,
-            });
-            for (let i = 0; i < shards.length; i++) {
-                await db.collection('aggregatedEvents').doc(`descriptions_${i}`).set({
-                    updatedAt, shardIndex: i, data: shards[i],
-                });
-            }
-            await deleteShards(db, 'descriptions_', shards.length);
+            await uploadShardedLayer(db, 'descriptions',
+                { updatedAt, shardCount: shards.length, totalEntries: entries.length },
+                shards.map((data, i) => ({ updatedAt, shardIndex: i, data })));
             console.log(`      ✅ Uploaded "descriptions" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -351,6 +300,29 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
 /** Radera cards_<N> shards som inte längre används. */
 async function deleteCardsShards(db: FirebaseFirestore.Firestore, keepBelow: number = 0): Promise<void> {
     return deleteShards(db, 'cards_', keepBelow);
+}
+
+/**
+ * Shardad uppladdning i LÄSSÄKER ordning: alla shards FÖRST, index-dokumentet
+ * SIST, städning av överblivna shards därefter. Webbens API-route läser index
+ * → shards och CACHAR resultatet nycklat på index-docens updatedAt — skrevs
+ * indexet först (som t.o.m. 31/8) kunde en läsare mitt i fönstret få nytt
+ * index + gamla shards, och den blandningen fastnade i cachen en hel
+ * aggregatgeneration (hände skarpt 2026-08-31 ~13:26Z). Med index sist pekar
+ * en färsk updatedAt alltid på fullt skrivna shards.
+ */
+export async function uploadShardedLayer(
+    db: FirebaseFirestore.Firestore,
+    baseDocId: string,
+    indexPayload: Record<string, unknown>,
+    shardPayloads: Record<string, unknown>[],
+): Promise<void> {
+    const prefix = `${baseDocId}_`;
+    for (let i = 0; i < shardPayloads.length; i++) {
+        await db.collection('aggregatedEvents').doc(`${prefix}${i}`).set(shardPayloads[i]);
+    }
+    await db.collection('aggregatedEvents').doc(baseDocId).set(indexPayload);
+    await deleteShards(db, prefix, shardPayloads.length);
 }
 
 /**

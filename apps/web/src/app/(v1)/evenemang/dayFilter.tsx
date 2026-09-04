@@ -1,19 +1,14 @@
 'use client';
 
-import { createContext, useContext, useState, useTransition, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { Period } from './periods';
 
 // Delat dagfilter för stads-/kategorisidorna: kart-heron och daglistan ska
 // vara SAMMA filter — väljer man "Idag" på kartan filtreras listan, och
 // tvärtom. Staten bor här i en provider som sidan lägger runt både heron och
 // EventDayList; DayFilteredList äger inte längre sitt urval själv.
-//
-// requestFocus är kartans väg IN i listan: klick på ett event i kart-popupen
-// VÄLJER eventets dag direkt här (då finns raden garanterat — dagurvalet blir
-// den enda dagen) och listan scrollar till raden och blinkar den
-// (DayFilteredList). Noncen gör att samma event kan fokuseras två gånger i
-// rad. Dagbytet körs som transition — det ritar om hela daglistan och får
-// inte blockera tappen.
+// (requestFocus-flödet — kart-popupens scrolla-till-raden — togs bort 30/8
+// tillsammans med hero-popupen: brick-klick går numera till stora kartan.)
 
 // ('nextHour'-varianten ("Nästa timmen"-chippen) togs bort 18/8 på ägarbeslut
 // — onödig. Lägg inte tillbaka den.)
@@ -21,39 +16,49 @@ export type DaySel =
     | { kind: 'period'; period: Period }
     | { kind: 'day'; key: string };
 
-export type FocusRequest = { id: string; dayKey: string; nonce: number };
-
 type DayFilterState = {
     sel: DaySel;
     setSel: (s: DaySel) => void;
     hours: number[];
     setHours: (h: number[] | ((prev: number[]) => number[])) => void;
-    focus: FocusRequest | null;
-    requestFocus: (id: string, dayKey: string) => void;
-    clearFocus: () => void;
+    /** KATEGORIN (Josef 2/9: "byte utan sidladdning") — datanyckeln
+     *  ('family', 'music' …) eller null = alla. Sätts av CategoryChips ur
+     *  URL:en; listan (och heron) filtrerar på den. På kategorisidan är
+     *  raderna redan kategorifiltrerade av servern, så värdet är ofarligt. */
+    category: string | null;
+    setCategory: (c: string | null) => void;
+    /** OPT-IN-KÄLLORNA (Josef 2/9): de VALDA källnycklarna (Mer-raden i
+     *  CategoryChips: 'svenskakyrkan' | 'pro' | 'korpen', sorterade) och de
+     *  hämtade dagarna (stadens opt-in.json, serverns radform, alla tre
+     *  källorna) som DayFilteredList filtrerar per källa och syr in i listan.
+     *  null = inte hämtat än. Alltid tomt vid SSR. */
+    optInSources: string[];
+    setOptInSources: (s: string[]) => void;
+    optInDays: OptInDay[] | null;
+    setOptInDays: (d: OptInDay[] | null) => void;
+    /** Antal event per källa ur JSON:en — chipsens siffror. */
+    optInTotals: Record<string, number> | null;
+    setOptInTotals: (t: Record<string, number> | null) => void;
 };
+
+/** Samma form som DayFilteredList:s ListedDay — typad löst här för att
+ *  slippa en importcirkel (DayFilteredList importerar den här modulen). */
+export type OptInDay = { key: string; label: string; short: string; hourCounts: number[]; events: unknown[] };
 
 const DayFilterCtx = createContext<DayFilterState | null>(null);
 
 export function DayFilterProvider({ children }: { children: ReactNode }) {
     const [sel, setSel] = useState<DaySel>({ kind: 'period', period: 'all' });
     const [hours, setHours] = useState<number[]>([]);
-    const [focus, setFocus] = useState<FocusRequest | null>(null);
-    const [, startTransition] = useTransition();
-
-    const requestFocus = (id: string, dayKey: string) =>
-        startTransition(() => {
-            // Välj dagen och släpp timfiltret HÄR (inte i en effekt i listan)
-            // — raden ska finnas i urvalet innan scrollen letar efter den.
-            setSel({ kind: 'day', key: dayKey });
-            setHours([]);
-            setFocus(prev => ({ id, dayKey, nonce: (prev?.nonce ?? 0) + 1 }));
-        });
+    const [category, setCategory] = useState<string | null>(null);
+    const [optInSources, setOptInSources] = useState<string[]>([]);
+    const [optInDays, setOptInDays] = useState<OptInDay[] | null>(null);
+    const [optInTotals, setOptInTotals] = useState<Record<string, number> | null>(null);
 
     return (
         <DayFilterCtx.Provider value={{
-            sel, setSel, hours, setHours,
-            focus, requestFocus, clearFocus: () => setFocus(null),
+            sel, setSel, hours, setHours, category, setCategory,
+            optInSources, setOptInSources, optInDays, setOptInDays, optInTotals, setOptInTotals,
         }}>
             {children}
         </DayFilterCtx.Provider>

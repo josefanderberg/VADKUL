@@ -1,32 +1,33 @@
 /**
  * post-quality-stats.ts
  *
- * Postar ett ANDRA Teams-kort (~1 min efter huvudkortet från run-daily.sh).
+ * Postar ett ANDRA Telegram-meddelande (strax efter huvudrapporten från run-daily.sh).
  * Innehåller LLM-audit-kvalitet och 7-dagars tillväxttrend:
  *
  *   - Pris-extraktion: hur många av senaste dygnets events fick pris av LLM?
  *   - Kategori-fördelning: hur fördelar sig de nya events över taxonomin?
  *   - AI-verdikt: ok / suspect / junk / inte-auditerade
  *   - 7-dagars tillväxt: hur många events lades till per dag senaste veckan,
- *     med Unicode bar-chart (Teams Adaptive Cards stöder inte riktiga grafer).
+ *     med Unicode bar-chart i <pre>.
  *
- * Posten görs direkt till TEAMS_WEBHOOK_URL — ingen Python-heredoc, ingen
- * shell-parsing. Allt går genom Node + better-sqlite3.
+ * Posten görs via utils/telegram — ingen Python-heredoc, ingen shell-parsing.
+ * Allt går genom Node + better-sqlite3.
  *
  * Användning:
  *   npm run quality-stats         # postar och avslutar
  *
  * Beroenden:
- *   - TEAMS_WEBHOOK_URL i miljön (sätts av run-daily.sh från ~/.vadkul-secrets/env)
+ *   - TG_BOT_TOKEN + TG_CHAT_ID i miljön (sätts av run-daily.sh från ~/.vadkul-secrets/env)
  *   - events.db i scraper-roten (samma som upsertEvent skriver till)
  */
 
 import Database from 'better-sqlite3';
 import * as path from 'path';
 import 'dotenv/config';
+import { sendMessage, isTelegramConfigured } from '../utils/telegram';
+import { factLines, section, preBlock, clampTelegram, escapeHtml } from '../utils/telegramReport';
 
 const DB_PATH = path.resolve(__dirname, '../../events.db');
-const WEBHOOK = process.env.TEAMS_WEBHOOK_URL;
 
 // ───────────────────────────────────────────────────────────────────────────
 //  Queries
@@ -153,91 +154,51 @@ function asciiBars(rows: DayRow[]): string {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  Adaptive Card
+//  Telegram-text (HTML)
 // ───────────────────────────────────────────────────────────────────────────
 
-function buildCard(
+export function buildText(
     price:    { total: number; withPrice: number },
     cats:     KvRow[],
     verdicts: KvRow[],
     emojis:   { unique: number; withEmoji: number; top: KvRow[] },
     trend:    DayRow[],
-) {
+): string {
     const totalLast24h = price.total;
     const trendTotal = trend.reduce((s, r) => s + r.n, 0);
     const trendAvg   = Math.round(trendTotal / 7);
-    const trendToday = trend[trend.length - 1].n;
+    const trendToday = trend.length ? trend[trend.length - 1].n : 0;
     const trendDelta = trendToday - trendAvg;
     const arrow      = trendDelta > 0 ? '📈' : trendDelta < 0 ? '📉' : '➡️';
 
-    // Pris-fakta
-    const priceFacts = [
-        { title: '🆕 Nya events (24h)',   value: String(totalLast24h) },
-        { title: '💰 Med LLM-pris',       value: `${price.withPrice} (${pct(price.withPrice, totalLast24h)})` },
-    ];
-
-    // Kategori-fakta
-    const catFacts = cats.length === 0
-        ? [{ title: '—', value: 'Inga nya events sista dygnet' }]
-        : cats.map(c => ({
-            title: `${CATEGORY_EMOJI[c.k] ?? '•'} ${c.k}`,
-            value: `${c.n} (${pct(c.n, totalLast24h)})`,
-        }));
-
-    // Verdikt-fakta — alltid visa alla 4 buckets även om noll, så man ser täckningsgrad
     const verdictMap = new Map(verdicts.map(v => [v.k, v.n]));
     const ok       = verdictMap.get('ok') ?? 0;
     const suspect  = verdictMap.get('suspect') ?? 0;
     const junk     = verdictMap.get('junk') ?? 0;
     const noAudit  = verdictMap.get('inte-auditerad') ?? 0;
-    const verdictFacts = [
-        { title: '✅ ok',              value: `${ok} (${pct(ok, totalLast24h)})` },
-        { title: '❓ suspect',         value: `${suspect} (${pct(suspect, totalLast24h)})` },
-        { title: '🗑️ junk',           value: `${junk} (${pct(junk, totalLast24h)})` },
-        { title: '⏳ inte-auditerade', value: `${noAudit} (${pct(noAudit, totalLast24h)})` },
-    ];
 
-    return {
-        type: 'message',
-        attachments: [{
-            contentType: 'application/vnd.microsoft.card.adaptive',
-            content: {
-                $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
-                type: 'AdaptiveCard',
-                version: '1.4',
-                msteams: { width: 'Full' },
-                body: [
-                    { type: 'TextBlock', text: '📊 VADKUL kvalitet — senaste dygnet',
-                      weight: 'Bolder', size: 'Large', color: 'accent' },
-
-                    { type: 'TextBlock', text: '💰 Pris-extraktion',
-                      weight: 'Bolder', spacing: 'Medium' },
-                    { type: 'FactSet', facts: priceFacts },
-
-                    { type: 'TextBlock', text: '🏷️ Kategori-fördelning (nya events)',
-                      weight: 'Bolder', spacing: 'Medium' },
-                    { type: 'FactSet', facts: catFacts },
-
-                    { type: 'TextBlock', text: '🤖 AI-audit verdikt',
-                      weight: 'Bolder', spacing: 'Medium' },
-                    { type: 'FactSet', facts: verdictFacts },
-
-                    { type: 'TextBlock',
-                      text: `🎨 Emoji-fördelning — ${emojis.unique} unika på ${emojis.withEmoji} events (${pct(emojis.withEmoji, totalLast24h)})`,
-                      weight: 'Bolder', spacing: 'Medium' },
-                    { type: 'FactSet',
-                      facts: emojis.top.length === 0
-                          ? [{ title: '—', value: 'Ingen LLM-emoji satt i nya events än' }]
-                          : emojis.top.map(e => ({ title: e.k, value: `${e.n} (${pct(e.n, emojis.withEmoji)})` })) },
-
-                    { type: 'TextBlock', text: `${arrow} 7-dagars tillväxt — totalt ${trendTotal}, snitt ${trendAvg}/dygn`,
-                      weight: 'Bolder', spacing: 'Medium' },
-                    { type: 'TextBlock', text: asciiBars(trend),
-                      wrap: true, fontType: 'Monospace', size: 'Small' },
-                ],
-            },
-        }],
-    };
+    return [
+        '📊 <b>VADKUL kvalitet — senaste dygnet</b>',
+        section('💰 Pris-extraktion', factLines([
+            { title: '🆕 Nya events (24h)', value: String(totalLast24h) },
+            { title: '💰 Med LLM-pris',     value: `${price.withPrice} (${pct(price.withPrice, totalLast24h)})` },
+        ])),
+        section('🏷️ Kategori-fördelning (nya events)', cats.length === 0
+            ? '<i>Inga nya events sista dygnet</i>'
+            : factLines(cats.map(c => ({ title: `${CATEGORY_EMOJI[c.k] ?? '•'} ${c.k}`, value: `${c.n} (${pct(c.n, totalLast24h)})` })))),
+        section('🤖 AI-audit verdikt', factLines([
+            { title: '✅ ok',              value: `${ok} (${pct(ok, totalLast24h)})` },
+            { title: '❓ suspect',         value: `${suspect} (${pct(suspect, totalLast24h)})` },
+            { title: '🗑️ junk',           value: `${junk} (${pct(junk, totalLast24h)})` },
+            { title: '⏳ inte-auditerade', value: `${noAudit} (${pct(noAudit, totalLast24h)})` },
+        ])),
+        section(`🎨 Emoji — ${emojis.unique} unika på ${emojis.withEmoji} events (${pct(emojis.withEmoji, totalLast24h)})`,
+            emojis.top.length === 0
+                ? '<i>Ingen LLM-emoji satt i nya events än</i>'
+                : factLines(emojis.top.map(e => ({ title: e.k, value: `${e.n} (${pct(e.n, emojis.withEmoji)})` })))),
+        section(`${arrow} 7-dagars tillväxt — totalt ${trendTotal}, snitt ${trendAvg}/dygn`,
+            trend.length ? preBlock(asciiBars(trend)) : escapeHtml('(ingen data)')),
+    ].join('\n');
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -245,36 +206,24 @@ function buildCard(
 // ───────────────────────────────────────────────────────────────────────────
 
 async function main() {
-    if (!WEBHOOK) {
-        console.error('⚠️ TEAMS_WEBHOOK_URL inte satt — skippar quality-stats-postningen.');
-        process.exit(0);
-    }
-
     const db = new Database(DB_PATH, { readonly: true });
+    let text: string;
     try {
-        const card = buildCard(
-            priceStats(db),
-            categoryStats(db),
-            verdictStats(db),
-            emojiStats(db),
-            trend7d(db),
-        );
-
-        const res = await fetch(WEBHOOK, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(card),
-        });
-
-        if (res.status !== 200 && res.status !== 202) {
-            const body = await res.text().catch(() => '');
-            console.error(`❌ Teams POST → HTTP ${res.status}: ${body.slice(0, 300)}`);
-            process.exit(1);
-        }
-        console.log(`✅ Quality-stats postat (HTTP ${res.status})`);
+        text = buildText(priceStats(db), categoryStats(db), verdictStats(db), emojiStats(db), trend7d(db));
     } finally {
         db.close();
     }
+    if (process.argv.includes('--dry')) { console.log(text); return; }
+    if (!isTelegramConfigured()) {
+        console.error('⚠️ TG_BOT_TOKEN/TG_CHAT_ID inte satta — skippar quality-stats-postningen.');
+        process.exit(0);
+    }
+    const id = await sendMessage(clampTelegram(text));
+    if (!id) {
+        console.error('❌ Telegram: sendMessage misslyckades.');
+        process.exit(1);
+    }
+    console.log(`✅ Quality-stats postat till Telegram (msg ${id})`);
 }
 
 main().catch(err => {

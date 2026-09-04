@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractCrunchoState, pickOccurrence, mapCrunchoEvent, CrunchoEvent } from './cruncho';
+import { extractCrunchoState, pickOccurrence, mapCrunchoEvent, mapCrunchoRouteEvent, mapCrunchoApiEvent, CrunchoEvent } from './cruncho';
 
 const CFG = { pageUrl: 'https://visitlund.se/evenemangskalender', defaultCity: 'Lund' };
 const WINDOW_START = new Date('2026-07-09T00:00:00+02:00');
@@ -98,5 +98,125 @@ describe('mapCrunchoEvent', () => {
     it('nollkoordinater skickas inte vidare', () => {
         const ev = mapCrunchoEvent({ ...base, mapCoordinates: { lat: 0, lng: 0 } }, CFG, WINDOW_START)!;
         expect(ev.coords).toBeUndefined();
+    });
+});
+
+describe('mapCrunchoRouteEvent', () => {
+    const CFG = { pageUrl: 'https://www.ange.se/evenemang', defaultCity: 'Ånge' };
+    const E = {
+        id: 'OnA5R0gdaQTG8OAGgErG',
+        name: 'Kulturskolan - pop-up i Konsthallen!',
+        from: '2026-08-27T10:00:00.000+02:00',
+        to: '2026-08-27T16:00:00.000+02:00',
+        uri: '/evenemang/evenemang/2026-08-21-kulturskolan---pop-up-i-konsthallen',
+        venue: 'Järnvägsgatan 3',
+        address: 'Järnvägsgatan 3, 841 33 Ånge, Sverige',
+        organizer: 'Kulturskolan',
+        imageUrl: 'https://s3.cruncho.co/eventmanager-assets/utstallning.jpg',
+        description: 'Välkommen att ta del av Kulturskolans verksamhet.',
+    };
+
+    it('gör uri absolut mot kalendersidan', () => {
+        expect(mapCrunchoRouteEvent(E, CFG)!.url)
+            .toBe('https://www.ange.se/evenemang/evenemang/2026-08-21-kulturskolan---pop-up-i-konsthallen');
+    });
+
+    it('läser from/to som lokal tid med offset', () => {
+        const e = mapCrunchoRouteEvent(E, CFG)!;
+        expect(e.startDate.toISOString()).toBe('2026-08-27T08:00:00.000Z');
+        expect(e.endDate?.toISOString()).toBe('2026-08-27T14:00:00.000Z');
+        expect(e.hasSpecificTime).toBe(true);
+    });
+
+    it('sätter arrangören som hostName och bär full adress', () => {
+        const e = mapCrunchoRouteEvent(E, CFG)!;
+        expect(e.hostName).toBe('Kulturskolan');
+        expect(e.address).toBe('Järnvägsgatan 3, 841 33 Ånge, Sverige');
+        expect(e.city).toBe('Ånge');
+    });
+
+    it('lämnar hasSpecificTime öppen för heldagsposter', () => {
+        expect(mapCrunchoRouteEvent({ ...E, from: '2026-08-27T00:00:00.000+02:00' }, CFG)!.hasSpecificTime).toBeUndefined();
+    });
+
+    it('avvisar poster utan namn, from eller uri', () => {
+        expect(mapCrunchoRouteEvent({ ...E, name: '' }, CFG)).toBeNull();
+        expect(mapCrunchoRouteEvent({ ...E, from: undefined }, CFG)).toBeNull();
+        expect(mapCrunchoRouteEvent({ ...E, uri: undefined }, CFG)).toBeNull();
+        expect(mapCrunchoRouteEvent({ ...E, from: 'aldrig' }, CFG)).toBeNull();
+    });
+
+    it('klarar arrangör satt till null', () => {
+        const e = mapCrunchoRouteEvent({ ...E, organizer: null }, CFG)!;
+        expect(e.hostName).toBeUndefined();
+    });
+});
+
+describe('mapCrunchoApiEvent', () => {
+    const CFG = {
+        pageUrl: 'https://lomma.se/evenemang',
+        hostedApi: { destination: 'lomma', siteBase: 'https://burlovlommastaffanstorp.cruncho.co' },
+        defaultCity: 'Lomma',
+    };
+    const E = {
+        id: 'klXDgp',
+        name: 'Fladdermössens mystiska värld',
+        description: '<p>Följ med på fladdermussafari.</p>',
+        eventStart: ['2026-08-27T18:00:00.000Z', '2026-09-03T18:00:00.000Z'],
+        eventEnd: ['2026-08-27T19:30:00.000Z', '2026-09-03T19:30:00.000Z'],
+        hideEventStartTime: false,
+        address: 'Dalbyvägen 51, 232 31 Arlöv, Sweden',
+        city: 'Arlöv',
+        eventVenueName: 'Falsterbo',
+        organizer: 'Naturskolan',
+        isFree: false,
+        price: 440,
+        geometry: { lat: 55.397121, lng: 12.8415278 },
+        photos: [{ url: 'https://s3.cruncho.co/eventmanager-assets/x.jpg' }],
+    };
+
+    it('ger ett event per tillfälle', () => {
+        expect(mapCrunchoApiEvent(E, CFG)).toHaveLength(2);
+    });
+
+    it('bygger /sv-SE/place/<id>-länk, unik per tillfälle', () => {
+        const [a, b] = mapCrunchoApiEvent(E, CFG);
+        expect(a.url).toBe('https://burlovlommastaffanstorp.cruncho.co/sv-SE/place/klXDgp#2026-08-27');
+        expect(b.url).toContain('#2026-09-03');
+    });
+
+    it('tar orten per event — destinationen spänner flera kommuner', () => {
+        expect(mapCrunchoApiEvent(E, CFG)[0].city).toBe('Arlöv');
+        expect(mapCrunchoApiEvent({ ...E, city: undefined }, CFG)[0].city).toBe('Lomma');
+    });
+
+    it('formaterar priset som tal, inte sträng', () => {
+        expect(mapCrunchoApiEvent(E, CFG)[0].price).toBe('440 kr');
+        expect(mapCrunchoApiEvent({ ...E, price: null }, CFG)[0].price).toBeUndefined();
+        expect(mapCrunchoApiEvent({ ...E, isFree: true }, CFG)[0].price).toBe('Gratis');
+    });
+
+    it('bär koordinater och bild', () => {
+        const e = mapCrunchoApiEvent(E, CFG)[0];
+        expect(e.coords).toEqual([55.397121, 12.8415278]);
+        expect(e.imageUrl).toContain('cruncho.co');
+        expect(e.hasSpecificTime).toBe(true);
+    });
+
+    it('litar inte på klockslaget när arrangören dolt det', () => {
+        expect(mapCrunchoApiEvent({ ...E, hideEventStartTime: true }, CFG)[0].hasSpecificTime).toBeUndefined();
+    });
+
+    it('hoppar över dolda poster och poster utan tillfällen', () => {
+        expect(mapCrunchoApiEvent({ ...E, hide: true }, CFG)).toEqual([]);
+        expect(mapCrunchoApiEvent({ ...E, eventStart: [] }, CFG)).toEqual([]);
+        expect(mapCrunchoApiEvent({ ...E, name: '' }, CFG)).toEqual([]);
+        expect(mapCrunchoApiEvent({ ...E, id: undefined }, CFG)).toEqual([]);
+    });
+
+    it('klarar att eventEnd är kortare än eventStart', () => {
+        const e = mapCrunchoApiEvent({ ...E, eventEnd: ['2026-08-27T19:30:00.000Z'] }, CFG);
+        expect(e[0].endDate).toBeDefined();
+        expect(e[1].endDate).toBeUndefined();
     });
 });

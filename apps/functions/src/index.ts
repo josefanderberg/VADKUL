@@ -1070,6 +1070,10 @@ export const confirmBoost = functions
 
         if (result.applied) {
             console.log(`[boost] Event ${eventId} boostat ${boostDays} dagar via confirmBoost (session ${sessionId}, user ${uid}).`);
+            // Belopp/valuta från Stripe-sessionen följer med i svaret så
+            // klienten kan logga köpet i Analytics — beloppet kommer alltid
+            // härifrån, aldrig från klientens prisetiketter.
+            return { ...result, amountTotal: session.amount_total, currency: session.currency };
         }
         return result;
     });

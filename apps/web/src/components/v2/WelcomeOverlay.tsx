@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowRight, Hand, Heart } from 'lucide-react';
+import { ArrowRight, CalendarPlus, Hand } from 'lucide-react';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from '@/lib/firebase';
 
@@ -17,6 +17,12 @@ interface WelcomeOverlayProps {
      *  visas inte längre automatiskt vid sidladdning utan öppnas från
      *  info-knappen, och måste kunna öppnas igen efteråt. */
     onClose?: () => void;
+    /** Sant när ett eventkort är öppet (t.ex. djuplänk från en stadssida).
+     *  Då lägger sig rutan UNDER kortet (Josef 29/8): den som klickat sig hit
+     *  från en stadssida ska se eventet direkt, inte mötas av onboarding.
+     *  Rutan väntar bakom och står kvar framför när kortet stängts. Även
+     *  tangenterna (Escape/Tab-fällan) släpps så länge kortet ligger överst. */
+    underCard?: boolean;
 }
 
 /** Exit-animationens längd — skickas till CSS via --welcome-exit-ms så de inte kan glida isär. */
@@ -78,7 +84,7 @@ function useCountUp(target: number, durationMs = 1200) {
  * live-räknare och en zoom-exit ner i kartan.
  * Återbesökare får allt direkt utan stagger (.welcome-fast).
  */
-export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose }: WelcomeOverlayProps) {
+export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose, underCard = false }: WelcomeOverlayProps) {
     const [open, setOpen] = useState(true);
     const [closing, setClosing] = useState(false);
     const [returning, setReturning] = useState(false);
@@ -90,6 +96,8 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     onCloseRef.current = onClose;
 
     const shownCount = useCountUp(weekEventCount ?? 0);
+    // Idag-siffran räknas upp precis som veckosiffran (Josef 1/9).
+    const shownToday = useCountUp(todayEventCount ?? 0);
 
     // Före första målningen så snabbspåret inte flimrar fram ur intro-animationen.
     useIsoLayoutEffect(() => {
@@ -116,7 +124,10 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     }, []);
 
     // Escape stänger; Tab hålls kvar inne i dialogen (kartkontrollerna ligger bakom).
+    // Under ett eventkort släpps tangenterna helt — annars stal Tab-fällan
+    // fokus från kortet (chattfältet m.m.) och Escape stängde rutan osynligt.
     useEffect(() => {
+        if (underCard) return;
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 track('welcome_dismiss');
@@ -141,7 +152,7 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [dismiss]);
+    }, [dismiss, underCard]);
 
     if (!open) return null;
 
@@ -149,6 +160,11 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     // ovanför bär "vad är det här", och de tre sakerna man själv kan göra
     // (tipsa/önska/skapa) har flyttat till ett EGET steg efter att rutan
     // stängts — de trängdes ihjäl här inne (Josef 14/8: "det blir för mycket").
+    // Rad 2 säljer KONTOT (Josef 1/9: "jag vill ju att folk ska registrera
+    // sig och skapa egna event — det hade varit ett mål"): sedan actionrutan
+    // (steg 2) revs 26/8 nämndes "lägg upp egna event" ingenstans i
+    // onboardingen. Grönt — egna/VADKUL-event är gröna i produkten.
+    // (Spara/dela-raden fick lämna plats; max TVÅ rader, Josef 14/8.)
     const rows = [
         {
             chip: 'bg-[#006AA7]/10',
@@ -156,18 +172,18 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
             text: <>Tryck <span className="font-bold text-slate-900">var som helst på kartan</span> för att se vad som händer just där.</>,
         },
         {
-            chip: 'bg-rose-100',
-            icon: <Heart size={19} className="text-rose-500" />,
-            text: <>Spara favoriter, dela med vänner &amp; håll koll på din stad.</>,
+            chip: 'bg-emerald-100',
+            icon: <CalendarPlus size={19} className="text-emerald-600" />,
+            text: <>Med ett gratis konto kan du <span className="font-bold text-slate-900">lägga upp egna event</span> och spara favoriter.</>,
         },
     ];
 
     return (
         <div
             role="dialog"
-            aria-modal="true"
+            aria-modal={!underCard}
             aria-label="Välkommen till VADKUL"
-            className={`fixed inset-0 z-[2000] flex items-center justify-center p-4 ${closing ? 'welcome-backdrop-out' : ''}`}
+            className={`fixed inset-0 ${underCard ? 'z-[1240]' : 'z-[2000]'} flex items-center justify-center p-4 ${closing ? 'welcome-backdrop-out' : ''}`}
             style={{ '--welcome-exit-ms': `${EXIT_MS}ms` } as React.CSSProperties}
         >
             {/* Duken är MEDVETET tunn (Josef 13/8): bakom den reser kartan genom
@@ -184,9 +200,23 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                 } ${closing ? 'welcome-card-out' : 'animate-in fade-in zoom-in-95 duration-300'}`}
             >
                 {/* ── Himmel: sol + drivande moln + svävande maskot ── */}
-                <div className="relative h-[132px] bg-gradient-to-b from-[#b8e0ff] via-[#e3f3ff] to-white overflow-hidden" aria-hidden="true">
-                    {/* Sol i hörnet (svenskgul, klipps mjukt av kortets rundning) */}
-                    <div className="welcome-sun absolute -top-7 -right-7 w-24 h-24 rounded-full bg-[#FECC02]" />
+                <div className="relative h-[132px] overflow-hidden" aria-hidden="true">
+                    {/* Himlen ANDAS (1/9): gradientlagret är HÖGRE än headern
+                        (164px mot 132) och glider sakta ner/upp — det blå når
+                        ibland längre ner innan det vänder. */}
+                    {/* Stoppen är explicita (to-white vid 75 % = 132px av 176)
+                        så gradienten är HELT vit innan klippkanten i ALLA
+                        andningsfaser — annars mötte en blåtonad rest kortets
+                        vita kropp som en synlig kant (1/9). */}
+                    <div className="welcome-sky absolute inset-x-0 top-0 h-[176px] bg-gradient-to-b from-[#b8e0ff] via-[#e3f3ff] via-40% to-white to-[75%]" />
+                    {/* Solen driver sakta (wrappern) med roterande strålar
+                        bakom sig; pulsen ligger kvar på själva solen. */}
+                    <div className="welcome-sun-drift absolute -top-7 -right-7 w-24 h-24">
+                        {/* blur + radiell mask = mjuka strålar som tonar ut
+                            mot spetsarna (skarpa conic-kanter såg klippta ut). */}
+                        <div className="welcome-rays absolute -inset-16 rounded-full blur-[5px] [mask-image:radial-gradient(circle,black_30%,transparent_72%)]" />
+                        <div className="welcome-sun absolute inset-0 rounded-full bg-[#FECC02]" />
+                    </div>
 
                     {/* Småmoln som driver förbi i olika hastigheter */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -217,18 +247,26 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             ögat landar på efter loggan. VECKANS antal, inte
                             dagens (Josef 11/8) — veckovolymen är det som visar
                             hur stor databasen faktiskt är. */}
+                        {/* Tre rader (Josef 1/9 kväll, slutformen):
+                            "13 996 event" / "den närmaste veckan i hela
+                            Sverige" / "2 551 redan idag". Ordet event ligger
+                            med gemener och tydligt mellanrum bredvid siffran —
+                            versal-varianten med tracking läste som fastklistrad. */}
                         <p className="mt-1 flex items-baseline justify-center gap-2">
                             <span className="text-[38px] leading-none font-black tabular-nums text-[#006AA7]">
                                 {shownCount > 0 ? shownCount.toLocaleString('sv-SE') : '…'}
                             </span>
-                            <span className="text-[15px] font-black uppercase tracking-[0.1em] text-slate-500">event</span>
+                            <span className="text-[16px] font-black uppercase tracking-wide text-slate-500">event</span>
                         </p>
                         <p className="text-[13px] font-bold text-slate-500 leading-snug px-2">
                             den närmaste veckan i hela Sverige
-                            {todayEventCount && todayEventCount > 0
-                                ? <> — <span className="text-slate-700">{todayEventCount.toLocaleString('sv-SE')} redan idag</span></>
-                                : null}
                         </p>
+                        {todayEventCount && todayEventCount > 0 ? (
+                            <p className="mt-1.5 text-[16px] font-black text-slate-500 leading-none tabular-nums">
+                                <span className="text-[19px] text-emerald-600">{shownToday.toLocaleString('sv-SE')}</span>
+                                {' '}redan idag
+                            </p>
+                        ) : null}
                         {/* ("N börjar inom en timme"-badgen låg här — borttagen
                             26/8 på ägarbeslut: lägg inte tillbaka den.) */}
                     </div>
@@ -257,16 +295,16 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             Utforska kartan
                             <ArrowRight size={19} strokeWidth={2.5} className="transition-transform group-hover:translate-x-1" />
                         </button>
+                        {/* Riktig sekundärknapp, inte textlänk (Josef 1/9 —
+                            registreringar är målet): samma tyngd som primären
+                            minus fyllningen. */}
                         <button
                             type="button"
                             onClick={() => { track('welcome_create_account'); dismiss(true); }}
-                            className="w-full py-2.5 rounded-2xl text-[#006AA7] hover:bg-slate-50 font-bold text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#006AA7]/40"
+                            className="w-full py-3 rounded-2xl border-2 border-[#006AA7]/25 text-[#006AA7] hover:bg-[#006AA7]/5 hover:border-[#006AA7]/40 font-black text-sm active:scale-[0.98] transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#006AA7]/40"
                         >
                             Skapa gratis konto
                         </button>
-                        <p className="text-center text-[11px] font-semibold text-slate-400 mt-0.5">
-                            Gratis att utforska — inget konto behövs.
-                        </p>
                     </div>
                 </div>
             </div>

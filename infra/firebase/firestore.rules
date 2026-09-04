@@ -217,11 +217,18 @@ service cloud.firestore {
                 && (request.resource.data.url == ''
                     || (request.resource.data.url.size() <= 500
                         && request.resource.data.url.matches('https?://.*')))))
+        // Pris/entré är fritext ("120 kr", "Gratis", "Medlemmar halva priset")
+        // — samma brokiga fält som scrapern levererar. Bara längden begränsas;
+        // fältet visas som en etikett och kan aldrig bli en länk eller ett tal
+        // vi räknar på.
+        && (!request.resource.data.keys().hasAny(['price'])
+            || (request.resource.data.price is string
+                && request.resource.data.price.size() <= 40))
         && request.resource.data.keys().hasOnly([
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
             'description', 'createdAt', 'isLocationVerified', 'coverImage',
-            'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks'
+            'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks', 'price'
         ]);
 
       // Uppdatera: bara sitt eget användarskapade event — OCH aldrig de

@@ -30,7 +30,7 @@
  * Minne: web-snowball-state.json — varje probad domän får verdikt + datum så
  * samma FAIL inte re-probas varje vecka (re-probe efter RETRY_FAILED_DAYS).
  *
- * Loggmarkörer (för Teams/log-grep): "🕸️ SNÖBOLL:"-rader.
+ * Loggmarkörer (för rapport/log-grep): "🕸️ SNÖBOLL:"-rader.
  */
 
 import fs from 'fs';

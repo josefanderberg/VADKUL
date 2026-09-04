@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import TopNavProfile from './TopNavProfile';
 
 // Fast toppnav som delas av alla /evenemang-sidor (index, stad, kategori):
-// tillbaka-länken till vänster, kart-pillen till höger — ligger kvar i toppen
+// tillbaka-länken till vänster, kart-pillen + profilknappen till höger — ligger kvar i toppen
 // när listan scrollas. city-cta = samma glesa ljussvep som kartans hörn-pill
 // (globals.css; kräver position + overflow-hidden).
 export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan', ctaHref = '/' }: {
@@ -11,21 +12,29 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
     /** Kart-länken — stadssidorna skickar ?plats=… så kartan öppnas inzoomad på staden. */
     ctaHref?: string;
 }) {
+    // z-40: ÖVER allt i sidflödet. Kart-herons dagchips/CTA (z-20) och listans
+    // klistrade dagrubriker (z-20) låg förr på samma z-30 som naven och ritades
+    // över den när man scrollat (Josef 2/9).
     return (
-        <nav className="sticky top-0 z-30 bg-slate-50/90 backdrop-blur-md border-b border-slate-200/70">
+        <nav className="sticky top-0 z-40 bg-slate-50/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-slate-200/70 dark:border-zinc-800/70">
             <div className="max-w-2xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
                 <Link
                     href={backHref}
-                    className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] hover:text-[#005590] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm font-black text-[#006AA7] dark:text-sky-400 hover:text-[#005590] dark:hover:text-sky-300 transition-colors"
                 >
                     ← {backLabel}
                 </Link>
-                <Link
-                    href={ctaHref}
-                    className="city-cta gold-glow-pulse relative overflow-hidden inline-flex items-center justify-center px-4 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white font-black text-xs shadow-md hover:scale-105 transition-all shrink-0"
-                >
-                    {ctaLabel}
-                </Link>
+                {/* Kart-pillen + profilknappen (Josef 2/9: logga in/skapa konto
+                    direkt på stadssidan) — ihop till höger. */}
+                <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                        href={ctaHref}
+                        className="city-cta gold-glow-pulse relative overflow-hidden inline-flex items-center justify-center px-4 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white font-black text-xs shadow-md hover:scale-105 transition-all shrink-0"
+                    >
+                        {ctaLabel}
+                    </Link>
+                    <TopNavProfile />
+                </div>
             </div>
         </nav>
     );

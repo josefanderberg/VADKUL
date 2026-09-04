@@ -1,14 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment } from 'react';
 import { isVadkulHostedEvent, LinkEvent } from '../../types';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { dupKey, groupListDuplicates } from '../../utils/groupDups';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
 import { type BoostTier } from '../../services/boostService';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
-import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
+import EventCardGroupList from './EventCardGroupList';
+import { chooserDefaultTargetPx } from '@/utils/chooserSheetHeight';
+import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
+import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
@@ -175,12 +179,25 @@ const getDayLabel = (offset: number, days = 1) => {
     return capitalize(date.toLocaleDateString('sv-SE', { weekday: 'long' }));
 };
 
+/** En rad i närhetslistan: eventet + ev. dagens dubbletter — samma titel
+ *  ELLER omslagsbild under samma dag (grupperat i EventCard via
+ *  utils/groupDups, samma regel som stadssidornas daglista, Josef 1/9).
+ *  Dubbletterna radas upp bakom radens utfällning (NearbyDupList). */
+type NearbyItem = {
+    evt: LinkEvent;
+    distanceKm: number | null;
+    dups?: { evt: LinkEvent; distanceKm: number | null }[];
+};
+
 interface NearbyEventsListProps {
-    /** Kommande (ej passerade) event, redan sliced till synligt antal. */
-    upcomingItems: { evt: LinkEvent; distanceKm: number | null }[];
+    /** Kommande (ej passerade) RADER (grupperade), redan sliced till synligt antal. */
+    upcomingItems: NearbyItem[];
+    /** Totalt antal RADER — pagineringens "Visa fler"-gräns. */
     upcomingTotal: number;
-    /** Alla event som redan varit — visas under en hopfällbar flik. */
-    pastItems: { evt: LinkEvent; distanceKm: number | null }[];
+    /** Totalt antal EVENT (rader + deras dubbletter) — rubrikens siffra. */
+    upcomingCount: number;
+    /** Rader som redan varit — visas under en hopfällbar flik. */
+    pastItems: NearbyItem[];
     now: number;
     onSelect: (evt: LinkEvent) => void;
     onLoadMore: () => void;
@@ -250,7 +267,7 @@ function LazyRowImage({ src, alt, className, onFailed }: {
         return () => io.disconnect();
     }, []);
     return (
-        <div ref={holderRef} className={`overflow-hidden bg-slate-200 dark:bg-slate-800 ${className ?? ''}`}>
+        <div ref={holderRef} className={`overflow-hidden bg-slate-200 dark:bg-zinc-800 ${className ?? ''}`}>
             {inView && (
                 <img
                     src={src}
@@ -265,7 +282,54 @@ function LazyRowImage({ src, alt, className, onFailed }: {
     );
 }
 
-function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false }: {
+/** "kl 10:30" för utfällningens variantrader — bara för event med klockslag. */
+const dupClock = (evt: LinkEvent): string | null =>
+    evt.hasSpecificTime !== false
+        ? new Date(evt.time).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+        : null;
+
+// Utfällningen på en GRUPPRAD i närhetslistan — samma mönster som stads-
+// sidornas DupList: bara det som skiljer sig (titeln när den avviker från
+// radens, tid, plats). Variantklick väljer eventet precis som radklicket.
+// Ligger UTANFÖR radens knapp (klick ska fälla ut, inte välja).
+function NearbyDupList({ dups, repTitle, onSelect, className }: {
+    dups: NonNullable<NearbyItem['dups']>;
+    repTitle: string;
+    onSelect: (evt: LinkEvent) => void;
+    className?: string;
+}) {
+    const repKey = dupKey(repTitle);
+    return (
+        <details className={`group/dups ${className ?? ''}`}>
+            <summary className="inline-flex items-center gap-1 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-[11px] font-black text-[#006AA7] dark:text-sky-400 hover:underline">
+                <ChevronDown size={12} strokeWidth={3} className="transition-transform group-open/dups:rotate-180" aria-hidden />
+                {dups.length === 1 ? '+1 tillfälle till' : `+${dups.length} fler tider & platser`}
+            </summary>
+            <ul className="mt-1.5 flex flex-col gap-1.5 border-l-2 border-slate-200 dark:border-zinc-800 pl-3">
+                {dups.map(d => {
+                    const clock = dupClock(d.evt);
+                    return (
+                        <li key={d.evt.id}>
+                            <button
+                                type="button"
+                                onClick={() => onSelect(d.evt)}
+                                className="flex items-center gap-x-2 max-w-full text-left text-[11px] font-bold text-slate-500 dark:text-zinc-400 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
+                            >
+                                {dupKey(d.evt.title) !== repKey && (
+                                    <span className="min-w-0 shrink truncate font-black text-slate-700 dark:text-zinc-300">{d.evt.title}</span>
+                                )}
+                                {clock && <span className="shrink-0 tabular-nums">kl {clock}</span>}
+                                <span className="min-w-0 shrink truncate">{d.evt.locationName}</span>
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
+        </details>
+    );
+}
+
+function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false, dups }: {
     evt: LinkEvent;
     distanceKm: number | null;
     now: number;
@@ -277,6 +341,8 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
      *  ELLER trasig länk — renderas inte alls i stället för att falla
      *  tillbaka till den bildlösa layouten. */
     hideWithoutImage?: boolean;
+    /** Dagens dubbletter (se NearbyItem) — ger ×N-brickan + utfällningen. */
+    dups?: NearbyItem['dups'];
 }) {
     const status = getEventStatus(evt.time, now, evt.hasSpecificTime !== false);
     const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
@@ -290,7 +356,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     // EN inforad (avstånd, plats, klocka, pris, kommer) — delas av båda
     // layouterna; platsnamnet är det enda som trunkeras när det blir trångt.
     const infoRow = (
-        <div className="flex items-center gap-x-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 overflow-hidden">
+        <div className="flex items-center gap-x-2 text-[11px] font-bold text-slate-500 dark:text-zinc-400 overflow-hidden">
             <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
                 <MapPin size={11} className="text-primary" />
                 {distanceKm !== null ? formatDistanceKm(distanceKm) : 'Okänt avstånd'}
@@ -327,7 +393,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                 <button
                     type="button"
                     onClick={() => onSelect(evt)}
-                    className="w-full text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                    className="w-full text-left hover:bg-white dark:hover:bg-zinc-800/60 transition-colors"
                 >
                     <div className="relative">
                         <LazyRowImage
@@ -343,6 +409,11 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                             <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                                 {evt.title}
                             </h4>
+                            {dups && dups.length > 0 && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-[10px] font-black text-white tabular-nums" title={`${dups.length + 1} tillfällen`}>
+                                    ×{dups.length + 1}
+                                </span>
+                            )}
                             {isVadkulHostedEvent(evt) && (
                                 <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                     VADKUL
@@ -356,6 +427,9 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                         <ChevronRight size={16} className="text-slate-400 shrink-0" />
                     </div>
                 </button>
+                {dups && dups.length > 0 && (
+                    <NearbyDupList dups={dups} repTitle={evt.title} onSelect={onSelect} className="px-4 md:px-6 pb-2.5 -mt-0.5" />
+                )}
             </li>
         );
     }
@@ -367,13 +441,13 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
             <button
                 type="button"
                 onClick={() => onSelect(evt)}
-                className="w-full text-left px-4 md:px-6 py-2.5 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                className="w-full text-left px-4 md:px-6 py-2.5 flex items-center gap-3 hover:bg-white dark:hover:bg-zinc-800/60 transition-colors"
             >
                 <span
                     className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
                         isVadkulHostedEvent(evt)
                             ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-400/80'
-                            : 'bg-slate-100 dark:bg-slate-800'
+                            : 'bg-slate-100 dark:bg-zinc-800'
                     }`}
                     aria-hidden
                 >
@@ -384,6 +458,11 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                         <h4 className="font-black text-sm text-black dark:text-white truncate">
                             {evt.title}
                         </h4>
+                        {dups && dups.length > 0 && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-black text-slate-500 dark:text-zinc-400 tabular-nums" title={`${dups.length + 1} tillfällen`}>
+                                ×{dups.length + 1}
+                            </span>
+                        )}
                         {isVadkulHostedEvent(evt) && (
                             <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                 VADKUL
@@ -395,11 +474,14 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                 </div>
                 <ChevronRight size={16} className="text-slate-400 shrink-0" />
             </button>
+            {dups && dups.length > 0 && (
+                <NearbyDupList dups={dups} repTitle={evt.title} onSelect={onSelect} className="pl-16 pr-4 md:pl-[4.5rem] md:pr-6 pb-2.5 -mt-1" />
+            )}
         </li>
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const effectiveShowImages = imagesOnly || showImages;
@@ -408,10 +490,10 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
     // scrollat ända ner hit.
     const markerIdx = Math.min(3, upcomingItems.length - 1);
     return (
-        <div className="w-full bg-slate-50 dark:bg-slate-900/40 border-t border-border">
-            <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-slate-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3">
+        <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
+            <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    Fler event i närheten · {upcomingTotal}
+                    Fler event i närheten · {upcomingCount}
                 </span>
                 {!imagesOnly && (
                     <button
@@ -422,7 +504,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                         className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest transition-colors ${
                             showImages
                                 ? 'bg-[#006AA7] text-white'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                : 'bg-slate-200 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
                         }`}
                     >
                         {showImages ? <ImageIcon size={12} /> : <ImageOff size={12} />}
@@ -432,9 +514,9 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
             </div>
 
             <ul className="divide-y divide-border">
-                {upcomingItems.map(({ evt, distanceKm }, i) => (
+                {upcomingItems.map(({ evt, distanceKm, dups }, i) => (
                     <Fragment key={evt.id}>
-                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} />
+                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
                         {i === markerIdx && coachMarkerRef && (
                             <li ref={coachMarkerRef} aria-hidden className="h-px" />
                         )}
@@ -460,11 +542,11 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                     <button
                         type="button"
                         onClick={() => setShowPast(s => !s)}
-                        className="w-full px-4 md:px-6 py-3 flex items-center justify-between text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                        className="w-full px-4 md:px-6 py-3 flex items-center justify-between text-left hover:bg-white dark:hover:bg-zinc-800/60 transition-colors"
                         aria-expanded={showPast}
                     >
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                            Har varit · {pastItems.length}
+                            Har varit · {pastItems.reduce((sum, it) => sum + 1 + (it.dups?.length ?? 0), 0)}
                         </span>
                         <ChevronDown
                             size={16}
@@ -473,8 +555,8 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
                     </button>
                     {showPast && (
                         <ul className="divide-y divide-border opacity-70">
-                            {pastItems.map(({ evt, distanceKm }) => (
-                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} />
+                            {pastItems.map(({ evt, distanceKm, dups }) => (
+                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
                             ))}
                         </ul>
                     )}
@@ -483,6 +565,13 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, pastItems, now, onSele
         </div>
     );
 }
+
+/** En post i kortets bakåt-/framåthistorik: eventet OCH dagen det låg på,
+ *  så Bakåt/Nästa kan ta en över ett dagbyte (Josef 2/9: "klickar man på
+ *  Nästa så man byter dag ska man kunna klicka på tillbaka-knappen igen").
+ *  Eventobjektet sparas hellre än bara id:t — en annan dags event finns
+ *  inte i `events` (dagens lista) och behövs ändå för emoji-förhandsvisningen. */
+type NavEntry = { evt: LinkEvent; dayOffset: number };
 
 interface EventCardProps {
     events: LinkEvent[];
@@ -499,6 +588,28 @@ interface EventCardProps {
     eventsSettled?: boolean;
     selectedEvent: LinkEvent | null;
     onSelectEvent: (evt: LinkEvent | null) => void;
+    /** VÄLJARLÄGET (Josef 31/8 — ersätter multi-event-listan som svävade över
+     *  kartan): klickade man en bricka med FLERA event skickar kartan upp
+     *  gruppen hit, och kortets INNEHÅLL byts ut mot en väljarlista
+     *  (EventCardGroupList) tills man valt. null/tom = vanligt kortinnehåll. */
+    groupChoice?: LinkEvent[] | null;
+    /** Radklicket i väljarlistan — sidan väljer eventet OCH nollar groupChoice
+     *  så kortet går över till vanligt innehåll. */
+    onPickFromGroup?: (evt: LinkEvent) => void;
+    /** ETT STEG TILLBAKA till multievent-listan man valde ur (Josef 1/9).
+     *  Sätts av sidan bara när det FINNS en grupp att gå tillbaka till och
+     *  listan inte redan visas — undefined = ingen pil i kortets header. */
+    onBackToGroup?: () => void;
+    /** Antal event i den gruppen — bara för pilens title/aria ("tillbaka till
+     *  de 5 eventen här"), inte för någon logik. */
+    backToGroupCount?: number;
+    /** Framåt-navigering (Nästa-knappen/svepet) som landar på en plats med
+     *  FLERA event öppnar väljarlistan där också (Josef 31/8: "kommer man
+     *  till ett multi-event ska listan dyka upp så man får välja") — samma
+     *  handleSelectGroup som kartans multibrick-klick (grupp + rep sätts
+     *  atomiskt). Bakåt-knappen väljer direkt som förut — dit man backar har
+     *  man redan valt. */
+    onSelectGroup?: (group: LinkEvent[], rep: LinkEvent) => void;
     onSaveEvent: (eventId: string) => void;
     onDiscardEvent: (eventId: string) => void;
     discardedEventIds: Set<string>;
@@ -526,6 +637,21 @@ interface EventCardProps {
     dayRangeDays?: number;
     /** Byt visad dag/intervall — från dagväljaren eller återställningsknappen. */
     onDayRangeChange: (offset: number, days: number) => void;
+    /** "I BILD"-VAKTEN (Josef 2/9: "kartan ska aldrig hoppa iväg"): Nästa och
+     *  svepet väljer bara bland event som SYNS på skärmen — inom kartrutan
+     *  och ovanför kortet. Sidan äger kartrutan (utils/viewportTour), kortet
+     *  får bara predikatet. Utelämnad = alla event räknas som i bild. */
+    inView?: (evt: LinkEvent) => boolean;
+    /** Nästa dag (offset) som HAR event i bild, eller null när inget mer
+     *  finns inom datahorisonten. Är eventen i bild genomgångna går Nästa
+     *  dit i stället för att börja om — knappen visar dagens namn som
+     *  förhandsvisning; null släcker knappen. */
+    nextDayOffset?: number | null;
+    /** Stega dagen (delta i dagar) — dagväljarens pilhandler, så landnings-
+     *  pulsen tystas på samma sätt som vid ett manuellt dagsteg. Med
+     *  `selectEventId` ska sidan landa på JUST det eventet (Bakåt/Nästa över
+     *  ett dagbyte); utan väljer den närmast kartans mitt bland dem i bild. */
+    onDayStep?: (delta: number, selectEventId?: string) => void;
     onSunClick?: () => void;
     /** Sant när huvudmolnet/solmolnet ligger utanför skärmen — då visas en
      *  återkallnings-knapp jämte solknappen. */
@@ -564,13 +690,22 @@ interface EventCardProps {
     starredEventIds?: Set<string>;
     canPlaceStar?: boolean;
     onPlaceStar?: (eventId: string) => void;
+    /** Engångsbegäran (räknare, 0 = ingen): nästa FÄRSKA öppning sker i
+     *  HELSKÄRM med hela innehållet uppfällt. Bumpas av djuplänken
+     *  (?event= från stadssidorna) — den som klickat sig hit från en
+     *  stadssida ska se hela eventet direkt, ovanpå välkomstrutan
+     *  (Josef 29/8). Förbrukas per bump; vanliga kartklick påverkas inte. */
+    fullOpenNonce?: number;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
     const PEEK_HEIGHT_VH = 22;
+    // Hur snabbt HJULET ändrar kortets höjd (1 = rått 1:1 px→vh). Gäller bara
+    // hjul/styrplatta, aldrig fingerdrag — se onWheel.
+    const SHEET_WHEEL_GAIN = 1.8;
     // Fallback-höjd för uppmätt "öppna till första beskrivningsraden" (tap) om
     // mätningen saknas.
     const OPEN_HEIGHT_VH = 80;
@@ -582,10 +717,62 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
     // stängas i stället för att snäppa tillbaka till peek.
     const DISMISS_BELOW_VH = 6;
-    // Kortets TAK: hur högt det får växa. Hela vägen upp (Josef 26/8 — förut
-    // stannade det på 83vh med en kartremsa ovanför, men kortet ska kunna
-    // fylla skärmen).
-    const MAX_HEIGHT_VH = 100;
+    // Minsta nedåtdrag (i vh) för att ett släpp ska räknas som ett medvetet
+    // "scrolla ner"-snäpp (helskärm → default, default → stängt; se
+    // onPointerUp) — kortare ryck studsar tillbaka dit gesten började.
+    const SNAP_PULL_MIN_VH = 6;
+    // Kortets TAK: hur högt det får växa. INTE hela vägen upp längre (Josef
+    // 31/8, ersätter 26/8-beslutet "kortet ska kunna fylla skärmen"): NÄSTA-
+    // knappen, som ligger på raden ovanför kortet, ska hamna i LINJE MED
+    // SÖKKNAPPEN i navbaren.
+    //
+    // Räkningen: navbaren sitter på top-6 (24 px) och sökknappen är dess
+    // första element (h-10) → dess överkant ligger 24 px ner. Knappraden över
+    // kortet är 38 px hög (verktygspillen/Nästa är h-[38px]) och har mb-4
+    // (16 px) ner till kortet. Kortets överkant måste alltså stanna
+    // 24 + 38 + 16 = 78 px under skärmtoppen, så raden hamnar på 24 px.
+    const CARD_TOP_GAP_PX = 78;
+    // Taket måste räknas i px och översättas till vh — en fast vh-siffra
+    // träffar bara EN skärmhöjd (78 px är ~10 vh på mobil men ~7 vh på en hög
+    // desktopskärm). Samma px→vh-omräkning som mät-hjälparna nedan gör.
+    const [viewportH, setViewportH] = useState(0);
+    useEffect(() => {
+        const read = () => setViewportH(window.innerHeight);
+        read();
+        window.addEventListener('resize', read);
+        return () => window.removeEventListener('resize', read);
+    }, []);
+    // 90 tills vi mätt (SSR + första målningen) — nära nog på en vanlig telefon
+    // och rättas i samma andetag av effekten ovan.
+    const MAX_HEIGHT_VH = viewportH ? 100 - (CARD_TOP_GAP_PX / viewportH) * 100 : 90;
+    // Hjul-lyssnaren registreras en gång per öppnat kort ([hasSelectedEvent])
+    // och skulle annars frysa taket från den renderingen — läs det via ref.
+    const maxVhRef = useRef(MAX_HEIGHT_VH);
+    maxVhRef.current = MAX_HEIGHT_VH;
+    // Djuplänksöppningen (?event= från stadssidorna): INTE hela skärmen —
+    // en kartremsa ska synas ovanför så man ser att man landat på kartan
+    // (Josef 30/8). Användaren kan själv dra upp till MAX_HEIGHT_VH.
+    const DEEPLINK_HEIGHT_VH = 80;
+    // VÄLJARLISTANS öppningshöjd (Josef 2/9: "multieventet blir inte alls lika
+    // högt"). Listan saknar data-peek-boundary och föll ner på peek-höjden
+    // 22 vh. Det vanliga kortet öppnar på header + 60 px bildremsa ≈ 285 px
+    // (mobil; 291 px på md): pt-10 40 + knapprad 40 + titelrad 57 + tidsrad 36
+    // + Värd/Pris 52 + 60. Listan visar så många HELA rader som ryms inom
+    // budgeten (3 rader i dagsläget, dagrubrik + 2 rader i veckovyn — se
+    // chooserDefaultTargetPx) — ingen halv rad i vikningen, samma korthöjd.
+    const CHOOSER_DEFAULT_MAX_PX = 300;
+
+    // VÄLJARLÄGET (Josef 31/8): en multi-brickas grupp har skickats upp och
+    // inget val är gjort än — kortets innehåll är väljarlistan i stället för
+    // eventet (sidan nollar groupChoice vid valet/när valet lämnar gruppen).
+    const chooserActive = !!(groupChoice && groupChoice.length > 1 && onPickFromGroup);
+    // Hjul-/touch-lyssnarna registreras en gång per öppnat kort
+    // ([hasSelectedEvent]) och pekar-handlers avgör i händelseögonblicket —
+    // läs läget via ref så de aldrig ser en gammal rendering. Speglas i en
+    // layout-effekt (före paint) i stället för under render, så en avbruten
+    // transition-rendering aldrig hinner skriva ett läge som inte committas.
+    const chooserActiveRef = useRef(chooserActive);
+    useLayoutEffect(() => { chooserActiveRef.current = chooserActive; }, [chooserActive]);
 
     // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
     const [cardRevealStep, setCardRevealStep] = useState(0);
@@ -613,13 +800,35 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             return next;
         });
     };
+    // heightVh (state) är bara RENDER-TRIGGER + tröskelvakt (cardExpanded).
+    // heightVhRef är SANNINGEN och läses direkt i style-objektet — så en render
+    // som råkar ske mitt i en gest aldrig skriver tillbaka ett gammalt värde.
     const [heightVh, setHeightVh] = useState(PEEK_HEIGHT_VH);
     // grip-zonen (h-6 = 24px) ovanför scroll-containern.
     const heightVhRef = useRef(PEEK_HEIGHT_VH);
-    const updateHeightVh = (vh: number) => {
+    const sheetRef = useRef<HTMLDivElement | null>(null);
+    /**
+     * live = mitt i en pågående gest (hjul/drag). Då skrivs höjden DIREKT till
+     * DOM via --sheet-h i stället för via setState (Josef 31/8: "det känns
+     * sticky"). En setState per wheel-tick renderade om HELA kortet —
+     * närhetslistan med bilder, chatten, allt — 60–120 gånger i sekunden, och
+     * det var motståndet man kände: innehållsscrollen går på kompositor-tråden
+     * medan kortets höjd fick betala en full React-render per pixel.
+     * Vid gestens slut committas värdet med setHeightVh (commitHeight) så
+     * cardExpanded-tröskeln och resten av React ser samma sanning.
+     */
+    const updateHeightVh = (vh: number, live = false) => {
         heightVhRef.current = vh;
+        if (live) {
+            sheetRef.current?.style.setProperty('--sheet-h', `${vh}vh`);
+            return;
+        }
         setHeightVh(vh);
     };
+    // (Efterhandssynken för hjulet — commitHeightSoon, 140 ms efter tystnad —
+    //  är borta sedan 2/9: hjulet snäpper stopp för stopp via setState och
+    //  har ingen live-fas längre. Bara fingerdraget skriver live, och det
+    //  committar i onPointerUp.)
 
 
     const [dragX, setDragX] = useState(0);
@@ -671,10 +880,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         try { localStorage.setItem(COACH_KEY, '1'); } catch { /* privat läge */ }
     };
     // Browse-historik (bakåt-stack): event-id:n vi tittade på innan vi gick vidare.
-    const [historyStack, setHistoryStack] = useState<string[]>([]);
+    const [historyStack, setHistoryStack] = useState<NavEntry[]>([]);
     // Framåt-stack: event vi backat ur. Nästa spelar upp dem i samma ordning igen
     // (som webbläsarens framåt-knapp) i stället för att räkna fram ett nytt event.
-    const [forwardStack, setForwardStack] = useState<string[]>([]);
+    const [forwardStack, setForwardStack] = useState<NavEntry[]>([]);
 
     const [isAnimating, setIsAnimating] = useState(true);
     const isDragging = useRef(false);
@@ -687,7 +896,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Sätts till id:t vi själva ska byta till så useEffect kan särskilja
     // "användaren klickade på kartan" från "vi tryckte Nästa".
     const expectedNextIdRef = useRef<string | null>(null);
+    // ARMERAT DAGBYTE (Josef 2/9): Nästa/Bakåt har just bett sidan byta dag,
+    // och nästa "externa" val är LANDNINGEN på den dagen — inte ett kart-
+    // klick. Ankar-effekten ser då att dagen bytt sedan armeringen och låter
+    // bakåt-/framåtstackarna stå kvar (ny dag = ny runda: ankare + besökt
+    // nollas ändå). Tidsfönstret skyddar mot att en landning som aldrig kom
+    // (sidan valde samma event) armerar ett riktigt kartklick långt senare.
+    const dayStepRef = useRef<{ fromOffset: number; armedAt: number } | null>(null);
+    const DAY_STEP_LANDING_MS = 3000;
     const isFreshOpenRef = useRef(false);
+    // Senast förbrukade helskärmsbegäran (fullOpenNonce) — se ankar-effekten.
+    const consumedFullOpenNonceRef = useRef(0);
 
     // Notify parent about card expansion state for map center offsets
     useEffect(() => {
@@ -742,6 +961,21 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const measureDefaultHeight = (): number => {
         const sc = scrollContainerRef.current;
         if (!sc) return OPEN_HEIGHT_VH;
+        // VÄLJARLISTAN (multievent): ingen peek-markör — mät radernas under-
+        // kanter och ta så många hela rader som ryms i CHOOSER_DEFAULT_MAX_PX,
+        // så kortet öppnar lika högt som ett vanligt event (Josef 2/9).
+        const groupList = sc.querySelector('[data-group-list]') as HTMLElement | null;
+        if (groupList) {
+            const scRect = sc.getBoundingClientRect();
+            // Innehållets topp i viewport-koordinater (oberoende av scroll).
+            const contentTop = scRect.top - sc.scrollTop;
+            const rowBottoms = Array.from(sc.querySelectorAll<HTMLElement>('[data-group-row]'))
+                .map(row => row.getBoundingClientRect().bottom - contentTop);
+            const contentHeight = groupList.getBoundingClientRect().bottom - contentTop;
+            const targetPx = chooserDefaultTargetPx(rowBottoms, contentHeight, CHOOSER_DEFAULT_MAX_PX);
+            const vh = (targetPx / window.innerHeight) * 100;
+            return Math.max(PEEK_HEIGHT_VH, Math.min(80, Math.round(vh)));
+        }
         const peek = sc.querySelector('[data-peek-boundary]') as HTMLElement | null;
         if (!peek) return measureCollapsedHeight();
         const scRect = sc.getBoundingClientRect();
@@ -750,12 +984,80 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(PEEK_HEIGHT_VH, Math.min(80, Math.round(vh)));
     };
+    // ── Kortets STOPP (Josef 2/9: "två nya sticky-positioner") ─────────────
+    // Default-höjden (header + bildremsa), TAPP-HÖJDEN (bild + första
+    // beskrivningsraden — "täcker typ halva skärmen") och TAKET. Hjul och drag
+    // stannar på dem i tur och ordning, och först på taket scrollar innehållet
+    // (touch-action pan-y / hjulets fallthrough). Nedåt samma stopp baklänges,
+    // sist stängs kortet. Mäts färskt per gest — bild- och headerhöjd varierar.
+    // Väljarlistan har ingen tapp-höjd (ingen beskrivning att mäta mot).
+    // Toleransen: ett läge inom 4 vh från ett stopp räknas som "på" det.
+    const SNAP_TOLERANCE_VH = 4;
+    const sheetStopsNow = (): number[] => sheetStops([
+        measureDefaultHeight(),
+        ...(chooserActiveRef.current ? [] : [measureOpenHeight()]),
+        maxVhRef.current,
+    ], SNAP_TOLERANCE_VH);
     // Live-ref så drag-handlern (onPointerMove) alltid läser senaste mätta
     // botten-gränsen utan att bindas om. Default = konstanten tills vi mätt.
     const collapsedVhRef = useRef(COLLAPSED_HEIGHT_VH);
     // Timer för stängningsanimationen (drag-ner-förbi-peek → glid ner → stäng).
     const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
     useEffect(() => () => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); }, []);
+
+    /** Stäng kortet helt: glid ner + avmarkera eventet. Delas av drag-ner-
+     *  släppet och hjul-snäppet — samma glid, samma 260 ms. */
+    const closeCard = () => {
+        updateHeightVh(2);
+        if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = setTimeout(() => onSelectEvent(null), 260);
+    };
+    // Hjul-lyssnaren registreras en gång per öppnat kort och skulle annars
+    // stänga mot den renderingens onSelectEvent — läs via ref.
+    const closeCardRef = useRef(closeCard);
+    closeCardRef.current = closeCard;
+
+    // ── Hjul-snäppets gest-grind (se onWheel) ───────────────────────────────
+    // Spänd = nästa svep får utföra ETT snäpp: uppåt ett stopp upp (default →
+    // tapp-höjden → taket, Josef 2/9), nedåt vid innehållstoppen ett stopp ner
+    // (sist stängs kortet). En styrplattas tröghetssvans sprutar wheel-
+    // händelser långt efter själva svepet — utan grinden faller ETT svep
+    // genom alla stopp. Grinden återspänns när hjulet varit tyst
+    // WHEEL_SNAP_QUIET_MS. wheelHoldAtMaxRef: precis snäppt till TAKET — då
+    // sväljs resten av samma gest så innehållet inte börjar scrolla förrän
+    // nästa gest ("stanna innan vi börjar scrolla inom själva kortet").
+    const wheelSnapArmedRef = useRef(true);
+    const wheelHoldAtMaxRef = useRef(false);
+    const wheelRearmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const WHEEL_SNAP_QUIET_MS = 350;
+    const scheduleWheelRearm = () => {
+        if (wheelRearmTimerRef.current) clearTimeout(wheelRearmTimerRef.current);
+        wheelRearmTimerRef.current = setTimeout(() => {
+            wheelSnapArmedRef.current = true;
+            wheelHoldAtMaxRef.current = false;
+        }, WHEEL_SNAP_QUIET_MS);
+    };
+    useEffect(() => () => { if (wheelRearmTimerRef.current) clearTimeout(wheelRearmTimerRef.current); }, []);
+    // NY-GEST-DETEKTORN (Josef 2/9: "direkt efter ett stopp går det inte att
+    // scrolla — man måste flytta pekaren först"). Styrplattans tröghetssvans
+    // rullar i upp till ~1,5 s efter ett svep, och varje händelse sköt upp
+    // återspänningen — ett NYTT svep som började medan svansen ännu rullade
+    // smälte ihop med den och svaldes. (Att röra pekaren = röra plattan =
+    // svansen dör → 350 ms tystnad → grinden spänns; därav "flytta musen".)
+    // Svansen avtar monotont: ett nytt svep syns som ett HOPP i storlek
+    // (> WHEEL_NEW_GESTURE_GAIN × förra händelsen) eller ett riktningsbyte,
+    // och återspänner då grinden direkt. Hoppet räknas först efter
+    // WHEEL_SNAP_COOLDOWN_MS från senaste snäpp — fingerfasen av SAMMA svep
+    // växer också och ska inte kedja två stopp. Riktningsbyte gäller alltid.
+    const wheelTrackRef = useRef({ lastAbs: 0, lastSign: 0, snappedAt: 0 });
+    const WHEEL_SNAP_COOLDOWN_MS = 400;
+    const WHEEL_NEW_GESTURE_GAIN = 1.5;
+    /** Ett snäpp utfört: lås grinden, notera tidpunkten, boka återspänning. */
+    const consumeWheelGate = () => {
+        wheelSnapArmedRef.current = false;
+        wheelTrackRef.current.snappedAt = performance.now();
+        scheduleWheelRearm();
+    };
 
     // ── Dra-ner-vid-scroll-toppen ────────────────────────────────────────────
     // Står den inre scrollen på toppen och man drar nedåt ska gesten INTE
@@ -770,41 +1072,54 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const sc = scrollContainerRef.current;
         if (!sc) return;
         let startedAtTop = false;
-        let pulling = false;
         let touchStartY = 0;
         const onTouchStart = (e: TouchEvent) => {
-            // Gester som börjar på interaktiva element (chattens input,
-            // knappar, länkar) lämnas helt åt webbläsaren.
+            // BARA textfälten lämnas åt webbläsaren (markera text, flytta
+            // markören) — knappar/länkar är DRAGYTA, samma filosofi som
+            // onPointerDown (Josef 31/8). 'button' låg tidigare i exkluderingen
+            // och då fanns i väljarlistan (enbart knapprader) ingen yta alls
+            // att dra ner kortet från i helskärm på touch: pan-y åt gesten →
+            // pointercancel → kortet "fastnade" på 1–2 px (iPhone-rapport
+            // 1/9). Ett rent tapp gör ingen touchmove-preventDefault, så
+            // radklicken lever som vanligt; ett riktigt drag sväljs ändå av
+            // didDragRef i sheet-rotens onClickCapture.
             const target = e.target as HTMLElement;
             // < 1: scrollTop kan vara bråkdel nära toppen (Firefox/iOS).
             startedAtTop = sc.scrollTop < 1
-                && !target.closest('button, a, input, textarea, select');
+                && !target.closest('input, textarea, select');
             touchStartY = e.touches[0].clientY;
-            pulling = false;
+            pullingRef.current = false;
         };
         const onTouchMove = (e: TouchEvent) => {
             if (!startedAtTop) return;
             const dy = e.touches[0].clientY - touchStartY;
-            if (!pulling) {
-                if (dy > 4 && sc.scrollTop < 1) pulling = true;        // neddrag vid toppen → ta över
-                else if (dy < -4) { startedAtTop = false; return; }    // uppdrag → vanlig innehållsscroll
+            if (!pullingRef.current) {
+                if (dy > 4 && sc.scrollTop < 1) pullingRef.current = true; // neddrag vid toppen → ta över
+                else if (dy < -4) { startedAtTop = false; return; }        // uppdrag → vanlig innehållsscroll
             }
-            if (pulling && e.cancelable) e.preventDefault();
+            if (pullingRef.current && e.cancelable) e.preventDefault();
         };
+        const onTouchEnd = () => { pullingRef.current = false; };
         sc.addEventListener('touchstart', onTouchStart, { passive: true });
         sc.addEventListener('touchmove', onTouchMove, { passive: false });
+        sc.addEventListener('touchend', onTouchEnd, { passive: true });
+        sc.addEventListener('touchcancel', onTouchEnd, { passive: true });
         return () => {
             sc.removeEventListener('touchstart', onTouchStart);
             sc.removeEventListener('touchmove', onTouchMove);
+            sc.removeEventListener('touchend', onTouchEnd);
+            sc.removeEventListener('touchcancel', onTouchEnd);
         };
     }, [hasSelectedEvent]);
 
     // ── Mus-/styrplatte-hjul: scrolla för att VÄXA hela behållaren ───────────
     // Förut kunde man bara DRA kortet med handtaget för att förstora det — ett
     // hjul-/tvåfingerscroll gjorde inget (touch-action gäller bara touch, inte
-    // hjul). Nu växer hjulet kortet mot helskärm FÖRST; när det fyllt skärmen
-    // scrollar den nedre delen av innehållet normalt. Scrollar man tillbaka vid
-    // innehållstoppen krymper hela kortet igen (ner mot peek, ej stäng).
+    // hjul). Hjulet tar kortet upp STOPP FÖR STOPP (Josef 2/9): default →
+    // tapp-höjden → taket, ett steg per gest; först på taket scrollar
+    // innehållet. Scrollar man tillbaka vid innehållstoppen går det samma
+    // stopp nedåt, och sist stängs kortet. (Den kontinuerliga växten mot
+    // helskärm, 31/8–2/9, är ersatt av stoppen.)
     // Native-lyssnare (passive:false) krävs för preventDefault.
     useEffect(() => {
         if (!hasSelectedEvent) return;
@@ -816,25 +1131,81 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             const px = e.deltaMode === 1 ? e.deltaY * 16
                 : e.deltaMode === 2 ? e.deltaY * window.innerHeight
                 : e.deltaY;
-            const deltaVh = (px / window.innerHeight) * 100;
-            // Scrolla "in i" kortet (fingrar upp / hjul ner) innan helskärm → väx det.
-            if (deltaVh > 0 && h < MAX_HEIGHT_VH) {
+            // GAIN (Josef 31/8): rått 1:1 px→vh kändes segt jämfört med
+            // innehållsscrollen bredvid — den flyttar text några rader, medan
+            // kortet ska resa 50+ vh på samma gest. Förstärkningen gäller BARA
+            // kortets storleksändring; innehållsscrollen rörs inte (vi
+            // preventDefault:ar bara i de två grenarna nedan).
+            const deltaVh = (px / window.innerHeight) * 100 * SHEET_WHEEL_GAIN;
+            // Ny gest mitt i tröghetssvansen? (Se wheelTrackRef.) Då spänns
+            // grinden och taket-hållet släpps direkt — utan att vänta på
+            // tystnad som aldrig kommer medan svansen rullar.
+            const track = wheelTrackRef.current;
+            const absPx = Math.abs(px);
+            const sign = Math.sign(px);
+            const flipped = sign !== 0 && track.lastSign !== 0 && sign !== track.lastSign;
+            const jumped = absPx > track.lastAbs * WHEEL_NEW_GESTURE_GAIN + 2;
+            if (flipped || (jumped && performance.now() - track.snappedAt > WHEEL_SNAP_COOLDOWN_MS)) {
+                wheelSnapArmedRef.current = true;
+                wheelHoldAtMaxRef.current = false;
+            }
+            track.lastAbs = absPx;
+            if (sign !== 0) track.lastSign = sign;
+            // VÄLJARLISTAN (Josef 2/9): kortet står STILL och listan scrollar
+            // upp under överkanten — hjulet växer inte kortet här. Vill man
+            // ha det större drar man i handtaget.
+            const chooser = chooserActiveRef.current;
+            // Scrolla "in i" kortet (fingrar upp / hjul ner) under taket → ETT
+            // STOPP UPP (Josef 2/9): default → tapp-höjden → taket. Grinden
+            // slukar tröghetssvansen så ett svep aldrig kedjar genom flera
+            // stopp. Landar vi på taket hålls resten av gesten (hold nedan) så
+            // innehållet inte börjar scrolla förrän nästa gest.
+            if (deltaVh > 0 && h < maxVhRef.current && !chooser) {
                 e.preventDefault();
-                setIsAnimating(false);
-                updateHeightVh(Math.min(MAX_HEIGHT_VH, h + deltaVh));
+                if (!wheelSnapArmedRef.current) { scheduleWheelRearm(); return; }
+                consumeWheelGate();
+                setIsAnimating(true);
+                const target = nextStopAbove(sheetStopsNow(), h, SNAP_TOLERANCE_VH);
+                updateHeightVh(target);
+                if (target >= maxVhRef.current - 0.5) wheelHoldAtMaxRef.current = true;
                 return;
             }
-            // Scrolla tillbaka vid innehållets topp → krymp kortet (ner mot peek).
+            // Scrolla tillbaka vid innehållets topp → ETT STOPP NER i stället
+            // för att glida (Josef 1/9, utökat 2/9 med tapp-höjden): taket →
+            // tapp-höjden → default, och nästa svep därifrån stänger kortet
+            // helt. Grinden (wheelSnapArmedRef) slukar tröghetssvansen så ett
+            // enda svep aldrig kedjar genom flera steg.
             // < 1 (inte <= 0): Firefox rapporterar BRÅKDELS-scrollTop (0.5 osv)
             // nära toppen — med <= 0 fastnade hjulet i en död zon där varken
             // innehållet eller kortet rörde sig.
-            if (deltaVh < 0 && sc.scrollTop < 1 && h > collapsedVhRef.current) {
+            if (deltaVh < 0 && sc.scrollTop < 1) {
                 e.preventDefault();
-                setIsAnimating(false);
-                updateHeightVh(Math.max(collapsedVhRef.current, h + deltaVh));
+                if (!wheelSnapArmedRef.current) { scheduleWheelRearm(); return; }
+                consumeWheelGate();
+                setIsAnimating(true);
+                const target = nextStopBelow(sheetStopsNow(), h, SNAP_TOLERANCE_VH);
+                if (target !== null) updateHeightVh(target);
+                else closeCardRef.current();
+                return;
+            }
+            // Precis snäppt till taket: svälj resten av samma gest (Josef 2/9:
+            // "stanna innan vi börjar scrolla inom själva eventkortet").
+            if (deltaVh > 0 && wheelHoldAtMaxRef.current) {
+                e.preventDefault();
+                scheduleWheelRearm();
                 return;
             }
             // annars: helskärm + innehållet scrollar → låt hjulet scrolla normalt.
+            // I väljarlistan spänner innehållsscrollen AV snäpp-grinden: en
+            // styrplatte-flick som rullar listan tillbaka till toppen får inte
+            // fortsätta rakt in i stäng-snäppet ovan på sin tröghetssvans.
+            // Grinden återspänns efter WHEEL_SNAP_QUIET_MS tystnad — ett nytt,
+            // medvetet uppåtsvep vid toppen stänger som vanligt. (Bara när
+            // listan faktiskt kan scrolla; en kort lista lämnar grinden spänd.)
+            if (chooser && sc.scrollHeight - sc.clientHeight > 1) {
+                wheelSnapArmedRef.current = false;
+                scheduleWheelRearm();
+            }
         };
         sc.addEventListener('wheel', onWheel, { passive: false });
         return () => sc.removeEventListener('wheel', onWheel);
@@ -864,13 +1235,26 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }
 
         const isPickNext = expectedNextIdRef.current === selectedEvent.id;
+        const step = dayStepRef.current;
+        const isDayStepLanding = !!step && step.fromOffset !== dayOffset
+            && Date.now() - step.armedAt < DAY_STEP_LANDING_MS;
         if (isPickNext) {
             // Intern navigering (Nästa/Bakåt) drev fram detta event — behåll
             // ankare, besökt-set OCH bakåt/framåt-stackarna.
             expectedNextIdRef.current = null;
+        } else if (isDayStepLanding) {
+            // LANDNINGEN efter ett dagbyte via Nästa/Bakåt (Josef 2/9): sidan
+            // valde eventet åt oss. Ny dag = ny runda — nytt ankare och tomt
+            // besökt-set — men bakåt-/framåtstackarna står KVAR så man kan gå
+            // tillbaka över dagbytet (och framåt igen).
+            dayStepRef.current = null;
+            setAnchorId(selectedEvent.id);
+            anchorSetAtRef.current = Date.now();
+            setVisitedEventIds(new Set());
         } else {
             // Användaren valde ett nytt event (kartkick / första valet) → ny
             // ankare och en helt ny browsing-gren: nollställ besökt + historik.
+            dayStepRef.current = null;
             setAnchorId(selectedEvent.id);
             anchorSetAtRef.current = Date.now();
             setVisitedEventIds(new Set());
@@ -887,12 +1271,22 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
         const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
         isFreshOpenRef.current = freshOpen;
+        // Helskärmsbegäran (djuplänken från stadssidorna): förbrukas här, en
+        // gång per bump — efterföljande kartklick öppnar som vanligt. En
+        // djuplänk är explicit navigering, så den vinner även om ett kort
+        // redan råkade vara öppet (då är freshOpen false).
+        const wantsFullOpen = fullOpenNonce > consumedFullOpenNonceRef.current;
+        if (wantsFullOpen) consumedFullOpenNonceRef.current = fullOpenNonce;
         const raf = requestAnimationFrame(() => {
             const collapsed = measureCollapsedHeight();
             collapsedVhRef.current = collapsed;
-            if (freshOpen) updateHeightVh(measureDefaultHeight());
+            if (wantsFullOpen) updateHeightVh(DEEPLINK_HEIGHT_VH);
+            else if (freshOpen) updateHeightVh(measureDefaultHeight());
         });
         return () => cancelAnimationFrame(raf);
+        // fullOpenNonce bumpas i samma commit som selectedEvent sätts (djup-
+        // länken) — den behöver inte trigga effekten själv.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEvent]);
 
     // Reset pagination and scroll position when the active event changes.
@@ -906,6 +1300,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         setCardRevealStep(0); // Återställ bildremsa vid nytt event
         setCardView('info'); // Nytt event öppnar alltid i infovyn (chatt/lista är per event)
     }, [selectedEvent?.id]);
+
+    // Väljarlistan börjar alltid från toppen (Josef 2/9): kortet kan ha stått
+    // nedscrollat i ett vanligt event när multibrickan klickades, eller när
+    // man backar till listan via pilen — annars låg listan kvar mitt i.
+    useEffect(() => {
+        if (!chooserActive) return;
+        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+    }, [chooserActive]);
 
     // Växla mellan infovyn och chatt-/listvyn. På väg IN i en vy: väx kortet
     // till full höjd och börja från toppen så sektionen syns direkt. På väg UT
@@ -1062,8 +1464,30 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // med bild, bilderna tvingade på. Lista-toggeln i headern visar ALLA
     // event, med bildtoggeln (default av).
     const imagesOnlyList = cardView !== 'nearby';
-    const listedUpcoming = imagesOnlyList ? upcomingNearby.filter(n => !!n.evt.coverImage) : upcomingNearby;
-    const listedPast = imagesOnlyList ? pastNearby.filter(n => !!n.evt.coverImage) : pastNearby;
+    // Dubblettgruppering (Josef 1/9 — samma regel som stadssidornas daglista,
+    // utils/groupDups): samma titel ELLER omslagsbild under samma dag = EN rad,
+    // övriga tillfällen bakom radens utfällning. Grupperas EFTER bildfiltret så
+    // bildflödets grupper bara bär bildsatta event. rows = RADER (pagineringen),
+    // count = EVENT (rubrikens siffra).
+    const groupNearby = (items: { evt: LinkEvent; distanceKm: number | null }[]) => {
+        const wrapped = items.map(it => ({ title: it.evt.title, coverImage: it.evt.coverImage || undefined, time: it.evt.time, it }));
+        const rows: NearbyItem[] = groupListDuplicates(wrapped).map(g => ({
+            ...g.rep.it,
+            ...(g.dups.length > 0 ? { dups: g.dups.map(d => d.it) } : {}),
+        }));
+        return { rows, count: items.length };
+    };
+    const listedUpcoming = useMemo(
+        () => groupNearby(imagesOnlyList ? upcomingNearby.filter(n => !!n.evt.coverImage) : upcomingNearby),
+        // groupNearby är en ren lokal hjälpare — medvetet utanför deps.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [upcomingNearby, imagesOnlyList]
+    );
+    const listedPast = useMemo(
+        () => groupNearby(imagesOnlyList ? pastNearby.filter(n => !!n.evt.coverImage) : pastNearby),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [pastNearby, imagesOnlyList]
+    );
 
     // Scroll-coachens "nått fram"-observer: separat från nudge-fasen så att
     // listuppdateringar ("Visa fler"/ny data) inte nollställer coachen. Ligger
@@ -1108,28 +1532,26 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // upp deras cover-bilder + favicon i webbläsarens cache redan medan du tittar
     // på nuvarande kort. När du sedan klickar Nästa är bilden redan nedladdad och
     // kortet visas direkt — istället för att hämta bilden on-demand.
+    // i bild-vakten läses via ref här: kartrutan byts vid varje panorering
+    // (~5 ggr/s) och förvärmningen ska inte starta om för det.
+    const inViewRef = useRef(inView);
+    inViewRef.current = inView;
     useEffect(() => {
         if (!selectedEvent || typeof window === 'undefined') return;
 
         const PRELOAD_COUNT = 4;
         const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
-        const pool = nextCandidatePool(anchor);
+        // Samma pool som Nästa: bara event i bild.
+        const pool = visiblePool(anchor, inViewRef.current);
         const simVisited = new Set(visitedEventIds);
         let current: LinkEvent = selectedEvent;
         const upcoming: LinkEvent[] = [];
 
         for (let i = 0; i < PRELOAD_COUNT; i++) {
             simVisited.add(current.id);
-            let next = findNearestEvent(anchor, pool, discardedEventIds, simVisited);
-            if (!next) {
-                // Allt besökt — börja om från ankaret (matchar pickNext-logiken).
-                simVisited.clear();
-                simVisited.add(anchor.id);
-                simVisited.add(current.id);
-                next = findNearestEvent(anchor, pool, discardedEventIds, simVisited)
-                    ?? findNearestEvent(anchor, events, discardedEventIds, simVisited);
-            }
-            if (!next || upcoming.some(e => e.id === next!.id)) break;
+            const next = findNearestEvent(anchor, pool, discardedEventIds, simVisited);
+            // Slut i bild → inget varv till (Nästa går till nästa dag i stället).
+            if (!next || upcoming.some(e => e.id === next.id)) break;
             upcoming.push(next);
             current = next;
         }
@@ -1167,14 +1589,26 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         return events.filter(e => !isPast(e));
     };
 
+    /** Nästa-poolen SOM SYNS: tids-/ankarregeln ovan OCH i bild (inView —
+     *  inom kartrutan, ovanför kortet; Josef 2/9). Utan predikat räknas allt
+     *  som synligt. Predikatet går att skicka in (förvärmningen läser det
+     *  via ref). */
+    const visiblePool = (anchor: LinkEvent, isInView: ((evt: LinkEvent) => boolean) | undefined = inView): LinkEvent[] => {
+        const pool = nextCandidatePool(anchor);
+        return isInView ? pool.filter(isInView) : pool;
+    };
+
     /**
-     * Plocka nästa event utifrån ankaret (spiral utåt i avstånd).
-     * Lägger nuvarande event i visited och letar närmaste-till-ankaret som inte är besökt.
-     * När alla är besökta — nollställ visited och börja om.
+     * Plocka nästa event utifrån ankaret (spiral utåt i avstånd) BLAND DEM I
+     * BILD. Lägger nuvarande plats i visited och letar närmaste-till-ankaret
+     * som inte är besökt. null = alla i bild är genomgångna — då är det
+     * dagbytets tur (handleNextOnly/handleSwipeOut), inte ett nytt varv:
+     * omstarten från ankaret är RIVEN 2/9 (Josef: "har man gått igenom alla
+     * ska vi automatiskt gå till nästa dag").
      */
     const pickNext = (current: LinkEvent): LinkEvent | null => {
         const anchor = events.find(e => e.id === anchorId) ?? current;
-        const pool = nextCandidatePool(anchor);
+        const pool = visiblePool(anchor);
 
         const newVisited = new Set(visitedEventIds);
         
@@ -1195,22 +1629,53 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             newVisited.add(current.id);
         }
 
-        let next = findNearestEvent(anchor, pool, discardedEventIds, newVisited);
-        if (!next) {
-            // Allt slut — börja om från ankaret. Ankaret OCH kortet man står på
-            // exkluderas (annars kan varvet "hoppa" till nuvarande kort = no-op,
-            // och fallbacken nedan nås aldrig).
-            newVisited.clear();
-            newVisited.add(anchor.id);
-            newVisited.add(current.id);
-            next = findNearestEvent(anchor, pool, discardedEventIds, newVisited)
-                // Degenererat läge: inga andra kommande event finns alls —
-                // ta vad som finns hellre än en död Nästa-knapp.
-                ?? findNearestEvent(anchor, events, discardedEventIds, newVisited);
-        }
+        const next = findNearestEvent(anchor, pool, discardedEventIds, newVisited);
         setVisitedEventIds(newVisited);
         if (next) expectedNextIdRef.current = next.id;
         return next;
+    };
+
+    /** Alla event på samma koordinat som evt (4 decimaler — samma hopning som
+     *  kartans multibrickor och räknarna nedan). */
+    const groupAt = (evt: LinkEvent): LinkEvent[] => {
+        if (!evt.lat || !evt.lng) return [evt];
+        const key = `${evt.lat.toFixed(4)},${evt.lng.toFixed(4)}`;
+        return events.filter(e => e.lat && e.lng && `${e.lat.toFixed(4)},${e.lng.toFixed(4)}` === key);
+    };
+    /** Framåt-navigeringens val: landar man på en MULTIPLATS öppnas kortets
+     *  väljarlista (onSelectGroup — grupp + rep atomiskt via sidan), annars
+     *  väljs eventet direkt. (Josef 31/8 — samma beteende som multibrick-
+     *  klicket på kartan.) */
+    const selectNextTarget = (next: LinkEvent | null) => {
+        if (next && onSelectGroup) {
+            const group = groupAt(next);
+            if (group.length > 1) {
+                onSelectGroup(group, next);
+                return;
+            }
+        }
+        onSelectEvent(next);
+    };
+    /** Alla event i bild genomgångna → nästa dag som HAR något i bild (sidan
+     *  räknar fram den: nextDayOffset; tomma dagar hoppas över). Kortet
+     *  följer med dit via sidans dagbytes-effekt, som väljer eventet närmast
+     *  kartans mitt bland dem i bild — kameran står still. Sant om ett
+     *  dagbyte utlöstes; falskt när ingen dag finns kvar. */
+    const advanceToNextDay = (): boolean => {
+        if (nextDayOffset == null || !onDayStep || !selectedEvent) return false;
+        // Dagbytet är ett steg i historiken: eventet man lämnar (och dess dag)
+        // läggs bakåt, så Bakåt tar en tillbaka över dagbytet (Josef 2/9).
+        pushHistory({ evt: selectedEvent, dayOffset });
+        setForwardStack([]);
+        stepToDay(nextDayOffset);
+        return true;
+    };
+    /** Be sidan byta dag och armera landningen (se dayStepRef). Med
+     *  selectEventId landar dagbytet på just det eventet (Bakåt/Nästa över
+     *  ett dagbyte), annars på närmaste i bild. */
+    const stepToDay = (toOffset: number, selectEventId?: string) => {
+        dayStepRef.current = { fromOffset: dayOffset, armedAt: Date.now() };
+        onDayStep?.(toOffset - dayOffset, selectEventId);
     };
 
     const THRESHOLD = 100; // Pixels to trigger a swipe action
@@ -1218,15 +1683,52 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Sätts när en press blir en riktig drag (>5px). Används för att INTE
     // navigera när man dragit i Föregående/Nästa-knappen i stället för klickat.
     const didDragRef = useRef(false);
+    // Elementet som bär pointer-capturen för kortets pågående gest: kortet
+    // självt, ELLER knappen/länken gesten började på (se onPointerDown — det
+    // är så ett rent klick på knappen överlever). null = ingen gest.
+    const dragCaptureElRef = useRef<HTMLElement | null>(null);
+    // Sant när gesten började på en knapp/länk — då ska tap-utan-rörelse INTE
+    // toggla kortets höjd (knappens eget onClick är tappens betydelse).
+    const dragFromInteractiveRef = useRef(false);
+    // Sant medan den native touch-lyssnaren (dra-ner-vid-scroll-toppen) har
+    // tagit över gesten från innehållsscrollen — då får kortets drag driva
+    // höjden även i väljarlistan (se contentTouchLockRef).
+    const pullingRef = useRef(false);
+    // VÄLJARLISTAN på touch (Josef 2/9): innehållet äger den vertikala gesten
+    // (touch-action pan-y) så listan scrollar medan kortet står still. Men
+    // webbläsaren skickar några pointermove INNAN den tar över panoreringen
+    // (och sedan pointercancel) — utan låset växte kortet några px på dem och
+    // snäppte sedan till MAX i cancel-släppet. Sätts i onPointerDown för
+    // touch/penna som börjar i scrollinnehållet; handtaget överst är fort-
+    // farande touch-action:none och drar kortet som vanligt.
+    const contentTouchLockRef = useRef(false);
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         if (e.button !== 0) return;
         didDragRef.current = false;
 
         const target = e.target as HTMLElement;
-        if (target.closest('button') || target.closest('a') || target.closest('input')) {
+        // Textfält behåller sina egna pekgester (markera text, flytta
+        // markören) — kortet ska inte börja åka för att man drar i chattfältet.
+        if (target.closest('input, textarea, select')) {
             return;
         }
+        // KNAPPAR OCH LÄNKAR ÄR OCKSÅ DRAGYTA (Josef 31/8: "det måste man
+        // kunna oavsett var man börjar dra i eventkortet" — förr dog gesten
+        // helt på Anmäl/chatten/listan och kortet gick varken att dra eller
+        // scrolla därifrån). Tricket är VAR pointer-capturen sätts: på det
+        // interaktiva elementet SJÄLVT, inte på kortet. Då pekar pointerup
+        // fortfarande på knappen och ett RENT klick (ingen rörelse) når dess
+        // onClick som vanligt — capture på kortet hade retargetat bort
+        // klicket. Händelserna bubblar ändå hit upp, så drag-logiken nedan
+        // är densamma; blir gesten ett drag sväljer onClickCapture på kortet
+        // knappens efterföljande klick (didDragRef).
+        // `summary` räknas också (Josef 2/9): närhetslistans grupprader
+        // ("+7 fler tider & platser") fälls ut med <details>/<summary>. Utan
+        // den här raden togs capturen på KORTET, klicket retargetades bort
+        // från summaryn (listan öppnades aldrig) och tappen togglade kortets
+        // höjd i stället — "kortet går ner men de 7 andra visas inte".
+        const interactive = target.closest('button, a, summary') as HTMLElement | null;
 
         // Firefox avfyrar pointerdown även för klick PÅ EN SCROLLBAR (Chrome
         // undertrycker dem). Utan vakten blev ett drag i den inre scrollistens
@@ -1242,7 +1744,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             }
         }
 
-        e.currentTarget.setPointerCapture(e.pointerId);
+        contentTouchLockRef.current = chooserActiveRef.current
+            && e.pointerType !== 'mouse'
+            && !!scrollContainerRef.current?.contains(target);
+
+        const captureEl = interactive ?? e.currentTarget;
+        captureEl.setPointerCapture(e.pointerId);
+        dragCaptureElRef.current = captureEl;
+        dragFromInteractiveRef.current = interactive != null;
         isDragging.current = true;
         dragDirection.current = 'none';
         startX.current = e.clientX;
@@ -1258,7 +1767,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
         if (!isDragging.current) return;
-        if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+        // Capturen kan sitta på en knapp/länk i stället för kortet (se
+        // onPointerDown) — fråga elementet som faktiskt bär den.
+        if (!dragCaptureElRef.current?.hasPointerCapture(e.pointerId)) return;
 
         const deltaX = e.clientX - startX.current;
         const deltaY = startY.current - e.clientY; // drag up is positive deltaY
@@ -1279,12 +1790,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }
 
         if (dragDirection.current === 'vertical') {
+            // Väljarlistan på touch: höjden rörs bara om den native touch-
+            // lyssnaren tagit över gesten (neddrag vid scroll-toppen) — annars
+            // är det innehållet som ska scrolla, inte kortet som ska växa.
+            if (contentTouchLockRef.current && !pullingRef.current) return;
             const deltaVh = (deltaY / window.innerHeight) * 100;
             // Fritt nedåt: under peek-gränsen fortsätter kortet glida ner mot
             // botten — släpper man tillräckligt långt ner stängs det (se
             // onPointerUp). Uppåt klampas vid MAX_HEIGHT_VH.
             const newHeight = Math.max(3, Math.min(MAX_HEIGHT_VH, startHeightVh.current + deltaVh));
-            updateHeightVh(newHeight);
+            // live: fingret äger höjden direkt, ingen React-render per pixel.
+            // Ingen gain här — vid drag SKA kortet följa fingret 1:1.
+            updateHeightVh(newHeight, true);
         } else if (dragDirection.current === 'horizontal') {
             updateDragX(startDragX.current + deltaX);
         }
@@ -1293,10 +1810,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
         if (!isDragging.current) return;
         isDragging.current = false;
-        
-        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-            e.currentTarget.releasePointerCapture(e.pointerId);
+
+        const captureEl = dragCaptureElRef.current ?? e.currentTarget;
+        if (captureEl.hasPointerCapture(e.pointerId)) {
+            captureEl.releasePointerCapture(e.pointerId);
         }
+        dragCaptureElRef.current = null;
 
         setIsAnimating(true);
 
@@ -1306,23 +1825,32 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             if (h < collapsed - DISMISS_BELOW_VH) {
                 // Släppt långt under peek-gränsen → kortet glider ner och
                 // stängs helt (avmarkerar eventet, precis som ett kartklick).
-                updateHeightVh(2);
-                if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-                dismissTimerRef.current = setTimeout(() => onSelectEvent(null), 260);
+                closeCard();
             } else if (h < collapsed) {
                 // Strax under gränsen → snäpp tillbaka till peek-läget.
                 updateHeightVh(collapsed);
             } else if (h > startHeightVh.current) {
-                // UPPÅT-drag → snäpp ända till MAX, oavsett hur kort svepet
-                // var. Det infriar löftet "ETT svep växer kortet hela vägen
-                // upp och NÄSTA svep scrollar": ett släpp på t.ex. 70vh
-                // lämnade annars kortet i touch-action:none-zonen (< MAX-5)
-                // där svep på innehållet bara fortsatte växa/stå still —
-                // långa beskrivningar gick då inte att scrolla alls.
-                updateHeightVh(MAX_HEIGHT_VH);
+                // UPPÅT-drag → snäpp till närmaste STOPP ovanför startläget
+                // (Josef 2/9: default → tapp-höjden → taket): ett kort ryck
+                // tar ett steg, ett långt drag landar där fingret släppte.
+                // Släppet hamnar alltid PÅ ett stopp, aldrig mitt emellan —
+                // så kortet inte blir kvar i touch-action:none-zonen (< MAX-5)
+                // där svep på innehållet varken scrollar eller växer. Först
+                // på taket scrollar innehållet (nästa svep).
+                updateHeightVh(snapUp(sheetStopsNow(), startHeightVh.current, h, SNAP_TOLERANCE_VH));
             } else {
-                // Neddrag: stanna på exakt den höjd användaren dragit till.
-                updateHeightVh(h);
+                // Neddrag → stoppen baklänges (Josef 1/9, utökat 2/9): taket →
+                // tapp-höjden → default, och från default (eller lägre) stängs
+                // kortet helt. Korta ryck studsar tillbaka dit gesten började
+                // — ett darr på fingret ska inte stänga kortet. (Ett släpp
+                // långt under peek har redan stängts av grenarna ovan.)
+                if (startHeightVh.current - h < SNAP_PULL_MIN_VH) {
+                    updateHeightVh(startHeightVh.current);
+                } else {
+                    const target = snapDown(sheetStopsNow(), startHeightVh.current, h, SNAP_TOLERANCE_VH);
+                    if (target !== null) updateHeightVh(target);
+                    else closeCard();
+                }
             }
         } else if (dragDirection.current === 'horizontal') {
             const currentDragX = dragXRef.current;
@@ -1346,11 +1874,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // I chatt-/listvyn görs inget: ett tap i sektionen (t.ex. på en
             // bubbla eller mellan listraderna) ska inte fälla ihop kortet mitt
             // i läsningen.
-            if (cardView === 'info') {
+            // Började tappen på en knapp/länk är knappens onClick tappens hela
+            // betydelse — höjdtoggeln ska inte också slå till.
+            if (cardView === 'info' && !dragFromInteractiveRef.current) {
                 updateHeightVh(heightVhRef.current > 50 ? measureDefaultHeight() : measureOpenHeight());
             }
         }
 
+        dragFromInteractiveRef.current = false;
         dragDirection.current = 'none';
     };
 
@@ -1360,6 +1891,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const onButtonPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
         if (e.button !== 0) return;
         didDragRef.current = false;
+        contentTouchLockRef.current = false;
         e.currentTarget.setPointerCapture(e.pointerId);
         isDragging.current = true;
         dragDirection.current = 'none';
@@ -1384,8 +1916,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         onPointerUp(e as unknown as React.PointerEvent<HTMLDivElement>);
     };
 
-    const pushHistory = (id: string) => {
-        setHistoryStack(prev => [...prev, id]);
+    const pushHistory = (entry: NavEntry) => {
+        setHistoryStack(prev => [...prev, entry]);
     };
 
     const handleSwipeOut = (direction: 'left' | 'right') => {
@@ -1411,8 +1943,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             onDiscardEvent(selectedEvent.id);
         }
 
-        const previousId = selectedEvent.id;
-
         // Wait for animation, then change event
         setTimeout(() => {
             if (events.length === 0) return;
@@ -1421,14 +1951,19 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // geografiskt närmaste icke-besökta eventet.
             setForwardStack([]);
             const next = pickNext(selectedEvent);
-            if (next) pushHistory(previousId);
-            onNavigate?.(); // kameran ska stå kvar — vi fokuserar inte det nya eventet
-            onSelectEvent(next);
-
             // Reset position immediately for the new card (height bevaras —
             // det här är en Nästa-navigering, inte en ny ankare).
             setExitX(null);
             updateDragX(0);
+            if (!next) {
+                // Sista i bild bortsvept → nästa dag (sidan väljer kortet där);
+                // finns ingen dag kvar stängs kortet — det finns inget att visa.
+                if (!advanceToNextDay()) onSelectEvent(null);
+                return;
+            }
+            pushHistory({ evt: selectedEvent, dayOffset });
+            onNavigate?.(); // kameran ska stå kvar — vi fokuserar inte det nya eventet
+            selectNextTarget(next); // multiplats → kortets väljarlista
         }, 200); // 200ms matches the CSS transition
     };
 
@@ -1437,10 +1972,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const handleHistoryBack = () => {
         if (didDragRef.current) { didDragRef.current = false; return; }
         if (historyStack.length === 0 || !selectedEvent) return;
-        const prevId = historyStack[historyStack.length - 1];
-        const prevEvent = events.find(e => e.id === prevId);
+        const entry = historyStack[historyStack.length - 1];
         setHistoryStack(prev => prev.slice(0, -1));
-        setForwardStack(prev => [...prev, selectedEvent.id]);
+        setForwardStack(prev => [...prev, { evt: selectedEvent, dayOffset }]);
+        if (entry.dayOffset !== dayOffset) {
+            // BAKÅT ÖVER ETT DAGBYTE (Josef 2/9): tillbaka till den dagen, och
+            // sidan landar på eventet man stod på där (finns det inte längre:
+            // närmast kartans mitt i bild). Landningen behåller stackarna, så
+            // Nästa tar en framåt över dagbytet igen.
+            if (onDayStep) stepToDay(entry.dayOffset, entry.evt.id);
+            setExitX(null);
+            updateDragX(0);
+            return;
+        }
+        const prevEvent = events.find(e => e.id === entry.evt.id);
         if (prevEvent) {
             // Intern navigering → behåll ankare/besökt (markeras som "väntat").
             expectedNextIdRef.current = prevEvent.id;
@@ -1456,19 +2001,41 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (!selectedEvent || events.length === 0) return;
 
         // Har vi backat? Spela då upp framåt-stacken i SAMMA ordning igen i
-        // stället för att räkna fram ett nytt närmaste event.
+        // stället för att räkna fram ett nytt närmaste event — men bara om
+        // eventet fortfarande är I BILD (man kan ha panorerat sedan man
+        // backade); annars slängs stacken och Nästa räknar fram som vanligt.
         let next: LinkEvent | null = null;
         if (forwardStack.length > 0) {
-            const fwdId = forwardStack[forwardStack.length - 1];
-            next = events.find(e => e.id === fwdId) ?? null;
-            setForwardStack(prev => prev.slice(0, -1));
-            if (next) expectedNextIdRef.current = next.id; // intern navigering — behåll ankare
+            const top = forwardStack[forwardStack.length - 1];
+            if (top.dayOffset !== dayOffset && onDayStep) {
+                // FRAMÅT ÖVER ETT DAGBYTE (man backade över det): eventet man
+                // står på läggs bakåt, dagen byts och sidan landar på just det
+                // event man var på där.
+                pushHistory({ evt: selectedEvent, dayOffset });
+                setForwardStack(prev => prev.slice(0, -1));
+                stepToDay(top.dayOffset, top.evt.id);
+                return;
+            }
+            const fwd = top.dayOffset === dayOffset ? events.find(e => e.id === top.evt.id) ?? null : null;
+            if (fwd && (!inView || inView(fwd))) {
+                next = fwd;
+                setForwardStack(prev => prev.slice(0, -1));
+                expectedNextIdRef.current = fwd.id; // intern navigering — behåll ankare
+            } else {
+                setForwardStack([]);
+            }
         }
         // Tom framåt-stack (eller eventet finns inte längre) → vanligt pickNext.
         if (!next) next = pickNext(selectedEvent);
-        if (next) pushHistory(selectedEvent.id);
+        if (!next) {
+            // Alla i bild genomgångna → nästa dag (Josef 2/9). Knappen är
+            // släckt när ingen dag finns kvar, så grenen är då oåtkomlig.
+            advanceToNextDay();
+            return;
+        }
+        pushHistory({ evt: selectedEvent, dayOffset });
         onNavigate?.(); // kameran står kvar — vi fokuserar inte det nya eventet
-        onSelectEvent(next);
+        selectNextTarget(next); // multiplats → kortets väljarlista
 
         setExitX(null);
         updateDragX(0);
@@ -1487,33 +2054,45 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     // Föregående event i bakåt-stacken — visas som emoji-bricka (= bakåt-knapp)
     // till vänster om Nästa, så man ser vilket event man går TILLBAKA till.
-    const backEventId = historyStack[historyStack.length - 1];
-    const backEvent = backEventId ? events.find(e => e.id === backEventId) : undefined;
+    const backEntry: NavEntry | undefined = historyStack[historyStack.length - 1];
+    const backEvent = backEntry?.evt;
+    // Ligger föregående event på en ANNAN dag tar Bakåt en över dagbytet —
+    // titeln säger vilken dag, så det inte kommer som en överraskning.
+    const backCrossDay = !!backEntry && backEntry.dayOffset !== dayOffset;
+    const backTitle = backEvent
+        ? `Gå tillbaka till ${backEvent.title}${backCrossDay ? ` (${getDayLabel(backEntry!.dayOffset, dayRangeDays).toLowerCase()})` : ''}`
+        : null;
 
-    // Antal event i föregående events grupp (om det var en multibricka)
+    // Antal event i föregående events grupp (om det var en multibricka).
+    // Räknas bara på dagens lista — över ett dagbyte visas ingen siffra.
     const backEventGroupCount = useMemo(() => {
-        if (!backEvent || !backEvent.lat || !backEvent.lng) return 1;
+        if (!backEvent || backCrossDay || !backEvent.lat || !backEvent.lng) return 1;
         const key = `${backEvent.lat.toFixed(4)},${backEvent.lng.toFixed(4)}`;
         return events.filter(e => {
             if (!e.lat || !e.lng) return false;
             const k = `${e.lat.toFixed(4)},${e.lng.toFixed(4)}`;
             return k === key;
         }).length;
-    }, [backEvent, events]);
+    }, [backEvent, backCrossDay, events]);
 
     // Nästa event — SAMMA val som handleNextOnly gör (framåt-stacken först,
     // annars närmaste obesökta), men helt ren (inga setState/refs) så den kan
     // visas som emoji-bricka = en förhandsvisning av vart Nästa tar dig.
     const nextEvent = useMemo<LinkEvent | null>(() => {
         if (!selectedEvent || events.length === 0) return null;
-        // Har vi backat? Nästa spelar upp framåt-stacken i samma ordning igen.
+        // Har vi backat? Nästa spelar upp framåt-stacken i samma ordning igen
+        // — om eventet fortfarande är i bild (samma vakt som handleNextOnly).
         if (forwardStack.length > 0) {
-            const fwd = events.find(e => e.id === forwardStack[forwardStack.length - 1]);
-            if (fwd) return fwd;
+            const top = forwardStack[forwardStack.length - 1];
+            // Över ett dagbyte: ingen emoji — knappen visar dagens namn i
+            // stället (nextDayLabel), och trycket byter dag.
+            if (top.dayOffset !== dayOffset) return null;
+            const fwd = events.find(e => e.id === top.evt.id);
+            if (fwd && (!inView || inView(fwd))) return fwd;
         }
         // Annars: samma logik som pickNext, utan sidoeffekter.
         const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
-        const pool = nextCandidatePool(anchor);
+        const pool = visiblePool(anchor);
         const simVisited = new Set(visitedEventIds);
         const curKey = selectedEvent.lat && selectedEvent.lng
             ? `${selectedEvent.lat.toFixed(4)},${selectedEvent.lng.toFixed(4)}` : null;
@@ -1524,16 +2103,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         } else {
             simVisited.add(selectedEvent.id);
         }
-        let next = findNearestEvent(anchor, pool, discardedEventIds, simVisited);
-        if (!next) {
-            simVisited.clear();
-            simVisited.add(anchor.id);
-            simVisited.add(selectedEvent.id);
-            next = findNearestEvent(anchor, pool, discardedEventIds, simVisited)
-                ?? findNearestEvent(anchor, events, discardedEventIds, simVisited);
-        }
-        return next;
-    }, [selectedEvent, events, forwardStack, anchorId, visitedEventIds, discardedEventIds, now]);
+        // null = alla i bild genomgångna → knappen visar nästa dag i stället.
+        return findNearestEvent(anchor, pool, discardedEventIds, simVisited);
+    }, [selectedEvent, events, forwardStack, dayOffset, anchorId, visitedEventIds, discardedEventIds, now, inView]);
 
     // Antal event i nästa events grupp (om det är en multibricka)
     const nextEventGroupCount = useMemo(() => {
@@ -1544,6 +2116,22 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             return `${e.lat.toFixed(4)},${e.lng.toFixed(4)}` === key;
         }).length;
     }, [nextEvent, events]);
+
+    // Nästa-knappens tre lägen (Josef 2/9): (1) event i bild kvar → emoji-
+    // förhandsvisning som förut; (2) eventen i bild slut men en dag med
+    // event i bild finns → NÄSTA DAGS NAMN på knappen ("IMORGON", "TORSDAG"),
+    // trycket byter dag; (3) ingen dag kvar → släckt knapp.
+    // Har man backat över ett dagbyte ligger DEN dagen överst i framåtstacken
+    // och vinner över den beräknade nästa dagen — Nästa spelar upp samma väg.
+    const forwardTop: NavEntry | undefined = forwardStack[forwardStack.length - 1];
+    const nextStepDayOffset = forwardTop && forwardTop.dayOffset !== dayOffset ? forwardTop.dayOffset : nextDayOffset;
+    const nextDayLabel = !nextEvent && nextStepDayOffset != null ? getDayLabel(nextStepDayOffset, dayRangeDays) : null;
+    const nextDisabled = !nextEvent && nextStepDayOffset == null;
+    const nextTitle = nextEvent
+        ? `Närmaste i bild: ${nextEvent.title}`
+        : nextDayLabel
+            ? `Alla event i bild är genomgångna — gå vidare till ${nextDayLabel.toLowerCase()}`
+            : 'Inga fler event i bild';
 
     return (
         <>
@@ -1618,13 +2206,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 </div>
 
                 {/* Höger: träff-räknare (flipper) + emoji + bakåt + Nästa. Emoji/bakåt
-                    sitter längst till vänster i gruppen och Nästa växer (flex-1) så den
-                    blir så bred som möjligt. Gruppen tar hela bredden (flex-1) bredvid
-                    verktygspillen. Bakåt/Nästa döljs i spelläget — då ska man inte kunna
-                    navigera bort målet. */}
-                <div className="flex-1 min-w-0 ml-2 flex items-center gap-2 pointer-events-auto">
+                    sitter längst till vänster i gruppen och Nästa skjuts ut i högerkanten
+                    (ml-auto). Gruppen tar hela bredden (flex-1) bredvid verktygspillen men
+                    är pointer-events-none — bara knapparna själva tar klick, tomrummet
+                    emellan går till kartan. Bakåt/Nästa döljs i spelläget — då ska man inte
+                    kunna navigera bort målet. */}
+                <div className="flex-1 min-w-0 ml-2 flex items-center gap-2 pointer-events-none">
                     {pinShotHits > 0 && (
-                        <div className="flex items-center gap-1.5 bg-amber-400 text-slate-900 font-black rounded-full shadow-xl border border-white/30 px-3.5 h-[38px] text-[13px] tabular-nums box-border whitespace-nowrap">
+                        <div className="pointer-events-auto flex items-center gap-1.5 bg-amber-400 text-slate-900 font-black rounded-full shadow-xl border border-white/30 px-3.5 h-[38px] text-[13px] tabular-nums box-border whitespace-nowrap">
                             🎯 {pinShotHits} träff{pinShotHits === 1 ? '' : 'ar'}
                         </div>
                     )}
@@ -1643,9 +2232,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerUp={onButtonPointerUp}
                                 onPointerCancel={onButtonPointerUp}
                                 disabled={!backEvent}
-                                aria-label={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event'}
-                                title={backEvent ? `Gå tillbaka till ${backEvent.title}` : 'Inget föregående event än'}
-                                className={`relative shrink-0 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center leading-none box-border select-none transition-all ${
+                                aria-label={backTitle ?? 'Inget föregående event'}
+                                title={backTitle ?? 'Inget föregående event än'}
+                                className={`pointer-events-auto relative shrink-0 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 h-[38px] w-[38px] flex items-center justify-center leading-none box-border select-none transition-all ${
                                     backEvent
                                         ? 'hover:bg-white/50 hover:scale-105 active:scale-95 cursor-pointer text-xl'
                                         : 'opacity-40 cursor-not-allowed'
@@ -1669,8 +2258,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     <ArrowLeft size={18} className="text-[#006AA7]" />
                                 )}
                             </button>
-                            {/* Nästa — hela flex-1-ytan är klickbar, men det SYNLIGA är
-                                en solid flaggblå kapsel i högerkanten (samma gradient +
+                            {/* Nästa — knappen ÄR kapseln: ytan till vänster om den
+                                var tidigare klickbar (flex-1) men revs 31/8 (Josef:
+                                "det ska bara vara på nästa-knappen"), så kartklick i
+                                tomrummet går fram. Kapseln är solid flaggblå i
+                                högerkanten (samma gradient +
                                 inre ljuskant som ANMÄL-knappen). Den genomskinliga
                                 urstansade SVG-varianten TOGS BORT (Josef 21/8: "den
                                 behöver synas lite mer" — kartan genom bokstäverna gjorde
@@ -1684,12 +2276,22 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 onPointerMove={onButtonPointerMove}
                                 onPointerUp={onButtonPointerUp}
                                 onPointerCancel={onButtonPointerUp}
-                                aria-label={nextEvent ? `Närmaste härifrån: ${nextEvent.title}` : 'Närmaste event i närheten'}
-                                title={nextEvent ? `Närmaste härifrån: ${nextEvent.title}` : 'Närmaste event i närheten'}
-                                className="group/nasta relative min-w-0 h-[38px] box-border flex items-center justify-end flex-1 bg-transparent"
+                                disabled={nextDisabled}
+                                aria-label={nextTitle}
+                                title={nextTitle}
+                                className={`group/nasta pointer-events-auto relative shrink-0 ml-auto h-[38px] box-border flex items-center bg-transparent${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
                             >
-                                <span className="flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 transition-all group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg group-active/nasta:scale-[0.97]">
-                                    <span className="text-[12px] font-black uppercase tracking-widest leading-none">NÄSTA</span>
+                                {/* DAGBYTES-LÄGET: samma blå kapsel men med GUL RAM (Josef
+                                    2/9: "skit i det att den byter färg, lägg en gul ram i
+                                    stället") + kalender-ikon i stället för eventets emoji.
+                                    Ägarbeslut — den vita omfärgningen byggdes och revs
+                                    samma kväll. */}
+                                <span className={`flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-inset transition-all group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg group-active/nasta:scale-[0.97] ${
+                                    nextDayLabel ? 'ring-2 ring-[#FECC02]' : 'ring-1 ring-white/25'
+                                }`}>
+                                    {/* Eventen i bild slut → nästa dags namn i stället för NÄSTA,
+                                        så man ser att trycket byter dag (se nextDayLabel). */}
+                                    <span className="text-[12px] font-black uppercase tracking-widest leading-none">{nextDayLabel ?? 'NÄSTA'}</span>
                                     {/* Emoji för nästa event + liten framåt-pil. */}
                                     {nextEvent ? (
                                         <span aria-hidden className="relative flex items-center justify-center w-8 h-8 text-lg leading-none">
@@ -1704,6 +2306,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                                     {nextEventGroupCount}
                                                 </span>
                                             )}
+                                        </span>
+                                    ) : nextDayLabel ? (
+                                        <span aria-hidden className="flex items-center justify-center w-7 h-7">
+                                            <CalendarDays size={16} />
                                         </span>
                                     ) : (
                                         <span aria-hidden className="flex items-center justify-center w-7 h-7">
@@ -1721,16 +2327,28 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             {selectedEvent ? (
             <div className="w-full max-w-4xl">
             <div
+                ref={sheetRef}
                 className={`relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)] overflow-hidden border border-border/10${scrollNudgeActive ? ' scroll-nudge-anim' : ''}`}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
+                // Blev gesten ett drag skickar webbläsaren ÄNDÅ ett click till
+                // knappen/länken den började på (capturen sitter på elementet
+                // självt, se onPointerDown) — svälj det i capture-fasen så ett
+                // kortdrag från Anmäl/chatten aldrig också ÖPPNAR dem.
+                onClickCapture={(e) => {
+                    if (didDragRef.current) {
+                        didDragRef.current = false;
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }}
                 onAnimationEnd={(e) => { if (e.animationName === 'scroll-nudge') setScrollNudgeActive(false); }}
                 style={{
                     // Höjden går via --sheet-h så scroll-nudge-animationen kan
                     // växa kortet från samma basvärde (botten förblir förankrad).
-                    ['--sheet-h' as string]: `${heightVh}vh`,
+                    ['--sheet-h' as string]: `${heightVhRef.current}vh`,
                     height: 'var(--sheet-h)',
                     transform: `translateX(${exitX !== null ? exitX : dragX}px) rotate(${rotation}deg)`,
                     opacity: exitX !== null ? 0 : opacity,
@@ -1751,8 +2369,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     inte adderar någon höjd/padding. pointer-events-none → drag går
                     rakt igenom till kortet. */}
                 <div className="absolute top-2 left-0 right-0 z-40 flex flex-col items-center justify-center gap-1 pointer-events-none">
-                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-slate-500/90" />
-                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-slate-500/90" />
+                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-zinc-500/90" />
+                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-zinc-500/90" />
                 </div>
 
                 {/* Visual feedback overlays during drag (Tinder swipe overlays) */}
@@ -1778,14 +2396,31 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // scrolla innehållet. touch-action låses vid gest-start,
                         // så ETT svep växer kortet hela vägen upp och NÄSTA svep
                         // scrollar den nedre delen.
-                        touchAction: heightVh < MAX_HEIGHT_VH - 5 ? 'none' : 'pan-y'
+                        // VÄLJARLISTAN (Josef 2/9): alltid pan-y — svepet
+                        // scrollar listan upp under överkanten, kortet står
+                        // still (se contentTouchLockRef för pointer-sidan).
+                        touchAction: !chooserActive && heightVhRef.current < MAX_HEIGHT_VH - 5 ? 'none' : 'pan-y'
                     }}
                 >
+                    {/* VÄLJARLÄGET: innehållet ÄR väljarlistan tills man valt
+                        (Josef 31/8) — sen renderas det vanliga kortet nedan. */}
+                    {chooserActive && groupChoice ? (
+                        <EventCardGroupList
+                            events={groupChoice}
+                            selectedEvent={selectedEvent}
+                            onSelect={onPickFromGroup!}
+                        />
+                    ) : (<>
                     <LinkEventCard
                         linkEvent={selectedEvent}
                         isAdmin={false}
                         distance={distanceFromUserKm}
                         showFullAddress
+                        // Djuplänksöppningen (DEEPLINK_HEIGHT_VH) startar med ALLT
+                        // uppfällt — ett nästan-fullhöjdskort med bara headern vore
+                        // mest tomyta. Läses vid mount; nonce-förbrukningen (ref-
+                        // skrivningen) sker i ankar-effekten ovan.
+                        initialRevealStep={fullOpenNonce > consumedFullOpenNonceRef.current ? 2 : 0}
                         groupIndex={sameSpotIndex < 0 ? 0 : sameSpotIndex}
                         groupTotal={sameSpotGroup.length}
                         onGroupNext={handleSameSpotNext}
@@ -1822,6 +2457,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // ligger direkt under eventinfon. Lista-toggeln bara
                         // när närhetslistan har innehåll.
                         activityView={false}
+                        // Tillbaka-pilen sitter FÖRE Lista-knappen i headern.
+                        // Bara i infovyn: står man i närhetslistan är "tillbaka"
+                        // tvetydigt (två listor), och där finns Lista-toggeln
+                        // som väg ut.
+                        onBackToGroup={cardView === 'info' ? onBackToGroup : undefined}
+                        backToGroupCount={backToGroupCount}
                         nearbyView={cardView === 'nearby'}
                         onToggleNearbyView={nearbyEvents.length > 0 ? () => handleToggleView('nearby') : undefined}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
@@ -1830,7 +2471,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         canPlaceStar={canPlaceStar && !isEventPast(selectedEvent, Date.now())}
                         onPlaceStar={onPlaceStar ? () => onPlaceStar(selectedEvent.id) : undefined}
                     />
-                    {/* Chatt per event — alla kan läsa, skriva kräver konto.
+                    {/* Chatt per event — KRÄVER KONTO för att ens läsas
+                        (Josef 31/8): utloggade ser en låst rad "Logga in för
+                        att se chatten" som öppnar auth-modalen.
                         (Livebilder-panelen borttagen 5/8 på ägarens beslut.)
                         Döljs i listvyn så närhetslistan hamnar direkt under
                         headern. */}
@@ -1844,11 +2487,28 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         event i närheten direkt när de scrollar). Döljs i
                         chatt-vyn (som visar bara header + chatt); i listvyn
                         hamnar den i stället direkt under headern. */}
+                    {/* Djuplänks-glappet (?event= från stadssidorna): kortet
+                        öppnar på sitt seed-data långt innan Sverige-lagren
+                        laddat, så närhetslistan är tom en stund. Visa sektionen
+                        som laddande i stället för att den poppar in ur
+                        ingenstans — försvinner när listan fyllts, eller tyst
+                        när det definitiva beskedet säger att inget finns nära. */}
+                    {cardView !== 'chat' && nearbyEvents.length === 0 && !eventsSettled && (
+                        <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
+                            <div className="px-4 md:px-6 py-3 flex items-center gap-2.5">
+                                <span aria-hidden className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 dark:border-zinc-600 border-t-[#006AA7] dark:border-t-sky-400 animate-spin" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                    Letar event i närheten…
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     {cardView !== 'chat' && nearbyEvents.length > 0 && (
                         <NearbyEventsList
-                            upcomingItems={listedUpcoming.slice(0, nearbyVisibleCount)}
-                            upcomingTotal={listedUpcoming.length}
-                            pastItems={listedPast}
+                            upcomingItems={listedUpcoming.rows.slice(0, nearbyVisibleCount)}
+                            upcomingTotal={listedUpcoming.rows.length}
+                            upcomingCount={listedUpcoming.count}
+                            pastItems={listedPast.rows}
                             now={now}
                             onSelect={evt => onSelectEvent(evt)}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}
@@ -1858,6 +2518,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onToggleImages={toggleImages}
                         />
                     )}
+                    </>)}
                 </div>
 
                 {/* Scroll-coach: "scrolla ner"-pilen visas DIREKT när ett kort är
@@ -1872,7 +2533,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     ytan runt pillen inte fångar scroll/tap.
                     Bara i infovyn — i listvyn ÄR man redan i närhetslistan och
                     i chatt-vyn finns ingen lista att scrolla till. */}
-                {coachStage !== 'off' && cardView === 'info' && (
+                {coachStage !== 'off' && cardView === 'info' && !chooserActive && (
                     <div className="absolute inset-x-0 bottom-4 z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <button
                             type="button"

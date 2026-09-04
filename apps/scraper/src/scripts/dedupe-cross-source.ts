@@ -9,6 +9,7 @@
  *   → "Albert Lee i Umeå" på FB + Eventim dedupas (samma stad)
  *
  * Score per event (högt = behåll):
+ *   +25  affiliate-wrappad länk (provision — slår allt annat, se 1/9)
  *   +10  har bild (icke-tomt)
  *   +5   bild är i vår egen Storage (permanent)
  *   +5   description längre än 50 tecken
@@ -25,6 +26,7 @@ import path from 'path';
 import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
+import { isAffiliateLink } from '../utils/ticketSources';
 
 const apply = process.argv.includes('--apply');
 
@@ -165,6 +167,14 @@ export function buildDedupGroups(rows: Row[]): GroupingResult {
 
 export function scoreOf(r: Row): number {
     let s = 0;
+    // AFFILIATELÄNKEN VINNER. Utan den här raden avgjordes valet på bild och
+    // beskrivning, och en turistsajt med snygg bild slog vår intäktslänk:
+    // Mamma Mia 3/9 behöll visitstockholm.com medan BÅDE affiliate-URL:en och
+    // ticketmaster.se göms — klicket gick dit och provisionen uteblev.
+    // 25 räcker för att slå allt annat sammanlagt (10+5+5+3+2+1 = 26 kan bara
+    // nås av en kandidat som är bättre på varenda punkt, och då är den värd
+    // att behålla ändå). Se utils/ticketSources.ts.
+    if (isAffiliateLink(r.url)) s += 25;
     const hasImage = r.coverImage && r.coverImage.length > 10;
     if (hasImage) s += 10;
     if (hasImage && r.coverImage!.includes('storage.googleapis')) s += 5;

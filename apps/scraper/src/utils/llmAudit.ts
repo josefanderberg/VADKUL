@@ -1,5 +1,5 @@
 /**
- * LLM-baserad audit av events: använder Ollama (gemma4:latest) för att bedöma
+ * LLM-baserad audit av events: använder Ollama (qwen3:8b) för att bedöma
  * om eventet ser legitimt ut, klassificera kategori, välja en passande emoji
  * och plocka ut entrépris.
  *
@@ -11,14 +11,20 @@
  *   - Vilken enskild emoji representerar just detta event bäst (för kartpinnen)?
  *   - Nämns ett entré-/deltagarpris i texten?
  *
- * Modell: gemma4:latest (text-only). För bildgranskning behövs llama3.2-vision.
+ * Modell: qwen3:8b (text-only, samma som K4 — EN modell laddad på minin).
+ * Standard var gemma4:latest t.o.m. 2026-09-04: llama-server tog 18 GB på en
+ * 16 GB-maskin och svepte ut allt annat. Bilder granskas inte — texten
+ * (titel/plats/beskrivning/värd) räcker för junk/kategori/emoji/pris.
  */
 
 import { normalizeCategory } from './categoryNormalize';
 
+import { OLLAMA_TIMEOUT_MS } from './ollamaPool';
+
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
-const TIMEOUT_MS = 30_000;
+const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'qwen3:8b';
+// Skalar med OLLAMA_CONCURRENCY (utils/ollamaPool) — köade anrop får inte avbrytas.
+const TIMEOUT_MS = OLLAMA_TIMEOUT_MS;
 
 export type AuditVerdict = 'ok' | 'suspect' | 'junk';
 
@@ -135,10 +141,18 @@ Bedöm:
    - course: workshop, kurs, seminarium, föredrag, föreläsning
    - family: barnteater, familjeevent, sagostund, barnaktivitet
    - other: passar inte i någon ovan
+   MÅLGRUPPEN SLÅR AKTIVITETSTYPEN: riktar sig eventet till BARN är det
+   family, även om aktiviteten i sig är sport/kurs/musik. Signaler att leta
+   efter: åldersspann eller födelseår i titeln ("2020-2018", "4-6 år",
+   "0-1 år"), samt Friluftsfrämjandets barnverksamhet — Skogsmulle, Knopp,
+   Knytte, Strövare, Frilufsare, Vildmarksäventyr, Skogens värld — som ALLA
+   är family, inte sport. Undantag: LEDARUTBILDNING och fortbildning för
+   vuxna ledare i samma verksamhet är course.
 6. categoryConfidence — "high" om kategorin är uppenbar, annars "medium"/"low".
 7. emoji — EN enda emoji som bäst representerar just detta SPECIFIKA event (fritt val, inte bunden till kategorin). Var PRECIS — använd INTE ⚽ för all sport. Matcha aktiviteten:
-   SPORT/RÖRELSE: yoga/meditation/mindfulness → 🧘 · cykling/MTB/spinning → 🚴 · löpning/maraton/terränglopp → 🏃 · simning → 🏊 · vandring/friluftsliv → 🥾 · gym/styrketräning/crossfit → 🏋️ · fotboll → ⚽ · ishockey → 🏒 · tennis/padel → 🎾 · golf → ⛳ · ridning/häst → 🐴 · kampsport/boxning → 🥊 · dans/zumba → 💃 · klättring → 🧗 · skidor → ⛷️
-   ÖVRIGT (exempel): schackturnering → ♟️ · kräftskiva → 🦞 · jazzkonsert → 🎷 · rockkonsert → 🎸 · teater → 🎭 · standup → 🎤 · konstutställning → 🎨 · loppis → 🛍️ · julmarknad → 🎄 · ölprovning → 🍺 · barnteater → 🧸 · quiz → 🧠 · brädspel → 🎲 · föreläsning → 🎓
+   SPORT/RÖRELSE: yoga/meditation/mindfulness → 🧘 · cykling/MTB/spinning → 🚴 · löpning/maraton/terränglopp → 🏃 · simning → 🏊 · vandring/friluftsliv → 🥾 · gym/styrketräning/crossfit → 🏋️ · fotboll → ⚽ · ishockey → 🏒 · tennis/padel → 🎾 · golf → ⛳ · discgolf/frisbee → 🥏 · orientering → 🧭 · bordtennis → 🏓 · badminton → 🏸 · ridning/häst → 🐴 · kampsport/boxning → 🥊 · dans/zumba → 💃 · klättring → 🧗 · skidor → ⛷️
+   FAMILJ/BARN: använd INTE 🧸 för allt som rör barn — den är lika slapp som ⚽ för all sport. Matcha aktiviteten: sagostund/högläsning → 📖 · babysång/babyrytmik → 🍼 · pyssel/skapande → ✂️ · målning/rita → 🎨 · öppen förskola/lekstuga → 🧸 · utomhus/skogsmulle/strövare → 🌲 · djur/4H/bondgård → 🐄 · ridning/ponny → 🐴 · barnteater/dockteater → 🎭 · barnkör/musiklek → 🎵 · barndisco → 🪩 · simskola → 🏊 · skattjakt → 🗺️ · ansiktsmålning → 🎨 · barnbio → 🎬 · ungdomsgrupp/häng → 🫂
+   ÖVRIGT (exempel): schackturnering → ♟️ · kräftskiva → 🦞 · jazzkonsert → 🎷 · rockkonsert → 🎸 · teater → 🎭 · standup → 🎤 · konstutställning → 🎨 · loppis → 🛍️ · julmarknad → 🎄 · ölprovning → 🍺 · quiz → 🧠 · brädspel → 🎲 · föreläsning → 🎓
    Välj det mest träffsäkra för EXAKT denna aktivitet. Två events av samma typ (t.ex. två yogapass) ska få samma emoji.
 8. price — entré-/deltagarpris OM det tydligt nämns i texten, som sträng (t.ex. "150 kr", "Fri entré", "50-200 kr"). Annars null. VIKTIGT: bara faktiskt pris för att delta — INTE vinstpotter ("1:a pris 1000 kr"), bordsavgifter eller medlemsavgifter.
 

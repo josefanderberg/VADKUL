@@ -4,6 +4,14 @@ Entry-point. Läs först. Hålls under 60 rader.
 
 ## Senaste riktade insats
 
+2026-09-04: **Källsvep storstadsscener + svagaste städerna** — Stockholm Lives
+fem arenor, Berwaldhallen, Debaser, Got Event (Scandinavium/Ullevi), Visit
+Luleå, Visit Roslagen in; Pustervik + Konserthuset lagade. Två nya motorer
+(`gotevent`, `visitlulea`), tre motorfixar. Ticketmasters API har bara ~200
+SE-event — arenorna måste tas från egna sajter. Recept för det som inte
+byggdes (Ystad-Österlen, Svensk Jazz, Malmö Arena) i
+[runs/2026-09-04.md](runs/2026-09-04.md).
+
 2026-07-27: **Dammsugning Borås/Kalmar/Östersund/Eskilstuna** (GSC-topstäderna) —
 9 nya/väckta källor, ~560 nya event. Ny `wp-graphql`-engine + 2 sitevision-API-
 varianter. Detaljer: [runs/2026-07-27.md](runs/2026-07-27.md).
@@ -41,6 +49,8 @@ varianter. Detaljer: [runs/2026-07-27.md](runs/2026-07-27.md).
 | [K5](kampanjer/k5-lank-enrichment.md) | Länk-enrichment | PLAN |
 | [K6](kampanjer/k6-teams-rapport.md) | Teams-rapport som visar tratten ärligt | PLAN |
 | K7 | Eventbrite + Eventim scrapers (Puppeteer) | KLAR 2026-05-29c |
+| [K9](kampanjer/k9-datakvalitet.md) | Datakvalitet: kapade beskrivningar, å/ä/ö, pris ur text | KOD KLAR 2026-09-03 — data läks av nattkedjan |
+| [K10](kampanjer/k10-pitea.md) | Piteå-kritiken: biografsalonger, mittpunkts-event, taggsoppa, Rotary dold, FB-sidor | KOD KLAR 2026-09-04 — källjakt från minin kvar |
 
 ## Topp-3 öppna problem (per 2026-05-29b)
 

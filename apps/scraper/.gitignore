@@ -13,3 +13,6 @@ events.db
 keyword_stats.json
 scraper_run_history.json
 keyword_test_results.json
+
+# IG-schemakön (inläggstexter i utkastform, maskin-lokal — se utils/igQueue.ts)
+ig-queue.json

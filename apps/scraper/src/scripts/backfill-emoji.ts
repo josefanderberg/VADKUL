@@ -21,6 +21,7 @@ import { db } from '../config/firebase';
 import { sqlite } from '../utils/sqliteHelper';
 import { CATEGORY_EMOJI } from '../utils/llmAudit';
 import { stamped } from '../utils/firestoreStamp';
+import { ruleEmojiFor } from '../utils/emojiRules';
 
 const APPLY = process.argv.includes('--apply');
 const ALL = process.argv.includes('--all');
@@ -32,6 +33,8 @@ const ALL = process.argv.includes('--all');
 const RESYNC = process.argv.includes('--resync-firestore');
 
 interface Row {
+    title: string | null;
+    locationName: string | null;
     url: string;
     firestoreId: string | null;
     category: string | null;
@@ -47,7 +50,7 @@ async function main() {
 
     const timeFilter = ALL ? '' : "AND time >= datetime('now')";
     const rows = sqlite.prepare(`
-        SELECT url, firestoreId, category, emoji
+        SELECT url, firestoreId, category, emoji, title, locationName
         FROM link_events
         WHERE (emoji IS NULL OR emoji = '' OR emoji = '❓' OR emoji = '❔')
         ${timeFilter}
@@ -61,7 +64,7 @@ async function main() {
 
     for (const r of rows) {
         const cat = r.category || 'other';
-        const emoji = CATEGORY_EMOJI[cat] ?? CATEGORY_EMOJI.other;
+        const emoji = ruleEmojiFor(r.title, r.locationName) ?? CATEGORY_EMOJI[cat] ?? CATEGORY_EMOJI.other;
         perCat.set(cat, (perCat.get(cat) || 0) + 1);
         updated++;
 

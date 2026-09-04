@@ -12,6 +12,8 @@ vi.mock('../utils/dbHelper', () => ({
     eventExistsInDb: vi.fn(async () => false),
     refreshEventTime: vi.fn(async () => false),
     refreshEventPlace: vi.fn(async () => false),
+    refreshEventEndDate: vi.fn(async () => false),
+    refreshEventContent: vi.fn(async () => false),
 }));
 vi.mock('../utils/venueCoordinates', () => ({
     geocodeVenueSweden: vi.fn(async () => null),
@@ -31,17 +33,24 @@ vi.mock('../utils/sqliteHelper', () => ({
     recordScrapeRun: vi.fn(),
     setEventAudit: vi.fn(),
     getSqliteEvent: vi.fn(() => undefined),
+    getSyncMeta: vi.fn(() => null),
+    setSyncMeta: vi.fn(),
+}));
+// Var 4:e-körning-logiken är datum/hash-styrd — pinna av så testerna inte
+// blir beroende av vilken dag de körs.
+vi.mock('./schedule', () => ({
+    isRefreshRun: vi.fn(() => false),
 }));
 vi.mock('../utils/llmAudit', () => ({
     auditEvent: vi.fn(),
     ollamaIsAvailable: vi.fn(async () => false),
 }));
 
-import { runSource, deriveHasSpecificTime, geocodeQueriesFor } from './runner';
+import { runSource, deriveHasSpecificTime, geocodeQueriesFor, CONTENT_SWEEP_VERSION } from './runner';
 import { Source, RawEvent, Engine } from './types';
 import { addEventsBatch, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
-import { recordScrapeRun } from '../utils/sqliteHelper';
+import { recordScrapeRun, getSyncMeta, setSyncMeta } from '../utils/sqliteHelper';
 
 const batchMock = vi.mocked(addEventsBatch);
 // Runnern batchar skrivningar: alla event från en körning kommer i ETT
@@ -51,6 +60,8 @@ const writtenEvents = (): any[] => batchMock.mock.calls.flatMap((c) => c[0]);
 const existsMock = vi.mocked(eventExistsInDb);
 const geocodeMock = vi.mocked(geocodeVenueSweden);
 const recordRunMock = vi.mocked(recordScrapeRun);
+const syncMetaGetMock = vi.mocked(getSyncMeta);
+const syncMetaSetMock = vi.mocked(setSyncMeta);
 
 /** Imorgon kl 19:00 lokal tid — alltid inne i 30-dagarsfönstret. */
 function tomorrow19(): Date {
@@ -93,6 +104,54 @@ beforeEach(() => {
     vi.clearAllMocks();
     existsMock.mockResolvedValue(false);
     geocodeMock.mockResolvedValue(null);
+    // Default: svepet är redan gjort — övriga tester ska inte köra i refresh-läge.
+    syncMetaGetMock.mockReturnValue(CONTENT_SWEEP_VERSION);
+});
+
+describe('runSource — innehålls-svep (engångs full-refresh per källa)', () => {
+    const capture = () => {
+        let seen: boolean | undefined;
+        const engine: Engine = async (_cfg, ctx) => { seen = ctx.refreshKnown; return []; };
+        return { engine, refreshKnown: () => seen };
+    };
+
+    it('ostämplad källa → full-refresh, stämplas efter genomförd körning', async () => {
+        syncMetaGetMock.mockReturnValue(null);
+        const c = capture();
+        await run(c.engine);
+        expect(c.refreshKnown()).toBe(true);
+        expect(syncMetaSetMock).toHaveBeenCalledWith('contentSweep.test-source', CONTENT_SWEEP_VERSION);
+    });
+
+    it('gammal stämpel räknas som ostämplad', async () => {
+        syncMetaGetMock.mockReturnValue('2026-01-01');
+        const c = capture();
+        await run(c.engine);
+        expect(c.refreshKnown()).toBe(true);
+        expect(syncMetaSetMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('redan svept → ingen tvingad refresh, ingen ny stämpel', async () => {
+        const c = capture();
+        await run(c.engine);
+        expect(c.refreshKnown()).toBe(false);
+        expect(syncMetaSetMock).not.toHaveBeenCalled();
+    });
+
+    it('dry-run varken refreshar eller stämplar', async () => {
+        syncMetaGetMock.mockReturnValue(null);
+        const c = capture();
+        await run(c.engine, { dryRun: true });
+        expect(c.refreshKnown()).toBe(false);
+        expect(syncMetaSetMock).not.toHaveBeenCalled();
+    });
+
+    it('motorkrasch stämplar inte — svepet försöks igen nästa körning', async () => {
+        syncMetaGetMock.mockReturnValue(null);
+        const result = await run(async () => { throw new Error('boom'); });
+        expect(result.errors[0]).toContain('boom');
+        expect(syncMetaSetMock).not.toHaveBeenCalled();
+    });
 });
 
 describe('runSource — grundpipeline', () => {
@@ -109,6 +168,17 @@ describe('runSource — grundpipeline', () => {
         expect(written.price).toBeNull();
         expect(written.coverImage).toBe('https://storage.example/hosted.jpg');
         expect(written.hasSpecificTime).toBe(true);     // 19:00 ≠ midnatt
+    });
+
+    it('biovisning får 🎬 redan vid spar', async () => {
+        await run([makeEvent({ title: 'The Invite', venueName: 'Metropol - Bio 3:an', city: 'Piteå' })]);
+        expect(writtenEvents()[0].emoji).toBe('🎬');
+        expect(writtenEvents()[0].category).toBe('stage');
+        await run([makeEvent({ title: 'Konsert', venueName: 'Konserthuset' })]);
+        expect(writtenEvents()[1].emoji).toBeUndefined();
+        // Entydig aktivitet får sin regel-emoji redan vid spar (utils/activityEmoji).
+        await run([makeEvent({ title: 'KM Piteå discgolf', venueName: 'Norrfjärdens discgolfbana', city: 'Piteå' })]);
+        expect(writtenEvents()[2].emoji).toBe('🥏');
     });
 
     it('per-event hostName (paraply-källor) vinner över source.hostName', async () => {
@@ -295,6 +365,11 @@ describe('deriveHasSpecificTime', () => {
 });
 
 describe('geocodeQueriesFor', () => {
+    it('salong-venue ("Saga - Bio 3:an") får byggnaden som kandidat före hela strängen', () => {
+        const queries = geocodeQueriesFor({ title: 'x', url: 'u', startDate: new Date(), venueName: 'Saga - Bio 3:an', city: 'Piteå' });
+        expect(queries.indexOf('Bio 3:an, Piteå')).toBeLessThan(queries.indexOf('Saga - Bio 3:an, Piteå'));
+    });
+
     it('källans kandidater används när de finns, tomma/korta filtreras', () => {
         const queries = geocodeQueriesFor({
             title: 't', url: 'u', startDate: new Date(),

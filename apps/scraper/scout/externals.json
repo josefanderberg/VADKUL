@@ -1,0 +1,206 @@
+[
+ {
+  "host": "visithallstahammar.se",
+  "finalUrl": "https://visithallstahammar.se/",
+  "sig": [
+   {
+    "kind": "RESTAPP",
+    "url": "https://visithallstahammar.se/rest-api/events-rest/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "n": 61
+   }
+  ],
+  "kommuner": [
+   "Hallstahammar"
+  ]
+ },
+ {
+  "host": "visitvarmland.com",
+  "finalUrl": "https://www.visitvarmland.com/",
+  "sig": [
+   {
+    "kind": "TURID",
+    "url": "https://turid.visitvarmland.com/api/v8/events?limit=1",
+    "total": 664
+   }
+  ],
+  "kommuner": [
+   "Filipstad",
+   "Grums",
+   "Kristinehamn",
+   "Munkfors",
+   "Torsby"
+  ]
+ },
+ {
+  "host": "bibliotekivastmanland.se",
+  "finalUrl": "https://bibliotekivastmanland.se/",
+  "sig": [
+   {
+    "kind": "WP",
+    "url": "https://bibliotekivastmanland.se/wp-json/wp/v2/evenemang?per_page=5",
+    "len": 9127
+   }
+  ],
+  "kommuner": [
+   "Köping"
+  ]
+ },
+ {
+  "host": "visitvastramalardalen.se",
+  "finalUrl": "https://visitvastramalardalen.se/",
+  "sig": [
+   {
+    "kind": "RESTAPP",
+    "url": "https://visitvastramalardalen.se/rest-api/evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "n": 200
+   }
+  ],
+  "kommuner": [
+   "Kungsör",
+   "Köping"
+  ]
+ },
+ {
+  "host": "visitkungsor.se",
+  "finalUrl": "https://visitkungsor.se/",
+  "sig": [
+   {
+    "kind": "RESTAPP",
+    "url": "https://visitvastramalardalen.se/rest-api/evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "n": 200
+   }
+  ],
+  "kommuner": [
+   "Kungsör"
+  ]
+ },
+ {
+  "host": "visitkoping.se",
+  "finalUrl": "https://visitkoping.se/",
+  "sig": [
+   {
+    "kind": "RESTAPP",
+    "url": "https://visitvastramalardalen.se/rest-api/evenemang/events?num=200&query=&count=0&page=1&type=event&timestamp=0&filters=%7B%22type%22%3A%22event%22%7D",
+    "n": 200
+   }
+  ],
+  "kommuner": [
+   "Köping"
+  ]
+ },
+ {
+  "host": "varmlandsmuseum.se",
+  "finalUrl": "https://varmlandsmuseum.se/",
+  "sig": [
+   {
+    "kind": "WP",
+    "url": "https://varmlandsmuseum.se/wp-json/wp/v2/event?per_page=5",
+    "len": 45580
+   },
+   {
+    "kind": "SITEMAP",
+    "url": "https://varmlandsmuseum.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://varmlandsmuseum.se/event-sitemap.xml"
+    ]
+   }
+  ],
+  "kommuner": [
+   "Torsby"
+  ]
+ },
+ {
+  "host": "visittorsas.se",
+  "finalUrl": "https://visittorsas.se/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://visittorsas.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://visittorsas.se/krea_evenemang-sitemap.xml",
+     "https://visittorsas.se/evenemangskategorier-sitemap.xml"
+    ]
+   }
+  ],
+  "kommuner": [
+   "Torsås"
+  ]
+ },
+ {
+  "host": "visitsundsvall.se",
+  "finalUrl": "https://destinationsundsvall.se/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://destinationsundsvall.se/download/18.64397dfc18d547787735c36/sitemap_destination.xml",
+    "events": 331,
+    "subs": []
+   }
+  ],
+  "kommuner": [
+   "Timrå"
+  ]
+ },
+ {
+  "host": "vastsverige.com",
+  "finalUrl": "https://www.vastsverige.com/",
+  "sig": [
+   {
+    "kind": "SITEMAP",
+    "url": "https://www.vastsverige.com/Sitemap.xml",
+    "events": 1752,
+    "subs": []
+   }
+  ],
+  "kommuner": [
+   "(regional)"
+  ]
+ },
+ {
+  "host": "visitostersund.se",
+  "finalUrl": "https://visitostersund.se/",
+  "sig": [
+   {
+    "kind": "WP",
+    "url": "https://visitostersund.se/wp-json/wp/v2/evenemang?per_page=5",
+    "len": 12264
+   },
+   {
+    "kind": "SITEMAP",
+    "url": "https://visitostersund.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://visitostersund.se/evenemang-sitemap1.xml",
+     "https://visitostersund.se/evenemang-sitemap2.xml"
+    ]
+   }
+  ],
+  "kommuner": [
+   "(regional)"
+  ]
+ },
+ {
+  "host": "visitorebro.se",
+  "finalUrl": "https://www.visitorebro.se/",
+  "sig": [
+   {
+    "kind": "WP",
+    "url": "https://www.visitorebro.se/wp-json/wp/v2/event?per_page=5",
+    "len": 11695
+   },
+   {
+    "kind": "SITEMAP",
+    "url": "https://www.visitorebro.se/sitemap_index.xml",
+    "events": 0,
+    "subs": [
+     "https://www.visitorebro.se/event-sitemap.xml"
+    ]
+   }
+  ],
+  "kommuner": [
+   "(regional)"
+  ]
+ }
+]

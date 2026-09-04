@@ -18,6 +18,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
+import { isTrustedTicketSource } from '../utils/ticketSources';
 import { setEventAuditWithCategory, setHidden } from '../utils/sqliteHelper';
 
 const args = (() => {
@@ -123,7 +124,10 @@ async function main() {
                     emoji: result.emoji,
                     price: result.price,
                 });
-                if (result.verdict === 'junk' && (result.confidence === 'high' || !result.inSweden)) {
+                // Biljettsystemen är kuraterade — se utils/ticketSources.ts.
+                if (!isTrustedTicketSource(r.url)
+                    && result.verdict === 'junk'
+                    && (result.confidence === 'high' || !result.inSweden)) {
                     setHidden(r.url, true);
                     stats.hidden++;
                     console.log(`         ↳ 🙈 auto-hidden`);

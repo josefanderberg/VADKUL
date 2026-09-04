@@ -6,6 +6,7 @@ import { Providers } from '@/components/Providers';
 import Hotjar from '@/components/analytics/Hotjar';
 import FirebaseAnalytics from '@/components/analytics/FirebaseAnalytics';
 import SiteVisitBeacon from '@/components/analytics/SiteVisitBeacon';
+import { roundedEventTotal } from './(v1)/evenemang/cityData';
 
 // Rundad, vänlig display-font för moln-texten och andra "lockande" inslag.
 // Variabel font så vi får alla vikter (300–700) i en fil.
@@ -16,48 +17,60 @@ const fredoka = Fredoka({
     variable: '--font-fredoka',
 });
 
-export const metadata: Metadata = {
-    metadataBase: new URL('https://vadkul.se'),
-    title: {
-        default: 'VADKUL – Hitta events och saker att göra nära dig',
-        template: '%s – VADKUL',
-    },
-    description:
-        'Över 20 000 evenemang i hela Sverige på en karta – konserter, marknader, sport och saker att göra med barn. Se vad som händer nära dig idag. Gratis.',
-    applicationName: 'VADKUL',
-    // Delnings-länkar (?event=...) pekar alla på kartan — self-canonical håller
-    // ihop dem i Googles index. /integritet sätter sin egen canonical.
-    alternates: { canonical: '/' },
-    openGraph: {
-        type: 'website',
-        locale: 'sv_SE',
-        url: '/',
-        siteName: 'VADKUL',
-        title: 'VADKUL – Hitta events och saker att göra nära dig',
+// "Över X evenemang" räknas ur eventdatat vid build (nedåtavrundat till
+// 5 000-tal — alltid sant) i stället för att hårdkodas: "Över 20 000" hann
+// bli 44 000+ i verkligheten innan någon märkte det. Den dagliga auto-
+// deployen håller siffran ikapp av sig själv framöver.
+const overClaim = (n: number) => `Över ${n.toLocaleString('sv-SE')} evenemang i hela Sverige på en karta`;
+
+export async function generateMetadata(): Promise<Metadata> {
+    const claim = overClaim(await roundedEventTotal());
+    return {
+        metadataBase: new URL('https://vadkul.se'),
+        title: {
+            default: 'VADKUL – Hitta events och saker att göra nära dig',
+            template: '%s – VADKUL',
+        },
         description:
-            'Över 20 000 evenemang i hela Sverige på en karta. Se vad som händer nära dig idag – gratis.',
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'VADKUL – Hitta events och saker att göra nära dig',
-        description:
-            'Över 20 000 evenemang i hela Sverige på en karta. Se vad som händer nära dig idag – gratis.',
-    },
-    manifest: '/manifest.json',
-    appleWebApp: {
-        capable: true,
-        statusBarStyle: 'black-translucent',
-        title: 'VADKUL',
-    },
-    other: {
-        'mobile-web-app-capable': 'yes',
-    },
-};
+            `${claim} – konserter, marknader, sport och saker att göra med barn. Se vad som händer nära dig idag. Gratis.`,
+        applicationName: 'VADKUL',
+        // Delnings-länkar (?event=...) pekar alla på kartan — self-canonical håller
+        // ihop dem i Googles index. /integritet sätter sin egen canonical.
+        alternates: { canonical: '/' },
+        openGraph: {
+            type: 'website',
+            locale: 'sv_SE',
+            url: '/',
+            siteName: 'VADKUL',
+            title: 'VADKUL – Hitta events och saker att göra nära dig',
+            description:
+                `${claim}. Se vad som händer nära dig idag – gratis.`,
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: 'VADKUL – Hitta events och saker att göra nära dig',
+            description:
+                `${claim}. Se vad som händer nära dig idag – gratis.`,
+        },
+        // fb:app_id är frivilligt (Sharing Debugger varnar ändå) — ger Facebook-
+        // appen Insights för delningar. Sätts via NEXT_PUBLIC_FB_APP_ID i .env/WEB_ENV.
+        ...(process.env.NEXT_PUBLIC_FB_APP_ID ? { other: { 'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID } } : {}),
+        manifest: '/manifest.json',
+        appleWebApp: {
+            capable: true,
+            statusBarStyle: 'black-translucent',
+            title: 'VADKUL',
+        },
+        other: {
+            'mobile-web-app-capable': 'yes',
+        },
+    };
+}
 
 // Strukturerad data (schema.org) — hjälper Google förstå vad VADKUL är och visa
 // varumärket rätt i sökresultat. Event-markup per event hör hemma på kommande
 // stads-/kategorisidor; på sajtnivå räcker WebSite + Organization.
-const jsonLd = {
+const buildJsonLd = (total: number) => ({
     '@context': 'https://schema.org',
     '@graph': [
         {
@@ -66,7 +79,7 @@ const jsonLd = {
             url: 'https://vadkul.se',
             name: 'VADKUL',
             description:
-                'Över 20 000 evenemang i hela Sverige på en karta – se vad som händer nära dig idag.',
+                `${overClaim(total)} – se vad som händer nära dig idag.`,
             inLanguage: 'sv',
             publisher: { '@id': 'https://vadkul.se/#organization' },
         },
@@ -75,10 +88,25 @@ const jsonLd = {
             '@id': 'https://vadkul.se/#organization',
             name: 'VADKUL',
             url: 'https://vadkul.se',
-            logo: 'https://vadkul.se/pwa-icon-512.png',
+            // Blå plattan sedan 1/9 — Organization-loggan kan dyka upp i
+            // sökresultat och vit-på-transparent försvinner där (samma skäl
+            // som favicon-bytet 30/8).
+            logo: 'https://vadkul.se/pwa-icon-bla-512.png',
         },
     ],
-};
+});
+
+// Temat sätts FÖRE första målningen. ThemeProvider (context/ThemeContext) gör
+// samma sak, men först i en effekt efter hydreringen — och /evenemang-sidorna
+// är statiskt genererade, så den som kör mörkt läge hann se en vit blink innan
+// klassen kom på plats. Samma villkor som providern: ett sparat val vinner,
+// annars webbläsarens/OS:ets prefers-color-scheme. Inline och synkront i <head>
+// (därför suppressHydrationWarning på <html> — klassen finns inte i SSR-HTML:en).
+const THEME_BOOT = `(function(){try{
+var t=localStorage.theme;
+if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))
+document.documentElement.classList.add('dark');
+}catch(e){}})();`;
 
 export const viewport: Viewport = {
     width: 'device-width',
@@ -86,20 +114,22 @@ export const viewport: Viewport = {
     maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const jsonLd = buildJsonLd(await roundedEventTotal());
     return (
         <html lang="sv" suppressHydrationWarning className={fredoka.variable}>
             <head>
-                {/* Två favicons med olika roller: Google (och iOS-hemskärmen) tar den
-                    STÖRSTA deklarerade — blå platta så det vita molnet syns i sökresultatens
-                    vita cirkel. Fliken tar 32:an — transparent, som förr. Ordningen är
+                <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+                {/* ALLA favicons på blå platta (#006AA7) sedan 30/8 — vitt moln på
+                    transparent syns inte i sökresultatens vita cirkel. Nytt filnamn
+                    (-bla) i stället för överskrivning: favicons cachas hårt. Ordningen är
                     medveten: Safari väljer sist deklarerade ikonen, Chrome går på sizes. */}
                 <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192-bla.png" />
-                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32-bla.png" />
                 <link rel="apple-touch-icon" href="/favicon-192-bla.png" />
                 <meta name="theme-color" content="#38bdf8" />
                 {/* Impact kräver value-attributet (inte content) — spread eftersom Reacts typer saknar value på meta */}

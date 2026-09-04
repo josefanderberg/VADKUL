@@ -1,10 +1,21 @@
 import puppeteer from 'puppeteer';
 import * as path from 'path';
 import * as fs from 'fs';
-import { addEventToDb, eventExistsInDb, getEventFromDb } from '../../utils/dbHelper';
+import { addEventToDb, eventExistsInDb, getEventFromDb, refreshEventHost } from '../../utils/dbHelper';
 import { uploadEventImage, isOurStorageUrl } from '../../utils/storageHelper';
 import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
 import { classifyEvent } from '../../utils/classify';
+import { normalizeDescription } from '../../utils/normalizeEvent';
+import { extractPriceFromText } from '../../utils/priceFromText';
+import { isResellerJunk, cleanFacebookTitle } from './junk';
+import { isGenericHost, hostFromOgDescription, hostFromPageJson } from './hostFallback';
+
+/**
+ * Kända event med generisk värd ("Facebook") skrapas om — högst så här många
+ * per natt, så FB inte rate-limitar oss för värdnamnens skull. 679/1 685 FB-
+ * event stod utan riktig värd 2026-09-03; hostFallback ger dem en ny chans.
+ */
+const MAX_HOST_RETRY = 120;
 import { searchGoogleImage } from '../../utils/imageSearch';
 import { applyDateFilters, discoverEventUrls } from './discovery';
 import { extractEventDetails } from './extractor';
@@ -13,6 +24,7 @@ import { LocationInstrument } from './location';
 import { FacebookSource } from './types';
 import { FACEBOOK_PAGE_WATCHLIST } from './watchlist';
 import { FACEBOOK_PAGE_WATCHLIST_NATIONAL } from './watchlist-national';
+import { matchesCityScope } from './scope';
 
 /**
  * Automatically dismisses cookie banners and overlay login walls if they appear.
@@ -83,6 +95,10 @@ export interface FacebookScraperOptions {
      *  vecko-svepet (halverar antalet queries och ger event till audit långt
      *  innan det stora full-jobbet är klart). */
     filters?: string[];
+    /** Kör bara EN stad: stadssöken för den + sidbevakningar med samma city.
+     *  Breda sökord hoppas. Riktad körning på minuter i stället för timmar —
+     *  `npm run scrape-fb -- --city=Piteå` efter community-kritik. */
+    onlyCity?: string;
 }
 
 export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
@@ -90,7 +106,8 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
     const DATE_FILTERS_INPUT = opts.filters && opts.filters.length > 0
         ? opts.filters
         : ['idag', 'den här veckan'];
-    console.log(`🚀 Startar Facebook-skrapan (Refactored) — filter: [${DATE_FILTERS_INPUT.join(', ')}]`);
+    const onlyCity = opts.onlyCity?.trim() || undefined;
+    console.log(`🚀 Startar Facebook-skrapan (Refactored) — filter: [${DATE_FILTERS_INPUT.join(', ')}]${onlyCity ? ` — bara ${onlyCity}` : ''}`);
     const scrapedEventsLog: any[] = [];
     const logPath = path.resolve(__dirname, '../../../../scraped_events.json');
     const keywordStatsPath = path.resolve(__dirname, '../../../keyword_stats.json');
@@ -296,10 +313,14 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         // today-scrapern skickar ['idag'] för att halvera query-volymen.
         const DATE_FILTERS = DATE_FILTERS_INPUT;
 
+        // --city=X: bara den stadens sök + sidor, inga breda sökord.
+        const cities = SWEDISH_CITIES.filter((c) => matchesCityScope(c, onlyCity));
+        const keywords = onlyCity ? [] : BROAD_KEYWORDS;
+
         const SOURCES: FacebookSource[] = [];
 
         // 1. Städer × datumfilter
-        for (const city of SWEDISH_CITIES) {
+        for (const city of cities) {
             for (const filter of DATE_FILTERS) {
                 SOURCES.push({
                     url: `https://www.facebook.com/events/search/?q=${encodeURIComponent(city)}`,
@@ -310,7 +331,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         }
 
         // 2. Breda sökord × datumfilter
-        for (const keyword of BROAD_KEYWORDS) {
+        for (const keyword of keywords) {
             for (const filter of DATE_FILTERS) {
                 SOURCES.push({
                     url: `https://www.facebook.com/events/search/?q=${encodeURIComponent(keyword)}`,
@@ -325,6 +346,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         //    sitt datum från detaljsidan (trusted → 30d-horisont nedan).
         const seenPageSlugs = new Set<string>();
         const allPageWatches = [...FACEBOOK_PAGE_WATCHLIST, ...FACEBOOK_PAGE_WATCHLIST_NATIONAL]
+            .filter((w) => matchesCityScope(w.city, onlyCity))
             .filter((w) => {
                 const key = w.slug.toLowerCase();
                 if (seenPageSlugs.has(key)) return false;
@@ -340,7 +362,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
             });
         }
 
-        console.log(`🔧 Konfiguration: ${SWEDISH_CITIES.length} städer + ${BROAD_KEYWORDS.length} sökord × ${DATE_FILTERS.length} datumfilter + ${allPageWatches.length} sidbevakningar = ${SOURCES.length} queries totalt.`);
+        console.log(`🔧 Konfiguration: ${cities.length} städer + ${keywords.length} sökord × ${DATE_FILTERS.length} datumfilter + ${allPageWatches.length} sidbevakningar = ${SOURCES.length} queries totalt.`);
 
         // requiresParsedDate: sid-/seed-event saknar sökets datumfilter — utan
         // ett datum parsat från själva eventsidan vore fallbacken "idag" ren
@@ -512,6 +534,8 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         // Extraction-fas räknare för slutstatistik
         let extractAlreadyInDb = 0;
         let extractSkippedForeign = 0;
+        let extractSkippedJunk = 0;
+        let extractHostRetried = 0;
         let extractSkippedDate = 0;
         let extractLoginWall = 0;
         let extractFailed = 0;
@@ -535,7 +559,15 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     return exp - Date.now() < 24 * 60 * 60 * 1000; // expirar inom 24h
                 };
 
-                if (existingEvent && !isFbImageExpired(existingEvent.coverImage)) {
+                // Generisk värd = DOM-instrumentet hittade inget. Skrapa om ett
+                // begränsat antal per natt så hostFallback (og:description, sid-JSON)
+                // får en chans att hitta namnet.
+                // … eller tom/sidfots-beskrivning (nya layouten "Vad du kan förvänta dig"
+                // + "Läs mer" missades) — samma tak per natt.
+                const storedDesc = String(existingEvent?.description ?? '').trim();
+                const descRetry = !!existingEvent && (storedDesc.length < 40 || /^Integritet/i.test(storedDesc)) && extractHostRetried < MAX_HOST_RETRY;
+                const hostRetry = (!!existingEvent && isGenericHost(existingEvent.hostName) && extractHostRetried < MAX_HOST_RETRY) || descRetry;
+                if (existingEvent && !isFbImageExpired(existingEvent.coverImage) && !hostRetry) {
                     console.log(`  📄 Detaljer för: ${url}`);
                     console.log(`    👉 Redan sparad i databasen: "${existingEvent.title}"`);
                     
@@ -590,7 +622,12 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 // Antingen ny URL eller existerande med expired FB-bild → scrape detalsidan
                 if (existingEvent) {
                     console.log(`  📄 Detaljer för: ${url}`);
-                    console.log(`    🔄 Bild expired → tvingar re-scrape för ny URL: "${existingEvent.title}"`);
+                    if (hostRetry) {
+                        extractHostRetried++;
+                        console.log(`    🔄 ${descRetry ? 'Tom/sidfots-beskrivning' : 'Generisk värd'} → omskrapning: "${existingEvent.title}"`);
+                    } else {
+                        console.log(`    🔄 Bild expired → tvingar re-scrape för ny URL: "${existingEvent.title}"`);
+                    }
                 }
                 await page.goto(url, { waitUntil: 'networkidle2' });
                 await handleBannersAndModals(page);
@@ -601,17 +638,50 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     const buttons = Array.from(document.querySelectorAll('div[role="button"]'));
                     for (const btn of buttons) {
                         const txt = btn.textContent?.trim().toLowerCase() || '';
-                        if (txt === 'visa mer' || txt === 'see more') (btn as HTMLElement).click();
+                        // Nya layouten säger "Läs mer" (2026-09-04) — 30 beskrivningar slutade i "… Läs mer".
+                        if (/^(?:visa mer|see more|läs mer|read more|mer)$/.test(txt)) (btn as HTMLElement).click();
                     }
                 });
                 await new Promise(r => setTimeout(r, 1000));
 
                 const details = await extractEventDetails(page);
                 if (details.title === 'Facebook Event' || details.title.includes('Logga in')) { extractLoginWall++; continue; }
+                // Samma städning som runnern ger engine-event: FB-sidfoten
+                // ("Integritet · Användarvillkor …") som beskrivning → tom,
+                // ersättningstecken (�) bort. FB-skrapan skriver direkt via
+                // addEventToDb och gick förbi normalizeEvent (revisionen 2026-09-03).
+                details.description = normalizeDescription(details.description);
+                // Ingen beskrivning i DOM:en (layoutvariant) → og:description om den
+                // bär mer än rubrik/plats. Hellre kort text än tom.
+                if (details.description.length < 20 && details.ogDescription && details.ogDescription.length >= 40 && !/facebook/i.test(details.ogDescription)) {
+                    details.description = normalizeDescription(details.ogDescription);
+                }
+                // "Sailing Day Tour (Stockholm) Tickets" → "Sailing Day Tour".
+                details.title = cleanFacebookTitle(details.title);
 
                 // --- INSTRUMENT: VÄRD (HOST) ---
                 const hostInfo = await HostInstrument.extractInfo(page);
                 let finalHostName = hostInfo.name;
+                // Fallback-källor när DOM-instrumentet inte hittade värden: FB visar
+                // den på olika ställen beroende på sidformat — og:description
+                // ("Evenemang av X · …") och sidans inbäddade Relay-JSON.
+                if (isGenericHost(finalHostName)) {
+                    const fromOg = hostFromOgDescription(details.ogDescription);
+                    let fromJson: string | null = null;
+                    if (!fromOg) {
+                        try { fromJson = hostFromPageJson(await page.content()); } catch { /* sidan kan ha stängts */ }
+                    }
+                    const found = fromOg ?? fromJson;
+                    if (found) {
+                        finalHostName = found;
+                        console.log(`    👤 Värd via ${fromOg ? 'og:description' : 'sid-JSON'}: ${found}`);
+                    }
+                }
+                // Omskrapat för värdens skull och namnet hittades: skriv direkt till
+                // SQLite + Firestore (addEventToDb rör inte kända Firestore-dokument).
+                if (hostRetry && !isGenericHost(finalHostName)) {
+                    await refreshEventHost(url, finalHostName);
+                }
                 let finalImage = details.image;
                 let isHostVerified = false;
 
@@ -633,7 +703,16 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
                 // --- INSTRUMENT: PLATS (LOCATION) ---
                 const locInfo = await LocationInstrument.extractInfo(page, details.title);
-                
+
+                // Biljett-återförsäljare ("Ken Carson Tickets" från Ticket Deals/
+                // Laugh Seats med amerikansk arena) — annonser, inte event. De
+                // slank förbi utlandsfiltret när adressen inte gick att läsa.
+                if (isResellerJunk(details.title, finalHostName, details.description, locInfo.fullAddress || locInfo.name)) {
+                    console.log(`    ⏩ Skippar biljettannons (återförsäljare): "${details.title}" (värd: ${finalHostName})`);
+                    extractSkippedJunk++;
+                    continue;
+                }
+
                 const extractedAddress = locInfo.fullAddress;
                 const geocodedQuery = cleanVenueName(extractedAddress);
                 
@@ -813,6 +892,12 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     }
                 }
 
+                // FB har inget prisfält — priset står i texten om alls
+                // ("Pris: 50 kr per person", "Fri entré"). 222 FB-event hade
+                // pris i beskrivningen men tomt prisfält (2026-09-03).
+                const fbPrice = extractPriceFromText(details.description) ?? extractPriceFromText(details.ogDescription);
+                if (fbPrice) console.log(`    💰 Pris ur texten: ${fbPrice}`);
+
                 const eventObj = {
                     title: details.title,
                     url: url,
@@ -827,6 +912,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     category: classifyEvent(details.title, details.description),
                     coverImage: finalImage,
                     description: details.description,
+                    price: fbPrice ?? null,
                     attendees: details.going,
                     createdAt: new Date().toISOString(),
                     isLocationVerified,
@@ -848,6 +934,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     category: classifyEvent(details.title, details.description),
                     coverImage: finalImage,
                     description: details.description,
+                    price: fbPrice ?? null,
                     attendees: details.going,
                     createdAt: new Date(),
                     isLocationVerified,
@@ -913,6 +1000,8 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 alreadyInDb:   extractAlreadyInDb,
                 newlySaved:    extractNewlySaved,
                 skippedForeign: extractSkippedForeign,
+                skippedJunk:   extractSkippedJunk,
+                hostRetried:   extractHostRetried,
                 skippedDate:   extractSkippedDate,
                 loginWall:     extractLoginWall,
                 failed:        extractFailed,
@@ -952,6 +1041,8 @@ export function writeFinalScraperStats(opts: {
         alreadyInDb: number;
         newlySaved: number;
         skippedForeign: number;
+        skippedJunk: number;
+        hostRetried: number;
         skippedDate: number;
         loginWall: number;
         failed: number;

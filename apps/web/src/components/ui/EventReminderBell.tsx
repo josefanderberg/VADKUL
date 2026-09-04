@@ -114,8 +114,8 @@ export default function EventReminderBell({ linkEvent }: { linkEvent: LinkEvent 
                 isOn
                     ? 'bg-sky-50 border-sky-200 text-[#006AA7] dark:bg-sky-950/30 dark:border-sky-900/50 dark:text-sky-400'
                     : disabled
-                        ? 'bg-white border-slate-200 text-slate-300 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700 dark:text-slate-600'
-                        : 'bg-white border-slate-200 text-slate-400 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
+                        ? 'bg-white border-slate-200 text-slate-300 cursor-not-allowed dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-600'
+                        : 'bg-white border-slate-200 text-slate-400 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-500 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
             }`}
         >
             {isOn

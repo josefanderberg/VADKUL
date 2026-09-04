@@ -14,8 +14,10 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
+import { addEventToDb, eventExistsInDb, refreshEventContent } from '../utils/dbHelper';
+import { getSqliteEvent } from '../utils/sqliteHelper';
 import { classifyEvent } from '../utils/classify';
+import { cleanDescription } from '../utils/text';
 
 const API_KEY  = process.env.TICKETMASTER_API_KEY || '';
 const BASE_URL = 'https://app.ticketmaster.com/discovery/v2/events.json';
@@ -121,7 +123,12 @@ interface TmVenue {
     location?: { latitude?: string; longitude?: string };
 }
 
-interface TmEvent {
+interface TmAttraction {
+    name?: string;
+    type?: string;
+}
+
+export interface TmEvent {
     id:     string;
     name:   string;
     url:    string;
@@ -129,7 +136,117 @@ interface TmEvent {
     images?:       TmImage[];
     priceRanges?:  TmPriceRange[];
     classifications?: { segment?: { name: string }; genre?: { name: string } }[];
-    _embedded?: { venues?: TmVenue[] };
+    /** Arrangörens egen text — finns på ~hälften av SE/DK/NO-eventen. */
+    info?:        string;
+    pleaseNote?:  string;
+    description?: string;
+    /** Arrangören (Live Nation Sweden AB, Det Ny Teater, Auditorium AS …). */
+    promoter?:  { id?: string; name?: string };
+    promoters?: { id?: string; name?: string }[];
+    _embedded?: { venues?: TmVenue[]; attractions?: TmAttraction[] };
+}
+
+// ── Innehåll: beskrivning + värd ur API-svaret ───────────────────────────────
+// Fram till 2026-09-04 sparades TM-event med description = "Music Pop"
+// (klassificeringshinten) och hostName = "TicketMaster" — kortet visade bara
+// en titel. API:t bär arrangörens text (info/pleaseNote, ~50 %) och promoter
+// (~90 %) direkt i listsvaret; priceRanges saknas däremot helt för SE/DK/NO
+// (0 av 547 kontrollerade 2026-09-04), så priset går inte att få den här vägen.
+
+const SEGMENT_SV: Record<string, string> = {
+    'Music': 'Musik',
+    'Arts & Theatre': 'Scen & teater',
+    'Sports': 'Sport',
+    'Film': 'Film',
+    'Miscellaneous': 'Övrigt',
+};
+
+/** Klassificeringshint → läsbar svensk reserv-rad ("Musik · Pop"). Exporterad för test. */
+export function categoryLine(e: Pick<TmEvent, 'classifications'>): string {
+    const segment = e.classifications?.[0]?.segment?.name ?? '';
+    const genre   = e.classifications?.[0]?.genre?.name   ?? '';
+    const seg = SEGMENT_SV[segment] ?? segment;
+    if (!seg && !genre) return '';
+    if (genre && genre !== 'Undefined' && genre !== 'Other' && genre !== seg) return seg ? `${seg} · ${genre}` : genre;
+    return seg;
+}
+
+/**
+ * Beskrivning ur API:t: arrangörens text (description/info/pleaseNote,
+ * dubbletter bort) → annars medverkande (utan arena/arrangör som TM lägger
+ * som "attractions") → annars kategoriraden. Exporterad för test.
+ */
+export function buildTmDescription(e: TmEvent): string {
+    const texts: string[] = [];
+    for (const raw of [e.description, e.info, e.pleaseNote]) {
+        const t = cleanDescription(raw || '', 1500);
+        if (t && !texts.some(x => x === t || x.includes(t))) texts.push(t);
+    }
+    if (texts.length) return texts.join('\n\n');
+
+    // Medverkande: TM lägger även arenan ("Sentrum Scene"), arrangörens
+    // kortnamn ("Auditorium" ⊂ "Auditorium AS (…)") och titeln själv ("HIT MED
+    // 80ERNE" ~ "Hit med 80-erne") som attractions — jämför normaliserat och
+    // släpp allt som ryms i titel/arena/arrangör.
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9åäöæøéü]+/g, '');
+    const containers = [e._embedded?.venues?.[0]?.name, pickTmHost(e)].map(s => norm(s || ''));
+    const title = norm(e.name);
+    const acts = (e._embedded?.attractions || [])
+        .map(a => (a.name || '').trim())
+        .filter(n => {
+            const k = norm(n);
+            // Titeln: bara exakt samma (annars försvinner "Tom McKay" ur
+            // "Tom McKay | Comic Con"); arena/arrangör: räcker att namnet ryms.
+            return k && k !== title && !containers.some(x => x.includes(k));
+        });
+    if (acts.length) return `Medverkande: ${acts.join(', ')}`;
+    return categoryLine(e);
+}
+
+/** Beskrivning vi själva härlett (hint, medverkande, kategorirad) — får räknas om. Exporterad för test. */
+export function isDerivedDescription(d: string | null | undefined): boolean {
+    const t = (d || '').trim();
+    if (isThinDescription(t)) return true;
+    if (/^Medverkande: /.test(t)) return true;
+    return /^(Musik|Scen & teater|Sport|Film|Övrigt)( · [^\n]{1,40})?$/.test(t);
+}
+
+/** Värd = promoter (första i promoters som reserv), annars "TicketMaster". Exporterad för test. */
+export function pickTmHost(e: Pick<TmEvent, 'promoter' | 'promoters'>): string {
+    const name = (e.promoter?.name || e.promoters?.find(p => p?.name)?.name || '').trim();
+    return name || 'TicketMaster';
+}
+
+/** Kategorihint-beskrivning ("Music Pop") eller tomt = tunt. Exporterad för test. */
+export function isThinDescription(d: string | null | undefined): boolean {
+    const t = (d || '').trim();
+    if (!t) return true;
+    // Hinten är "Segment Genre" på engelska, 1–4 ord utan skiljetecken —
+    // en riktig mening som råkar börja med "Music" ska inte fällas.
+    return /^(Music|Arts & Theatre|Sports|Film|Miscellaneous|Undefined)(\s[A-Za-z&\/-]+){0,3}$/.test(t);
+}
+
+/**
+ * Vad som ska uppdateras på ett REDAN sparat event: bara tunna fält byts,
+ * och bara mot något rikare. Returnerar null när inget behöver röras.
+ * Exporterad för test.
+ */
+export function enrichmentPatch(
+    row: { description?: string | null; hostName?: string | null; price?: string | null },
+    e: TmEvent,
+): { description?: string; hostName?: string; price?: string } | null {
+    const patch: { description?: string; hostName?: string; price?: string } = {};
+    const desc = buildTmDescription(e);
+    // Härledda beskrivningar räknas om när härledningen ger något annat
+    // (bättre filter, eller arrangören har lagt till text sedan sist);
+    // arrangörens egen text rörs aldrig. Deterministisk → konvergerar.
+    const cur = (row.description || '').trim();
+    if (desc && !isThinDescription(desc) && isDerivedDescription(cur) && desc !== cur) patch.description = desc;
+    const host = pickTmHost(e);
+    if ((!row.hostName || row.hostName === 'TicketMaster') && host !== 'TicketMaster') patch.hostName = host;
+    const price = formatPrice(e.priceRanges ?? []);
+    if (!(row.price || '').trim() && price) patch.price = price;
+    return Object.keys(patch).length ? patch : null;
 }
 
 interface TmApiResponse {
@@ -209,17 +326,30 @@ export async function scrapeTicketmaster(): Promise<number> {
 
     // ── Spara ─────────────────────────────────────────────────────────────
     let savedCount = 0;
+    let enrichedCount = 0;
 
     for (const event of allEvents) {
         try {
             const eventUrl = cleanEventUrl(event.url);
 
-            // Dedup — kolla ren URL, rå URL och den gamla taggade formen
+            // Dedup — kolla ren URL, rå URL och den gamla taggade formen.
+            // Kända event BERIKAS i stället för att hoppas över: de som sparades
+            // före 2026-09-04 har bara "Music Pop" som beskrivning och
+            // "TicketMaster" som värd (se enrichmentPatch). Spegeln är källan
+            // till raden; saknas den där rör vi inget.
             if (
                 await eventExistsInDb(eventUrl) ||
                 await eventExistsInDb(event.url) ||
                 await eventExistsInDb(legacyAffiliateUrl(event.url))
-            ) continue;
+            ) {
+                const row = getSqliteEvent(eventUrl) ?? getSqliteEvent(event.url) ?? getSqliteEvent(legacyAffiliateUrl(event.url));
+                const patch = row ? enrichmentPatch(row, event) : null;
+                if (row && patch && await refreshEventContent(row.url, patch)) {
+                    enrichedCount++;
+                    console.log(`  ✏️  ${event.name}: ${Object.keys(patch).join('+')}`);
+                }
+                continue;
+            }
 
             // Datum
             const { localDate, localTime } = event.dates.start;
@@ -246,6 +376,10 @@ export async function scrapeTicketmaster(): Promise<number> {
             const locationName = [venueName, cityName].filter(Boolean).join(', ');
             const coverImage   = getBestImage(event.images ?? []);
             const price        = formatPrice(event.priceRanges ?? []);
+            // Beskrivning + värd ur API:t: buildTmDescription/pickTmHost (samma
+            // härledning som berikningen av kända event ovan). Revisionen 3/9
+            // hängde på genre-hinten sist i texten — classifyEvent får hinten
+            // direkt, så den behövs inte i det som visas för användaren.
 
             await addEventToDb({
                 title:             event.name,
@@ -257,12 +391,12 @@ export async function scrapeTicketmaster(): Promise<number> {
                 lng:               isNaN(lng) ? 0 : lng,
                 // TM-API:t levererar arenans egna koordinater — exakta.
                 geoPrecision:      (lat && lng && !isNaN(lat)) ? 'kallkoordinat' : null,
-                hostName:          'TicketMaster',
+                hostName:          pickTmHost(event),
                 category,
                 createdAt:         new Date(),
                 coverImage,
                 price,
-                description:       categoryHint,
+                description:       buildTmDescription(event),
                 isLocationVerified: !!(lat && lng && lat !== 0 && lng !== 0),
             });
 
@@ -273,6 +407,6 @@ export async function scrapeTicketmaster(): Promise<number> {
         }
     }
 
-    console.log(`\n[TicketMaster] Klar — ${savedCount} nya events sparade.`);
+    console.log(`\n[TicketMaster] Klar — ${savedCount} nya events sparade, ${enrichedCount} kända berikade.`);
     return savedCount;
 }

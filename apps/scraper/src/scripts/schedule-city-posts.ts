@@ -22,6 +22,8 @@
  *   --per-dag=2      antal orter per dag (default 2)
  *   --max=20         tak för antal inlägg i körningen
  *   --radie=25       km kring orten som eventen hämtas ur
+ *   --golv=8         minsta antal eventrader för att orten ska postas (0 = av)
+ *   --kommunfilter=av  ta med grannkommunernas event (bara för regionposter)
  *   --commit         schemalägg (utan den: bara utskrift)
  *
  * ⚠️ FÄRSKVARUREGELN — läs innan du höjer --per-dag:
@@ -34,8 +36,12 @@
  * BILD: Facebook-inlägget schemaläggs som REN TEXT — ingen bild, och ingen
  * länkförhandsvisning (Graph API bygger bara preview-kort när `link`-param
  * skickas, vilket vi aldrig gör). Ägarbeslut 2026-08-23: genererade
- * kartbilder används enbart till Instagram. Kartbild-URL:en skrivs ändå ut i
- * dry-runnen, märkt IG, för manuell IG-publicering.
+ * kartbilder används enbart till Instagram.
+ *
+ * INSTAGRAM: samma inlägg går ut på IG med annonsbilden. Instagrams API kan
+ * inte schemalägga (bara "publicera nu"), så `--commit` lägger IG-tvillingen
+ * i en lokal kö (utils/igQueue.ts) som `publish-ig-queue.ts` tömmer varje
+ * hel timme — se launchd-jobbet se.vadkul.ig-queue.
  *
  * ⚠️ ATTRIBUTION: alla grupper som får samma sidinlägg delar samma länk, så
  * klicken går inte att fördela per grupp. Vill du veta vilken grupp som drog
@@ -47,8 +53,11 @@ import path from 'path';
 import fs from 'fs';
 import { db } from '../config/firebase';
 import { postToFacebook, getFacebookPostPermalink, SCHEDULE_MAX_MS } from '../utils/socialPublish';
-import { buildCityPostText, pickCityRows, type PickedRows } from '../utils/cityPostText';
+import { buildCityPostText, buildIgCaption, pickCityRows, meetsQualityFloor, type PickedRows } from '../utils/cityPostText';
 import { matchOrt } from '../utils/ortMatch';
+import { lookupCityPoint, citySlugFor, cityAdImageUrl, cityPoints } from '../utils/cityLookup';
+import { belongsToTown } from '../utils/townBoundary';
+import { loadQueue, saveQueue, upsertQueueItem, queueId, QUEUE_PATH } from '../utils/igQueue';
 
 // Hemligheter (FB_PAGE_ID/FB_PAGE_TOKEN) — samma mönster som publish-fb.ts.
 // MacBooken saknar ~/.vadkul-secrets — där läses webbens .env.local/.env i
@@ -88,6 +97,12 @@ const onlyCities = arg('orter')?.split(',').map(s => s.trim().toLowerCase()).fil
 const perDay = Math.max(1, Number(arg('per-dag')) || 2);
 const maxPosts = Number(arg('max')) || 40;
 const radiusKm = Number(arg('radie')) || 25;
+/** Kvalitetsgolvet — minsta antal eventrader för att orten ska få ett inlägg.
+ *  0 stänger av det (för orter man medvetet vill posta tunt om). */
+const minRows = arg('golv') !== undefined ? Number(arg('golv')) : 8;
+/** Kommunfiltret — utan det hamnar grannkommunens event i inlägget. Av bara
+ *  vid uttrycklig `--kommunfilter=av` (regionposter som "Värmland"). */
+const kommunfilter = arg('kommunfilter') !== 'av';
 const [startHour, startMin] = (arg('klockan') ?? '17:00').split(':').map(Number);
 
 function firstSlot(): Date {
@@ -207,23 +222,6 @@ async function loadTowns(): Promise<Town[]> {
     return towns.sort((a, b) => b.groups.length - a.groups.length);
 }
 
-/** Webbens ortlistor, regex-lästa (uniforma objektliteraler — ingen TS-import
- *  över paketgränsen). cityPoints = koordinater, cityData.CITIES = stadssidor. */
-function lookupCityPoint(query: string): { name: string; lat: number; lng: number } | null {
-    const src = fs.readFileSync(path.resolve(__dirname, '../../../web/src/utils/cityPoints.ts'), 'utf-8');
-    const points = [...src.matchAll(/\{ name: '([^']+)', lat: ([\d.]+), lng: ([\d.]+)/g)]
-        .map(m => ({ name: m[1], lat: Number(m[2]), lng: Number(m[3]) }));
-    return matchOrt(points, query, p => [p.name])[0] ?? null;
-}
-
-function citySlugFor(name: string): string | null {
-    const src = fs.readFileSync(path.resolve(__dirname, '../../../web/src/app/(v1)/evenemang/cityData.ts'), 'utf-8');
-    for (const m of src.matchAll(/\{ name: '([^']+)', slug: '([a-z-]+)'/g)) {
-        if (m[1].toLowerCase() === name.toLowerCase()) return m[2];
-    }
-    return null;
-}
-
 /* ── 2. Eventen per ort ───────────────────────────────────────────────────── */
 
 function eventsForTown(sqlite: Database.Database, town: Town, from: Date, to: Date): EventRow[] {
@@ -247,7 +245,16 @@ function eventsForTown(sqlite: Database.Database, town: Town, from: Date, to: Da
         town.lng - lngSpan, town.lng + lngSpan,
     ) as EventRow[];
 
-    return rows.filter(r => distKm(town.lat, town.lng, r.lat, r.lng) <= radiusKm);
+    const withinRadius = rows.filter(r => distKm(town.lat, town.lng, r.lat, r.lng) <= radiusKm);
+    if (!kommunfilter) return withinRadius;
+
+    // KOMMUNFILTRET: radien känner inga kommungränser. Landskrona-gruppen
+    // avvisade oss 1/9 för ett inlägg fullt av Helsingborg, Kävlinge och
+    // Lomma — "Ta bort alla evenemang som ej finns i Landskrona kommun".
+    // Se utils/townBoundary.ts för hur tillhörigheten avgörs.
+    const towns = cityPoints();
+    const self = { name: town.name, lat: town.lat, lng: town.lng };
+    return withinRadius.filter(r => belongsToTown(r, self, towns));
 }
 
 /* ── 3. Texten — bygget bor i utils/cityPostText (ägarens täta tvåsektions-
@@ -271,20 +278,11 @@ function timelessText(town: Town): string {
     ].join('\n');
 }
 
+/** Bilden till Instagram-tvillingen. Tidlösa inlägg publiceras långt fram —
+ *  en 7-dagarskarta vore tom då, så de får 30-dagarsfönstret (gäller bara
+ *  kartvarianten; orter med stadssida får annonsbilden). */
 function imageFor(town: Town, timeless: boolean): string {
-    const p = new URLSearchParams({
-        lat: town.lat.toFixed(4),
-        lng: town.lng.toFixed(4),
-        namn: town.name,
-        radie: String(radiusKm),
-        // Sidan ÄR öppet avsändaren, så den brandade stilen hör hemma här.
-        // (Till gruppinlägg används stil=karta — se ad-plats-routens header.)
-        stil: 'annons',
-    });
-    // Tidlösa inlägg publiceras långt fram — en 7-dagarsbild vore tom då.
-    // 30-dagarsfönstret håller sig rimligt mycket längre.
-    if (timeless) p.set('dagar', '30');
-    return `${SITE}/api/marketing/ad-plats?${p.toString()}`;
+    return cityAdImageUrl(town, { radiusKm, days: timeless ? 30 : undefined });
 }
 
 /* ── 4. Körningen ─────────────────────────────────────────────────────────── */
@@ -322,6 +320,26 @@ async function main() {
                 eventsForTown(sqlite, town, when, new Date(when.getTime() + 14 * DAY_MS)),
                 when.getTime());
         const rows = [...picked.thisWeek, ...picked.nextWeek];
+
+        // Kvalitetsgolvet: hellre inget inlägg än ett tunt. Gäller även de
+        // tidlösa — en ort utan utbud ska inte lockas till en tom karta.
+        if (minRows > 0) {
+            const probe = timeless
+                ? pickCityRows(
+                    eventsForTown(sqlite, town, when, new Date(when.getTime() + 14 * DAY_MS)),
+                    when.getTime())
+                : picked;
+            if (!meetsQualityFloor(probe, { minRows })) {
+                const all = [...probe.thisWeek, ...probe.nextWeek];
+                const kategorier = new Set(all.map(e => e.category)).size;
+                const brist = all.length < minRows
+                    ? `bara ${all.length} rader (golv ${minRows})`
+                    : `bara ${kategorier} kategorier — för ensidigt`;
+                console.warn(`⏭  ${town.name}: ${brist}, hoppas över.`);
+                return;
+            }
+        }
+
         const text = timeless || rows.length === 0
             ? timelessText(town)
             : buildCityPostText(town.name, linkFor(town), picked, when.getTime());
@@ -350,11 +368,26 @@ async function main() {
     }
 
     /* ── Schemaläggning ── */
+    let igQueue = loadQueue();
+
     for (const p of planned) {
         try {
             // Ren text till FB — bilden är enbart för IG (se filhuvudet).
             const postId = await postToFacebook(p.text, [], 1, { scheduledFor: p.when.getTime() });
             const permalink = await getFacebookPostPermalink(postId);
+
+            // IG-tvillingen: samma text + annonsbilden, i kön tills klockan
+            // slår. (Instagrams API kan inte schemalägga — se utils/igQueue.ts.)
+            igQueue = upsertQueueItem(igQueue, {
+                id: queueId(p.town.name, p.when.getTime()),
+                town: p.town.name,
+                caption: buildIgCaption(p.text, p.town.name),
+                imageUrl: p.image,
+                publishAt: p.when.getTime(),
+                status: 'väntar',
+                fbPostId: postId,
+            });
+            saveQueue(igQueue);
 
             // Loggrad per GRUPP: varje grupp ska kunna kvitteras separat när
             // inlägget delats dit, och karensen räknas per grupp.
@@ -394,6 +427,8 @@ async function main() {
 
     console.log('\nKlart. Inläggen ligger i Meta Business Suite → Planner tills de publiceras.');
     console.log('Efter publicering: öppna permalinken, Dela → Dela i en grupp.');
+    console.log(`Instagram-tvillingarna ligger i ${QUEUE_PATH} och publiceras av`);
+    console.log('se.vadkul.ig-queue vid samma tidpunkt (npm run ig-ko för att se kön).');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

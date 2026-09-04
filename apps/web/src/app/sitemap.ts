@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { CITIES, getCategoryCombos } from './(v1)/evenemang/cityData';
+import { CITIES, MIN_INDEXABLE_EVENTS, getCategoryCombos, getCityEvents } from './(v1)/evenemang/cityData';
 
 // Genereras vid build och ersätter den gamla handskrivna public/sitemap.xml.
 // Bara riktiga, indexerbara sidor hör hemma här — kartans ?event=-djuplänkar
@@ -36,12 +36,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'daily',
             priority: 0.8,
         },
-        ...CITIES.map(city => ({
-            url: `https://vadkul.se/evenemang/${city.slug}`,
-            lastModified: eventsUpdatedAt,
-            changeFrequency: 'daily' as const,
-            priority: 0.7,
-        })),
+        // Småorter under noindex-tröskeln hålls även ur sitemapen — samma
+        // vakt som robots-noindexen i [stad]/page.tsx (säsongstunna sidor
+        // ska inte bjudas ut till Google).
+        ...(await Promise.all(CITIES.map(async city => {
+            if (city.small) {
+                const { events } = await getCityEvents(city);
+                if (events.length < MIN_INDEXABLE_EVENTS) return null;
+            }
+            return {
+                url: `https://vadkul.se/evenemang/${city.slug}`,
+                lastModified: eventsUpdatedAt,
+                changeFrequency: 'daily' as const,
+                priority: city.small ? 0.6 : 0.7,
+            };
+        }))).filter(e => e !== null),
         ...(await getCategoryCombos()).map(({ city, cat }) => ({
             url: `https://vadkul.se/evenemang/${city.slug}/${cat.slug}`,
             lastModified: eventsUpdatedAt,

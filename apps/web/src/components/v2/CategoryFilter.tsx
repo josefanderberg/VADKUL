@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Layers, X } from 'lucide-react';
 import { LinkEvent } from '@/types';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_LIST, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { sourceGradientCss } from './v2MapBricka';
+import { categoryLabel } from './v2MapLabel';
 
 interface CategoryFilterProps {
     /** Eventen I KARTANS RUTA just nu (sidan filtrerar med inMapView före
@@ -21,6 +22,10 @@ interface CategoryFilterProps {
      *  vuxen utan barn): 🧸-cirkeln flyttar upp bland opt-in-raderna (Svenska
      *  kyrkan/PRO) och kategorin är gömd tills den kryssas i. */
     familyOptIn?: boolean;
+    /** Bumpas av sidan vid varje KLICK på själva kartan (aldrig efter en
+     *  dragning — MapLibre fyrar ingen 'click' då): öppen kolumn fäller ihop
+     *  sig (Josef 31/8). Panorering lämnar den alltså i fred. */
+    closeNonce?: number;
 }
 
 /**
@@ -37,10 +42,11 @@ interface CategoryFilterProps {
  * (⋯"visa mer"-cirkeln och bildspels-genvägskolumnen är borttagna 10/8 —
  * källorna behöver ingen extra väg när de alltid står högst upp.)
  *
- * Öppen kolumn är ett sessionsval — ingen localStorage. Inget
- * stäng-vid-klick-utanför: öppnad kolumn står kvar tills man stänger den.
+ * Öppen kolumn är ett sessionsval — ingen localStorage. Ett klick på KARTAN
+ * stänger kolumnen (Josef 31/8, via closeNonce — ersätter 12/8-beslutet att
+ * den bara stängs manuellt); att DRA kartan lämnar den öppen.
  */
-export default function CategoryFilter({ events, selected, onToggle, onClear, familyOptIn = false }: CategoryFilterProps) {
+export default function CategoryFilter({ events, selected, onToggle, onClear, familyOptIn = false, closeNonce = 0 }: CategoryFilterProps) {
     // Startar ALLTID GÖMD (Josef 12/8, skärpt från 11/8): kolumnen tar nästan
     // hela högersidan på mobil. Första versionen lät ett gammalt "visa"-val i
     // localStorage vinna över defaulten — då såg det ut som att defaulten
@@ -48,6 +54,11 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
     // ingen localStorage alls, filterknappen öppnar när man vill ha kolumnen.
     const [hidden, setHidden] = useState(true);
     const toggleHidden = () => setHidden(h => !h);
+    // Kartklick = stäng (Josef 31/8). Noncen bumpas i sidans onMapClick;
+    // 0 = inget klick än (initialvärdet ska inte trigga något).
+    useEffect(() => {
+        if (closeNonce > 0) setHidden(true);
+    }, [closeNonce]);
 
     const counts = useMemo(() => {
         const c = new Map<string, number>();
@@ -147,7 +158,14 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
                         shownOnMap ? '' : 'opacity-50'
                     }`}
                 >
-                    {cat.label}
+                    {/* KORTFORMEN — samma enda ord som står under
+                        eventmarkörerna på kartan (Josef 1/9), inte
+                        EVENT_CATEGORIES långa etiketter ("Sport & träning",
+                        "Mat & dryck"). Samma sak ska heta samma sak på båda
+                        ytorna. Opt-in-källorna har ingen kortform (de är inte
+                        LLM-kategorier — categoryLabel skulle ge "Övrigt") och
+                        behåller därför sina egna namn. */}
+                    {SPECIAL_CATEGORY_KEYS.has(cat.id) ? cat.label : categoryLabel(cat.id)}
                 </span>
             </div>
         );

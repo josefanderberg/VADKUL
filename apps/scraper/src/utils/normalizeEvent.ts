@@ -13,7 +13,8 @@
  */
 
 import { RawEvent } from '../sources/types';
-import { decodeHtmlEntities, cleanDescription } from './text';
+import { decodeHtmlEntities, cleanDescription, truncateAtBoundary } from './text';
+import { extractPriceFromText } from './priceFromText';
 
 /** Beskrivningar som egentligen är sajt-chrome (FB-sidfot m.fl.) → töm. */
 const JUNK_DESCRIPTION = [
@@ -84,6 +85,24 @@ export function normalizeLocation(venueName: string | undefined, address: string
     return { venueName: venue, address: addr };
 }
 
+/** Ord som gör ett sifferlöst prisfält meningsfullt ("Fri entré", "Kollekt", "Det kostar inget"). */
+const PRICE_WORD_RE = /(?:gratis|fri(?:tt)?(?!\p{L})|kostnadsfri|avgiftsfri|free|ingen\s+(?:avgift|kostnad|entr)|utan\s+(?:kostnad|avgift)|kostar\s+inget|självkostnad|frivillig|donation|gåva|ingår|kollekt|valfri|swish)/iu;
+const MAX_PRICE_LEN = 60;
+
+/**
+ * Prisfält från källan: entiteter/taggar bort, skräp utan siffra och utan
+ * gratis-ord ("P", "ordi", "Avgift", "kronor" — 29 st i revisionen 2026-09-03)
+ * → tomt, och lång pristext ("Pris: 100 kr, Ungdom: 80 kr, barn: 60 kr.
+ * Biljetter via …") → intervall via priceFromText, annars ordgräns-klipp.
+ */
+export function sanitizePriceField(price: unknown): string | undefined {
+    const p = collapse(decodeHtmlEntities(String(price ?? '')).replace(/<[^>]+>/g, ' '));
+    if (!p) return undefined;
+    if (!/\d/.test(p) && !PRICE_WORD_RE.test(p)) return undefined;
+    if (p.length > MAX_PRICE_LEN) return extractPriceFromText(p) ?? truncateAtBoundary(p, MAX_PRICE_LEN);
+    return p;
+}
+
 /** Applicera allt på ett RawEvent (muterar). Returnerar eventet för kedjning. */
 export function normalizeRawEvent(e: RawEvent, hostName?: string): RawEvent {
     const loc = normalizeLocation(e.venueName, e.address);
@@ -92,5 +111,14 @@ export function normalizeRawEvent(e: RawEvent, hostName?: string): RawEvent {
     if (e.city) e.city = collapse(decodeHtmlEntities(e.city));
     e.title = normalizeTitle(e.title, { venueName: e.venueName, city: e.city, hostName: e.hostName ?? hostName });
     e.description = normalizeDescription(e.description) || undefined;
+    // Pris: källans strukturerade pris vinner (sanerat — skräp/långtext bort);
+    // saknas det plockas ett SÄKERT pris ur beskrivningstexten (etiketterat
+    // belopp / entré-fras — se priceFromText). 81 % av eventen saknade pris
+    // fast det ofta stod i texten.
+    e.price = sanitizePriceField(e.price);
+    if (!e.price) {
+        const fromText = extractPriceFromText(e.description);
+        if (fromText) e.price = fromText;
+    }
     return e;
 }

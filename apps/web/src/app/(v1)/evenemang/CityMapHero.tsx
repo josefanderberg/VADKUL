@@ -1,16 +1,17 @@
 import Link from 'next/link';
-import { dayKey, clockLabel, hourOf, type City, type CityEvent } from './cityData';
+import { dayKey, hourOf, type City, type CityEvent } from './cityData';
 import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 import { sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
 import CityMapHeroCanvas, { type HeroLiveEvent } from './CityMapHeroCanvas';
-import { mapHref, DAYS_LISTED } from './EventList';
+import { mapHref } from './EventList';
 
 // Kart-heron överst på stads-/kategorisidorna: en äkta, inzoomad kartbit över
 // staden med riktiga VADKUL-brickor på riktiga event-positioner. Sedan 24/8
-// PASSIV men klickbar (CityMapHeroCanvas): inga kartgester — klick på
-// kartbotten öppnar stora kartan över staden — men dagchipsen delar filter
-// med daglistan och brick-klick leder till eventet i listan på samma sida.
-// CTA-pillen längst ner är kvar som den tydliga länken till stora kartan
+// PASSIV men klickbar (CityMapHeroCanvas): inga kartgester. Sedan 30/8 leder
+// ALLA klick till stora kartan — kartbotten öppnar den över staden och
+// brick-klick öppnar den med eventet uppslaget (?event=). Popupen som förr
+// visade platsens event i heron är borttagen (ägarbeslut: sidorna ska mata
+// kartan). CTA-pillen längst ner är kvar som den tydliga länken till stora kartan
 // (?plats=lat,lng,zoom — läses i V2Maps init). Poängen är densamma: sidorna
 // ska kännas som sajten (kartan ÄR produkten), inte som ett textindex.
 //
@@ -78,22 +79,14 @@ type Brick = { id: string; emoji: string; bg: string; dx: number; dy: number };
  *  kapas ligger längst fram i tiden). */
 const MAX_LIVE_DATA = 350;
 
-/** Bygg den levande kartans eventdata (vid BUILD). `listed` = dagen finns
- *  bland daglistans DAYS_LISTED första dagar — samma skärning som
- *  EventDayList, så kart-popupens "gå till listan" aldrig pekar på en rad
- *  som inte finns. */
-function buildLiveEvents(city: City, events: CityEvent[]): HeroLiveEvent[] {
-    const listedKeys = new Set<string>();
-    for (const e of events) {
-        const k = dayKey(e.time);
-        if (listedKeys.size < DAYS_LISTED) listedKeys.add(k);
-        else if (!listedKeys.has(k)) break; // tidssorterat → resten är bortom horisonten
-    }
+/** Bygg den levande kartans eventdata (vid BUILD). Bara fälten markörerna
+ *  behöver — titel/plats/klockslag åkte ut med hero-popupen 30/8 (mindre
+ *  HTML-payload). */
+function buildLiveEvents(events: CityEvent[]): HeroLiveEvent[] {
     return events
         .filter(e => e.lat && e.lng)
         .slice(0, MAX_LIVE_DATA)
         .map(e => {
-            const k = dayKey(e.time);
             const cat = EVENT_CATEGORIES[e.category as EventCategoryType] as { markerHex?: string } | undefined;
             return {
                 id: e.id,
@@ -102,13 +95,10 @@ function buildLiveEvents(city: City, events: CityEvent[]): HeroLiveEvent[] {
                 lng: e.lng,
                 emoji: e.emoji || '📍',
                 hex: cat?.markerHex ?? null,
-                title: e.title,
-                place: e.locationName || city.name,
-                clock: e.hasSpecificTime ? clockLabel(e.time) : null,
                 t: Date.parse(e.time),
                 hour: e.hasSpecificTime ? hourOf(e.time) : null,
-                day: k,
-                listed: listedKeys.has(k),
+                day: dayKey(e.time),
+                category: e.category,
             };
         });
 }
@@ -174,10 +164,10 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
     }
 
     const bricks = pickBricks(city, events, recommended);
-    const live = buildLiveEvents(city, events);
+    const live = buildLiveEvents(events);
 
     return (
-        <div className="group relative block mt-5 h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md hover:border-[#006AA7]/40 transition-all">
+        <div className="group relative block mt-5 h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 transition-all">
             {/* Kartbotten: rena bild-tiles, absolut positionerade runt mitten. */}
             {tiles.map(t => (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -231,15 +221,15 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
             <Link
                 href={cityMapHref(city)}
                 aria-label={ctaLabel}
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap z-20"
             >
-                <span className="city-cta relative overflow-hidden inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white font-black text-xs shadow-lg transition-colors">
+                <span className="city-cta gold-glow-pulse relative overflow-hidden inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white font-black text-xs shadow-lg hover:scale-105 transition-all">
                     {ctaLabel} →
                 </span>
             </Link>
 
             {/* Carto/OSM-attribution — licenskravet gäller även rastertiles. */}
-            <span className="absolute bottom-0 right-0 z-30 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 bg-white/70 rounded-tl pointer-events-none">
+            <span className="absolute bottom-0 right-0 z-20 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 dark:text-zinc-400 bg-white/70 dark:bg-zinc-900/70 rounded-tl pointer-events-none">
                 © OpenStreetMap © CARTO
             </span>
         </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCbisCard, applyCbisDetail } from './cbis';
+import { parseCbisCard, applyCbisDetail, stripWeekday, flipMonthFirst } from './cbis';
 
 const NOW = new Date('2026-07-02T10:00:00');
 const CFG = { baseUrl: 'https://visitumea.se', nodeId: 1262, defaultCity: 'Umeå' };
@@ -24,6 +24,26 @@ const KARLSKRONA_CARD = `
   <p class="card-text">Upptäck sommarens aktiviteter på Dragsö Camping i Karlskrona skärgård.</p>
 </div>`;
 
+// Öland-temat: .body-title / .body-desc-text / .cbis-occasions med MÅNAD FÖRE DAG
+const OLAND_CARD = `
+<a href="/afterwork-i-relaxavdelningen" class="node cbis-product-teaser">
+  <div class="image">
+    <img src="/sites/cb_oland/files/styles/cbis_teaser_540x360/http/images.citybreak.com/19087190.jpeg.webp?itok=x" />
+    <div class="image-nav">
+      <div class="body-desc-occasions cbis-occasions d-flex">
+        <span class="mr-1"><i class="fa-regular fa-calendar-alt"></i> sep 02 - dec 16 </span>
+        <span class="ml-1"><i class="fa-regular fa-clock"></i>16:00</span>
+      </div>
+    </div>
+  </div>
+  <div class="body">
+    <strong class="h3 body-title">Afterwork i relaxavdelningen</strong>
+    <div class="body-desc">
+      <div class="body-desc-text">Varje onsdag bjuder Hotel Skansen in till den populära afterworken i relaxavdelningen.</div>
+    </div>
+  </div>
+</a>`;
+
 describe('parseCbisCard', () => {
     it('Umeå-temat: titel/datum/venue/bild', () => {
         const ev = parseCbisCard(UMEA_CARD, CFG, NOW)!;
@@ -43,6 +63,18 @@ describe('parseCbisCard', () => {
         expect(ev.startDate.getDate()).toBe(3);
         expect(ev.description).toContain('Dragsö Camping');
         expect(ev.city).toBe('Karlskrona');
+    });
+
+    it('Öland-temat: body-title + månad-först-datum + klockslag + body-desc-text', () => {
+        const ev = parseCbisCard(OLAND_CARD, { ...CFG, baseUrl: 'https://www.oland.se', defaultCity: 'Öland' }, NOW)!;
+        expect(ev.title).toBe('Afterwork i relaxavdelningen');
+        expect(ev.url).toBe('https://www.oland.se/afterwork-i-relaxavdelningen');
+        expect(ev.startDate.getMonth()).toBe(8);   // september
+        expect(ev.startDate.getDate()).toBe(2);
+        expect(ev.startDate.getHours()).toBe(16);
+        expect(ev.hasSpecificTime).toBe(true);
+        expect(ev.description).toContain('Hotel Skansen');
+        expect(ev.imageUrl).toContain('https://www.oland.se/sites/');
     });
 
     it('kort utan datum eller länk → null', () => {
@@ -68,5 +100,42 @@ describe('applyCbisDetail', () => {
         applyCbisDetail('<meta name="description" content="Något helt annat innehåll här."/><p>08:00</p>', ev);
         expect(ev.description).toBe(before);
         expect(ev.startDate.getHours()).toBe(19);
+    });
+});
+
+describe('stripWeekday', () => {
+    it('kapar Kinda-temats veckodagsprefix', () => {
+        expect(stripWeekday('ons 26 aug')).toBe('26 aug');
+        expect(stripWeekday('sön 06 sep')).toBe('06 sep');
+        expect(stripWeekday('tors 3 juli')).toBe('3 juli');
+        expect(stripWeekday('måndag 1 maj')).toBe('1 maj');
+    });
+
+    it('rör inte datum utan veckodag', () => {
+        expect(stripWeekday('26 aug')).toBe('26 aug');
+        expect(stripWeekday('2026-08-26')).toBe('2026-08-26');
+    });
+
+    it('kapar inte ord som bara börjar likadant', () => {
+        expect(stripWeekday('Onsdagsklubben 5 maj')).toBe('Onsdagsklubben 5 maj');
+    });
+});
+
+describe('flipMonthFirst', () => {
+    it('vänder Öland-temats månad-först-datum', () => {
+        expect(flipMonthFirst('sep 02')).toBe('02 sep');
+        expect(flipMonthFirst('okt 3')).toBe('3 okt');
+        expect(flipMonthFirst('december 24 kl 15:00')).toBe('24 dec kl 15:00');
+    });
+
+    it('rör inte datum som redan är dag-först', () => {
+        expect(flipMonthFirst('02 sep')).toBe('02 sep');
+        expect(flipMonthFirst('26 aug')).toBe('26 aug');
+        expect(flipMonthFirst('2026-08-26')).toBe('2026-08-26');
+    });
+
+    it('tolkar inte "mars 2026" som månad + dag', () => {
+        expect(flipMonthFirst('mars 2026')).toBe('mars 2026');
+        expect(flipMonthFirst('maj 2027')).toBe('maj 2027');
     });
 });

@@ -54,3 +54,46 @@ De flesta lat=0-events är genuint utländska (USA, Frankrike, Polen, Belgien, A
 ## Resultat
 
 (Mäts i körning 2026-05-29 efter fullskalig körning med alla fixes.)
+
+## Parallellism (2026-09-04)
+
+Nattkedjans två LLM-steg (K4 `llm-enrich`, K8 `audit-events`) körde ett event
+i taget: upp till 500 + 500 anrop à 10–40 s = flera timmar per natt. Nu går
+anropen i batchar om `OLLAMA_CONCURRENCY` (default 3, `utils/ollamaPool.ts`);
+Nominatim (1 req/s) och Firestore-skrivningarna är fortfarande sekventiella.
+
+**Servern måste tillåta parallella anrop.** Ollama ≥ 0.2 sätter
+`OLLAMA_NUM_PARALLEL` till 4 automatiskt om minnet räcker, annars 1 — då
+köas anropen och vinsten uteblir (timeouten är skalad så köade anrop inte
+avbryts). Sätt explicit på minin och starta om Ollama-appen:
+
+```sh
+launchctl setenv OLLAMA_NUM_PARALLEL 2
+```
+
+**Minnet sätter taket (4/9).** Minin har 16 GB. Aktivitetskontrollen visade
+`llama-server` på 18 GB med `gemma4:latest` — 4,4 GB komprimerat, gult
+minnestryck — mitt i K8. Varje parallellt anrop lägger dessutom sin egen
+KV-cache ovanpå modellen. Regel: audit-modellen får inte vara större än
+8B-klassen (~5 GB — `qwen3:8b` är nu standard i koden, samma modell som K4, så
+bara EN modell laddas), och
+`OLLAMA_NUM_PARALLEL` högst 2 på 16 GB. Kontrollera med `ollama ps` att
+"SIZE" + parallellitet ryms med marginal under 16 GB.
+
+Verifiera i nattloggen: K8-raden "Att auditera: N (3 parallella Ollama-anrop)"
+och "Total tid" i sammanfattningen mot föregående natt.
+
+## Modeller (läge 2026-09-04)
+
+| Steg | Modell | Sedan |
+|---|---|---|
+| K4 llm-enrich (plats/kategori/pris ur FB-text) | `qwen3:8b`, `think: false` | maj 2026 |
+| K8 audit (junk/kategori/emoji/pris) + audit-daemon | `qwen3:8b` (standard sedan 4/9; `OLLAMA_AUDIT_MODEL` för att byta). Var `gemma4:latest` — 18 GB, för stor för 16 GB (se Minnet ovan) | 4/9 2026 |
+
+Uppgiften är svensk JSON-extraktion ur korta texter — 8B-klassen räcker, och
+största vinsten är hastighet (parallellism ovan), inte modellbyte. Kandidater
+om ett byte ändå ska provas: Qwen3.8-familjen (aug 2026, starkast flerspråkigt)
+eller en större Gemma 4-storlek. Byt via `OLLAMA_MODEL`/`OLLAMA_AUDIT_MODEL`
+och jämför på samma 50 event i dry-run (`npm run audit-events -- --limit=50`)
+innan något ändras i nattkedjan. Modellen får inte kräva mer minne än att
+tre anrop ryms samtidigt.

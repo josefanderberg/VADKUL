@@ -540,6 +540,9 @@ export const SNOWBALL_SOURCES: Source[] = [
         engine: 'sitevision' as const,
         config: { urls: ["https://visitarboga.se/download/18.e8970c418b6ab9102db98b"], defaultCity: 'Arboga', restApi: {"url":"https://visitarboga.se/rest-api/Evenemang"} },
         updateFrequency: 'every-3d' as const,
+        // Fönstret vidgat 3/9 2026: dry-run visade +157 event mellan 30 och 180
+        // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
+        windowDays: 180 as const,
         status: 'experimental' as const,
         discovery: {
             method: 'hint' as const,
@@ -686,5 +689,57 @@ export const SNOWBALL_SOURCES: Source[] = [
         },
         notes: 'web-snöboll 2026-08-25: sitevision-cal, smoke 5 event ok. Hänvisad av 3 event i DB (t.ex. "Visning av Roggebibliotekets samlingar").',
         lastVerified: '2026-08-25',
+    },
+
+    {
+        id: 'sb-followmeguide-se',
+        hostName: 'Followmeguide',
+        region: 'national',
+        engine: 'wp-rest' as const,
+        config: { baseUrl: 'https://followmeguide.se', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5 },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://followmeguide.se',
+            date: '2026-09-01',
+            rawEventCount: 10,
+        },
+        notes: 'web-snöboll 2026-09-01: wp-v2, smoke 10 event ok. Hänvisad av 2 event i DB (t.ex. "Guidad vandring: Konsten i centrum").',
+        lastVerified: '2026-09-01',
+    },
+    {
+        id: 'sb-alphasverige-se',
+        hostName: 'Alphasverige',
+        region: 'national',
+        engine: 'sitemap' as const,
+        config: { sitemapUrl: 'https://alphasverige.se/tribe_events-sitemap.xml', urlPatterns: [/\/event\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: '', maxUrls: 200 },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://alphasverige.se/tribe_events-sitemap.xml',
+            date: '2026-09-01',
+            rawEventCount: 3,
+        },
+        notes: 'web-snöboll 2026-09-01: sitemap-json-ld, smoke 3 event ok. Hänvisad av 2 event i DB (t.ex. "Ekumenisk Alpha-kurs - Intro i kristen tro").',
+        lastVerified: '2026-09-01',
+    },
+    {
+        id: 'sb-jazzimalmo-com',
+        hostName: 'Jazzimalmo',
+        region: 'national',
+        engine: 'wp-rest' as const,
+        config: { baseUrl: 'https://jazzimalmo.com', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5 },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://jazzimalmo.com',
+            date: '2026-09-01',
+            rawEventCount: 15,
+        },
+        notes: 'web-snöboll 2026-09-01: wp-v2, smoke 15 event ok. Hänvisad av 2 event i DB (t.ex. "Emma Denward Transformation/Jazz i Malmö").',
+        lastVerified: '2026-09-01',
     },
 ];

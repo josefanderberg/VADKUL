@@ -128,22 +128,26 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     };
 
     return (
+        // Rutan bär SAMMA mörka platta-språk som stadsnamnet/dagväljaren på
+        // kartan (Josef 31/8 — den mörkblå looken utbytt): slate-900/80 +
+        // blur + white/10-kant, guld (#FECC02) som accent i stället för blått.
+        // Samma look i ljust och mörkt läge, precis som plattorna.
         <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
             <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="auth-modal-title"
-                className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4"
+                className="bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-start justify-between">
                     <div>
-                        <h2 id="auth-modal-title" className="text-xl font-black text-slate-800 dark:text-slate-100">
+                        <h2 id="auth-modal-title" className="text-xl font-black text-white">
                             {mode === 'login' ? 'Logga in' : 'Skapa konto'}
                         </h2>
-                        {reason && <p className="text-xs font-semibold text-slate-500 mt-0.5">{reason}</p>}
+                        {reason && <p className="text-xs font-semibold text-white/60 mt-0.5">{reason}</p>}
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Stäng" className="text-slate-400 hover:text-slate-600 p-1">
+                    <button type="button" onClick={onClose} aria-label="Stäng" className="text-white/50 hover:text-white p-1 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
@@ -159,7 +163,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                                 aria-label="Visningsnamn"
                                 autoComplete="nickname"
                                 required
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                                className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 text-white placeholder:text-white/40 focus:border-[#FECC02]/70 focus:outline-none"
                             />
                             {/* Ålder + kön sida vid sida — statistikunderlag ("vilka
                                 använder VADKUL"). Kön kan alltid lämnas som
@@ -175,14 +179,14 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                                     required
                                     min={13}
                                     max={120}
-                                    className="w-28 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                                    className="w-28 px-4 py-3 rounded-xl border border-white/10 bg-white/10 text-white placeholder:text-white/40 focus:border-[#FECC02]/70 focus:outline-none"
                                 />
                                 <select
                                     value={gender}
                                     onChange={(e) => setGender(e.target.value)}
                                     aria-label="Kön"
                                     required
-                                    className={`flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:border-[#006AA7] focus:outline-none ${gender ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400'}`}
+                                    className={`flex-1 px-4 py-3 rounded-xl border border-white/10 bg-white/10 focus:border-[#FECC02]/70 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white ${gender ? 'text-white' : 'text-white/40'}`}
                                 >
                                     <option value="" disabled>Kön</option>
                                     <option value="kvinna">Kvinna</option>
@@ -197,7 +201,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                                 value={citySlug}
                                 onChange={(e) => { setCitySlug(e.target.value); setCityTouched(true); }}
                                 aria-label="Stad"
-                                className={`w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:border-[#006AA7] focus:outline-none ${citySlug ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400'}`}
+                                className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 focus:border-[#FECC02]/70 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white ${citySlug ? 'text-white' : 'text-white/40'}`}
                             >
                                 <option value="">Stad (valfritt)</option>
                                 {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
@@ -214,9 +218,9 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                                     type="checkbox"
                                     checked={hasChildren}
                                     onChange={(e) => setHasChildren(e.target.checked)}
-                                    className="w-4 h-4 accent-[#006AA7] shrink-0"
+                                    className="w-4 h-4 accent-[#FECC02] shrink-0"
                                 />
-                                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                <span className="text-sm font-semibold text-white/80">
                                     Jag har barn (0–13 år)
                                 </span>
                             </label>
@@ -231,7 +235,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                         autoComplete="email"
                         required
                         autoFocus
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 text-white placeholder:text-white/40 focus:border-[#FECC02]/70 focus:outline-none"
                     />
                     <input
                         type="password"
@@ -242,17 +246,17 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                         autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                         required
                         minLength={6}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#006AA7] focus:outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 text-white placeholder:text-white/40 focus:border-[#FECC02]/70 focus:outline-none"
                     />
                     {error && (
-                        <p role="alert" className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700">
+                        <p role="alert" className="rounded-xl bg-red-500/15 border border-red-400/30 px-4 py-2.5 text-sm font-semibold text-red-200">
                             {error}
                         </p>
                     )}
                     <button
                         type="submit"
                         disabled={busy}
-                        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#006AA7] text-white font-bold disabled:opacity-50 hover:bg-[#005590] transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FECC02] text-slate-900 font-black disabled:opacity-50 hover:bg-[#ffd633] transition-colors"
                     >
                         {mode === 'login' ? <LogIn size={16} /> : <UserPlus size={16} />}
                         {busy ? 'Vänta…' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
@@ -262,7 +266,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                             type="button"
                             onClick={forgot}
                             disabled={busy}
-                            className="text-xs font-semibold text-slate-500 hover:text-[#006AA7] transition-colors self-center disabled:opacity-50"
+                            className="text-xs font-semibold text-white/50 hover:text-white transition-colors self-center disabled:opacity-50"
                         >
                             Glömt lösenord?
                         </button>
@@ -272,15 +276,15 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                 <button
                     type="button"
                     onClick={() => setMode(m => (m === 'login' ? 'register' : 'login'))}
-                    className="text-sm font-bold text-[#006AA7] hover:text-[#005590] transition-colors"
+                    className="text-sm font-bold text-[#FECC02] hover:text-[#ffd633] transition-colors"
                 >
                     {mode === 'login' ? 'Ny här? Skapa konto' : 'Har du redan konto? Logga in'}
                 </button>
 
                 {mode === 'register' && (
-                    <p className="text-[11px] font-semibold text-slate-400 text-center -mt-1">
+                    <p className="text-[11px] font-semibold text-white/40 text-center -mt-1">
                         Genom att skapa konto godkänner du vår{' '}
-                        <a href="/integritet" target="_blank" rel="noopener" className="underline hover:text-slate-600 transition-colors">
+                        <a href="/integritet" target="_blank" rel="noopener" className="underline hover:text-white/70 transition-colors">
                             integritetspolicy
                         </a>.
                     </p>

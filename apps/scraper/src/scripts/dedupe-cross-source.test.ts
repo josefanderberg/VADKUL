@@ -119,3 +119,30 @@ describe('buildDedupGroups — tvilling-fästning', () => {
         expect(attached).toBe(0);
     });
 });
+
+describe('scoreOf — affiliatelänken vinner (1/9)', () => {
+    const rad = (over: Partial<Parameters<typeof scoreOf>[0]>) => ({
+        url: 'https://exempel.se/a', title: 'Event', time: '2026-09-03T18:30:00Z',
+        locationName: 'Tyrol, Stockholm', coverImage: null, description: null,
+        lat: 59.32, lng: 18.1, isLocationVerified: 1, hostName: 'Arrangör',
+        firestoreId: 'x', ...over,
+    } as Parameters<typeof scoreOf>[0]);
+
+    it('slår en turistsajt med bild och lång beskrivning', () => {
+        // Exakt Mamma Mia-fallet: visitstockholm.com hade bild + text och vann,
+        // så klicket gick dit i stället för till vår intäktslänk.
+        const turistsajt = rad({
+            url: 'https://www.visitstockholm.com/events/mamma-mia-the-party',
+            coverImage: 'https://storage.googleapis.com/bild.jpg',
+            description: 'x'.repeat(200),
+        });
+        const affiliate = rad({ url: 'https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=x' });
+        expect(scoreOf(affiliate)).toBeGreaterThan(scoreOf(turistsajt));
+    });
+
+    it('ger inget påslag åt den nakna biljettlänken', () => {
+        const naken = rad({ url: 'https://www.ticketmaster.se/event/mamma-mia' });
+        const vanlig = rad({ url: 'https://arrangoren.se/mamma-mia' });
+        expect(scoreOf(naken)).toBe(scoreOf(vanlig));
+    });
+});

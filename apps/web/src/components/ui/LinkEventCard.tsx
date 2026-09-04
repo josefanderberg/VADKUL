@@ -1,37 +1,26 @@
-import { ExternalLink, Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, CalendarPlus, Sparkles, Users, Check, Rocket, ArrowRight, Star, Eye, MessageCircle, List } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List } from 'lucide-react';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
+import { hostLabelFor } from '../../utils/hostLabel';
 import { boostedUntilLabel } from '../../utils/boostLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
-import { googleCalendarUrl, downloadIcs } from '../../utils/calendarLinks';
 import { eventShareSlug } from '../../utils/eventShareSlug';
+import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
+// Radbrytnings-återställningen + värd-faviconen delas med stadssidornas utfällda event (2/9).
+import { hostFaviconUrl, withRecoveredLineBreaks } from '../../utils/eventExpand';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { type BoostTier } from '../../services/boostService';
 import EventReminderBell from './EventReminderBell';
 import BoostTierPicker from './BoostTierPicker';
-import { getEventViews, recordEventClick } from '../../services/eventStatsService';
+import { recordEventClick } from '../../services/eventStatsService';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
 const ADDRESS_FALLBACKS = new Set(['växjö', 'vaxjo', 'stockholm', 'sverige', 'sweden', '']);
-
-/**
- * Äldre skrapade beskrivningar tappade radbrytningarna HELT — styckena sitter
- * ihop utan ens mellanslag ("…intresseklubb.Tävlingsområde…", "…11:30Klasserna…").
- * Saknar texten \n men har sådana skarvar (skiljetecken/siffra direkt följt av
- * versal) stoppar vi in radbrytningar där. Nyskrapat innehåll har riktiga \n
- * (skraperfix 2026-07-11) och lämnas orört.
- */
-function withRecoveredLineBreaks(text: string): string {
-    if (!text || text.includes('\n')) return text;
-    return text
-        .replace(/([.!?…)])(?=[A-ZÅÄÖ"“])/g, '$1\n')
-        .replace(/(\d)(?=[A-ZÅÄÖ])/g, '$1\n');
-}
 
 function isSpecificAddress(addr: string | undefined | null): boolean {
     if (!addr) return false;
@@ -56,6 +45,10 @@ interface LinkEventCardProps {
     isPanelMode?: boolean;
     showFullAddress?: boolean;
     onRevealStepChange?: (step: number) => void;
+    /** Reveal-steget kortet MONTERAS med (default 0 = bara header). Djuplänks-
+     *  öppningen i helskärm (EventCard) monterar med 2 så hela innehållet syns
+     *  direkt. Läses bara vid mount — senare eventbyten stegar som vanligt. */
+    initialRevealStep?: 0 | 1 | 2;
     // När true: kortet är alltid fullt utvecklat. peek-bilden + "Stäng
     // detaljer"-knappen visas inte. Klick på header/bild/beskrivning fäller i
     // stället ihop bottensheeten via onContentTap (se nedan).
@@ -83,6 +76,11 @@ interface LinkEventCardProps {
      *  direkt under. Egen pill bredvid Chatt på översta raden. */
     nearbyView?: boolean;
     onToggleNearbyView?: () => void;
+    /** ETT STEG TILLBAKA till multievent-listan eventet valdes ur (Josef 1/9).
+     *  Undefined = kortet nåddes inte via en grupplista → ingen pil. */
+    onBackToGroup?: () => void;
+    /** Antal i gruppen — bara för pilens title/aria. */
+    backToGroupCount?: number;
     /** Fler event på SAMMA plats (multi-event-hög): position + antal → pager på
      *  platsraden ("3/7"). onGroupNext stegar till nästa i högen. groupTotal ≤ 1
      *  döljer pagern. */
@@ -97,11 +95,28 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
-    const [internalRevealStep, setInternalRevealStep] = useState(0); // 0: header, 1: +img/truncated, 2: +full
+    const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
+
+    // Beskrivningslagret laddas först när ett kort faktiskt öppnas (störst av
+    // aggregaten — ska inte belasta besökare som aldrig öppnar ett kort).
+    // Mergen pekar om selectedEvent i page.tsx → description dyker upp här
+    // via props när svaret landat; descriptionsPending styr bara fallbacktexten.
+    const [descriptionsPending, setDescriptionsPending] = useState(
+        () => !linkEvent.userCreated && (linkEvent as any).description === undefined,
+    );
+    useEffect(() => {
+        let mounted = true;
+        linkEventService.requestDescriptions().then(() => {
+            if (mounted) setDescriptionsPending(false);
+        });
+        // Säkerhetsnät: hänger nätet ska kortet inte stå på "Hämtar…" för evigt.
+        const guard = setTimeout(() => { if (mounted) setDescriptionsPending(false); }, 12000);
+        return () => { mounted = false; clearTimeout(guard); };
+    }, []);
 
     // VADKUL-värdat = skapat här UTAN länk (anmälan sker på sidan). Användar-
     // skapade event MED länk är TIPS — de presenteras som vanliga länk-event
@@ -149,23 +164,24 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // Nollställ när eventet (eller dess bild-URL) byts så felet inte "fastnar".
     useEffect(() => { setCoverFailed(false); }, [linkEvent.id, linkEvent.coverImage]);
 
-    // 👁 Visningar — läses från eventStats (increment:et fyras när kortet öppnas,
-    // i (v2)/page.tsx). Kort fördröjning så vår egen visning hinner räknas med.
-    // null = okänt (offline/regler ej deployade) → badgen visas inte alls.
-    const [viewCount, setViewCount] = useState<number | null>(null);
-    useEffect(() => {
-        setViewCount(null);
-        let cancelled = false;
-        const t = setTimeout(async () => {
-            const n = await getEventViews(linkEvent.id);
-            if (!cancelled) setViewCount(n);
-        }, 600);
-        return () => { cancelled = true; clearTimeout(t); };
-    }, [linkEvent.id]);
+    // (👁-visningsbadgen är BORTTAGEN 31/8 på ägarbeslut — siffran ska inte
+    // VISAS längre. Insamlingen är kvar: increment:et fyras fortfarande när
+    // kortet öppnas (recordEventView i (v2)/page.tsx) så statistiken finns
+    // internt. Att läsningen (getEventViews per kortöppning) försvann sparar
+    // dessutom Firestore-reads.)
     // Byt event (Nästa/Bakåt): var kortet redan uppfällt ska det FÖRBLI uppfällt
     // så bilden fortsatt syns — men i topp-läget (steg 1). Var det hopfällt börjar
     // det hopfällt som vanligt. (Sheet-höjden bevaras separat i föräldern.)
-    useEffect(() => { setInternalRevealStep(prev => (prev >= 1 ? 1 : 0)); }, [linkEvent.id]);
+    // Körs bara vid FAKTISKT eventbyte (id-jämförelsen, inte deps): på mount
+    // var effekten alltid ett no-op (0 → 0) tills initialRevealStep kom — nu
+    // skulle den nolla djuplänkens uppfällda start (och StrictModes dubbel-
+    // körning i dev gör en ren "skippa första varvet"-flagga opålitlig).
+    const prevRevealIdRef = useRef(linkEvent.id);
+    useEffect(() => {
+        if (prevRevealIdRef.current === linkEvent.id) return;
+        prevRevealIdRef.current = linkEvent.id;
+        setInternalRevealStep(prev => (prev >= 1 ? 1 : 0));
+    }, [linkEvent.id]);
 
     // Rapportera event: liten textknapp → orsaksval → tack. Nollställs per event.
     const [reportOpen, setReportOpen] = useState(false);
@@ -228,6 +244,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         }
     };
 
+    // Ticketmaster = biljettköp, inte anmälan (ägarbeslut 1/9): utlänk-
+    // knapparna säger BOKA och går i guld — samma guld som boost-brickan.
+    const tmEvent = isTicketmasterEvent(linkEvent);
+
     const handleVisitSite = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -241,19 +261,6 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             hostName: linkEvent.hostName,
         });
         window.open(linkEvent.url, '_blank', 'noopener,noreferrer');
-    };
-
-    // Vägbeskrivning i Google Maps (öppnar appen på mobil). Koordinaterna är
-    // pålitligare än adressträngen, så de används som destination.
-    const hasCoords = typeof linkEvent.lat === 'number' && typeof linkEvent.lng === 'number'
-        && !(linkEvent.lat === 0 && linkEvent.lng === 0);
-    const handleDirections = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(
-            `https://www.google.com/maps/dir/?api=1&destination=${linkEvent.lat},${linkEvent.lng}`,
-            '_blank', 'noopener,noreferrer'
-        );
     };
 
     const handleToggleSave = (e: React.MouseEvent) => {
@@ -312,18 +319,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // (ingen fallback-platshållare längre).
     const hasRealCover = !!linkEvent.coverImage;
 
-    const getFaviconUrl = (url: string) => {
-        try {
-            const domain = new URL(url).hostname;
-            return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-        } catch { return null; }
-    };
-    const faviconUrl = getFaviconUrl(linkEvent.url);
+    const faviconUrl = hostFaviconUrl(linkEvent.url);
 
     // Formatera pris för visning. Normaliserar de vanliga svenska varianter vi
     // ser i scraper-datan: "Fri entré"/"Avgiftsfritt"/"kostnadsfritt" → "Gratis";
     // "30kr"/"160:-"/"40 SEK" → "X kr"; rena siffror/intervall får "kr" påsatt.
     const priceLabel = normalizePriceLabel(linkEvent.price);
+    // Källans domän tills cards-lagret mergat in värden (aldrig "Okänd" med länk).
+    const hostLabel = hostLabelFor(linkEvent.hostName, linkEvent.url);
 
     // Eventets emoji (samma logik som kartnålen/EventCard): per-event-emoji, annars
     // kategori-fallback. Visas i början av titeln.
@@ -376,8 +379,30 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         sektionen respektive närhetslistan (som annars ligger
                         långt ner och sällan nås via scroll). Tydligt på/av-läge:
                         fylld blå när vyn är aktiv. */}
-                    {(onToggleActivityView || onToggleNearbyView) ? (
+                    {(onBackToGroup || onToggleActivityView || onToggleNearbyView) ? (
                         <div className="shrink-0 flex items-center gap-1.5">
+                            {/* TILLBAKA TILL MULTIEVENT-LISTAN (Josef 1/9) —
+                                längst till vänster, före Lista-toggeln, så
+                                steget bakåt läses som ett steg bakåt. BARA
+                                pilen: texten "Tillbaka" krockade med
+                                Lista-toggeln bredvid (två listor, två ord).
+                                Neutral (aldrig blå/aktiv) — den är en väg,
+                                inte ett läge man kan stå i. Meningen ligger i
+                                title/aria ("Tillbaka till de N eventen"). */}
+                            {onBackToGroup && (
+                                <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onBackToGroup(); }}
+                                    aria-label={backToGroupCount > 1
+                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
+                                        : 'Tillbaka till listan'}
+                                    title={backToGroupCount > 1
+                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
+                                        : 'Tillbaka till listan'}
+                                    className="inline-flex items-center justify-center h-8 w-8 rounded-full border transition-all active:scale-[0.97] bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
+                                >
+                                    <ArrowLeft size={15} strokeWidth={2.5} />
+                                </button>
+                            )}
                             {onToggleActivityView && (
                                 <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleActivityView(); }}
@@ -386,7 +411,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.97] ${
                                         activityView
                                             ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
                                     }`}
                                 >
                                     <MessageCircle size={13} fill={activityView ? 'currentColor' : 'none'} />
@@ -401,7 +426,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.97] ${
                                         nearbyView
                                             ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
                                     }`}
                                 >
                                     <List size={13} />
@@ -448,7 +473,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 className={`w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 ${
                                     saved
                                         ? 'bg-rose-50 border-rose-200 text-rose-500 dark:bg-rose-950/30 dark:border-rose-900/50'
-                                        : 'bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500 dark:hover:text-rose-400 dark:hover:border-rose-900/50'
+                                        : 'bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-500 dark:hover:text-rose-400 dark:hover:border-rose-900/50'
                                 }`}
                             >
                                 <Heart size={15} fill={saved ? 'currentColor' : 'none'} />
@@ -462,7 +487,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             onClick={handleShare}
                             aria-label="Dela eventet"
                             title="Dela eventet"
-                            className="w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 bg-white border-slate-200 text-slate-400 hover:text-[#006AA7] hover:border-sky-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
+                            className="w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 bg-white border-slate-200 text-slate-400 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-500 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
                         >
                             <Share2 size={15} />
                         </button>
@@ -474,9 +499,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         {linkEvent.url && (
                             <button
                                 onClick={handleVisitSite}
-                                className="group/anmal shrink-0 h-8 pl-3.5 pr-2.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md shadow-sky-900/30 ring-1 ring-inset ring-white/25 hover:from-[#0083CE] hover:to-[#00619F] hover:shadow-lg active:scale-[0.97] transition-all"
+                                className={`group/anmal shrink-0 h-8 pl-3.5 pr-2.5 rounded-full text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md ring-1 ring-inset hover:shadow-lg active:scale-[0.97] transition-all ${tmEvent
+                                    ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 shadow-amber-900/30 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
+                                    : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-sky-900/30 ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'}`}
                             >
-                                ANMÄL
+                                {tmEvent ? 'BOKA' : 'ANMÄL'}
                                 <ArrowRight size={13} className="shrink-0 transition-transform group-hover/anmal:translate-x-0.5" />
                             </button>
                         )}
@@ -496,7 +523,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     den får en egen rad (nedan) som radbryts fritt. Skrapade
                     event och tips behåller platsen inline (trunkerad) — där
                     finns alltid ANMÄL-länken med fullständig info. */}
-                <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
+                <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-zinc-300 overflow-hidden ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
                     <div className="flex items-center gap-2 shrink-0">
                         <Clock size={14} className="text-primary" />
                         <span className="whitespace-nowrap">{formatEventDateSpan(linkEvent.time, linkEvent.endDate, linkEvent.hasSpecificTime !== false)}</span>
@@ -516,23 +543,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             <MapPin size={14} className="text-primary shrink-0" />
                             <span className="text-sm truncate">{linkEvent.locationName}</span>
                             {secondaryAddress && (
-                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 shrink-0">
                                     · {secondaryAddress}
                                 </span>
                             )}
                         </div>
                     )}
-                    {/* 👁 Antal visningar (eventStats). Visas först när siffran
-                        är hämtad och > 0 — aldrig en ljugande nolla. */}
-                    {viewCount !== null && viewCount > 0 && (
-                        <div
-                            className="flex items-center gap-1.5 shrink-0"
-                            title={`${viewCount.toLocaleString('sv-SE')} visningar`}
-                        >
-                            <Eye size={13} className="text-primary" />
-                            <span className="whitespace-nowrap tabular-nums">{viewCount.toLocaleString('sv-SE')}</span>
-                        </div>
-                    )}
+                    {/* (👁-visningsbadgen som stod här är borttagen 31/8 —
+                        se kommentaren vid recordEventView-inforutan ovan.) */}
                     {/* Fler event på samma plats → pager längst till höger på platsraden:
                         antal ("3/7") + pil som stegar till nästa event i högen. */}
                     {groupTotal > 1 && onGroupNext && (
@@ -541,7 +559,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             onClick={(e) => { e.stopPropagation(); onGroupNext(); }}
                             aria-label={`Nästa av ${groupTotal} event på samma plats`}
                             title="Fler event på samma plats"
-                            className="shrink-0 flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-95 transition-all"
+                            className="shrink-0 flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 active:scale-95 transition-all"
                         >
                             <span className="text-[11px] font-black tabular-nums leading-none">{groupIndex + 1}/{groupTotal}</span>
                             <ArrowRight size={13} className="shrink-0" />
@@ -550,12 +568,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 </div>
 
                 {vadkulHosted && (
-                    <div className="flex items-start gap-2 mb-4 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <div className="flex items-start gap-2 mb-4 text-xs font-bold text-slate-600 dark:text-zinc-300">
                         <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
                         <span className="text-sm min-w-0 break-words">
                             {linkEvent.locationName}
                             {secondaryAddress && (
-                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
                                     {' '}· {secondaryAddress}
                                 </span>
                             )}
@@ -579,10 +597,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 {!vadkulHosted && faviconUrl ? (
                                     <img src={faviconUrl} alt="" className="w-4 h-4 object-contain" />
                                 ) : (
-                                    <span className="font-bold text-[8px]">{linkEvent.hostName?.charAt(0).toUpperCase()}</span>
+                                    <span className="font-bold text-[8px]">{hostLabel.charAt(0).toUpperCase()}</span>
                                 )}
                             </div>
-                            <span className="text-xs font-black text-black dark:text-white truncate">{linkEvent.hostName || 'Okänd'}</span>
+                            <span className="text-xs font-black text-black dark:text-white truncate">{hostLabel}</span>
                         </div>
                     </div>
 
@@ -632,22 +650,28 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
 
                     {/* Description Section */}
                     <div
-                        className={`p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-border ${alwaysExpanded ? '' : 'cursor-pointer'}`}
+                        className={`p-4 md:p-8 bg-slate-50 dark:bg-zinc-900/50 border-t border-border ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                         onClick={handleContentClick}
                     >
-                        <p data-event-description className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
-                            {withRecoveredLineBreaks((linkEvent as any).description) || 'Ingen beskrivning tillgänglig.'}
+                        <p data-event-description className="text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
+                            {withRecoveredLineBreaks((linkEvent as any).description)
+                                || (descriptionsPending ? 'Hämtar beskrivning…' : 'Ingen beskrivning tillgänglig.')}
                         </p>
                         
                         <div className="mt-6 flex flex-col gap-3">
-                                {/* Skrapade event länkar ut till arrangörens sida. */}
+                                {/* Skrapade event länkar ut till arrangörens sida.
+                                    Samma formspråk som ANMÄL-pillret uppe i headern
+                                    (helrundad gradient, inre ljuskant, pil som glider
+                                    vid hover) — fast i CTA-storlek. */}
                                 {linkEvent.url && (
                                     <button
                                         onClick={handleVisitSite}
-                                        className="flex items-center justify-center gap-4 w-full py-4 bg-[#006AA7] hover:bg-[#005590] text-white text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97]"
+                                        className={`group/anmalcta flex items-center justify-center gap-3 w-full py-4 rounded-full text-lg md:text-xl font-black uppercase tracking-widest shadow-lg ring-1 ring-inset hover:shadow-xl transition-all active:scale-[0.97] ${tmEvent
+                                            ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 shadow-amber-900/30 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
+                                            : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-sky-900/30 ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'}`}
                                     >
-                                        <span>ANMÄL DIG HÄR</span>
-                                        <ExternalLink size={24} />
+                                        <span>{tmEvent ? 'Boka biljetter' : 'Anmäl dig här'}</span>
+                                        <ArrowRight size={22} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
                                     </button>
                                 )}
 
@@ -660,10 +684,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                             onClick={handleRsvpToggle}
                                             disabled={rsvpBusy}
                                             aria-pressed={isAttending}
-                                            className={`flex items-center justify-center gap-3 w-full py-4 text-lg md:text-xl font-black shadow-2xl transition-all active:scale-[0.97] disabled:opacity-60 ${
+                                            className={`flex items-center justify-center gap-3 w-full py-4 rounded-full text-lg md:text-xl font-black uppercase tracking-widest text-white shadow-lg ring-1 ring-inset ring-white/25 transition-all active:scale-[0.97] disabled:opacity-60 ${
                                                 isAttending
-                                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                                    : 'bg-[#006AA7] hover:bg-[#005590] text-white'
+                                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-700 hover:from-emerald-400 hover:to-emerald-600 shadow-emerald-900/30'
+                                                    : 'bg-gradient-to-r from-[#0077BC] to-[#005590] hover:from-[#0083CE] hover:to-[#00619F] shadow-sky-900/30'
                                             }`}
                                         >
                                             {isAttending ? <Check size={24} /> : <Users size={24} />}
@@ -671,7 +695,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         </button>
 
                                         <div>
-                                            <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
+                                            <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2">
                                                 <Users size={13} />
                                                 {attendees.length === 0
                                                     ? 'Ingen anmäld än — bli först!'
@@ -682,7 +706,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                                     {attendees.map(a => (
                                                         <span
                                                             key={a.uid}
-                                                            className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                                            className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700"
                                                         >
                                                             {a.photoURL ? (
                                                                 // eslint-disable-next-line @next/next/no-img-element
@@ -692,7 +716,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                                                     {a.name.charAt(0).toUpperCase()}
                                                                 </span>
                                                             )}
-                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 max-w-[120px] truncate">{a.name}</span>
+                                                            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 max-w-[120px] truncate">{a.name}</span>
                                                         </span>
                                                     ))}
                                                 </div>
@@ -700,84 +724,6 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         </div>
                                     </div>
                                 )}
-                                {/* Spara / Hitta hit / Dela — samlade direkt under
-                                    anmälningsknappen i stället för utspridda
-                                    småknappar uppe vid titeln. */}
-                                <div className="flex gap-3">
-                                    {/* Stjärn-gåvan ⭐ bredvid Spara: samma logik som
-                                        header-stjärnan (knapp när man kan placera,
-                                        annars indikator på stjärnmärkta event). */}
-                                    {canPlaceStar && onPlaceStar ? (
-                                        <button
-                                            onClick={handlePlaceStar}
-                                            aria-label="Sätt din stjärna på eventet"
-                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97] border-amber-400 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                                        >
-                                            <Star size={20} fill={hasStar ? 'currentColor' : 'none'} />
-                                            Sätt stjärna
-                                        </button>
-                                    ) : hasStar ? (
-                                        <div
-                                            aria-label="Det här eventet har fått en stjärna"
-                                            title="Det här eventet har fått en stjärna av en tidig VADKUL-användare"
-                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide border-amber-300 bg-amber-50 text-amber-500 dark:bg-amber-950/30 dark:border-amber-900/60"
-                                        >
-                                            <Star size={20} fill="currentColor" />
-                                            Stjärnmärkt
-                                        </div>
-                                    ) : null}
-                                    {onToggleSave && (
-                                        <button
-                                            onClick={handleToggleSave}
-                                            aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
-                                            className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97] ${
-                                                saved
-                                                    ? 'bg-rose-500 border-rose-500 text-white hover:bg-rose-400'
-                                                    : 'border-rose-300 text-rose-500 hover:bg-rose-50'
-                                            }`}
-                                        >
-                                            <Heart size={20} fill={saved ? 'currentColor' : 'none'} />
-                                            {saved ? 'Sparad' : 'Spara'}
-                                        </button>
-                                    )}
-                                    {hasCoords && (
-                                        <button
-                                            onClick={handleDirections}
-                                            aria-label="Vägbeskrivning (Google Maps)"
-                                            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 border-[#006AA7] text-[#006AA7] hover:bg-[#006AA7]/5 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97]"
-                                        >
-                                            <Navigation size={20} />
-                                            Hitta hit
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={handleShare}
-                                        aria-label="Dela eventet"
-                                        className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 border-2 border-[#006AA7] text-[#006AA7] hover:bg-[#006AA7]/5 text-xs font-black uppercase tracking-wide transition-all active:scale-[0.97]"
-                                    >
-                                        <Share2 size={20} />
-                                        Dela
-                                    </button>
-                                </div>
-
-                                {/* Lägg till i kalender — Google-länk + .ics för Apple/Outlook */}
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(googleCalendarUrl(linkEvent), '_blank', 'noopener,noreferrer'); }}
-                                        className="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-bold transition-colors"
-                                    >
-                                        <CalendarPlus size={16} className="shrink-0" />
-                                        Google Kalender
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadIcs(linkEvent); }}
-                                        className="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-bold transition-colors"
-                                    >
-                                        <CalendarPlus size={16} className="shrink-0" />
-                                        Kalenderfil (.ics)
-                                    </button>
-                                </div>
-
                                 {/* Småtext-åtgärder: rapportera (alla) + ta bort (ägaren) */}
                                 <div className="flex flex-col items-center gap-1 pt-1">
                                     {/* Veckoserie: utan den här raden ser tolv utvecklade
@@ -795,7 +741,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                                 <button
                                                     key={reason}
                                                     onClick={(e) => handleReport(e, reason)}
-                                                    className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                    className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-slate-300 dark:border-zinc-600 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
                                                 >
                                                     {reason}
                                                 </button>
@@ -804,7 +750,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     ) : (
                                         <button
                                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReportOpen(true); }}
-                                            className="text-[10px] uppercase tracking-widest font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 py-1.5 transition-colors"
+                                            className="text-[10px] uppercase tracking-widest font-bold text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 py-1.5 transition-colors"
                                         >
                                             Rapportera event
                                         </button>

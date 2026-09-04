@@ -1,6 +1,8 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { geocodeVenueSweden } from '../utils/venueCoordinates';
+import { geocodeVenueSweden, type GeoHit } from '../utils/venueCoordinates';
+import { venueBuildingOf } from '../utils/venueFromText';
+import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
 import { searchGoogleImage } from '../utils/imageSearch';
 
 // --- DATE FILTER: Kommande 7 dagar ---
@@ -98,7 +100,9 @@ async function discoverEventLinks(page: Page, url: string): Promise<{ href: stri
             const anchors = Array.from(document.querySelectorAll('a[href*="/events/"]'));
             return anchors
                 .map(a => (a as HTMLAnchorElement).href)
-                .filter(href => /\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}\//.test(href));
+                // Bara /se/-event: sökningen är svensk men listar även norska
+                // (/no/nb/) — 108 Oslo-event låg på kartan 2026-09-03.
+                .filter(href => /tickster\.com\/se\//i.test(href) && /\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}\//.test(href));
         });
 
         const result: { href: string; dateFromUrl: string }[] = [];
@@ -178,13 +182,40 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
                             jsonLng = d.location.geo.longitude ?? null;
                         }
                     }
-                    if (d.offers?.price !== undefined) {
-                        const p = d.offers.price;
-                        jsonPrice = (p === 0 || p === '0') ? 'Gratis' : parseInt(p, 10);
+                    // Pris ENBART ur JSON-LD offers — aldrig ur sidtexten: enda
+                    // "800 kr" i Ticksters HTML är deras egen serviceavgifts-text
+                    // (verifierat 2026-09-03). offers kan vara objekt eller lista,
+                    // med price eller lowPrice/highPrice (även i priceSpecification).
+                    const offers = Array.isArray(d.offers) ? d.offers : (d.offers ? [d.offers] : []);
+                    const nums: number[] = [];
+                    for (const o of offers) {
+                        for (const k of ['lowPrice', 'highPrice', 'price']) {
+                            const v = o?.[k] ?? o?.priceSpecification?.[k];
+                            if (v === undefined || v === null || v === '') continue;
+                            const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
+                            if (Number.isFinite(n) && n >= 0) nums.push(n);
+                        }
+                    }
+                    if (nums.length) {
+                        const min = Math.min(...nums);
+                        const max = Math.max(...nums);
+                        jsonPrice = max === 0 ? 'Gratis'
+                            : (min === max || min === 0) ? `${Math.round(max)} kr`
+                            : `${Math.round(min)}–${Math.round(max)} kr`;
                     }
                 }
             } catch (_) {}
         }
+
+        // Ticksters JSON-LD-description är oftast bara sidans meta-text
+        // ("Titel på Venue i Stad 3 september - Tickster.com") — 2 049 av
+        // 2 082 Tickster-event hade den som "beskrivning" (revisionen
+        // 2026-09-03). Räkna den som saknad så stycke-fallbacken nedan får
+        // plocka den riktiga texten ur sidan.
+        const genericJsonDesc = /\s[-–]\s*Tickster\.com\s*$/i.test(jsonDescription)
+            || (jsonDescription.length < 160 && title.length >= 8
+                && jsonDescription.toLowerCase().includes(title.toLowerCase().slice(0, 25)));
+        if (genericJsonDesc) jsonDescription = '';
 
         // Description från sidans body — om JSON-LD saknar den.
         // Tickster renderar beskrivningen som vanliga <p> utan klass vars parent också saknar klass.
@@ -198,8 +229,9 @@ async function extractEventDetails(page: Page, href: string, dateFromUrl: string
                     if (txt.length < 30) return false;
                     // Skip date lines ("Måndag den 1 juni …")
                     if (/^(Måndag|Tisdag|Onsdag|Torsdag|Fredag|Lördag|Söndag)\s+den\s+\d/i.test(txt)) return false;
-                    // Skip ticket/door info lines
-                    if (/Entrén öppnar|Biljett|köpa biljett|Startar:|Dörröppning|Insläpp:/i.test(txt)) return false;
+                    // Skip ticket/door info lines — och Ticksters egen text om
+                    // serviceavgift/köpvillkor (får aldrig bli "beskrivning").
+                    if (/Entrén öppnar|Biljett|köpa biljett|Startar:|Dörröppning|Insläpp:|serviceavgift|Tickster|köpvillkor/i.test(txt)) return false;
                     return true;
                 })
                 .map(p => p.textContent?.trim() || '');
@@ -412,6 +444,13 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     console.log(`     🗑️  Placeholder-titel "${details.title}", hoppar.`);
                     continue;
                 }
+                // Rena biljettslag sålda som "event" (Armémuseums dagliga
+                // "Entrébiljetter/Tickets", 29 st 2026-09-03) — museientré,
+                // inte ett evenemang.
+                if (/^(?:entr[ée]biljetter?|entr[ée]|intr[äa]de|tickets?|biljetter?)(?:\s*\/\s*(?:tickets?|biljetter?|entr[ée]))?$/i.test(details.title)) {
+                    console.log(`     🗑️  Biljettslag som titel "${details.title}", hoppar.`);
+                    continue;
+                }
 
                 // Sanera bort Tickster AB:s kontoradress (Magasinsgatan 8, 411 18
                 // Göteborg ≈ 57.7088, 11.967). Den läcker in på event utan venue
@@ -438,12 +477,33 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     details.jsonLng = null;
                 }
 
+                // Biografsalonger: "Saga - Bio 3:an". Ticksters koordinater per
+                // salong spretar (Piteå 2026-09-04: tre salonger, tre platser, en
+                // 14 km bort mellan Svensbyn och Hemmingsmark). Geokoda BYGGNADEN
+                // först — en riktig träff (known_venues/poi/gata) vinner över
+                // salongens koordinat; stadscentroid räknas inte som träff.
+                let buildingHit: GeoHit | null = null;
+                const building = venueBuildingOf(details.venue);
+                if (building) {
+                    const bq = [building, details.city].filter(Boolean).join(', ');
+                    const hit = await geocodeVenueSweden(bq, details.city ? { nearCity: details.city } : undefined);
+                    if (hit && hit[2] && hit[2] !== 'stad-centroid' && hit[2] !== 'ort-centroid') {
+                        buildingHit = hit;
+                        details.geocodeQuery = bq;
+                        console.log(`     🏛️  Byggnad "${bq}" → [${hit[0].toFixed(4)}, ${hit[1].toFixed(4)}] (${hit[2]}) i stället för salongskoordinaten`);
+                    }
+                }
+
                 // Koordinater
                 let lat: number;
                 let lng: number;
 
                 let geoPrecision: string | null = null;
-                if (details.jsonLat && details.jsonLng) {
+                if (buildingHit) {
+                    lat = buildingHit[0];
+                    lng = buildingHit[1];
+                    geoPrecision = buildingHit[2];
+                } else if (details.jsonLat && details.jsonLng) {
                     lat = details.jsonLat;
                     lng = details.jsonLng;
                     geoPrecision = 'kallkoordinat';
@@ -487,7 +547,9 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     lng,
                     geoPrecision,
                     hostName: 'Tickster',
-                    category: guessCategoryFromTitle(details.title),
+                    category: looksLikeCinema(details.title, details.venue) ? 'stage' : guessCategoryFromTitle(details.title),
+                    // Biovisning → 🎬 (annars 🎭/🎉 från auditen — community-kritik 2026-09-04)
+                    ...(looksLikeCinema(details.title, details.venue) ? { emoji: CINEMA_EMOJI } : {}),
                     createdAt: new Date(),
                     coverImage: details.coverImage || await searchGoogleImage(page, details.title) || '',
                     description: details.jsonDescription || '',

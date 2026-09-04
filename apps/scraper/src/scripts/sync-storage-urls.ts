@@ -42,15 +42,22 @@ function publicUrlFor(p: string): string {
     return `https://storage.googleapis.com/${STORAGE_BUCKET}/${p}`;
 }
 
-async function findExistingStorageUrl(eventUrl: string): Promise<string | null> {
+async function findExistingStorageUrl(eventUrl: string, remoteImageUrl?: string): Promise<string | null> {
     if (!bucket) return null;
-    const hash = hashUrl(eventUrl);
-    for (const ext of EXTS) {
-        const p = `${STORAGE_FOLDER}/${hash}.${ext}`;
-        try {
-            const [exists] = await bucket.file(p).exists();
-            if (exists) return publicUrlFor(p);
-        } catch { /* ignore */ }
+    // Nya schemat (2026-08-30): delade objekt hashade på bildens URL.
+    // Legacy: per-event-objekt hashade på eventets URL.
+    const bases = [
+        ...(remoteImageUrl ? [`${STORAGE_FOLDER}/shared/${hashUrl(remoteImageUrl)}`] : []),
+        `${STORAGE_FOLDER}/${hashUrl(eventUrl)}`,
+    ];
+    for (const base of bases) {
+        for (const ext of EXTS) {
+            const p = `${base}.${ext}`;
+            try {
+                const [exists] = await bucket.file(p).exists();
+                if (exists) return publicUrlFor(p);
+            } catch { /* ignore */ }
+        }
     }
     return null;
 }
@@ -88,7 +95,7 @@ async function main() {
 
     for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
-        const storageUrl = await findExistingStorageUrl(r.url);
+        const storageUrl = await findExistingStorageUrl(r.url, r.coverImage || undefined);
         if (!storageUrl) {
             notInStorage++;
             continue;

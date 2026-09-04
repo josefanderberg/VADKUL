@@ -12,6 +12,28 @@ export function isEventFeatured(e: { featuredUntil?: Date } | null | undefined):
     return !!e?.featuredUntil && e.featuredUntil.getTime() > Date.now();
 }
 
+/**
+ * Ska eventet synas VARJE dag, inte bara sin egen? Det är själva boost-löftet
+ * (99 kr/vecka): alla andra event visas bara den dag de händer, men ett
+ * boostat event ligger kvar på kartan ALLA dagar t.o.m. featuredUntil —
+ * annars köper arrangören en vecka och syns en enda kväll av den.
+ *
+ * Två villkor: boosten är aktiv OCH eventets egen dag har inte passerat.
+ * Dagen efter eventet är det färdigspelat och ska bort oavsett hur många
+ * boostdagar som råkar återstå — en boost gör inte ett passerat event
+ * odödligt. (Under själva eventdagen gäller samma regel som för alla event:
+ * det ligger kvar dagen ut, ev. nedtonat som "har varit".)
+ */
+export function isBoostShownEveryDay(
+    e: { featuredUntil?: Date; time: Date } | null | undefined,
+    now: Date = new Date(),
+): boolean {
+    if (!e?.featuredUntil || e.featuredUntil.getTime() <= now.getTime()) return false;
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    return e.time.getTime() >= startOfToday.getTime();
+}
+
 /** Lättviktig anmälan (RSVP) på ett event — bor i linkEvents/{id}/attendees/{uid}. */
 export interface RsvpAttendee {
     uid: string;
@@ -243,6 +265,22 @@ function awaitHeavyLayersGate(): Promise<void> {
     return heavyGate;
 }
 
+// ── Beskrivningar hämtas först när någon öppnar ett eventkort ───────────────
+// descriptions-lagret är det största (~4 MB gzippat för 40k+ event) men
+// renderas BARA i ett öppet LinkEventCard. Räknare, markörer, listor och sök
+// bygger på destinations(+cards). Därför laddas lagret inte alls vid start —
+// LinkEventCard anropar requestDescriptions() vid mount, och först då hämtas
+// och mergas det (och följer därefter med i 5-minuterspollarna, där ETag/304
+// gör oförändrade omfrågningar nästan gratis). Besökare som aldrig öppnar ett
+// kort laddar aldrig lagret.
+let descriptionsRequested = false;
+let releaseDescriptionsGate: (() => void) | null = null;
+const descriptionsGate = new Promise<void>((res) => { releaseDescriptionsGate = res; });
+let signalDescriptionsSettled: (() => void) | null = null;
+// Löser ut när ett descriptions-svar behandlats (även tomt/misslyckat —
+// kortet ska visa "Ingen beskrivning tillgänglig", inte vänta för evigt).
+const descriptionsSettled = new Promise<void>((res) => { signalDescriptionsSettled = res; });
+
 async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
     // 1. CDN-cachad server-route FÖRST (gzippad ~5:1, delas mellan alla
     // besökare via Hosting-CDN:en). 30s-pollen är också gratis här:
@@ -372,15 +410,24 @@ export const linkEventService = {
      *  (se awaitHeavyLayersGate). Idempotent; säkerhetsnätet släpper ändå. */
     releaseHeavyLayers() { releaseHeavyGate?.(); },
 
+    /** Ett eventkort har öppnats → descriptions-lagret behövs. Idempotent.
+     *  Löftet löser ut när första svaret behandlats (även tomt), så kortet
+     *  kan skilja "hämtas fortfarande" från "har ingen beskrivning". */
+    requestDescriptions(): Promise<void> {
+        descriptionsRequested = true;
+        releaseDescriptionsGate?.();
+        return descriptionsSettled;
+    },
+
     // Hämta link events
     async getAll(onlyFuture = true): Promise<LinkEvent[]> {
         try {
-            // Alla tre lagren parallellt — descriptions hämtades tidigare SERIELLT
-            // efter de andra två, vilket bara adderade väntetid före första kartritningen.
+            // Destinations + cards parallellt; descriptions (största lagret)
+            // bara om något eventkort redan bett om det (se descriptions-gaten).
             const [destData, cardsData, descData] = await Promise.all([
                 fetchLayer('destinations'),
                 fetchLayer('cards'),
-                fetchLayer('descriptions'),
+                descriptionsRequested ? fetchLayer('descriptions') : Promise.resolve(null),
             ]);
 
             if (!destData) return [];
@@ -426,6 +473,8 @@ export const linkEventService = {
     async createUserEvent(input: {
         title: string; time: Date; lat: number; lng: number;
         locationName?: string; category?: string; description?: string;
+        /** Färdig etikett ("120 kr", "Gratis") — normaliseras i formuläret. */
+        price?: string;
         hostName: string; hostUid: string; coverImage?: string; url?: string;
         isTip?: boolean; anonTip?: boolean; repeatWeekly?: boolean;
         repeatWeeks?: number;
@@ -451,6 +500,10 @@ export const linkEventService = {
         // Lägg bara med coverImage när det faktiskt finns en bild — då fungerar
         // event UTAN bild även innan de uppdaterade Firestore-reglerna deployats.
         if (input.coverImage) payload.coverImage = input.coverImage;
+        // Samma sak för priset: tomt fält betyder "vet inte / står inget", och
+        // det är INTE detsamma som gratis. Utan fältet visar korten inget
+        // pris-chip alls, precis som för skrapade event utan pris.
+        if (input.price) payload.price = input.price.slice(0, 40);
         // Bara på faktiska tips — annars skulle varje eget event bära ett
         // isTip: false som reglernas hasOnly-lista måste känna till i onödan.
         if (input.isTip) payload.isTip = true;
@@ -467,8 +520,24 @@ export const linkEventService = {
                 payload.repeatWeeks = Math.floor(input.repeatWeeks);
             }
         }
-        const ref = await addDoc(collection(db, 'linkEvents'), payload);
-        return ref.id;
+        try {
+            const ref = await addDoc(collection(db, 'linkEvents'), payload);
+            return ref.id;
+        } catch (e: any) {
+            // Reglernas hasOnly-lista avvisar HELA skrivningen om den känner
+            // igen ett fält den inte har — och rules deployas separat från
+            // bundlen. Faller skapandet på just priset släpper vi priset och
+            // sparar eventet ändå: ett event utan pris-etikett är oändligt
+            // mycket bättre än "kunde inte skapa" för alla som fyller i rutan
+            // i fönstret innan de nya reglerna är ute.
+            if (e?.code === 'permission-denied' && payload.price !== undefined) {
+                console.warn('[event] pris avvisat av reglerna — sparar utan pris (deploya rules)');
+                delete payload.price;
+                const ref = await addDoc(collection(db, 'linkEvents'), payload);
+                return ref.id;
+            }
+            throw e;
+        }
     },
 
     // ── Anmälningar (RSVP) ────────────────────────────────────────────────
@@ -616,6 +685,10 @@ export const linkEventService = {
         let baseEvents: LinkEvent[] = [];   // sammanslagna aggregat-lager (utan user-events)
         let userEvents: LinkEvent[] = [];   // senast hämtade användarskapade event
         let boostOverlay: Map<string, Date> = new Map(); // skrapat eventId → featuredUntil (eventBoosts)
+        // Engångsvakt: descriptions-gatens efterhäng får bara kopplas en gång
+        // per prenumeration (varje 5-min-poll går annars in här på nytt och
+        // staplar identiska hämtningar som alla fyrar när gaten släpps).
+        let descriptionsWaiterAttached = false;
         let initialLoadSignaled = false;
         const signalInitialLoad = () => {
             if (initialLoadSignaled || !active) return;
@@ -722,24 +795,43 @@ export const linkEventService = {
                 // moment 22 och allt väntade ut säkerhetsnätet.
                 signalInitialLoad();
 
-                // 2+3. Cards + descriptions PARALLELLT (laddades förr i serie =
-                // onödigt lång svans innan bilder/arrangörer/beskrivningar fanns)
-                // — men först när kartan målat klart (eller säkerhetsnätet gått):
-                // de ska inte konkurrera med tiles + prickar om bandbredden.
+                // 2. Cards — men först när kartan målat klart (eller säkerhets-
+                // nätet gått): ska inte konkurrera med tiles + prickar om
+                // bandbredden. Descriptions (största lagret) hämtas INTE här om
+                // inget eventkort bett om det — se descriptions-gaten.
                 await awaitHeavyLayersGate();
                 if (!active) return;
                 const [cardsData, descData] = await Promise.all([
                     fetchLayer('cards'),
-                    fetchLayer('descriptions'),
+                    descriptionsRequested ? fetchLayer('descriptions') : Promise.resolve(null),
                 ]);
                 if (!active) return;
                 if (cardsData) {
                     baseEvents = mergeCardsWithDestinations(baseEvents, cardsData.events || []);
                     emit();
                 }
-                if (descData && descData.data) {
-                    baseEvents = mergeDescriptionsWithEvents(baseEvents, descData.data);
-                    emit();
+                if (descriptionsRequested) {
+                    if (descData && descData.data) {
+                        baseEvents = mergeDescriptionsWithEvents(baseEvents, descData.data);
+                        emit();
+                    }
+                    // Även tomt/misslyckat svar räknas som "avgjort" — kortet
+                    // visar då sin vanliga fallbacktext; nästa poll försöker om.
+                    signalDescriptionsSettled?.();
+                } else if (!descriptionsWaiterAttached) {
+                    descriptionsWaiterAttached = true;
+                    descriptionsGate.then(async () => {
+                        if (!active) return;
+                        try {
+                            const dd = await fetchLayer('descriptions');
+                            if (active && dd && dd.data) {
+                                baseEvents = mergeDescriptionsWithEvents(baseEvents, dd.data);
+                                emit();
+                            }
+                        } finally {
+                            signalDescriptionsSettled?.();
+                        }
+                    });
                 }
             } catch (err) {
                 console.error("Error loading events progressively:", err);

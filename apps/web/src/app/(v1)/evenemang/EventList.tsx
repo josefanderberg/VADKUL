@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react';
 import { dayKey, dayLabel, shortDayLabel, clockLabel, hourOf, type CityEvent } from './cityData';
-import DayFilteredList, { type ListedDay } from './DayFilteredList';
+import DayFilteredList, { type ListedDay, type ListedEvent } from './DayFilteredList';
+import { groupDayDuplicates } from '@/utils/groupDups';
 import { normalizePriceLabel } from '@/utils/priceLabel';
+import { classifySource } from '@/utils/sources';
+import { planCategoryExtras } from '@/utils/listHorizon';
+
+const sourceField = (id: string): { source?: string } => {
+    const s = classifySource(id);
+    return s ? { source: s } : {};
+};
 
 // Delade byggstenar för stads- och kategorisidorna: dag-grupperad eventlista
 // + schema.org-markup. Sidorna ska se ut och bete sig identiskt — bara
@@ -11,8 +19,6 @@ import { normalizePriceLabel } from '@/utils/priceLabel';
 // event — klienten avtäcker dagarna en i taget vid scroll (DayFilteredList),
 // så allt renderas ändå inte på en gång. Event bortom horisonten sammanfattas
 // med "…längre fram"-raden; kartan är alltid den fulla vyn.
-// Exporterad: kart-heron använder samma skärning för sin "listed"-flagga —
-// popup-rader ska bara peka på listrader som faktiskt finns.
 export const DAYS_LISTED = 14;
 
 export const mapHref = (id: string) => `/?event=${encodeURIComponent(id)}`;
@@ -134,13 +140,13 @@ export function buildFaqJsonLd(faqs: Faq[]) {
 export function FaqSection({ faqs }: { faqs: Faq[] }) {
     if (!faqs.length) return null;
     return (
-        <section className="mt-10 pt-6 border-t border-slate-200">
-            <h2 className="text-sm font-black text-slate-900 mb-3">Vanliga frågor</h2>
+        <section className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">
+            <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-3">Vanliga frågor</h2>
             <dl className="space-y-4">
                 {faqs.map(f => (
                     <div key={f.q}>
-                        <dt className="text-sm font-black text-slate-800">{f.q}</dt>
-                        <dd className="mt-1 text-sm leading-relaxed text-slate-600 font-medium">{f.a}</dd>
+                        <dt className="text-sm font-black text-slate-800 dark:text-zinc-200">{f.q}</dt>
+                        <dd className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-zinc-400 font-medium">{f.a}</dd>
                     </div>
                 ))}
             </dl>
@@ -159,55 +165,106 @@ export function EventDayList({ events, cityName, children }: {
     cityName: string;
     children?: ReactNode;
 }) {
+    const { days, restCount, restByCategory } = buildListedDays(events, cityName);
+    return (
+        <DayFilteredList days={days} restCount={restCount} restByCategory={restByCategory} cityName={cityName}>
+            {children}
+        </DayFilteredList>
+    );
+}
+
+/** Event → klientens färdiga dagar (rena strängar). Delas av sidornas
+ *  EventDayList och stadens opt-in.json (route handler), så opt-in-raderna
+ *  får EXAKT samma form som serverns och kan sys in i listan i klienten.
+ *  De första DAYS_LISTED dagarna är listans fönster; därefter följer
+ *  `beyond`-dagar med glesa kategoriers senare event (utils/listHorizon),
+ *  som klienten visar bara när kategorin är vald. */
+export function buildListedDays(events: CityEvent[], cityName: string): { days: ListedDay[]; restCount: number; restByCategory: Record<string, number> } {
     const byDay = new Map<string, CityEvent[]>();
     for (const e of events) {
         const k = dayKey(e.time);
         const list = byDay.get(k);
         if (list) list.push(e); else byDay.set(k, [e]);
     }
-    const days = [...byDay.entries()].slice(0, DAYS_LISTED);
+    const allDays = [...byDay.entries()];
+    const days = allDays.slice(0, DAYS_LISTED);
+    // Glesa kategoriers senare event → extra `beyond`-dagar (se filhuvudet).
+    const { extras, restByCategory } = planCategoryExtras(
+        days.flatMap(([, l]) => l),
+        allDays.slice(DAYS_LISTED).flatMap(([, l]) => l),
+    );
+    const beyondByDay = new Map<string, CityEvent[]>();
+    for (const e of extras) {
+        const k = dayKey(e.time);
+        const list = beyondByDay.get(k);
+        if (list) list.push(e); else beyondByDay.set(k, [e]);
+    }
     let listed = 0;
+    // En CityEvent → en färdig klientrad (rena strängar, se ovan).
+    const toRow = (e: CityEvent, cityName: string): Omit<ListedEvent, 'dups'> => ({
+        id: e.id,
+        href: mapHref(e.id),
+        emoji: e.emoji || '📍',
+        title: e.title,
+        meta: (e.hasSpecificTime ? `kl ${clockLabel(e.time)} · ` : '')
+            + (e.locationName || cityName)
+            + (e.hostName && e.hostName !== e.locationName ? ` · ${e.hostName}` : ''),
+        // Fält för bildkorts-raden (samma stil som eventkortets
+        // närhetslista): omslagsbild + inforad (plats · tid · pris · antal).
+        coverImage: e.coverImage,
+        place: e.locationName || cityName,
+        clock: e.hasSpecificTime ? clockLabel(e.time) : null,
+        price: normalizePriceLabel(e.price),
+        attendees: e.attendees ?? 0,
+        hour: e.hasSpecificTime ? hourOf(e.time) : null,
+        t: Date.parse(e.time),
+        // Överlämningen till kartan (sessionStorage-seed vid klick,
+        // se utils/eventSeed): kortet på /?event= öppnar direkt på
+        // radens data i stället för att vänta på Sverige-lagren.
+        lat: e.lat,
+        lng: e.lng,
+        category: e.category,
+        hostName: e.hostName ?? null,
+        description: e.description ?? null,
+        // Källnyckeln finns bara på opt-in-raderna (stadens opt-in.json) —
+        // Fler-radens chips filtrerar per källa. Sidornas egna rader är
+        // aldrig från en opt-in-källa, så fältet uteblir där (mindre HTML).
+        ...sourceField(e.id),
+    });
+    const buildDay = (k: string, list: CityEvent[], beyond: boolean): ListedDay => {
+        // ALLA dagens event listas (ingen budget). Dagens dubbletter
+        // (samma titel — biblioteksfilialernas kopior) grupperas till EN
+        // rad var (groupDups); övriga tillfällen följer med raden som
+        // dups och radas upp bakom utfällningen i klienten. Bild först
+        // inom dagen: grupper vars representant har omslagsbild överst,
+        // bildlösa under; tidsordningen (listan kommer tidssorterad)
+        // bevaras inbördes.
+        const groups = groupDayDuplicates(list);
+        const shown = [...groups.filter(g => !!g.rep.coverImage), ...groups.filter(g => !g.rep.coverImage)];
+        // Timfördelning för dagen — klientens stapeldiagram.
+        const hourCounts = Array(24).fill(0) as number[];
+        for (const e of list) if (e.hasSpecificTime) hourCounts[hourOf(e.time)]++;
+        return {
+            key: k,
+            label: dayLabel(list[0].time),
+            short: shortDayLabel(list[0].time),
+            hourCounts,
+            ...(beyond ? { beyond: true } : {}),
+            events: shown.map(g => ({
+                ...toRow(g.rep, cityName),
+                ...(g.dups.length > 0 ? { dups: g.dups.map(d => toRow(d, cityName)) } : {}),
+            })),
+        };
+    };
     const shownDays: ListedDay[] = days
         .map(([k, list]) => {
-            // ALLA dagens event listas (ingen budget) — bild först inom dagen:
-            // rader med omslagsbild överst, bildlösa under; tidsordningen
-            // (listan kommer tidssorterad) bevaras inbördes.
-            const shown = [...list.filter(e => !!e.coverImage), ...list.filter(e => !e.coverImage)];
-            listed += shown.length;
-            // Timfördelning för dagen — klientens stapeldiagram.
-            const hourCounts = Array(24).fill(0) as number[];
-            for (const e of list) if (e.hasSpecificTime) hourCounts[hourOf(e.time)]++;
-            return {
-                key: k,
-                label: dayLabel(list[0].time),
-                short: shortDayLabel(list[0].time),
-                hourCounts,
-                events: shown.map(e => ({
-                    id: e.id,
-                    href: mapHref(e.id),
-                    emoji: e.emoji || '📍',
-                    title: e.title,
-                    meta: (e.hasSpecificTime ? `kl ${clockLabel(e.time)} · ` : '')
-                        + (e.locationName || cityName)
-                        + (e.hostName && e.hostName !== e.locationName ? ` · ${e.hostName}` : ''),
-                    // Fält för bildkorts-raden (samma stil som eventkortets
-                    // närhetslista): omslagsbild + inforad (plats · tid · pris · antal).
-                    coverImage: e.coverImage,
-                    place: e.locationName || cityName,
-                    clock: e.hasSpecificTime ? clockLabel(e.time) : null,
-                    price: normalizePriceLabel(e.price),
-                    attendees: e.attendees ?? 0,
-                    hour: e.hasSpecificTime ? hourOf(e.time) : null,
-                    t: Date.parse(e.time),
-                })),
-            };
+            listed += list.length;
+            return buildDay(k, list, false);
         })
         .filter(d => d.events.length > 0);
+    const beyondDays = [...beyondByDay.entries()].map(([k, list]) => buildDay(k, list, true));
+    // "…längre fram" i Alla-vyn räknar allt utanför fönstret — även de
+    // extra-rader som bara syns under en vald kategori.
     const restCount = events.length - listed;
-
-    return (
-        <DayFilteredList days={shownDays} restCount={restCount} cityName={cityName}>
-            {children}
-        </DayFilteredList>
-    );
+    return { days: [...shownDays, ...beyondDays], restCount, restByCategory };
 }

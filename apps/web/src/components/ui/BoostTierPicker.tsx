@@ -48,12 +48,12 @@ export default function BoostTierPicker({ isExtension = false, onSelect, onClose
                         type="button"
                         onClick={onClose}
                         aria-label="Stäng"
-                        className="w-8 h-8 -mr-1 -mt-1 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-300 transition-colors shrink-0"
+                        className="w-8 h-8 -mr-1 -mt-1 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors shrink-0"
                     >
                         <X size={18} />
                     </button>
                 </div>
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-4">
+                <p className="text-xs font-bold text-slate-500 dark:text-zinc-400 mb-4">
                     {BOOST_TIERS.length > 1
                         ? 'Ditt event lyfts fram och syns direkt på kartan — välj hur länge. 🚀'
                         : 'Ditt event lyfts fram med guldstjärna och syns direkt på kartan. 🚀'}
@@ -68,7 +68,7 @@ export default function BoostTierPicker({ isExtension = false, onSelect, onClose
                             className={`w-full text-left rounded-2xl border-2 p-3.5 transition-all active:scale-[0.98] ${
                                 tier === 'week'
                                     ? 'border-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50'
-                                    : 'border-border bg-white hover:border-amber-300 hover:bg-amber-50/50 dark:bg-slate-800 dark:hover:bg-slate-800/70'
+                                    : 'border-border bg-white hover:border-amber-300 hover:bg-amber-50/50 dark:bg-zinc-800 dark:hover:bg-zinc-800/70'
                             }`}
                         >
                             <div className="flex items-center justify-between gap-3 mb-0.5">
@@ -87,7 +87,7 @@ export default function BoostTierPicker({ isExtension = false, onSelect, onClose
                                     {priceLabel}
                                 </span>
                             </div>
-                            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-snug">
+                            <p className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 leading-snug">
                                 {pitch}
                             </p>
                         </button>

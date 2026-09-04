@@ -14,12 +14,21 @@
 // filen (static) skyddar mot förlegade svar (flik över midnatt / besök före
 // morgondeployen). URL-formen för slicen MÅSTE spegla fetchTodaySlice (lokal
 // midnatt→midnatt som UTC-ISO) — CDN:en cachar per URL, en post per dag/tidszon.
+// Djuplänken (?event=) får samma försprång: /api/event?id= (~1 kB, hela
+// kortfältet inkl. beskrivning) börjar hämtas här så svaret ofta redan finns
+// när djuplänks-snabbstarten i page.tsx frågar (fetchDeepLinkEvent i
+// utils/eventSeed återanvänder promisen). Körs bara vid FULL sidladdning —
+// klientnavigering (t.ex. /e/-sidans router.replace) exekverar inte inline-
+// script, och där hämtar fetchDeepLinkEvent själv.
 const TODAY_SLICE_BOOT = `(function(){try{
 var f=new Date();f.setHours(0,0,0,0);var t=new Date();t.setHours(23,59,59,999);
 window.__vadkulTodaySliceDay=f.toDateString();
 window.__vadkulTodayStatic=fetch('/events-today.json').then(function(r){return r.ok?r.json():null}).catch(function(){return null});
 window.__vadkulTodaySlice=fetch('/api/events/destinations?from='+encodeURIComponent(f.toISOString())+'&to='+encodeURIComponent(t.toISOString()))
 .then(function(r){return r.ok?r.json():null}).catch(function(){return null});
+var ev=new URLSearchParams(location.search).get('event');
+if(ev){window.__vadkulDeepLinkEvent=fetch('/api/event?id='+encodeURIComponent(ev))
+.then(function(r){return r.ok?r.json():null}).catch(function(){return null});}
 }catch(e){}})();`;
 
 export default function V2Layout({ children }: { children: React.ReactNode }) {

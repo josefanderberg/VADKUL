@@ -48,6 +48,23 @@
 }
 .feature-blink-blue { animation: feature-blink-blue 1s ease-in-out infinite; }
 
+/* DAGBLINKEN på kartans toppplatta (Josef 2/9): när dagen byts — av Nästa-
+   knappens automatiska dagbyte eller ett dagsteg — ska dagens namn "blinka
+   till" så man uppfattar bytet. ENGÅNGS (ingen infinite): texten svälls upp
+   och glöder vitt, plattan får en vit ring som tonar bort. Spelas om via
+   key-byte på elementen (page.tsx dayFlashNonce). */
+@keyframes day-flash-text {
+  0%   { transform: scale(1);    text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+  30%  { transform: scale(1.22); text-shadow: 0 0 16px rgba(255, 255, 255, 0.95); }
+  100% { transform: scale(1);    text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+}
+.day-flash-text { animation: day-flash-text 700ms cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: center; }
+@keyframes day-flash-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.9); }
+  100% { box-shadow: 0 0 0 14px rgba(255, 255, 255, 0); }
+}
+.day-flash-ring { animation: day-flash-ring 700ms ease-out; }
+
 @layer base {
   :root {
     /* Base HSL values */
@@ -252,6 +269,41 @@
   animation: welcome-sun-pulse 4.5s ease-in-out infinite;
 }
 
+/* ── Välkomstrutans ambient-liv (1/9): rörelsen sitter i detaljerna, inte i
+   en hel miljö (kulle-/tåg-scenen är prövad och riven samma dag — "för lik
+   bakgrunden"). Tre små: himlen andas, solen driver med strålar, kontoknappens
+   ram glimmar till. Allt ambient — rullar även för återbesökare. ── */
+
+/* Himlen ANDAS: gradientlagret är högre än headern och glider sakta ner/upp,
+   så det blå ibland når längre ner innan det vänder. */
+@keyframes welcome-sky-breathe {
+  0%, 100% { transform: translateY(-16px); }
+  50%      { transform: translateY(0); }
+}
+.welcome-sky {
+  animation: welcome-sky-breathe 14s ease-in-out infinite;
+}
+
+/* Solstrålar — roterande ekrar (repeating-conic) bakom solen. */
+@keyframes welcome-rays-spin {
+  to { transform: rotate(360deg); }
+}
+.welcome-rays {
+  background: repeating-conic-gradient(rgba(254, 204, 2, 0.22) 0deg 9deg, transparent 9deg 30deg);
+  animation: welcome-rays-spin 70s linear infinite;
+}
+
+/* Solen driver några pixlar i en långsam åtta — strålarna följer med
+   (de bor i samma wrapper). */
+@keyframes welcome-sun-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-7px, 6px); }
+}
+.welcome-sun-drift {
+  animation: welcome-sun-drift 16s ease-in-out infinite;
+}
+
+
 /* Ljusstråk som sveper över primärknappen med jämna mellanrum */
 @keyframes welcome-cta-shimmer {
   0%       { transform: translateX(-160%) skewX(-18deg); }
@@ -347,19 +399,6 @@
   will-change: transform;
 }
 
-/* Fokus från kart-heron: raden man valde i kart-popupen blinkar till när
-   listan scrollat fram den (DayFilteredList lägger på/tar bort klassen). */
-@keyframes event-row-flash {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 106, 167, 0); }
-  30%      { box-shadow: 0 0 0 4px rgba(0, 106, 167, 0.45); }
-}
-.event-row-flash {
-  animation: event-row-flash 1.2s ease-in-out 2;
-}
-@media (prefers-reduced-motion: reduce) {
-  .event-row-flash { animation: none; }
-}
-
 /* Exit: kortet zoomar "ner i kartan" medan backdropen tonar bort.
    Längden styrs av --welcome-exit-ms som komponenten sätter (håller JS-timeouten
    och animationen i synk från ETT ställe: EXIT_MS i WelcomeOverlay.tsx). */
@@ -395,7 +434,8 @@
     opacity: 1;
     transform: none;
   }
-  .welcome-sun, .welcome-cta::before, .animate-cloud-drift, .animate-welcome-float {
+  .welcome-sun, .welcome-cta::before, .animate-cloud-drift, .animate-welcome-float,
+  .welcome-sky, .welcome-rays, .welcome-sun-drift {
     animation: none;
   }
   /* Exit blir en ren uttoning — ingen zoom/blur. */

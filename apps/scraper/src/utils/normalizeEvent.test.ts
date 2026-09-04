@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, normalizeDescription, normalizeLocation, normalizeRawEvent } from './normalizeEvent';
+import { normalizeTitle, normalizeDescription, normalizeLocation, normalizeRawEvent, sanitizePriceField } from './normalizeEvent';
 
 describe('normalizeTitle', () => {
     it('avkodar entiteter och kollapsar whitespace', () => {
@@ -51,7 +51,46 @@ describe('normalizeLocation', () => {
     });
 });
 
+describe('sanitizePriceField', () => {
+    it('behåller riktiga priser och gratis-ord', () => {
+        expect(sanitizePriceField('150 kr')).toBe('150 kr');
+        expect(sanitizePriceField('Fri entré')).toBe('Fri entré');
+        expect(sanitizePriceField('Det kostar inget att delta')).toBe('Det kostar inget att delta');
+        expect(sanitizePriceField('Kollekt')).toBe('Kollekt');
+        expect(sanitizePriceField('60:- för vuxna och 30:- för barn.')).toBe('60:- för vuxna och 30:- för barn.');
+    });
+    it('tömmer skräp utan siffra och utan gratis-ord', () => {
+        for (const junk of ['P', 'ordi', 'Avgift', 'kronor', 'Deltagaravgift', 'Halva priset!', 'Var och en betalar för sig']) {
+            expect(sanitizePriceField(junk)).toBeUndefined();
+        }
+        expect(sanitizePriceField('')).toBeUndefined();
+        expect(sanitizePriceField(null)).toBeUndefined();
+    });
+    it('lång pristext → intervall, annars ordgräns-klipp', () => {
+        expect(sanitizePriceField('Pris: 100 kr, Ungdom 12-18 år: 80 kr, barn upp till 11 år: 60 kr. Biljetter via bio.se/frolundabion eller biljettkassan: 031-3662725.'))
+            .toBe('60–100 kr');
+        const long = sanitizePriceField('Fri entré för alla som bor i kommunen och deras vänner och bekanta som vill komma med')!;
+        expect(long.length).toBeLessThanOrEqual(60);
+    });
+});
+
 describe('normalizeRawEvent', () => {
+    it('sanerar källans prisfält och faller tillbaka på texten när det var skräp', () => {
+        const e: any = { title: 'Dans', startDate: new Date(), url: 'u', description: 'Entré 80 kr.', price: 'P' };
+        normalizeRawEvent(e);
+        expect(e.price).toBe('80 kr');
+    });
+    it('plockar pris ur beskrivningen när källan inte gav något — men skriver aldrig över källans', () => {
+        const a: any = { title: 'Dans', startDate: new Date(), url: 'u', description: 'Kom och dansa. Pris: 80 kr per person.' };
+        normalizeRawEvent(a);
+        expect(a.price).toBe('80 kr');
+        const b: any = { title: 'Dans', startDate: new Date(), url: 'u', description: 'Pris: 80 kr', price: '100 kr' };
+        normalizeRawEvent(b);
+        expect(b.price).toBe('100 kr');
+        const c: any = { title: 'Dans', startDate: new Date(), url: 'u', description: 'Vi samlade in 500 kr.' };
+        normalizeRawEvent(c);
+        expect(c.price).toBeUndefined();
+    });
     it('kör allt och behåller övriga fält', () => {
         const e: any = { title: 'A &amp; B | Lund', startDate: new Date(), url: 'u', city: 'Lund', description: '<b>x</b>', venueName: 'V\nadr 1' };
         normalizeRawEvent(e, 'Host');

@@ -3,99 +3,137 @@
   "sources": {
     "cirkus": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "dalhalla": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-27",
+      "emptyRetries": 1
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-04",
+      "emptyRetries": 2
     },
     "folk-goteborg": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-03",
+      "emptyRetries": 2
     },
-    "huddinge-hembygdsforening": {
-      "since": "2026-08-19",
+    "louisdegeer": {
+      "since": "2026-08-30",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "nordmaling": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "nybro": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-03",
+      "emptyRetries": 2
     },
     "nykoping": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-26",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-04",
+      "emptyRetries": 2
     },
     "orebro": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-30",
+      "emptyRetries": 1
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-29",
+      "emptyRetries": 1
     },
     "pitea": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "pustervik": {
       "since": "2026-08-21",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-30",
+      "emptyRetries": 1
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
-    "rotary": {
-      "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-26",
+      "lastRetry": "2026-08-29",
       "emptyRetries": 1
     },
     "sater": {
       "since": "2026-08-19",
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-29",
+      "emptyRetries": 1
+    },
+    "sdhl": {
+      "since": "2026-09-01",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "staffanstorp": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-01",
+      "emptyRetries": 1
     },
     "stockholm": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-27",
+      "emptyRetries": 1
     },
     "tingsryd": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "tjorn": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-03",
+      "emptyRetries": 2
     },
     "tjorns-hembygdsforening": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-29",
+      "emptyRetries": 1
     },
     "trelleborg": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-28",
+      "emptyRetries": 1
     },
     "vasteras": {
       "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-08-29",
+      "emptyRetries": 1
     }
   }
 }

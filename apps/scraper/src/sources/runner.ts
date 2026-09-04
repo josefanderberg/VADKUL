@@ -11,7 +11,11 @@
  */
 
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
-import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate } from '../utils/dbHelper';
+import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate, refreshEventContent } from '../utils/dbHelper';
+import { pickBetterDescription, pickBetterPrice } from '../utils/contentRefresh';
+import { venueBuildingOf } from '../utils/venueFromText';
+import { looksLikeCinema } from '../utils/cinema';
+import { ruleEmojiFor } from '../utils/emojiRules';
 import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
@@ -21,10 +25,23 @@ import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
 import { normalizeRawEvent } from '../utils/normalizeEvent';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
-import { recordScrapeRun, setEventAudit } from '../utils/sqliteHelper';
+import { isLikelyLogoOrPlaceholderImage, normalizeImagePort } from '../utils/imageFilter';
+import { recordScrapeRun, setEventAudit, getSyncMeta, setSyncMeta } from '../utils/sqliteHelper';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 
 const AUDIT_ENABLED = process.env.AUDIT_ENABLED === 'true';
+
+/**
+ * Innehålls-svep (2026-09-03): när tolkningen av beskrivning/pris ändras
+ * (1500-tak i stället för 500, pris ur texten, contentRefresh) ska VARJE
+ * källa göra EN full-refresh vid sin nästa körning så kända event läks
+ * direkt — inte först vid var 4:e körning (upp till fyra veckor för
+ * veckokällor). Stämplas per källa i sync_meta när motorn gått igenom;
+ * dry-run och motorkrasch stämplar inte. Bumpa datumet när nästa sådan
+ * ändring landar, så går svepet igen.
+ */
+export const CONTENT_SWEEP_VERSION = '2026-09-03';
+const sweepKey = (sourceId: string): string => `contentSweep.${sourceId}`;
 
 // 30 dagar. Håller databasen lean — events längre fram fångas ändå senare när
 // de glider in i fönstret (och med färskare info då). Detalj-sidorna hämtas
@@ -76,6 +93,8 @@ export function geocodeQueriesFor(e: RawEvent): string[] {
         ? e.geocodeCandidates
         : [
             e.address ? [e.address, e.city].filter(Boolean).join(', ') : '',
+            // "Saga - Bio 3:an" → byggnaden först; salongsnamnet träffar annars fel ort.
+            (() => { const b = venueBuildingOf(e.venueName); return b ? [b, e.city].filter(Boolean).join(', ') : ''; })(),
             e.venueName ? [e.venueName, e.city].filter(Boolean).join(', ') : '',
             e.city ?? '',
         ];
@@ -130,7 +149,8 @@ export async function runSource(
     // Var 4:e körning per källa är en full-refresh: skip-känt-optimeringen
     // stängs av så ändrade/flyttade event på kända URL:er fångas upp.
     // SCRAPE_FORCE_REFRESH=1 tvingar refresh (reparationer efter motorfixar).
-    const refreshKnown = !opts.dryRun && (isRefreshRun(source) || process.env.SCRAPE_FORCE_REFRESH === '1');
+    const sweepDue = !opts.dryRun && getSyncMeta(sweepKey(source.id)) !== CONTENT_SWEEP_VERSION;
+    const refreshKnown = !opts.dryRun && (isRefreshRun(source) || process.env.SCRAPE_FORCE_REFRESH === '1' || sweepDue);
     const ctx: EngineContext = {
         windowStart,
         windowEnd,
@@ -140,7 +160,7 @@ export async function runSource(
         isKnownUrl: opts.dryRun ? async () => false : (url) => eventExistsInDb(url),
         refreshKnown,
     };
-    if (refreshKnown) ctx.log('full-refresh-körning: kända URL:er re-fetchas');
+    if (refreshKnown) ctx.log(sweepDue ? `full-refresh-körning (innehålls-svep ${CONTENT_SWEEP_VERSION}): kända URL:er re-fetchas` : 'full-refresh-körning: kända URL:er re-fetchas');
 
     // Geocode-cache per källkörning — paraplyn återanvänder samma församling/
     // klubb/ort många gånger; spara Nominatim-anropen.
@@ -209,7 +229,17 @@ export async function runSource(
                     const storedLoc = (storedRow?.locationName ?? '').trim().toLowerCase();
                     const storedUngeocoded = !(storedRow?.lat) || !(storedRow?.lng);
                     const cityLower = (e.city ?? '').trim().toLowerCase();
-                    if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
+                    // Källan levererar nu EGNA koordinater medan det sparade bara
+                    // var stadscentroid/ogeokodat → flytta eventet dit. Utan detta
+                    // fastnar event som sparades innan källans koordinat-join
+                    // började täcka dem på centroiden för alltid (oland.se 2026-08-31).
+                    if (e.coords && (storedUngeocoded || storedRow?.geoPrecision === 'stad-centroid')) {
+                        const loc = storedRow?.locationName || e.venueName || e.city || '';
+                        if (await refreshEventPlace(e.url, loc, e.coords[0], e.coords[1], 'källans egna koordinater', true, 'kallkoordinat')) {
+                            result.updated++;
+                            ctx.log(`  📍 koordinater från källan: ${e.title.slice(0, 50)}`);
+                        }
+                    } else if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
                         const q = `${e.venueName}, ${e.city}`;
                         // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
                         let hit: GeoHit | null = e.coords ? [e.coords[0], e.coords[1], 'kallkoordinat'] : null;
@@ -239,6 +269,23 @@ export async function runSource(
                     if (validEnd && await refreshEventEndDate(e.url, validEnd.toISOString())) {
                         result.updated++;
                         ctx.log(`  📅 slutdatum satt: ${e.title.slice(0, 50)} → ${validEnd.toISOString().slice(0, 10)}`);
+                    }
+                    // Innehåll: byt beskrivning BARA när källan nu bevisligen ger
+                    // bättre (hel text där den sparade kapades vid gammalt tak,
+                    // återfunna å/ä/ö, borttaget �, platshållare → riktig text —
+                    // se utils/contentRefresh). Pris fylls bara på där det saknas;
+                    // normalizeRawEvent har redan plockat pris ur texten om källan
+                    // inte gav något. Utan detta låg 1 509 kapade och 159 å/ä/ö-
+                    // lösa beskrivningar kvar för alltid (kända URL:er hoppas över).
+                    const betterDesc = pickBetterDescription(storedRow?.description, e.description);
+                    const betterPrice = pickBetterPrice(storedRow?.price, e.price);
+                    if ((betterDesc || betterPrice) && await refreshEventContent(e.url, {
+                        ...(betterDesc ? { description: betterDesc } : {}),
+                        ...(betterPrice ? { price: betterPrice } : {}),
+                    })) {
+                        result.updated++;
+                        const what = [betterDesc ? 'beskrivning' : '', betterPrice ? `pris ${betterPrice}` : ''].filter(Boolean).join(' + ');
+                        ctx.log(`  📝 ${what} uppdaterad: ${e.title.slice(0, 50)}`);
                     }
                 }
                 result.skipped.duplicate++;
@@ -275,7 +322,10 @@ export async function runSource(
                 }
             }
 
-            const category = normalizeCategory(e.category || classifyEvent(e.title, e.description || ''));
+            // classifyHints (t.ex. WP-termer) går till klassificeraren men sparas
+            // aldrig i beskrivningen — förr hamnade "aktiviteter & upplevelser
+            // kultur & nöje …" sist i 30 Visit Piteå-texter (2026-09-04).
+            const category = normalizeCategory(e.category || classifyEvent(e.title, [e.description, e.classifyHints].filter(Boolean).join(' ')));
 
             // ── LLM-audit (opt-in, kräver AUDIT_ENABLED=true + Ollama uppe) ──
             let auditVerdict: string | undefined;
@@ -304,6 +354,14 @@ export async function runSource(
                     ctx.log(`  ⚠️  audit-fel på "${e.title.slice(0, 40)}": ${(auditErr as Error).message}`);
                 }
             }
+
+            // Port-mismatch ("https://…:80/", Axiell-sajterna) lagas INNAN
+            // logo-filtret och Storage-uppladdningen — fetch mot :80 över TLS
+            // kan aldrig lyckas, så bilden blev annars kvar som död remote-URL.
+            if (e.imageUrl) e.imageUrl = normalizeImagePort(e.imageUrl);
+            // Loggor/platshållare (kommunsajters generiska og:image) blir
+            // hellre bildlöst kort än en stadssida full av samma logga.
+            if (isLikelyLogoOrPlaceholderImage(e.imageUrl)) e.imageUrl = undefined;
 
             if (opts.dryRun) {
                 const fieldHealth = {
@@ -337,6 +395,10 @@ export async function runSource(
             // dokumentet inte bär ett null-fält i onödan.
             const validEnd = validEventEnd(e.startDate, e.endDate);
 
+            // Regelstyrd emoji (🎬 bio, 🥏 discgolf …) sätts redan vid spar;
+            // övriga event lämnar emoji åt auditen/kategoridefaulten.
+            const ruleEmoji = ruleEmojiFor(e.title, e.venueName);
+
             pendingWrites.push({
                 title: e.title,
                 url: e.url,
@@ -351,12 +413,15 @@ export async function runSource(
                 geoPrecision,
                 // Paraply-källor (församling/klubb/krets) sätter värd per event.
                 hostName: e.hostName || source.hostName,
-                category,
+                // Biovisningar är alltid scen (taxonomin: film → stage) — klassificeraren
+                // gissade musik/familj/kurs på filmtitlar (158 av 619 låg fel 2026-09-04).
+                category: looksLikeCinema(e.title, e.venueName) ? 'stage' : category,
                 description: e.description || '',
                 coverImage: finalImageUrl,
                 // null (ej undefined) när pris saknas: Firestore vägrar undefined,
                 // och SQLite-upsert COALESCE:ar null → bevarar LLM-extraherat pris.
                 price: e.price || null,
+                ...(ruleEmoji ? { emoji: ruleEmoji } : {}),
                 createdAt: new Date(),
                 // OBS: betyder "har koordinater" (även stad-centroid) — kvalitets-
                 // sanningen bor i geoPrecision. Semantiken låst av konsumenterna
@@ -398,6 +463,9 @@ export async function runSource(
     // Dry-run lämnar inga spår: en "would save 19686"-rad i scrape_runs skulle
     // förgifta daily-report och expectedMinEvents-regressionen.
     if (!opts.dryRun) persistRun(source, startedAt, result);
+    // Motorn gick igenom → svepet är gjort för den här källan (per-event-fel
+    // hindrar inte; en motorkrasch returnerar tidigare och stämplar inte).
+    if (sweepDue) setSyncMeta(sweepKey(source.id), CONTENT_SWEEP_VERSION);
     return result;
 }
 

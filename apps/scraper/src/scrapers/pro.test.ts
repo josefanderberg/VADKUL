@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapProActivity, parseProDate, kommunFromUrl, dedupeSeries, foreningsNamn } from './pro';
+import { mapProActivity, parseProDate, kommunFromUrl, dedupeSeries, foreningsNamn, kommunNameFromSlug } from './pro';
 
 const FORENING_URL = 'https://pro.se/distrikt/skaraborg/kommun/falkoping/pro-falkoping/vara-aktiviteter';
 
@@ -40,6 +40,18 @@ describe('foreningsNamn', () => {
     });
 });
 
+describe('kommunNameFromSlug', () => {
+    it('ger riktigt kommunnamn med åäö ur ascii-sluggen', () => {
+        expect(kommunNameFromSlug('eksjo')).toBe('Eksjö');
+        expect(kommunNameFromSlug('falkoping')).toBe('Falköping');
+        expect(kommunNameFromSlug('vasteras')).toBe('Västerås');
+    });
+    it('okänd slug → stor bokstav per ord', () => {
+        expect(kommunNameFromSlug('nagonstans okand')).toBe('Nagonstans Okand');
+        expect(kommunNameFromSlug('')).toBe('');
+    });
+});
+
 describe('kommunFromUrl', () => {
     it('plockar kommun-slug ur föreningsvägen', () => {
         expect(kommunFromUrl(FORENING_URL)).toBe('falkoping');
@@ -59,14 +71,14 @@ describe('mapProActivity', () => {
         expect(e.hasSpecificTime).toBe(true);
         expect(e.hostName).toBe('PRO Falköping');
         expect(e.venueName).toBe('PRO Falköping');          // location null → värden
-        expect(e.geocodeCandidates).toEqual(['Falkoping']); // kommun-fallback (kapitaliserad sedan 24/8)
-        expect(e.city).toBe('Falkoping');
+        expect(e.geocodeCandidates).toEqual(['Falköping']); // kommun-fallback (kapitaliserad sedan 24/8)
+        expect(e.city).toBe('Falköping');
     });
 
     it('location.name används som venue och första geocode-kandidat', () => {
         const e = mapProActivity({ ...baseActivity, location: { name: 'Folkets Hus' } }, FORENING_URL, 'PRO Falköping')!;
         expect(e.venueName).toBe('Folkets Hus');
-        expect(e.geocodeCandidates).toEqual(['Folkets Hus, Falkoping', 'Falkoping']);
+        expect(e.geocodeCandidates).toEqual(['Folkets Hus, Falköping', 'Falköping']);
     });
 
     it('administrativa möten och samorganisationer filtreras', () => {

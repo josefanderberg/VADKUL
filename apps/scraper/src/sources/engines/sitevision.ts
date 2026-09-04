@@ -24,8 +24,9 @@
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import * as cheerio from 'cheerio';
-import { decodeHtmlEntities } from '../../utils/text';
+import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
 import { findFirstDateInText } from '../../utils/swedishDate';
+import { getSharedBrowser } from './sitemap';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -34,6 +35,37 @@ const DEFAULT_UA =
 export interface SiteVisionConfig {
     urls: string[];
     defaultCity?: string;
+    /**
+     * Kort där rubriken är hopklistrad av kategorietikett + titel + venue
+     * ("Evenemang Mareld - Piratlajv Berghems Lajvby, Skillingaryd" på
+     * vaggeryd.se). `titleStripRe` tar bort etiketten, `stripVenueFromTitle`
+     * kapar venue-svansen — venue extraheras separat och exakt, så svansen är
+     * ren dubbelinformation. Båda är OPT-IN: default rör vi inte titeln.
+     */
+    titleStripRe?: RegExp;
+    stripVenueFromTitle?: boolean;
+    /**
+     * Flerkommuns-källor (regionala eventguider): orterna källan täcker.
+     * Venue-namnen bär orten i klartext ("Arboga bibliotek", "Mötesplats
+     * Tallåsgården, Kungsör") — matchar ett namn i listan sätts det som city
+     * i stället för defaultCity, så geokodningen inte drar allt till en ort.
+     */
+    cities?: string[];
+    /**
+     * Rendera kalendersidan i Puppeteer innan extraktionen. Flera kommuner
+     * (Trollhättan, Botkyrka, Mark, Dals-Ed …) skickar en tom skal-HTML och
+     * bygger korten i JS — utan detta ser motorn noll <time datetime>, trots
+     * att sidan är full av datum i browsern. Delar browser-instans med
+     * sitemap-motorn. Kostar ~3 s per URL; slå bara på när HTML-läget ger 0.
+     */
+    useBrowser?: boolean;
+    /**
+     * Filtrera bort kommunala sammanträden ur kalendern. Botkyrkas och Marks
+     * kommunkalendrar blandar nämndmöten med publika event i samma lista.
+     * OPT-IN: sitemap-motorn har en URL-blacklist för samma sak, men den
+     * körs inte här och ~150 befintliga sitevision-källor ska inte påverkas.
+     */
+    dropMunicipalMeetings?: boolean;
     pathFilter?: string;
     maxItems?: number;
     userAgent?: string;
@@ -105,6 +137,36 @@ export interface SiteVisionConfig {
      * resultatet mellan seriens tillfällen.
      */
     searchAppApi?: { portletId: string; fetchDetail?: boolean };
+    /**
+     * SiteVision-webappens `/page`-route (upptäckt på varmdo.se 2026-08-26):
+     *   GET <origin>/appresource/<pageId>/<portletId>/page?p=<N>&f=&t=&c=&svAjaxReqParam=ajax
+     *   Header: X-Requested-With: XMLHttpRequest
+     *   → { hitCount, items: [{ displayName, URI, startDate, endDate, eventDate,
+     *                           img, text, id }] }
+     *
+     * startDate/endDate är EPOCH-MILLISEKUNDER (inte ISO) och bär riktig tid.
+     * 9 träffar/sida, p är 1-indexerad och INTE kumulativ — alla sidor krävs.
+     * Samma app kör degerfors.se; c-parametern (kategori) utelämnas där.
+     */
+    pageApi?: { pageId: string; portletId: string };
+    /**
+     * SiteVision RESTApp "EventService" (Dalarna-mallen — vansbro.se,
+     * morakommun.se, orsa.se, alvdalen.se; upptäckt 2026-08-26):
+     *   GET <origin>/rest-api/EventService/items?start=0&num=200&paths=<nodId>
+     *   → { categories, data: [{ name, uri, startDate, endDate, startTime,
+     *       endTime, location, description, image:{uri}, identifier }],
+     *       meta:{ totalItems } }
+     *
+     * `paths` är OBLIGATORISK (utan den svarar servern med ett felmeddelande)
+     * och är arkivnodens id. Den står som `"paths":["3.…"]` intill
+     * `"eventServiceRoute"` i kalendersidans registerInitialState-blob.
+     *
+     * FÄLLA: sidan listar även GRANNKOMMUNERNAS endpoints med deras paths —
+     * ta rätt id, annars skrapar du fel kommun (och ofta ett gammalt arkiv).
+     * `location` bär hela adressen ("Medborgarhuset, Norra Allégatan 30, 78631
+     * Vansbro"), `startDate` är ISO med offset.
+     */
+    eventServiceApi?: { paths: string };
 }
 
 /** Rått item ur soleil items-API:t (bara fälten vi läser). */
@@ -164,6 +226,60 @@ export function mapSoleilItem(
     };
 }
 
+/**
+ * Städa en kort-rubrik som bär kategorietikett och/eller venue-svans.
+ * Venue-svansen kapas bara om något meningsfullt blir kvar (≥6 tecken och
+ * inte ett hängande förhållandeord) — annars var venue-namnet en del av
+ * titeln på riktigt ("Konsert i Berghems Lajvby"). Exporterad för test.
+ */
+export function cleanCardTitle(
+    title: string,
+    venueName: string | undefined,
+    opts: { titleStripRe?: RegExp; stripVenue?: boolean } = {},
+): string {
+    let t = title.replace(/\s+/g, ' ').trim();
+    if (opts.titleStripRe) t = t.replace(opts.titleStripRe, '').trim();
+    if (opts.stripVenue && venueName) {
+        const v = venueName.replace(/\s+/g, ' ').trim();
+        if (v && t.toLowerCase().endsWith(v.toLowerCase())) {
+            const rest = t.slice(0, t.length - v.length).replace(/[\s,–—-]+$/, '').trim();
+            if (rest.length >= 6 && !/\b(i|på|vid|hos|med|till|från|och|för)$/i.test(rest)) t = rest;
+        }
+    }
+    return t;
+}
+
+/**
+ * Vilken ort hör eventet till? Regionala guider bär orten i venue-namnet.
+ * Längsta träffen vinner ("Västra Ämtervik" före "Ämtervik"). Exporterad för test.
+ */
+/**
+ * Kommunalt sammanträde snarare än publikt event? Matchar på titel ELLER URL
+ * (sluggen bär oftast samma ord). "nämnden" matchas UTAN inledande ordgräns —
+ * nämnderna heter nästan alltid något sammansatt ("utbildningsnämnden",
+ * "socialnämnden"), men den bestämda ändelsen krävs så att "benämnd" går fri.
+ * Exporterad för test.
+ */
+export function isMunicipalMeeting(title: string, url = ''): boolean {
+    const hay = `${title} ${url}`.toLowerCase();
+    return /sammantr(a|ä)d|kommunfullm(a|ä)ktige|kommunstyrelse|n(a|ä)mnd(en|er|ens)\b|\bn(a|ä)mnd\b|styrelsem(o|ö)te|(a|å)rsm(o|ö)te|protokoll|\butskott\b/.test(hay);
+}
+
+export function pickCityFromVenue(
+    venueName: string | undefined,
+    cities: string[] | undefined,
+    defaultCity: string | undefined,
+): string | undefined {
+    if (!venueName || !cities?.length) return defaultCity;
+    const hay = venueName.toLowerCase();
+    let best: string | undefined;
+    for (const c of cities) {
+        if (!hay.includes(c.toLowerCase())) continue;
+        if (!best || c.length > best.length) best = c;
+    }
+    return best ?? defaultCity;
+}
+
 /** Rått hit ur RESTApp-API:t (bara fälten vi läser). */
 interface RestAppHit {
     id?: string;
@@ -197,6 +313,7 @@ export function mapRestAppHit(
     hit: RestAppHit,
     baseUrl: string,
     defaultCity: string | undefined,
+    cities?: string[],
 ): RawEvent | null {
     const title = (hit.title || '').trim();
     const parsed = parseRestAppDate(hit.info?.start);
@@ -206,6 +323,7 @@ export function mapRestAppHit(
     const end = parseRestAppDate(hit.info?.end);
     const venueName = hit.info?.location?.name?.trim() || undefined;
     const isDigital = !!venueName && /^digitalt/i.test(venueName);
+    const city = pickCityFromVenue(venueName, cities, defaultCity);
 
     return {
         externalId: hit.id,
@@ -214,9 +332,9 @@ export function mapRestAppHit(
         endDate: end && end.date.getTime() >= parsed.date.getTime() ? end.date : undefined,
         url: eventUrl,
         venueName,
-        city: defaultCity,
+        city,
         // "Digitalt evenemang" är ingen geocodebar plats — ankra på staden.
-        geocodeCandidates: isDigital && defaultCity ? [defaultCity] : undefined,
+        geocodeCandidates: isDigital && city ? [city] : undefined,
         description: hit.description?.trim() || undefined,
         imageUrl: makeAbsoluteUrl(hit.image?.src || hit.image?.mediumSrc, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
@@ -257,7 +375,7 @@ async function scrapeRestAppApi(
         if (hits.length === 0) break;
 
         for (const hit of hits) {
-            const ev = mapRestAppHit(hit, base, config.defaultCity);
+            const ev = mapRestAppHit(hit, base, config.defaultCity, config.cities);
             if (!ev || seenUrls.has(ev.url)) continue;
             seenUrls.add(ev.url);
             events.push(ev);
@@ -309,8 +427,10 @@ async function scrapeSoleilItemsApi(
 interface EventSearchHit {
     id?: string;
     name?: string;
-    URl?: string;               // sic — API:t stavar fältet så
+    URl?: string;               // sic — kalmar.com stavar fältet så
+    URL?: string;               // osteraker.se stavar det så i stället
     image?: string;
+    city?: string;              // ort per hit (osteraker.se) — saknas på kalmar.com
     description?: string;
     local?: string;             // venue-namn ("Kalmar läns museum")
     location?: string;          // gatuadress ("Skeppsbrogatan 51")
@@ -328,7 +448,7 @@ export function mapEventSearchHit(
     windowStart: Date,
 ): RawEvent | null {
     const title = (hit.name || '').trim();
-    const eventUrl = makeAbsoluteUrl(hit.URl, baseUrl);
+    const eventUrl = makeAbsoluteUrl(hit.URl ?? hit.URL, baseUrl);
     if (!title || !eventUrl) return null;
 
     // Pågående fleradagars-event (start i det förflutna, slut framåt) ankras på
@@ -349,11 +469,155 @@ export function mapEventSearchHit(
         url: eventUrl,
         venueName: hit.local?.trim() || undefined,
         address: hit.location?.trim() || undefined,
-        city: defaultCity,
+        city: hit.city?.trim() || defaultCity,
         description: hit.description?.trim() || undefined,
         imageUrl: makeAbsoluteUrl(hit.image, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
     };
+}
+
+/** Rått item ur EventService (bara fälten vi läser). */
+interface EventServiceItem {
+    identifier?: string;
+    name?: string;
+    uri?: string;
+    startDate?: string;      // "2026-01-09T21:00:00+01:00"
+    endDate?: string;
+    startTime?: string;      // "21:00"
+    location?: string;       // hela adressen
+    description?: string;
+    image?: { uri?: string };
+}
+
+/** Mappa ett EventService-item → RawEvent. Exporterad för test. */
+export function mapEventServiceItem(
+    item: EventServiceItem,
+    baseUrl: string,
+    defaultCity: string | undefined,
+): RawEvent | null {
+    const title = decodeHtmlEntities(item.name || '').trim();
+    const eventUrl = makeAbsoluteUrl(item.uri, baseUrl);
+    if (!title || !eventUrl || !item.startDate) return null;
+    const start = new Date(item.startDate);
+    if (isNaN(start.getTime())) return null;
+    const end = item.endDate ? new Date(item.endDate) : null;
+
+    return {
+        externalId: item.identifier,
+        title,
+        startDate: start,
+        endDate: end && !isNaN(end.getTime()) && end > start ? end : undefined,
+        url: eventUrl,
+        address: item.location?.trim() || undefined,
+        city: defaultCity,
+        description: item.description?.trim() || undefined,
+        imageUrl: makeAbsoluteUrl(item.image?.uri, baseUrl),
+        // startTime finns bara när arrangören satt klockslag.
+        hasSpecificTime: item.startTime?.trim() ? true : undefined,
+    };
+}
+
+/** SiteVision EventService — hela arkivnoden i ETT anrop. */
+async function scrapeEventServiceApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const origin = new URL(base).origin;
+    const cap = config.maxItems ?? 300;
+    const url = `${origin}/rest-api/EventService/items?start=0&num=${cap}`
+        + `&paths=${encodeURIComponent(config.eventServiceApi!.paths)}`;
+
+    const body = await fetchHtml(url, config);
+    if (!body) { ctx.log('EventService svarade inte'); return []; }
+    let data: { data?: EventServiceItem[]; meta?: { totalItems?: number } };
+    try { data = JSON.parse(body); } catch { ctx.log('EventService gav icke-JSON'); return []; }
+
+    const events: RawEvent[] = [];
+    const seen = new Set<string>();
+    for (const it of data.data ?? []) {
+        const ev = mapEventServiceItem(it, base, config.defaultCity);
+        if (!ev || seen.has(ev.url)) continue;
+        seen.add(ev.url);
+        events.push(ev);
+    }
+    ctx.log(`EventService: ${events.length} event (totalItems=${data.meta?.totalItems})`);
+    return events;
+}
+
+/** Rått item ur /page-routen (bara fälten vi läser). */
+interface PageApiItem {
+    id?: string;
+    displayName?: string;
+    URI?: string;
+    startDate?: number;      // epoch ms
+    endDate?: number;
+    img?: string;
+    text?: string;
+}
+
+/** Mappa ett /page-item → RawEvent. Exporterad för test. */
+export function mapPageApiItem(
+    item: PageApiItem,
+    baseUrl: string,
+    defaultCity: string | undefined,
+): RawEvent | null {
+    const title = decodeHtmlEntities(item.displayName || '').trim();
+    const eventUrl = makeAbsoluteUrl(item.URI, baseUrl);
+    if (!title || !eventUrl) return null;
+    if (typeof item.startDate !== 'number' || !isFinite(item.startDate) || item.startDate <= 0) return null;
+
+    const start = new Date(item.startDate);
+    if (isNaN(start.getTime())) return null;
+    const end = typeof item.endDate === 'number' && item.endDate > item.startDate
+        ? new Date(item.endDate) : undefined;
+
+    return {
+        externalId: item.id,
+        title,
+        startDate: start,
+        endDate: end,
+        url: eventUrl,
+        city: defaultCity,
+        description: item.text?.trim() || undefined,
+        imageUrl: makeAbsoluteUrl(item.img, baseUrl),
+    };
+}
+
+/** SiteVision-webappens /page-route — paginera igenom (9/sida, ej kumulativ). */
+async function scrapePageApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const origin = new URL(base).origin;
+    const { pageId, portletId } = config.pageApi!;
+    const cap = config.maxItems ?? 400;
+    const events: RawEvent[] = [];
+    const seenUrls = new Set<string>();
+
+    let hitCount = Infinity;
+    for (let page = 1; events.length < cap; page++) {
+        const url = `${origin}/appresource/${pageId}/${portletId}/page?p=${page}&f=&t=&c=&svAjaxReqParam=ajax`;
+        const body = await fetchHtml(url, config, { 'X-Requested-With': 'XMLHttpRequest' });
+        if (!body) { ctx.log(`  /page svarade inte (p=${page})`); break; }
+
+        let data: { hitCount?: number; items?: PageApiItem[] };
+        try { data = JSON.parse(body); } catch { ctx.log('  /page gav icke-JSON'); break; }
+        if (typeof data.hitCount === 'number') hitCount = data.hitCount;
+
+        const items = data.items ?? [];
+        if (items.length === 0) break;
+        for (const it of items) {
+            const ev = mapPageApiItem(it, base, config.defaultCity);
+            if (!ev || seenUrls.has(ev.url)) continue;
+            seenUrls.add(ev.url);
+            events.push(ev);
+        }
+        if (page * items.length >= hitCount) break;
+    }
+    ctx.log(`/page-API: ${events.length} event (hitCount=${hitCount})`);
+    return events;
 }
 
 /** soleilit.eventSearch: hela kalendern i ETT anrop (fönsterstyrt). */
@@ -729,6 +993,9 @@ async function fetchHtml(
     extraHeaders?: Record<string, string>,
 ): Promise<string | null> {
     await domainLimiter.wait(url);
+    // API-lägena skickar extraHeaders och ska ALLTID gå via fetch — browsern
+    // används bara för att rendera list-sidans HTML.
+    if (cfg.useBrowser && !extraHeaders) return fetchHtmlViaBrowser(url, cfg);
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), cfg.timeoutMs ?? 20000);
     try {
@@ -751,21 +1018,92 @@ async function fetchHtml(
     }
 }
 
+/** Rendera sidan i den delade Puppeteer-browsern och returnera DOM:en. */
+async function fetchHtmlViaBrowser(url: string, cfg: SiteVisionConfig): Promise<string | null> {
+    let page: Awaited<ReturnType<Awaited<ReturnType<typeof getSharedBrowser>>['newPage']>> | null = null;
+    try {
+        const browser = await getSharedBrowser();
+        page = await browser.newPage();
+        await page.setUserAgent(cfg.userAgent ?? DEFAULT_UA);
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: cfg.timeoutMs ?? 45000 });
+        // Korten kommer ofta ett andetag efter networkidle.
+        await new Promise((r) => setTimeout(r, 3000));
+        return await page.content();
+    } catch {
+        return null;
+    } finally {
+        if (page) await page.close().catch(() => { });
+    }
+}
+
 function makeAbsoluteUrl(url: string | undefined, base: string): string | undefined {
     if (!url) return undefined;
     if (/^https?:\/\//.test(url)) return url;
     try { return new URL(url, base).toString(); } catch { return url; }
 }
 
+/**
+ * Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter
+ * (Strömsund 106/111 utan desc, Svenljunga 30/30) är text-tomma medan
+ * detaljsidan har meta/og-description. Throttlat via domainLimiter; bara
+ * event som SAKNAR desc hämtas → självbegränsande när korten räcker.
+ *
+ * Gäller sedan 3/9 2026 även API-vägarna. Anropet satt tidigare EFTER
+ * dispatchens `return scrapeXApi(...)` och nåddes därför aldrig av en
+ * API-källa — `fetchDetailDesc: true` var tyst verkningslös på alla 13.
+ *
+ * VARNING innan du slår på den för en restApi-källa: RESTApp-API:t saknar
+ * description-fält helt (bara image/id/title/uri/url/info), men de fyra
+ * restApi-källorna testades 3/9 och detaljsidans meta-tagg duger INTE:
+ * visitarboga/visitvastramalardalen har `content=""`, medan surahammar.se
+ * ger arrangörsnamnet ("Surahammars Hembygdsförening") och
+ * visithallstahammar eventtiteln ("IT-hjälp på biblioteket"). Båda passerar
+ * 20-teckensgränsen och hade lagt sig som falsk beskrivning — sämre än tom.
+ * Flaggan är därför medvetet AV på alla fyra. Deras text finns bara i
+ * brödtexten, bakom cookie-/translate-boilerplate.
+ */
+async function backfillDescriptions(
+    events: RawEvent[],
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<void> {
+    if (!config.fetchDetailDesc) return;
+    let filled = 0;
+    for (const ev of events) {
+        if (ev.description || !ev.url) continue;
+        const html = await fetchHtml(ev.url, config);
+        if (!html) continue;
+        const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
+            || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
+        const desc = m?.[1]
+            ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
+            : undefined;
+        if (desc && desc.length >= 20) { ev.description = truncateAtBoundary(desc, DEFAULT_DESCRIPTION_MAX); filled++; }
+    }
+    if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);
+}
+
 export const sitevisionEngine = async (
     config: SiteVisionConfig,
     ctx: EngineContext,
 ): Promise<RawEvent[]> => {
-    if (config.restApi) return scrapeRestAppApi(config, ctx);
-    if (config.itemsApi) return scrapeSoleilItemsApi(config, ctx);
-    if (config.eventSearchApi) return scrapeEventSearchApi(config, ctx);
-    if (config.guideApi) return scrapeGuideApi(config, ctx);
-    if (config.searchAppApi) return scrapeSearchAppApi(config, ctx);
+    // API-vägarna kortsluter HTML-extraktionen. De går via samma
+    // backfillDescriptions() som list-vägen — utan den kunde en API-källa
+    // aldrig få fetchDetailDesc att göra något (se helpern ovan).
+    const apiScraper =
+        config.restApi ? scrapeRestAppApi
+            : config.itemsApi ? scrapeSoleilItemsApi
+                : config.eventSearchApi ? scrapeEventSearchApi
+                    : config.guideApi ? scrapeGuideApi
+                        : config.searchAppApi ? scrapeSearchAppApi
+                            : config.pageApi ? scrapePageApi
+                                : config.eventServiceApi ? scrapeEventServiceApi
+                                    : null;
+    if (apiScraper) {
+        const apiEvents = await apiScraper(config, ctx);
+        await backfillDescriptions(apiEvents, config, ctx);
+        return apiEvents;
+    }
 
     const events: RawEvent[] = [];
     const seenUrls = new Set<string>();
@@ -866,14 +1204,22 @@ export const sitevisionEngine = async (
 
             // Description: sök första <p> eller text-element i kortet
             const descCandidate = container.find('p, .description, [class*="excerpt"], [class*="summary"]').first().text().trim();
-            const description = descCandidate.length > 30 ? descCandidate.slice(0, 600) : undefined;
+            const description = descCandidate.length > 30 ? truncateAtBoundary(descCandidate, DEFAULT_DESCRIPTION_MAX) : undefined;
 
             // Venue: ofta i en .venue, [class*="location"] eller liknande
             const venueEl = container.find('[class*="location"], [class*="venue"], [class*="place"]').first();
             const venueName = venueEl.text().trim() || undefined;
 
+            if (config.dropMunicipalMeetings && isMunicipalMeeting(title, eventUrl)) continue;
+
+            const cleanTitle = cleanCardTitle(title, venueName, {
+                titleStripRe: config.titleStripRe,
+                stripVenue: config.stripVenueFromTitle,
+            });
+            if (cleanTitle.length < 2) continue;
+
             events.push({
-                title,
+                title: cleanTitle,
                 startDate,
                 url: eventUrl,
                 venueName,
@@ -925,6 +1271,9 @@ export const sitevisionEngine = async (
                 const title = (innerHeading.length > 0 ? innerHeading.text() : ($(a).attr('title') || aClone.text())).replace(/\s+/g, ' ').trim();
                 if (title.length < 3 || title.length > 150) return;
                 if (/^(läs mer|visa alla|visa mer|mer info|boka|anmäl dig|till evenemanget)\.?$/i.test(title)) return;   // länktext, inte titel
+                // Samma filter som i huvudloopen — Botkyrkas kalender når hit
+                // (inga <time datetime>) och blandar in nämndsammanträden.
+                if (config.dropMunicipalMeetings && isMunicipalMeeting(title, abs)) return;
                 seenUrls.add(abs);
                 events.push({ title, startDate, url: abs, city: config.defaultCity });
                 slugCards++;
@@ -933,25 +1282,7 @@ export const sitevisionEngine = async (
         }
     }
 
-    // Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter
-    // (Strömsund 106/111 utan desc, Svenljunga 30/30) är text-tomma medan
-    // detaljsidan har meta/og-description. Throttlat via domainLimiter; bara
-    // event som SAKNAR desc hämtas → självbegränsande när korten räcker.
-    if (config.fetchDetailDesc) {
-        let filled = 0;
-        for (const ev of events) {
-            if (ev.description || !ev.url) continue;
-            const html = await fetchHtml(ev.url, config);
-            if (!html) continue;
-            const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
-                || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
-            const desc = m?.[1]
-                ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
-                : undefined;
-            if (desc && desc.length >= 20) { ev.description = desc.slice(0, 600); filled++; }
-        }
-        if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);
-    }
+    await backfillDescriptions(events, config, ctx);
 
     return events;
 };

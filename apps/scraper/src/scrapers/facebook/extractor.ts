@@ -88,8 +88,26 @@ export async function extractEventDetails(page: Page): Promise<IFacebookEventScr
         // styckena utan separator ("…klubb.Tävlingsområde…"). innerText
         // bevarar de renderade radbrytningarna som \n.
         let description = '';
+        // Nya layouten (2026): beskrivningen under rubriken "Vad du kan förvänta
+        // dig"/"What to expect" — ta rubrikens närmaste block med rejäl text.
+        const headingEl = Array.from(main.querySelectorAll('span, div, h2, h3')).find(el =>
+            el.children.length === 0 && /^(?:vad du kan förvänta dig|what to expect|detaljer|details)$/i.test(el.textContent?.trim() || ''));
+        if (headingEl) {
+            const headingTxt = headingEl.textContent?.trim() || '';
+            let box: HTMLElement | null = headingEl.parentElement;
+            for (let depth = 0; depth < 5 && box; depth++) {
+                const txt = ((box as any).innerText || box.textContent || '').trim();
+                if (txt.length > headingTxt.length + 40 && !txt.includes('Logga in')) {
+                    description = txt.replace(/^(?:vad du kan förvänta dig|what to expect|detaljer|details)\s*/i, '').trim();
+                    break;
+                }
+                box = box.parentElement;
+            }
+        }
         const descEl = main.querySelector('div[data-ad-preview="message"], div[style*="white-space: pre-wrap"]');
-        if (descEl && descEl.textContent) {
+        if (description.length >= 20) {
+            // rubrik-blocket ovan räcker
+        } else if (descEl && descEl.textContent) {
             description = ((descEl as any).innerText || descEl.textContent).trim();
         } else {
             const allDivs = Array.from(main.querySelectorAll('div[dir="auto"], span[dir="auto"]'));
@@ -106,7 +124,10 @@ export async function extractEventDetails(page: Page): Promise<IFacebookEventScr
         }
 
         // Clean up common Facebook UI artifacts from the description
+        // FB-sidfoten som "längsta text" (Integritet · Användarvillkor …) = ingen beskrivning.
+        if (/^\s*Integritet\s*[·•]?\s*(?:\n\s*)?·?\s*Användarvillkor/i.test(description) || /Användarvillkor[\s\S]{0,80}Cookies/i.test(description.slice(0, 200))) description = '';
         description = description
+            .replace(/\s*(?:Läs mer|Read more)\s*$/i, '')
             .replace(/Visa f[äa]rre$/i, '')
             .replace(/Visa mindre$/i, '')
             .replace(/See less$/i, '')
