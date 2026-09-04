@@ -46,3 +46,20 @@ Rörs inte: Korpen som opt-in på kartan (ägarbeslut), årsmötesfilter (ägarb
 - [ ] Nattloggen: vilka Piteå-slugs gav eventlänkar? Ta bort tomma.
 - [ ] Ägarbeslut: Korpen opt-in på kartan? Dölja "årsmöte/medlemsmöte" (30 st)?
 - [ ] Svara Elin när biografen och Öjebyn-platserna ligger rätt (nästa natt + geo-refine).
+
+## Snabbkörning på minin (utan att vänta på nattkedjan)
+
+`apps/scraper/scripts/run-quickfix.sh` kör dagens innehållsfixar direkt när
+nattkedjan är klar (vägrar om `run-daily.sh` fortfarande kör):
+
+```sh
+bash ~/Repos/VADKUL/apps/scraper/scripts/run-quickfix.sh --fb-city=Piteå --sources=visitpitea
+```
+
+Steg: git pull → Facebook bara för Piteå (`npm run scrape-fb -- --city=Piteå`:
+stadssök + de sex Piteå-sidorna, omskrapar tomma beskrivningar/generiska
+värdar) → `visitpitea` i full-refresh ("Plats:" ur detaljsidan för kända
+event) → `repair-salong` (salongs-event flyttas till byggnaden, t.ex.
+"Saga - Bio 3:an" → Bio 3:an) → hide Rotary → K9 (pris ur text, 🎬, �) →
+aggregate → whitelist-commit + push. Logg: `~/Library/Logs/vadkul-scraper/quickfix.log`.
+`--no-push` för att bara testa lokalt.
