@@ -201,7 +201,12 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                         return events
                             .filter(e => new Date(e.time).getTime() < to)
                             .slice(0, 400)
-                            .map(e => ({ id: e.id, title: e.title, time: e.time, emoji: e.emoji, locationName: e.locationName }));
+                            .map(e => ({
+                                id: e.id, title: e.title, time: e.time, emoji: e.emoji, locationName: e.locationName,
+                                // För boostade externa rader: kart-seed + utfällning
+                                // (beskrivning m.m. fylls av /api/event vid klick).
+                                lat: e.lat, lng: e.lng, category: e.category, hostName: e.hostName,
+                            }));
                     })()}
                 />
 

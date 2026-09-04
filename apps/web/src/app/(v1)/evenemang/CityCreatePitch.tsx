@@ -76,7 +76,7 @@ export default function CityCreatePitch({ cityName, createHref, collapsible }: P
                 <div className="rounded-2xl bg-white/5 border border-white/10 px-3.5 py-3 min-h-[88px]">
                     <p className="text-[10px] font-black uppercase tracking-wider text-sky-300/80">Nivå 1</p>
                     <p className="mt-0.5 text-sm font-black text-sky-100/90">Syns bra</p>
-                    <p className="mt-1 text-xs font-medium leading-snug text-sky-200/70">Externa event — vi hittar dem åt dig, varje natt, och visar dem som prickar på kartan.</p>
+                    <p className="mt-1 text-xs font-medium leading-snug text-sky-200/70">Externa event — vi hittar dem åt dig inför varje morgon och visar dem som prickar på kartan.</p>
                 </div>
                 <div className="rounded-2xl bg-white/15 border border-sky-300/40 px-3.5 py-4 min-h-[108px] shadow-lg">
                     <p className="text-[10px] font-black uppercase tracking-wider text-sky-200">Nivå 2 · Skapa gratis</p>
