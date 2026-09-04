@@ -3,7 +3,7 @@
  * Fristående från satori/fs så de kan testas.
  */
 import type { CityEvent } from './cityData';
-import { pickRecommended, shortDayLabel } from './cityData';
+import { pickRecommended, shortDayLabel, clockLabel } from './cityData';
 
 export type ShareLine = { emoji: string; title: string; when: string };
 
@@ -21,13 +21,23 @@ export function truncateTitle(title: string, max = 48): string {
     return `${(sp > max * 0.6 ? cut.slice(0, sp) : cut).trimEnd()}…`;
 }
 
-/** Radera till bilden: pickRecommended (spridning över kategori/värd/plats),
- *  bara kommande, kapade titlar, "Lör 6/9"-etikett. */
-export function pickShareLines(events: CityEvent[], n = 3, now = Date.now()): ShareLine[] {
-    const upcoming = events.filter(e => new Date(e.time).getTime() >= now - 60 * 60 * 1000);
-    return pickRecommended(upcoming, n).map(e => ({
+/** Rader till bilden: veckans bästa (pickRecommended — spridning över
+ *  kategori/värd/plats), bara inom `horizonDays` framåt, kapade titlar,
+ *  "Lör 6/9 · 19:00" (klockslag när eventet har ett). Delas länken varje dag
+ *  (ägarens plan 4/9) ska bilden vara den dagens veckolista, i datumordning. */
+export function pickShareLines(events: CityEvent[], n = 5, now = Date.now(), horizonDays = 7): ShareLine[] {
+    const from = now - 60 * 60 * 1000;
+    const to = now + horizonDays * 24 * 60 * 60 * 1000;
+    const upcoming = events.filter(e => {
+        const t = new Date(e.time).getTime();
+        return t >= from && t < to;
+    });
+    // Urvalet är kvalitetsrankat; raderna visas i datumordning (ägaren 4/9).
+    return pickRecommended(upcoming, n)
+        .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+        .map(e => ({
         emoji: e.emoji || '🎉',
-        title: truncateTitle(e.title),
-        when: shortDayLabel(e.time),
+        title: truncateTitle(e.title, 44),
+        when: e.hasSpecificTime ? `${shortDayLabel(e.time)} · ${clockLabel(e.time)}` : shortDayLabel(e.time),
     }));
 }
