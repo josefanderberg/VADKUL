@@ -24,7 +24,7 @@ import { looksLikeCinema } from '../utils/cinema';
 import { ruleEmojiFor } from '../utils/emojiRules';
 import { OLLAMA_CONCURRENCY, chunk } from '../utils/ollamaPool';
 
-const AUDIT_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
+const AUDIT_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'qwen3:8b';
 
 const args = (() => {
     const out: any = {};
