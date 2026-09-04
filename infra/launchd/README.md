@@ -17,7 +17,7 @@ föregående är klart:
    för midnatts-platshållare) → dedupe-cross → geo-refine (exakta adresser för
    stadscentrum-klumpade event) → storage-sync → image-migrate → llm-enrich →
    AI-audit → re-aggregate
-4. **Stats + Teams-rapporter**
+4. **Stats + Telegram-rapporter** (huvudrapport, per-scraper, kvalitet, fält-täckning — kräver `TG_BOT_TOKEN` + `TG_CHAT_ID` i `~/.vadkul-secrets/env`)
 
 Ersätter de gamla jobben `se.vadkul.scraper.today` (00:30) och
 `se.vadkul.scraper.full` (02:30), som körde post-pipelinen dubbelt varje natt
