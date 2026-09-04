@@ -16,8 +16,8 @@
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-28",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-04",
+      "emptyRetries": 2
     },
     "folk-goteborg": {
       "since": "2026-08-19",
@@ -50,8 +50,8 @@
     "nykoping": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-26",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-04",
+      "emptyRetries": 2
     },
     "orebro": {
       "since": "2026-08-19",
