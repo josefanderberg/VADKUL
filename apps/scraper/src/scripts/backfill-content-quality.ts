@@ -36,6 +36,7 @@ import { extractPriceFromText } from '../utils/priceFromText';
 import { normalizeDescription, sanitizePriceField } from '../utils/normalizeEvent';
 import { looksStripped } from '../utils/contentRefresh';
 import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
+import { activityEmojiFor } from '../utils/activityEmoji';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -81,7 +82,7 @@ async function main() {
     `).all() as Row[];
     console.log(`${rows.length} framtida synliga event`);
 
-    const stats = { price: 0, priceCleaned: 0, cleaned: 0, emptied: 0, cinema: 0, cinemaCategory: 0 };
+    const stats = { price: 0, priceCleaned: 0, cleaned: 0, emptied: 0, cinema: 0, cinemaCategory: 0, activity: 0 };
     const priceSamples: string[] = [];
     const priceByHost: Record<string, number> = {};
     const capped: Record<string, number> = {};
@@ -96,6 +97,11 @@ async function main() {
         if (looksLikeCinema(r.title, r.locationName)) {
             if ((r.emoji ?? '') !== CINEMA_EMOJI) { patch.emoji = CINEMA_EMOJI; stats.cinema++; }
             if ((r.category ?? '') !== 'stage') { patch.category = 'stage'; stats.cinemaCategory++; }
+        } else {
+            // 0b) Entydig aktivitet (🥏 discgolf, 🧭 orientering …) där auditen
+            //     gissade generiskt (⚽/⛳) — utils/activityEmoji, ägaren 4/9.
+            const a = activityEmojiFor(r.title);
+            if (a && (r.emoji ?? '') !== a) { patch.emoji = a; stats.activity++; }
         }
 
         // 1) Trasiga tecken / FB-sidfot / "Läs mer"-svans → städa (bara rader som bär skadan).
@@ -149,6 +155,7 @@ async function main() {
     console.log(`🏷️  Prisfält sanerade (skräp tömt / långtext → intervall): ${stats.priceCleaned}`);
     console.log(`🎬 Biovisningar som fick filmsymbol: ${stats.cinema}`);
     console.log(`🎬 Biovisningar flyttade till kategori scen: ${stats.cinemaCategory}`);
+    console.log(`🥏 Aktiviteter som fick sin egen emoji: ${stats.activity}`);
 
     const top = (o: Record<string, number>) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 12)
         .map(([h, n]) => `  ${String(n).padStart(5)}  ${h}`).join('\n') || '  (inga)';

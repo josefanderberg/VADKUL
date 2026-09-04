@@ -20,7 +20,8 @@ import { db } from '../config/firebase';
 import { auditEvent, auditGps, ollamaIsAvailable } from '../utils/llmAudit';
 import { setHidden, setEventAuditWithCategory } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
-import { withCinemaEmoji, looksLikeCinema } from '../utils/cinema';
+import { looksLikeCinema } from '../utils/cinema';
+import { ruleEmojiFor } from '../utils/emojiRules';
 import { OLLAMA_CONCURRENCY, chunk } from '../utils/ollamaPool';
 
 const AUDIT_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'gemma4:latest';
@@ -201,8 +202,8 @@ async function main() {
                 confidence: result.confidence,
                 category: result.category,
                 categoryConfidence: result.categoryConfidence,
-                // Biovisning → 🎬 oavsett LLM:ens val (utils/cinema, community-kritik 2026-09-04).
-                emoji: withCinemaEmoji(result.emoji, r.title, r.locationName) ?? result.emoji,
+                // Regel-emoji (🎬 bio, 🥏 discgolf …) går före LLM:ens val (utils/emojiRules).
+                emoji: ruleEmojiFor(r.title, r.locationName) ?? result.emoji,
                 price: result.price,
             });
             // Spegla hidden till SQLite — den publika feeden aggregeras från SQLite

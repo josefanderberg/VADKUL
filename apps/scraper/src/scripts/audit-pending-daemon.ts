@@ -26,7 +26,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
-import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
+import { looksLikeCinema } from '../utils/cinema';
+import { ruleEmojiFor } from '../utils/emojiRules';
 import { isTrustedTicketSource } from '../utils/ticketSources';
 import { setEventAuditWithCategory, setHidden } from '../utils/sqliteHelper';
 import { db as firestoreDb } from '../config/firebase';
@@ -119,10 +120,11 @@ async function processBatch(rows: Row[]): Promise<number> {
                 continue;
             }
 
-            // Biovisning → scen + 🎬 oavsett LLM:ens val (utils/cinema, samma regel som audit-events).
-            if (looksLikeCinema(r.title, r.locationName)) {
-                result.category = 'stage'; result.categoryConfidence = 'high'; result.emoji = CINEMA_EMOJI;
-            }
+            // Biovisning → scen oavsett LLM:ens val (utils/cinema, samma regel som audit-events);
+            // regel-emoji (🎬 bio, 🥏 discgolf …) går före LLM:ens val (utils/emojiRules).
+            if (looksLikeCinema(r.title, r.locationName)) { result.category = 'stage'; result.categoryConfidence = 'high'; }
+            const ruleEmoji = ruleEmojiFor(r.title, r.locationName);
+            if (ruleEmoji) result.emoji = ruleEmoji;
 
             const swFlag = result.inSweden ? '' : ' [EJ-SE]';
             const priceTag = result.price ? ` 💰${result.price}` : '';
