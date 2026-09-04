@@ -10,6 +10,7 @@ import CategoryChips from '../CategoryChips';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../EventList';
 import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
+import CityVadkulSpotlight from '../CityVadkulSpotlight';
 import { DayFilterProvider } from '../dayFilter';
 import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
 // Chipsen visar KARTANS ettords-etiketter (samma källa som kategorifiltret på
@@ -182,6 +183,27 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 </p>
                 <p className="mt-1 text-xs font-bold text-slate-400 dark:text-zinc-500">Uppdaterad {dayLabel(updatedAt)}</p>
 
+                {/* Exponeringstrappans topp (Josef 4/9): boostade + VADKUL-
+                    skapade event ÖVER den externa listan — eller en smal
+                    inbjudan när staden saknar sådana. Klientkomponent:
+                    userCreated/boost bor i Firestore, inte i build-datat.
+                    staticEvents trimmas till 14 dagar och används bara för
+                    boost-matchning (boostade externa event ska också upp). */}
+                <CityVadkulSpotlight
+                    cityName={city.name}
+                    cityLat={city.lat}
+                    cityLng={city.lng}
+                    radiusKm={city.small ? 20 : 35}
+                    createHref={`${cityMapHref(city)}&skapa=1`}
+                    staticEvents={(() => {
+                        const to = Date.now() + 14 * 864e5;
+                        return events
+                            .filter(e => new Date(e.time).getTime() < to)
+                            .slice(0, 400)
+                            .map(e => ({ id: e.id, title: e.title, time: e.time, emoji: e.emoji, locationName: e.locationName }));
+                    })()}
+                />
+
                 {/* Filterraden (Idag/Imorgon/I helgen + timstaplar) ligger överst
                     i sektionen och styr allt under: kategorichipsen (children)
                     och dag-för-dag-listan. */}
@@ -212,6 +234,43 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                     />
                 </EventDayList>
                 </DayFilterProvider>
+
+                {/* Slutet av listan är en INBJUDAN, inte en återvändsgränd
+                    (Josef 4/9): den som scrollat hit ska mötas av "du är
+                    nästa", plus varför horisonten är kort (nu-fokus är
+                    positionering, inte en brist). Trappan säljer boosten. */}
+                <section className="mt-10 rounded-3xl bg-gradient-to-br from-[#006AA7] to-[#004B78] px-5 py-6 text-white">
+                    <h2 className="text-xl font-black tracking-tight">Slut på listan? Skapa det som saknas.</h2>
+                    <p className="mt-2 text-sm leading-relaxed text-sky-100 font-medium">
+                        Ett event på VADKUL behöver inte vara en konsert — bjud hem folk på sällskapsspel,
+                        laga mat ihop, ordna vinprovning, plugga eller gå en runda. Det du skapar visas
+                        överst på den här sidan och lyfts på kartan.
+                    </p>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-2xl bg-white/10 px-3.5 py-3">
+                            <p className="text-xs font-black uppercase tracking-wider text-sky-200">Syns bra</p>
+                            <p className="mt-0.5 text-xs font-medium text-sky-100">Externa event — vi hittar dem åt dig, varje natt.</p>
+                        </div>
+                        <div className="rounded-2xl bg-white/10 px-3.5 py-3">
+                            <p className="text-xs font-black uppercase tracking-wider text-sky-200">Syns mer</p>
+                            <p className="mt-0.5 text-xs font-medium text-sky-100">Skapade på VADKUL — överst på stadssidan, lyfta på kartan.</p>
+                        </div>
+                        <div className="rounded-2xl bg-white/10 px-3.5 py-3 ring-1 ring-[#FECC02]/60">
+                            <p className="text-xs font-black uppercase tracking-wider text-[#FECC02]">⭐ Syns mest</p>
+                            <p className="mt-0.5 text-xs font-medium text-sky-100">Boostade — guldbricka på kartan och första plats här.</p>
+                        </div>
+                    </div>
+                    <Link
+                        href={`${cityMapHref(city)}&skapa=1`}
+                        className="mt-4 inline-block rounded-full bg-[#FECC02] px-5 py-2.5 text-sm font-black text-[#052846] hover:brightness-105 transition"
+                    >
+                        Skapa ett event i {city.name}
+                    </Link>
+                    <p className="mt-3 text-[11px] font-medium text-sky-200/90">
+                        VADKUL fokuserar på det som händer nu — idag först, sedan veckan. Event längre
+                        fram fylls på när de närmar sig.
+                    </p>
+                </section>
 
                 <FaqSection faqs={faqs} />
 

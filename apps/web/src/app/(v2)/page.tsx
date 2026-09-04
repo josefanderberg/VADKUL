@@ -2505,6 +2505,19 @@ export default function HomePage() {
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // ?skapa=1 — stadssidornas "arrangera själv"-CTA: starta placeringsvarvet
+    // direkt, samma väg som +-knappen (kartan står redan över staden via
+    // ?plats=). Läses en gång vid mount och städas ur URL:en som ?stjarna=.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has('skapa')) return;
+        params.delete('skapa');
+        const qs = params.toString();
+        window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+        setCreationMode('placing');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     useEffect(() => {
         if (!pendingStarCodeRef.current) return;
         // Vänta tills Firebase återställt sessionen — annars öppnas login-
