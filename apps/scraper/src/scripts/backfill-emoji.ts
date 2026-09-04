@@ -21,7 +21,7 @@ import { db } from '../config/firebase';
 import { sqlite } from '../utils/sqliteHelper';
 import { CATEGORY_EMOJI } from '../utils/llmAudit';
 import { stamped } from '../utils/firestoreStamp';
-import { withCinemaEmoji } from '../utils/cinema';
+import { ruleEmojiFor } from '../utils/emojiRules';
 
 const APPLY = process.argv.includes('--apply');
 const ALL = process.argv.includes('--all');
@@ -64,7 +64,7 @@ async function main() {
 
     for (const r of rows) {
         const cat = r.category || 'other';
-        const emoji = withCinemaEmoji(CATEGORY_EMOJI[cat] ?? CATEGORY_EMOJI.other, r.title, r.locationName) as string;
+        const emoji = ruleEmojiFor(r.title, r.locationName) ?? CATEGORY_EMOJI[cat] ?? CATEGORY_EMOJI.other;
         perCat.set(cat, (perCat.get(cat) || 0) + 1);
         updated++;
 

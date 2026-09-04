@@ -14,7 +14,8 @@ import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './type
 import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate, refreshEventContent } from '../utils/dbHelper';
 import { pickBetterDescription, pickBetterPrice } from '../utils/contentRefresh';
 import { venueBuildingOf } from '../utils/venueFromText';
-import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
+import { looksLikeCinema } from '../utils/cinema';
+import { ruleEmojiFor } from '../utils/emojiRules';
 import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
@@ -394,6 +395,10 @@ export async function runSource(
             // dokumentet inte bär ett null-fält i onödan.
             const validEnd = validEventEnd(e.startDate, e.endDate);
 
+            // Regelstyrd emoji (🎬 bio, 🥏 discgolf …) sätts redan vid spar;
+            // övriga event lämnar emoji åt auditen/kategoridefaulten.
+            const ruleEmoji = ruleEmojiFor(e.title, e.venueName);
+
             pendingWrites.push({
                 title: e.title,
                 url: e.url,
@@ -416,9 +421,7 @@ export async function runSource(
                 // null (ej undefined) när pris saknas: Firestore vägrar undefined,
                 // och SQLite-upsert COALESCE:ar null → bevarar LLM-extraherat pris.
                 price: e.price || null,
-                // Biovisningar får 🎬 direkt (LLM-auditen/backfill-emoji håller
-                // regeln); övriga event lämnar emoji åt auditen/kategoridefaulten.
-                ...(looksLikeCinema(e.title, e.venueName) ? { emoji: CINEMA_EMOJI } : {}),
+                ...(ruleEmoji ? { emoji: ruleEmoji } : {}),
                 createdAt: new Date(),
                 // OBS: betyder "har koordinater" (även stad-centroid) — kvalitets-
                 // sanningen bor i geoPrecision. Semantiken låst av konsumenterna
