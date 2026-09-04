@@ -305,6 +305,19 @@ else
     echo "⚠️ Repair-geo misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Venue-fixar: manuellt verifierade koordinater (buggrapporter) ──────────
+# data/venueFixes.ts i repot: en rad per rapporterad felplacerad venue.
+# Idempotent — upsertar known_venues, rensar förgiftad geocode-cache och
+# flyttar befintliga event (t.ex. Bio 3:ans Saga-salong i Piteå som hamnade
+# i skogen 27/8). Körs FÖRE aggregeringen så webben får rätt punkt samma natt.
+echo "" >> "$LOG_FILE"
+echo "── VENUE-FIXAR (verifierade koordinater) ──" >> "$LOG_FILE"
+if npm run venue-fixes -- --apply >> "$LOG_FILE" 2>&1; then
+    echo "Venue-fixar OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Venue-fixar misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Synca redan-i-Storage-bilder med Firestore coverImage ─────────────────
 # Idempotent + snabbt: kollar bara Storage.exists() för varje events sha1.
 # Fixar fall där upload lyckades historiskt men coverImage inte uppdaterades.
