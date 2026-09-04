@@ -69,8 +69,11 @@ apps/web/public/pwa-icon-v222.png
 # TypeScript build cache
 *.tsbuildinfo
 
-# Claude Code local state
-.claude/
+# Claude Code: skills delas via git (minin och molnsessioner läser dem —
+# CLAUDE.md pekar på .claude/skills/). Övrigt (settings.local.json,
+# launch.json m.m.) förblir lokalt.
+.claude/*
+!.claude/skills/
 
 # Genereras vid build (dagens slice av events-destinations.json) — daglig
 # färskvara, ska inte ligga i repot.
