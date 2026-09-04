@@ -10,6 +10,7 @@ import {
 import { writeEventSeed } from '@/utils/eventSeed';
 import { isPlainClick } from '@/utils/eventExpand';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
+import { emojiForCategory } from '@/utils/categories';
 import EventExpanded from './EventExpanded';
 
 // Exponeringstrappans nivå 2–3 överst på stadssidan: boostade event (guld,
@@ -77,6 +78,12 @@ async function fetchCityRows(p: Props): Promise<{ boosted: SpotRow[]; vadkul: Sp
     return composeSpotlightRows(userCreated, p.staticEvents, boostedIds);
 }
 
+/** Radens emoji: sparad emoji om den finns, annars kategorins (som kartan) —
+ *  aldrig 🎉-fallback (Josef 4/9: sport/familj-event visades som fest). */
+function spotEmoji(e: SpotRow): string {
+    return e.emoji || emojiForCategory(e.category);
+}
+
 const DAY_LABEL_FMT = new Intl.DateTimeFormat('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' });
 const CLOCK_FMT = new Intl.DateTimeFormat('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
 const HOUR_FMT = new Intl.DateTimeFormat('sv-SE', { hour: 'numeric', hour12: false, timeZone: 'Europe/Stockholm' });
@@ -90,7 +97,7 @@ function toExpanded(e: SpotRow) {
     return {
         id: e.id,
         href: `/?event=${encodeURIComponent(e.id)}`,
-        emoji: e.emoji || '🎉',
+        emoji: spotEmoji(e),
         title: e.title,
         meta: [clock ? `kl ${clock}` : null, place || null, e.hostName ?? null].filter(Boolean).join(' · '),
         coverImage: e.coverImage,
@@ -119,7 +126,7 @@ function seedMap(e: SpotRow): void {
         lng: e.lng ?? 0,
         locationName: e.locationName ?? '',
         category: e.category ?? 'other',
-        emoji: e.emoji || '🎉',
+        emoji: spotEmoji(e),
         hostName: e.hostName,
         coverImage: e.coverImage,
         price: e.price,
@@ -181,7 +188,7 @@ function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expan
                             className={`w-full object-cover ${expanded ? 'h-52' : 'h-28'}`}
                         />
                         <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
-                            <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>{gold ? '⭐' : e.emoji || '🎉'}</span>
+                            <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>{gold ? '⭐' : spotEmoji(e)}</span>
                             <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{e.title}</h4>
                             {badge}
                             {catChip}
@@ -196,7 +203,7 @@ function Row({ e, gold, expanded, onToggle }: { e: SpotRow; gold: boolean; expan
             ) : (
                 <a href={`/?event=${encodeURIComponent(e.id)}`} onClick={onClick} className="flex items-center gap-3 px-3 py-2.5">
                     <span aria-hidden className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-lg ${gold ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-sky-50 dark:bg-sky-950/40'}`}>
-                        {e.emoji || '🎉'}
+                        {spotEmoji(e)}
                     </span>
                     <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold text-slate-900 dark:text-zinc-100">
