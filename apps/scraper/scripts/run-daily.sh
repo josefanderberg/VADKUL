@@ -219,6 +219,18 @@ else
     echo "⚠️ Hide Rotary misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Salong → byggnad: biografsalonger geokodade var för sig (Piteå 2026-09-04) ─
+# Ticksters koordinat per SALONG spretar ("Saga - Bio 3:an" låg 14 km utanför
+# stan). Nya event geokodar byggnaden först i skrapan; det här flyttar de
+# redan sparade. En geokodning per byggnad+stad (cachad), idempotent.
+echo "" >> "$LOG_FILE"
+echo "── REPAIR-SALONG (salong → byggnad) ──" >> "$LOG_FILE"
+if npm run repair-salong -- --apply --limit=300 >> "$LOG_FILE" 2>&1; then
+    echo "Repair-salong OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Repair-salong misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Fixa platshållar-midnatt: re-fetcha detail-sidor efter klockslag ────────
 # Kandidater väljs på hasSpecificTime=0 (runnerns flagga) med max 3 försök per
 # event — sedan ger vi upp (sidan saknar klockslag) och eventet ligger kvar på
