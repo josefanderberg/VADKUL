@@ -33,23 +33,30 @@ describe('truncateTitle', () => {
 });
 
 describe('pickShareLines', () => {
-    it('bara kommande event, max n, med emoji/kapad titel/dagetikett', () => {
+    it('bara kommande inom 7 dagar, max n, med emoji/kapad titel/dag + klockslag', () => {
         const now = Date.now();
         const lines = pickShareLines([
             ev({ id: 'past', title: 'Igår', time: new Date(now - 3 * 864e5).toISOString() }),
+            ev({ id: 'far', title: 'Om tre veckor', time: new Date(now + 21 * 864e5).toISOString() }),
             ev({ id: 'a', title: 'Konsert i Acusticum', category: 'music', emoji: '🎵' }),
-            ev({ id: 'b', title: 'Loppis på torget', category: 'market', emoji: '🛍️', locationName: 'Torget' }),
+            ev({ id: 'b', title: 'Loppis på torget', category: 'market', emoji: '🛍️', locationName: 'Torget', hasSpecificTime: false }),
             ev({ id: 'c', title: 'Familjedag', category: 'family', emoji: '🧸', locationName: 'Parken' }),
             ev({ id: 'd', title: 'Match', category: 'sport', emoji: '⚽', locationName: 'Arenan' }),
-        ], 3, now);
-        expect(lines).toHaveLength(3);
-        expect(lines.map(l => l.title)).not.toContain('Igår');
+            ev({ id: 'e', title: 'Schack på biblioteket', category: 'social', emoji: '♟️', locationName: 'Biblioteket' }),
+            ev({ id: 'f', title: 'Vernissage', category: 'art', emoji: '🎨', locationName: 'Galleriet' }),
+        ], 5, now);
+        expect(lines).toHaveLength(5);
+        const titles = lines.map(l => l.title);
+        expect(titles).not.toContain('Igår');
+        expect(titles).not.toContain('Om tre veckor');
         for (const l of lines) {
             expect(l.emoji.length).toBeGreaterThan(0);
-            expect(l.when).toMatch(/^[A-ZÅÄÖ][a-zåäö]{2} \d{1,2}\/\d{1,2}$/);
+            expect(l.when).toMatch(/^[A-ZÅÄÖ][a-zåäö]{2} \d{1,2}\/\d{1,2}( · \d{2}\.\d{2})?$/);
         }
+        const loppis = lines.find(l => l.title === 'Loppis på torget');
+        if (loppis) expect(loppis.when).not.toContain('·');   // utan klockslag → bara dagen
     });
     it('tom lista → tom lista', () => {
-        expect(pickShareLines([], 3)).toEqual([]);
+        expect(pickShareLines([], 5)).toEqual([]);
     });
 });

@@ -13,6 +13,9 @@ name: Deploy till Firebase
 #   FIREBASE_SERVICE_ACCOUNT — hela JSON-nyckeln från Firebase Console →
 #       Projektinställningar → Tjänstkonton → Generera ny privat nyckel
 #   WEB_ENV — hela innehållet i apps/web/.env (NEXT_PUBLIC_*-raderna)
+#   FB_SCRAPE_TOKEN (valfri) — Facebook Graph-token (app-token "APP_ID|APP_SECRET"
+#       eller sidtoken) så delningsbilderna hämtas om efter deploy; saknas den
+#       hoppas steget över.
 on:
   schedule:
     - cron: '0 6 * * *' # UTC → 08:00 svensk sommartid / 07:00 vintertid
@@ -109,3 +112,14 @@ jobs:
           curl -fsS -o /dev/null --max-time 30 https://vadkul.se/sitemap.xml || { echo '::error::sitemap.xml svarar inte'; fail=1; }
           curl -fsS -o /dev/null --compressed --max-time 60 https://vadkul.se/api/events/destinations || { echo '::error::/api/events/destinations svarar inte'; fail=1; }
           exit $fail
+
+      # Facebook cachar delningsbilden per länk i ~30 dagar. Efter varje deploy
+      # ber vi crawlern hämta om roten + stadssidorna, så dagens bild (siffror,
+      # veckans fem event) är den som visas när länken delas (ägarbeslut 4/9:
+      # stadslänken delas i grupper dagligen). Saknas FB_SCRAPE_TOKEN hoppar
+      # steget över — deployen blir aldrig röd av det.
+      - name: Facebook — hämta om delningsbilder
+        run: node scripts/fb-rescrape.mjs
+        working-directory: apps/web
+        env:
+          FB_SCRAPE_TOKEN: ${{ secrets.FB_SCRAPE_TOKEN }}
