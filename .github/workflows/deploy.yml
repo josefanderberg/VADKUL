@@ -111,6 +111,15 @@ jobs:
           [ "${h1:-0}" -ge 1 ] || { echo '::error::Stadssidan saknar <h1> efter deploy — SSR trasig?'; fail=1; }
           curl -fsS -o /dev/null --max-time 30 https://vadkul.se/sitemap.xml || { echo '::error::sitemap.xml svarar inte'; fail=1; }
           curl -fsS -o /dev/null --compressed --max-time 60 https://vadkul.se/api/events/destinations || { echo '::error::/api/events/destinations svarar inte'; fail=1; }
+          # Delningsbilden (4/9): stadssidan ska peka på en og:image som svarar
+          # med en riktig PNG — annars visar Facebook ingen bild vid delning.
+          og=$(curl -fsS --max-time 30 https://vadkul.se/evenemang/pitea | grep -oE 'property="og:image" content="[^"]+"' | head -1 | sed 's/.*content="//;s/"$//')
+          if [ -z "$og" ]; then echo '::error::Stadssidan saknar og:image'; fail=1;
+          else
+            ctype=$(curl -sS -o "$RUNNER_TEMP/og.png" -w '%{content_type}' --max-time 60 "$og" || true)
+            bytes=$(wc -c < "$RUNNER_TEMP/og.png" 2>/dev/null || echo 0)
+            case "$ctype" in image/png*) [ "$bytes" -gt 20000 ] || { echo "::error::og:image för liten ($bytes byte): $og"; fail=1; } ;; *) echo "::error::og:image svarar inte med PNG ($ctype): $og"; fail=1 ;; esac
+          fi
           exit $fail
 
       # Facebook cachar delningsbilden per länk i ~30 dagar. Efter varje deploy
