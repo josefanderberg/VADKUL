@@ -246,18 +246,27 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                         laga mat ihop, ordna vinprovning, plugga eller gå en runda. Det du skapar visas
                         överst på den här sidan och lyfts på kartan.
                     </p>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                        <div className="rounded-2xl bg-white/10 px-3.5 py-3">
-                            <p className="text-xs font-black uppercase tracking-wider text-sky-200">Syns bra</p>
-                            <p className="mt-0.5 text-xs font-medium text-sky-100">Externa event — vi hittar dem åt dig, varje natt.</p>
+                    {/* Trappan: nivåerna ska SE ut som en stegring (Josef 4/9:
+                        "ser knappt skillnad på vänster och höger") — dämpad →
+                        blå med bricka → guld med glow, stigande höjd på
+                        desktop. Argumenten är kartans riktiga beteenden:
+                        VADKUL-event ligger alltid uppe som bricka, boost ger
+                        guldbricka med ⭐ som syns hela veckan före eventet. */}
+                    <div className="mt-4 grid gap-2 sm:grid-cols-3 sm:items-end">
+                        <div className="rounded-2xl bg-white/5 border border-white/10 px-3.5 py-3">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-sky-300/80">Nivå 1</p>
+                            <p className="mt-0.5 text-sm font-black text-sky-100/90">Syns bra</p>
+                            <p className="mt-1 text-xs font-medium leading-snug text-sky-200/70">Externa event — vi hittar dem åt dig, varje natt, och visar dem som prickar på kartan.</p>
                         </div>
-                        <div className="rounded-2xl bg-white/10 px-3.5 py-3">
-                            <p className="text-xs font-black uppercase tracking-wider text-sky-200">Syns mer</p>
-                            <p className="mt-0.5 text-xs font-medium text-sky-100">Skapade på VADKUL — överst på stadssidan, lyfta på kartan.</p>
+                        <div className="rounded-2xl bg-white/15 border border-sky-300/40 px-3.5 py-4 shadow-lg">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-sky-200">Nivå 2 · Skapa gratis</p>
+                            <p className="mt-0.5 text-sm font-black text-white">📌 Syns mer</p>
+                            <p className="mt-1 text-xs font-medium leading-snug text-sky-100">Skapat på VADKUL — egen eventbricka som ligger UPPE på kartan hela tiden, och överst på den här sidan.</p>
                         </div>
-                        <div className="rounded-2xl bg-white/10 px-3.5 py-3 ring-1 ring-[#FECC02]/60">
-                            <p className="text-xs font-black uppercase tracking-wider text-[#FECC02]">⭐ Syns mest</p>
-                            <p className="mt-0.5 text-xs font-medium text-sky-100">Boostade — guldbricka på kartan och första plats här.</p>
+                        <div className="rounded-2xl bg-gradient-to-br from-[#FECC02]/25 to-[#FECC02]/10 border-2 border-[#FECC02] px-3.5 py-5 shadow-xl shadow-[#FECC02]/20">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-[#FECC02]">Nivå 3 · Boost</p>
+                            <p className="mt-0.5 text-sm font-black text-[#FECC02]">⭐ Syns mest</p>
+                            <p className="mt-1 text-xs font-medium leading-snug text-sky-50">Guldbricka med stjärna som lyser på kartan en hel vecka före eventet — och första plats här.</p>
                         </div>
                     </div>
                     <Link

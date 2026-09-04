@@ -20,9 +20,11 @@ import { buildDeepLinkEventIndex, type DeepLinkEvent } from '@/lib/deepLinkEvent
  * ingen internet-egress). Query-param i stället för path-segment: event-id:n
  * ÄR url:er, och %2F i path-segment normaliseras/avvisas av CDN-lager.
  *
- * OBS: användarskapade event (linkEvents) finns INTE i aggregaten och svarar
- * 404 här — deras djuplänkar täcks av kartans egna user-events-hämtning som
- * i praktiken alltid är före aggregaten.
+ * Användarskapade event (linkEvents, userCreated) finns INTE i aggregaten —
+ * de slås upp direkt som dokument vid index-miss (1 doc-read). Antagandet att
+ * kartans egen user-events-hämtning "alltid hinner före" höll inte:
+ * stadssidornas spotlight-länkar (4/9) gav "kunde inte hittas"-toast när
+ * aggregaten blev klara före user-queryn.
  */
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +96,38 @@ async function getIndex(
     return indexBuild;
 }
 
+/** Slå upp ett användarskapat event direkt i linkEvents (index-miss-vägen).
+ *  Bara userCreated och inte dolda — övriga linkEvents hör till aggregaten. */
+async function readUserCreatedEvent(db: Firestore, id: string): Promise<DeepLinkEvent | null> {
+    try {
+        const snap = await db.collection('linkEvents').doc(id).get();
+        if (!snap.exists) return null;
+        const v = snap.data() as Record<string, unknown>;
+        if (v.userCreated !== true || v.hidden === true) return null;
+        const time = v.time && typeof (v.time as { toDate?: unknown }).toDate === 'function'
+            ? (v.time as { toDate: () => Date }).toDate()
+            : new Date(String(v.time ?? ''));
+        if (isNaN(time.getTime())) return null;
+        return {
+            id,
+            title: String(v.title ?? ''),
+            time: time.toISOString(),
+            hasSpecificTime: v.hasSpecificTime !== false,
+            lat: Number(v.lat) || 0,
+            lng: Number(v.lng) || 0,
+            locationName: typeof v.locationName === 'string' ? v.locationName : '',
+            category: typeof v.category === 'string' ? v.category : 'other',
+            hostName: typeof v.hostName === 'string' ? v.hostName : undefined,
+            coverImage: typeof v.coverImage === 'string' && v.coverImage ? v.coverImage : undefined,
+            price: typeof v.price === 'string' || typeof v.price === 'number' ? v.price : undefined,
+            url: typeof v.url === 'string' && v.url ? v.url : undefined,
+            description: typeof v.description === 'string' ? v.description : undefined,
+        };
+    } catch {
+        return null;
+    }
+}
+
 export async function GET(request: Request) {
     const id = new URL(request.url).searchParams.get('id');
     if (!id) {
@@ -118,8 +152,20 @@ export async function GET(request: Request) {
         }
 
         const index = await getIndex(db, updatedAt, destIndexData);
-        const event = index.get(id);
+        let event = index.get(id);
         if (!event) {
+            // Användarskapat event? Doc-id:n innehåller aldrig "://" (skrapade
+            // id:n är url:er) — en direkt doc-läsning är 1 read och bara på miss.
+            if (!id.includes('://')) {
+                const userEvent = await readUserCreatedEvent(db, id);
+                if (userEvent) {
+                    // Kortare cache än aggregat-träffar: skaparen kan redigera/
+                    // dölja sitt event när som helst.
+                    return NextResponse.json({ updatedAt, event: userEvent }, {
+                        headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
+                    });
+                }
+            }
             return NextResponse.json({ error: 'Okänt event' }, { status: 404, headers: MISS_HEADERS });
         }
         return NextResponse.json({ updatedAt, event }, {
