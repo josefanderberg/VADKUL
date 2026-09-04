@@ -147,16 +147,18 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
     // 5×3 tiles (1280×768 px) centrerade på staden täcker hero-ytan
     // (max ~672×320) med god marginal oavsett viewportbredd.
     const tiles: { key: string; src: string; left: number; top: number }[] = [];
-    const subs = ['a', 'b', 'c', 'd'];
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -2; dx <= 2; dx++) {
             const tx = ctx + dx;
             const ty = cty + dy;
             tiles.push({
                 key: `${tx}/${ty}`,
-                // Samma Voyager-kartografi som kartans vektorstil, som raster
-                // (@2x = skarpt på retina). Keyless, kräver bara attribution.
-                src: `https://${subs[(tx + ty) % 4]}.basemaps.cartocdn.com/rastertiles/voyager/${HERO_ZOOM}/${tx}/${ty}@2x.png`,
+                // Esris gatukarta (samma keyless leverantör som satellitläget).
+                // Var Cartos raster-Voyager, men Carto vattenstämplar sedan
+                // slutet av aug -26 nyckellösa rasterkakel med "API KEY
+                // REQUIRED" — vektorstilen ovanpå är fortsatt fri. Kaklen är
+                // ändå bara reservväg under/utan GL.
+                src: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${HERO_ZOOM}/${ty}/${tx}`,
                 left: tx * TILE - center.x,
                 top: ty * TILE - center.y,
             });
@@ -228,9 +230,9 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
                 </span>
             </Link>
 
-            {/* Carto/OSM-attribution — licenskravet gäller även rastertiles. */}
+            {/* Attribution — Carto/OSM för vektorkartan, Esri för reservkaklen. */}
             <span className="absolute bottom-0 right-0 z-20 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 dark:text-zinc-400 bg-white/70 dark:bg-zinc-900/70 rounded-tl pointer-events-none">
-                © OpenStreetMap © CARTO
+                © OpenStreetMap © CARTO © Esri
             </span>
         </div>
     );

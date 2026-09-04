@@ -30,7 +30,6 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 
 const TILE = 256;
-const SUBS = ['a', 'b', 'c', 'd'];
 
 const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
 
@@ -93,7 +92,9 @@ async function loadTiles(
     }
 
     const results = await Promise.allSettled(wanted.map(async ({ tx, ty }) => {
-        const url = `https://${SUBS[(tx + ty) % 4]}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}@2x.png`;
+        // Esris gatukarta — Carto vattenstämplar sedan slutet av aug -26
+        // nyckellösa rasterkakel med "API KEY REQUIRED". Obs z/y/x-ordning.
+        const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${zoom}/${ty}/${tx}`;
         const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
         if (!res.ok) throw new Error(String(res.status));
         const buf = Buffer.from(await res.arrayBuffer());

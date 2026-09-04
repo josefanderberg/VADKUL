@@ -91,6 +91,18 @@ describe('cityBricks', () => {
         for (let i = 0; i < bricks.length; i++) for (let j = i + 1; j < bricks.length; j++)
             expect(Math.hypot(bricks[i].left - bricks[j].left, bricks[i].top - bricks[j].top)).toBeGreaterThanOrEqual(48);
     });
+    it('brickorna bär kategori-gradient och exakt den första har stjärna', () => {
+        const now = Date.now();
+        const events: CityEvent[] = Array.from({ length: 6 }, (_, i) => ev({
+            id: `e${i}`, title: `Event ${i}`, category: ['music', 'sport', 'family'][i % 3],
+            lat: 65.3170 + i * 0.006, lng: 21.4795 + i * 0.008,
+            locationName: `Plats ${i}`, time: new Date(now + 864e5 + i * 36e5).toISOString(),
+        }));
+        const bricks = cityBricks(pitea, events, now);
+        expect(bricks.length).toBeGreaterThan(1);
+        for (const b of bricks) expect(b.bg).toMatch(/gradient/);
+        expect(bricks.map(b => b.star)).toEqual(bricks.map((_, i) => i === 0));
+    });
     it('event utan koordinater, förbi eller >7 dagar bort ger inga brickor', () => {
         const now = Date.now();
         expect(cityBricks(pitea, [

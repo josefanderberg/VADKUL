@@ -4,6 +4,8 @@ import path from 'path';
 import type { CityEvent } from './cityData';
 import { todayKey, weekKeys, countByDayKeys, pickRecommended } from './cityData';
 import { formatCount, pickShareLines } from './cityShare';
+import { sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
+import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 
 // Delningsbild för stads- och kategorisidorna (/evenemang/<stad>[/<kategori>]).
 //
@@ -18,11 +20,15 @@ import { formatCount, pickShareLines } from './cityShare';
 export const SHARE_IMAGE_SIZE = { width: 1200, height: 630 };
 
 // ── Kartbotten per stad (Josef 4/9: "en bild över Stockholm på alla") ──────
-// Samma Carto Voyager-rasterkakel som stadssidans hero (keyless, kräver
-// attribution), monterade vid build: staden hamnar i bildens högra del
+// Esris gatukarta som rasterkakel (samma keyless leverantör som kartans
+// satellitläge), monterade vid build: staden hamnar i bildens högra del
 // (vänster täcks av scrim + text), med stadens egna event som brickor på
 // riktiga positioner. Misslyckas en kakelhämtning faller vi tillbaka på
 // og-karta.jpg — bilden får aldrig saknas.
+// (Var Cartos raster-Voyager, men Carto vattenstämplar sedan slutet av aug -26
+// nyckellösa rasterhämtningar med "API KEY REQUIRED" över hela kartan —
+// vektorstilen som stora kartan använder är fortsatt fri. Byt inte tillbaka
+// utan nyckel.)
 const TILE = 256;
 const MAP_ZOOM = 12;                       // som heron: hela stadskärnan
 const CITY_ANCHOR = { x: 840, y: 315 };    // stadens mittpunkt i bilden
@@ -51,18 +57,17 @@ const defaultTileFetcher: TileFetcher = async (url) => {
 };
 
 type Tile = { src: string; left: number; top: number };
-type Brick = { emoji: string; left: number; top: number };
+type Brick = { emoji: string; left: number; top: number; bg: string; star: boolean };
 
 async function cityTiles(city: { lat: number; lng: number }, fetchTile: TileFetcher): Promise<Tile[] | null> {
     const c = worldPx(city.lat, city.lng, MAP_ZOOM);
     const tlx = c.x - CITY_ANCHOR.x, tly = c.y - CITY_ANCHOR.y;
-    const subs = ['a', 'b', 'c', 'd'];
     const wanted: { tx: number; ty: number }[] = [];
     for (let ty = Math.floor(tly / TILE); ty * TILE < tly + SHARE_IMAGE_SIZE.height; ty++)
         for (let tx = Math.floor(tlx / TILE); tx * TILE < tlx + SHARE_IMAGE_SIZE.width; tx++)
             wanted.push({ tx, ty });
     const bufs = await Promise.all(wanted.map(({ tx, ty }) =>
-        fetchTile(`https://${subs[((tx + ty) % 4 + 4) % 4]}.basemaps.cartocdn.com/rastertiles/voyager/${MAP_ZOOM}/${tx}/${ty}@2x.png`)));
+        fetchTile(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${MAP_ZOOM}/${ty}/${tx}`)));
     if (bufs.some(b => !b)) return null;
     return wanted.map(({ tx, ty }, i) => ({
         src: `data:image/png;base64,${bufs[i]!.toString('base64')}`,
@@ -71,8 +76,17 @@ async function cityTiles(city: { lat: number; lng: number }, fetchTile: TileFetc
     }));
 }
 
+/** Brick-bakgrund ur kategorin — samma markerHex + gradient som kartans
+ *  GL-brickor (och stadssidans hero), så bilden färgmatchar riktiga kartan. */
+function brickBg(category: string): string {
+    const cat = EVENT_CATEGORIES[category as EventCategoryType] as { markerHex?: string } | undefined;
+    return cat?.markerHex ? sourceGradientCss(cat.markerHex) : BRICKA_DARK_BG;
+}
+
 /** Stadens event som brickor i kartans synliga högerdel — rekommenderade
- *  först, glest (min 48 px), max 12. Exporterad för test. */
+ *  först, glest (min 48 px), max 12. Brickorna bär kategori-gradienten och
+ *  den första (bästa rekommenderade) får ⭐ — som stjärnmärkta event på
+ *  riktiga kartan. Exporterad för test. */
 export function cityBricks(city: { lat: number; lng: number }, events: CityEvent[], now = Date.now()): Brick[] {
     const c = worldPx(city.lat, city.lng, MAP_ZOOM);
     const tlx = c.x - CITY_ANCHOR.x, tly = c.y - CITY_ANCHOR.y;
@@ -88,7 +102,7 @@ export function cityBricks(city: { lat: number; lng: number }, events: CityEvent
         const left = p.x - tlx, top = p.y - tly;
         if (left < BRICK_AREA.x0 || left > BRICK_AREA.x1 || top < BRICK_AREA.y0 || top > BRICK_AREA.y1) continue;
         if (out.some(b => Math.hypot(b.left - left, b.top - top) < MIN_BRICK_DIST)) continue;
-        out.push({ emoji: e.emoji || '🎉', left: Math.round(left), top: Math.round(top) });
+        out.push({ emoji: e.emoji || '🎉', left: Math.round(left), top: Math.round(top), bg: brickBg(e.category), star: out.length === 0 });
     }
     return out;
 }
@@ -166,12 +180,21 @@ export async function renderCityShareImage(opts: {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={kartaSrc} width={1200} height={630} alt="" style={{ position: 'absolute', top: 0, left: 0 }} />
                 )}
-                {/* Stadens event som brickor på riktiga positioner (bara på riktig kartbotten) */}
+                {/* Stadens event som brickor på riktiga positioner (bara på riktig
+                    kartbotten): samma nål-droppe som kartans GL-brickor — rundad
+                    kvadrat med tre runda hörn, roterad 45° så spetsen (det fjärde)
+                    pekar nedåt mot koordinaten — i kategori-gradienten, med ⭐ vid
+                    axeln på den bästa rekommenderade (som stjärnmärkta på kartan). */}
                 {bricks.map((b, i) => (
-                    <div key={`b${i}`} style={{ position: 'absolute', left: b.left - 22, top: b.top - 22, width: 44, height: 44, borderRadius: 999, background: '#ffffff', border: '3px solid #006AA7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 4px 12px rgba(2, 30, 55, 0.45)' }}>{b.emoji}</div>
+                    <div key={`b${i}`} style={{ position: 'absolute', left: b.left - 22, top: b.top - 53, width: 44, height: 44, borderRadius: '999px 999px 0 999px', background: b.bg, border: '2px solid rgba(255,255,255,0.4)', transform: 'rotate(45deg)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(2, 30, 55, 0.45)' }}>
+                        <div style={{ display: 'flex', transform: 'rotate(-45deg)', fontSize: 24, lineHeight: 1 }}>{b.emoji}</div>
+                    </div>
+                ))}
+                {bricks.filter(b => b.star).map((b, i) => (
+                    <div key={`s${i}`} style={{ position: 'absolute', left: b.left + 8, top: b.top - 63, display: 'flex', fontSize: 20, textShadow: '0 2px 6px rgba(2, 30, 55, 0.6)' }}>⭐</div>
                 ))}
                 {tiles && (
-                    <div style={{ position: 'absolute', right: 10, bottom: 6, fontSize: 14, color: 'rgba(5,40,70,0.75)', background: 'rgba(255,255,255,0.7)', padding: '2px 8px', borderRadius: 6, display: 'flex' }}>© OpenStreetMap © CARTO</div>
+                    <div style={{ position: 'absolute', right: 10, bottom: 6, fontSize: 14, color: 'rgba(5,40,70,0.75)', background: 'rgba(255,255,255,0.7)', padding: '2px 8px', borderRadius: 6, display: 'flex' }}>© Esri © OpenStreetMap</div>
                 )}
                 {/* Scrim: mörkare och bredare än rotens — här bär vänsterhalvan
                     både rubrik, pills och tre eventrader. */}
