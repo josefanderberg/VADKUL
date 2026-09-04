@@ -92,10 +92,12 @@ async function loadTiles(
     }
 
     const results = await Promise.allSettled(wanted.map(async ({ tx, ty }) => {
-        // Esris gatukarta — Carto vattenstämplar sedan slutet av aug -26
-        // nyckellösa rasterkakel med "API KEY REQUIRED". Obs z/y/x-ordning.
-        const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${zoom}/${ty}/${tx}`;
-        const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        // OpenStreetMaps standardkakel — Carto vattenstämplar keyless raster
+        // sedan aug -26, och Esris gatukarta saknar z12-täckning i norra
+        // Sverige (helblå kakel).
+        const url = `https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`;
+        // OSM:s tile-policy kräver identifierande User-Agent.
+        const res = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { 'User-Agent': 'VADKUL/1.0 (+https://vadkul.se)' } });
         if (!res.ok) throw new Error(String(res.status));
         const buf = Buffer.from(await res.arrayBuffer());
         return {

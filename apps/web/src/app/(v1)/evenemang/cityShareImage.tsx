@@ -21,15 +21,15 @@ import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 export const SHARE_IMAGE_SIZE = { width: 1200, height: 630 };
 
 // ── Kartbotten per stad (Josef 4/9: "en bild över Stockholm på alla") ──────
-// Esris gatukarta som rasterkakel (samma keyless leverantör som kartans
-// satellitläge), monterade vid build: staden hamnar i bildens högra del
+// OpenStreetMaps standardkakel (keyless, full Sverige-täckning på alla
+// zoomnivåer), monterade vid build: staden hamnar i bildens högra del
 // (vänster täcks av scrim + text), med stadens egna event som brickor på
 // riktiga positioner. Misslyckas en kakelhämtning faller vi tillbaka på
 // og-karta.jpg — bilden får aldrig saknas.
-// (Var Cartos raster-Voyager, men Carto vattenstämplar sedan slutet av aug -26
-// nyckellösa rasterhämtningar med "API KEY REQUIRED" över hela kartan —
-// vektorstilen som stora kartan använder är fortsatt fri. Byt inte tillbaka
-// utan nyckel.)
+// Källhistorik (byt inte tillbaka): Cartos raster-Voyager vattenstämplas
+// sedan slutet av aug -26 utan API-nyckel ("API KEY REQUIRED" över hela
+// kartan); Esris gatukarta saknar z12-täckning i norra Sverige och svarar
+// 200 med enfärgat havsblå kakel (Piteå-rapporten 4/9 — "kartan helt blå").
 const TILE = 256;
 const MAP_ZOOM = 12;                       // som heron: hela stadskärnan
 const CITY_ANCHOR = { x: 840, y: 315 };    // stadens mittpunkt i bilden
@@ -80,7 +80,13 @@ async function withTileSlot<T>(fn: () => Promise<T>): Promise<T> {
 async function fetchTileWithRetry(url: string): Promise<Buffer | null> {
     for (let attempt = 0; attempt < TILE_ATTEMPTS; attempt++) {
         try {
-            const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+            const res = await fetch(url, {
+                signal: AbortSignal.timeout(15_000),
+                // OSM:s tile-policy kräver identifierande User-Agent (Nodes
+                // standard-UA riskerar 403). Volymen är låg: kakelcachen gör
+                // ~25 hämtningar per stad och byggprocess, en deploy per dygn.
+                headers: { 'User-Agent': 'VADKUL/1.0 (+https://vadkul.se)' },
+            });
             if (res.ok) return Buffer.from(await res.arrayBuffer());
         } catch { /* nytt försök nedan */ }
         if (attempt < TILE_ATTEMPTS - 1) {
@@ -112,8 +118,13 @@ async function cityTiles(city: { lat: number; lng: number }, fetchTile: TileFetc
         for (let tx = Math.floor(tlx / TILE); tx * TILE < tlx + SHARE_IMAGE_SIZE.width; tx++)
             wanted.push({ tx, ty });
     const bufs = await Promise.all(wanted.map(({ tx, ty }) =>
-        fetchTile(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${MAP_ZOOM}/${ty}/${tx}`)));
+        fetchTile(`https://tile.openstreetmap.org/${MAP_ZOOM}/${tx}/${ty}.png`)));
     if (bufs.some(b => !b)) return null;
+    // Täckningsvakt (Piteå 4/9): en källa utan data på zoomen svarar 200 med
+    // ENFÄRGADE kakel (Esris gatukarta gav helblått hav över norra Sverige) —
+    // ser alla kakel identiska ut är det ingen karta. Hellre Stockholm-
+    // reservbilden än en enfärgad "karta".
+    if (bufs.length > 1 && bufs.every(b => b!.equals(bufs[0]!))) return null;
     return wanted.map(({ tx, ty }, i) => ({
         src: `data:image/png;base64,${bufs[i]!.toString('base64')}`,
         left: Math.round(tx * TILE - tlx),
@@ -238,7 +249,7 @@ export async function renderCityShareImage(opts: {
                     <div key={`s${i}`} style={{ position: 'absolute', left: b.left + 8, top: b.top - 63, display: 'flex', fontSize: 20, textShadow: '0 2px 6px rgba(2, 30, 55, 0.6)' }}>⭐</div>
                 ))}
                 {tiles && (
-                    <div style={{ position: 'absolute', right: 10, bottom: 6, fontSize: 14, color: 'rgba(5,40,70,0.75)', background: 'rgba(255,255,255,0.7)', padding: '2px 8px', borderRadius: 6, display: 'flex' }}>© Esri © OpenStreetMap</div>
+                    <div style={{ position: 'absolute', right: 10, bottom: 6, fontSize: 14, color: 'rgba(5,40,70,0.75)', background: 'rgba(255,255,255,0.7)', padding: '2px 8px', borderRadius: 6, display: 'flex' }}>© OpenStreetMap contributors</div>
                 )}
                 {/* Scrim: mörkare och bredare än rotens — här bär vänsterhalvan
                     både rubrik, pills och tre eventrader. */}
