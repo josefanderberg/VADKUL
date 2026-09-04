@@ -173,6 +173,7 @@ describe('runSource — grundpipeline', () => {
     it('biovisning får 🎬 redan vid spar', async () => {
         await run([makeEvent({ title: 'The Invite', venueName: 'Metropol - Bio 3:an', city: 'Piteå' })]);
         expect(writtenEvents()[0].emoji).toBe('🎬');
+        expect(writtenEvents()[0].category).toBe('stage');
         await run([makeEvent({ title: 'Konsert', venueName: 'Konserthuset' })]);
         expect(writtenEvents()[1].emoji).toBeUndefined();
     });

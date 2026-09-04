@@ -643,12 +643,14 @@ const setPriceStmt = sqlite.prepare('UPDATE link_events SET price = ?, updatedAt
  * ticketmaster.enrichmentPatch) — här skrivs bara. Utelämnade fält rörs inte.
  */
 const setEmojiStmt = sqlite.prepare('UPDATE link_events SET emoji = ?, updatedAt = ? WHERE url = ?');
-export function setEventContent(url: string, patch: { description?: string; hostName?: string; price?: string; emoji?: string }): void {
+const setCategoryStmt = sqlite.prepare('UPDATE link_events SET category = ?, updatedAt = ? WHERE url = ?');
+export function setEventContent(url: string, patch: { description?: string; hostName?: string; price?: string; emoji?: string; category?: string }): void {
     const now = new Date().toISOString();
     if (patch.description !== undefined) setDescriptionStmt.run(patch.description, now, url);
     if (patch.hostName !== undefined) setHostStmt.run(patch.hostName, now, url);
     if (patch.price !== undefined) setPriceStmt.run(patch.price, now, url);
     if (patch.emoji !== undefined) setEmojiStmt.run(patch.emoji, now, url);
+    if (patch.category !== undefined) setCategoryStmt.run(patch.category, now, url);
 }
 
 const bumpGeoRefineStmt = sqlite.prepare(
