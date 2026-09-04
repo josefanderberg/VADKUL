@@ -41,6 +41,7 @@
     "geo-refine": "ts-node src/scripts/geo-refine.ts",
     "repair-geo": "ts-node src/scripts/repair-misplaced-geo.ts",
     "venue-fixes": "ts-node src/scripts/apply-venue-fixes.ts",
+    "hotfix-aggregate": "ts-node src/scripts/hotfix-aggregate-venue.ts",
     "repair-salong": "ts-node src/scripts/repair-salong-geo.ts",
     "refetch-tickster": "ts-node src/scripts/refetch-tickster-geo.ts",
     "backfill-geocode": "ts-node src/scripts/backfill-geocode.ts",
