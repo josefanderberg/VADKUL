@@ -10,8 +10,8 @@
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-27",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-05",
+      "emptyRetries": 2
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
@@ -62,8 +62,8 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-29",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-05",
+      "emptyRetries": 2
     },
     "pitea": {
       "since": "2026-08-19",
@@ -80,14 +80,14 @@
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-29",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-05",
+      "emptyRetries": 2
     },
     "sater": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-29",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-05",
+      "emptyRetries": 2
     },
     "sdhl": {
       "since": "2026-09-01",
@@ -102,8 +102,8 @@
     "stockholm": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-27",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-05",
+      "emptyRetries": 2
     },
     "tingsryd": {
       "since": "2026-08-19",
@@ -117,12 +117,6 @@
       "lastRetry": "2026-09-03",
       "emptyRetries": 2
     },
-    "tjorns-hembygdsforening": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-29",
-      "emptyRetries": 1
-    },
     "trelleborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -132,8 +126,8 @@
     "vasteras": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-29",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-05",
+      "emptyRetries": 2
     }
   }
 }
