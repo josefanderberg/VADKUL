@@ -51,30 +51,39 @@ async function main() {
         SELECT url, firestoreId, title, locationName, lat, lng
         FROM link_events
         WHERE hidden = 0 AND time >= datetime('now')
-    `).all() as { url: string; firestoreId: string | null; title: string; locationName: string; lat: number; lng: number }[];
+    `).all() as { url: string; firestoreId: string | null; title: string | null; locationName: string | null; lat: number | null; lng: number | null }[];
 
-    let moved = 0, alreadyRight = 0, fsErrors = 0;
+    // En trasig rad (NULL-titel, korrupt url …) får ALDRIG fälla hela steget:
+    // run-daily.sh sväljer exit≠0 med en ⚠️-rad och kör vidare, så en krasch
+    // här betyder tyst att inga event flyttas alls (Piteå 5/9 — skogen låg
+    // kvar i nattens aggregat). Därför per-rad-try/catch + null-säkra fält.
+    let moved = 0, alreadyRight = 0, fsErrors = 0, rowErrors = 0;
     for (const e of events) {
-        const fix = matchVenueFix(e.locationName);
-        if (!fix) continue;
-        const dist = distanceKm(e.lat || 0, e.lng || 0, fix.lat, fix.lng);
-        if (dist < 0.1) { alreadyRight++; continue; }
-        console.log(`  🔧 ${e.title.slice(0, 45)} | ${e.locationName} | ${dist.toFixed(1)} km fel${APPLY ? ' → flyttas' : ''}`);
-        if (!APPLY) { moved++; continue; }
-        setEventCoords(e.url, fix.lat, fix.lng, `venue-fix: ${fix.city}`, 'poi');
-        if (db && e.firestoreId) {
-            try {
-                await db.collection('linkEvents').doc(e.firestoreId).update(stamped({
-                    lat: fix.lat, lng: fix.lng, isLocationVerified: true, geoPrecision: 'poi',
-                }));
-            } catch (err: any) {
-                // NOT_FOUND (kod 5) = dokumentet rensat ur Firestore — SQLite räcker.
-                if (err?.code !== 5) { fsErrors++; console.error(`  ⚠️ Firestore-update misslyckades för ${e.url}:`, err?.message); }
+        try {
+            const fix = matchVenueFix(e.locationName);
+            if (!fix) continue;
+            const dist = distanceKm(e.lat || 0, e.lng || 0, fix.lat, fix.lng);
+            if (dist < 0.1) { alreadyRight++; continue; }
+            console.log(`  🔧 ${(e.title ?? '(utan titel)').slice(0, 45)} | ${e.locationName} | ${dist.toFixed(1)} km fel${APPLY ? ' → flyttas' : ''}`);
+            if (!APPLY) { moved++; continue; }
+            setEventCoords(e.url, fix.lat, fix.lng, `venue-fix: ${fix.city}`, 'poi');
+            if (db && e.firestoreId) {
+                try {
+                    await db.collection('linkEvents').doc(e.firestoreId).update(stamped({
+                        lat: fix.lat, lng: fix.lng, isLocationVerified: true, geoPrecision: 'poi',
+                    }));
+                } catch (err: any) {
+                    // NOT_FOUND (kod 5) = dokumentet rensat ur Firestore — SQLite räcker.
+                    if (err?.code !== 5) { fsErrors++; console.error(`  ⚠️ Firestore-update misslyckades för ${e.url}:`, err?.message); }
+                }
             }
+            moved++;
+        } catch (err: any) {
+            rowErrors++;
+            console.error(`  ⚠️ Rad hoppades över (${(e?.url ?? '?').slice(0, 60)}):`, err?.message);
         }
-        moved++;
     }
-    console.log(`✅ Venue-fixar: ${moved} event ${APPLY ? 'flyttade' : 'skulle flyttas'}, ${alreadyRight} stod redan rätt${fsErrors ? `, ${fsErrors} Firestore-fel` : ''}`);
+    console.log(`✅ Venue-fixar: ${moved} event ${APPLY ? 'flyttade' : 'skulle flyttas'}, ${alreadyRight} stod redan rätt${fsErrors ? `, ${fsErrors} Firestore-fel` : ''}${rowErrors ? `, ${rowErrors} trasiga rader överhoppade` : ''}`);
 }
 
 main().then(() => process.exit(0)).catch((err) => { console.error(err); process.exit(1); });
