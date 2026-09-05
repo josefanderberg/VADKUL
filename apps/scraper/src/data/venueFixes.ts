@@ -52,3 +52,25 @@ export function matchVenueFix(locationName: string | null | undefined, fixes: Ve
     }
     return null;
 }
+
+/**
+ * SKRIVVÄGSVAKTEN: tvinga verifierade koordinater på ett event vars
+ * locationName matchar en fix — källkoordinater (Ticksters spretande
+ * salongspunkter) och geokodningsträffar (Saga-namnen i skogen) räknas
+ * inte när platsen är manuellt verifierad. Anropas CENTRALT i dbHelper
+ * (addEventToDb + addEventsBatch, samma mönster som sanitizeEndDate) så
+ * regeln gäller ALLA skrapare och kan inte glömmas i en ny källa.
+ * Muterar eventet; returnerar true när koordinaterna sattes.
+ */
+export function applyVenueFixInPlace(
+    e: { locationName?: string | null; lat?: number; lng?: number; isLocationVerified?: boolean; geoPrecision?: string },
+    fixes: VenueFix[] = VENUE_FIXES,
+): boolean {
+    const fix = matchVenueFix(e.locationName, fixes);
+    if (!fix) return false;
+    e.lat = fix.lat;
+    e.lng = fix.lng;
+    e.isLocationVerified = true;
+    e.geoPrecision = 'poi';
+    return true;
+}

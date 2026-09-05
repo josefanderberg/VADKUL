@@ -1,6 +1,7 @@
 import { db } from '../config/firebase';
 import { upsertEvent, sqliteEventExists, getSqliteEvent, getSqlitePath, setEventTime, setEventCoords, setEventLocationName, setEventEndDate, setEventContent, setEventHost, getSyncMeta } from './sqliteHelper';
 import { sanitizeEndDate } from './eventEnd';
+import { applyVenueFixInPlace } from '../data/venueFixes';
 import { normalizeDateOnlyTime } from './swedishDate';
 import { stamped } from './firestoreStamp';
 
@@ -274,6 +275,10 @@ export async function addEventToDb(eventData: any) {
     // saknat fält skrivs inte alls.
     const cleanEnd = sanitizeEndDate(eventData.time, eventData.endDate);
     if (cleanEnd) eventData.endDate = cleanEnd; else delete eventData.endDate;
+    // Manuellt verifierade venue-koordinater vinner ALLTID över källans/
+    // geokodningens (Piteå 5/9: Ticksters Saga-salong landade i skogen igen
+    // för varje nytt event). Central som endDate-saneringen ovan.
+    applyVenueFixInPlace(eventData);
 
     // 1. Skriv ALLTID till lokal SQLite först — snabbt, offline-säkert.
     try {
@@ -355,6 +360,9 @@ export async function addEventsBatch(
         const norm: any = { ...e, time: afternoonForDateOnly(e.time, e.hasSpecificTime) };
         const cleanEnd = sanitizeEndDate(norm.time, norm.endDate);
         if (cleanEnd) norm.endDate = cleanEnd; else delete norm.endDate;
+        // Samma skrivvägsvakt som addEventToDb: verifierade venue-koordinater
+        // tvingas på oavsett vad källan/geokodningen sa.
+        applyVenueFixInPlace(norm);
         byUrl.set(e.url, norm);
     }
     const prepared = [...byUrl.values()];
