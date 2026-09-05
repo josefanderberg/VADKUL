@@ -55,6 +55,14 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
             type: 'website',
             siteName: 'VADKUL',
             locale: 'sv_SE',
+            // Daglig ?v=-cache-bust mot Facebooks bild-CDN — se stadssidan.
+            images: [{
+                url: `/evenemang/${city.slug}/${cat.slug}/delningsbild.png?v=${todayKey()}`,
+                width: 1200,
+                height: 630,
+                type: 'image/png',
+                alt: 'Evenemang i staden på VADKUL-kartan',
+            }],
         },
     };
 }

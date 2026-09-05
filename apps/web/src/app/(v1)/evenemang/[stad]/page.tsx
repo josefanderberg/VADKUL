@@ -68,6 +68,17 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
             type: 'website',
             siteName: 'VADKUL',
             locale: 'sv_SE',
+            // ?v=<dagens datum> är cache-bust mot Facebooks bild-CDN: bytesen
+            // cachas per bild-URL oberoende av scrape=true, så utan daglig ny
+            // URL visade FB gamla (blå) bilder trots färsk og-metadata (5/9).
+            // Hosting ignorerar queryn — samma statiska PNG serveras.
+            images: [{
+                url: `/evenemang/${city.slug}/delningsbild.png?v=${todayKey()}`,
+                width: 1200,
+                height: 630,
+                type: 'image/png',
+                alt: 'Vad händer i staden? Evenemang på VADKUL-kartan',
+            }],
         },
     };
 }
