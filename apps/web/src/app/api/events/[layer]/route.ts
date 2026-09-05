@@ -4,6 +4,7 @@ import { readFile, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { getAdminDb } from '@/lib/firestore-admin';
+import { applyVenueFixInPlace } from '@/data/venueFixes';
 
 /**
  * CDN-cachad utlämning av event-aggregaten (destinations/cards/descriptions).
@@ -177,6 +178,15 @@ export async function GET(
                     for (const s of snaps) if (s.exists) events.push(...(((s.data() as any)?.events) || []));
                     body = { updatedAt, events };
                 }
+            }
+            // LÄS-VAKT (Piteå 5/9): minins re-aggregat kan bära gamla
+            // koordinater tills dess SQLite synkat — manuellt verifierade
+            // venue-koordinater (data/venueFixes) tvingas därför även vid
+            // UTLÄMNING, så kartan alltid får rätt punkt oavsett vad som
+            // laddats upp. Bara destinations bär koordinater. Körs en gång
+            // per datauppdatering och instans (packningen cachas).
+            if (layer === 'destinations' && Array.isArray(body?.events)) {
+                for (const e of body.events) applyVenueFixInPlace(e);
             }
             // Packa här i stället för att lita på att CDN:en komprimerar
             // funktions-svar — garanterat färre fakturerade byte.

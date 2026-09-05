@@ -4,6 +4,7 @@ import { emojiForCategory } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { planCategoryChips, CATEGORY_PAGE_MIN_BIG } from '@/utils/categoryChips';
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
+import { applyVenueFixInPlace } from '@/data/venueFixes';
 
 // Stadssidornas dataunderlag. Läser samma events-JSON som kartan använder som
 // fallback (public/events-*.json) — vid BUILD, så sidorna är helt statiska.
@@ -88,6 +89,9 @@ function loadData() {
                 pub('events-descriptions.json').catch(() => null),
             ]);
             const destJson = JSON.parse(destRaw) as { updatedAt?: string; events: RawDest[] };
+            // Verifierade venue-koordinater tvingas även i build-datat (Piteå
+            // 5/9): deploy-snapshoten kan vara dragen mitt i ett fel-aggregat.
+            for (const e of destJson.events) applyVenueFixInPlace(e);
             const cardJson = JSON.parse(cardRaw) as { events: RawCard[] };
             const cards = new Map<string, RawCard>();
             for (const c of cardJson.events) cards.set(c.id, c);
