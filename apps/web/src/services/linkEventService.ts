@@ -2,6 +2,7 @@ import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
 import { doc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuthHeaders } from '../lib/authHeaders';
+import { applyVenueFixInPlace } from '../data/venueFixes';
 
 /**
  * Är eventet boostat just nu? Sant om featuredUntil finns och ligger i framtiden.
@@ -341,6 +342,9 @@ function hasSpecificTimeOf(evt: any, time: Date): boolean {
 
 function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
     return events.map((evt: any) => {
+        // Verifierade venue-koordinater tvingas SIST i kedjan också (Piteå
+        // 5/9): täcker även cachade/gamla API-svar och deploy-snapshoten.
+        applyVenueFixInPlace(evt);
         const time = new Date(evt.time);
         // Slutdatum (flerdagarsevent) — pipelinen validerar redan, men en
         // trasig/omvänd sträng ska inte ge kortet ett bakvänt spann.
