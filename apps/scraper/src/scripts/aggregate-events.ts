@@ -1,6 +1,7 @@
 import { db } from '../config/firebase';
 import { publicUrl } from '../utils/affiliateUrl';
 import { sqlite } from '../utils/sqliteHelper';
+import { applyVenueFixInPlace } from '../data/venueFixes';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -77,6 +78,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     // dess bounds-filter. Sanera till 0,0 (webben döljer 0,0) så ett dåligt
     // event aldrig kan släcka kartan för alla andra. Loggas för uppföljning.
     let droppedCoords = 0;
+    let venueFixed = 0;
     const safeCoord = (lat: number, lng: number): [number, number] => {
         if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return [lat, lng];
         droppedCoords++;
@@ -92,6 +94,12 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         // string"), vilket fällde HELA descriptions-uppladdningen. VADKUL-värdade
         // event saknar url by design och läses live, inte härifrån.
         if (!id) { skippedNoUrl++; return; }
+        // Venue-vakt: manuellt verifierade koordinater tvingas ÄVEN här, sist i
+        // kedjan före publicering. Nattens venue-fixes-steg kan faila tyst
+        // (run-daily.sh kör vidare på ⚠️ — Piteå 5/9: aggregatet byggdes med
+        // skogen kvar trots steget), och audit-daemonens omaggregeringar går
+        // också genom runAggregation — så vakten här täcker båda vägarna.
+        if (applyVenueFixInPlace(row)) venueFixed++;
         const [safeLat, safeLng] = safeCoord(Number(row.lat) || 0, Number(row.lng) || 0);
         // NULL (legacy-rad som inte backfillats) tolkas som "har tid" bara om
         // klockslaget inte är midnatt — samma heuristik som webben använt.
@@ -145,6 +153,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     }
     if (droppedCoords > 0) {
         console.log(`   ⚠️  ${droppedCoords} event hade ogiltiga koordinater (utanför WGS84) — sanerade till 0,0 i kartlagret`);
+    }
+    if (venueFixed > 0) {
+        console.log(`   📍 ${venueFixed} event fick verifierade venue-koordinater vid aggregering (venueFixes-vakten)`);
     }
 
     // "Null island": ogeokodade events på (0,0) och dess närområde. De stannar
