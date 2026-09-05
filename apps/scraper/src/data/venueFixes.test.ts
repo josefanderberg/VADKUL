@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchVenueFix, VENUE_FIXES, type VenueFix } from './venueFixes';
+import { matchVenueFix, applyVenueFixInPlace, VENUE_FIXES, type VenueFix } from './venueFixes';
 
 const FIXES: VenueFix[] = [{
     names: ['Saga - Bio 3:an', 'Bio 3:an'],
@@ -29,5 +29,28 @@ describe('matchVenueFix', () => {
             expect(fix.city).toBeTruthy();
             expect(fix.note).toBeTruthy();
         }
+    });
+});
+
+describe('applyVenueFixInPlace', () => {
+    const fixes: VenueFix[] = [{ names: ['Testhallen'], city: 'Piteå', lat: 65.32058, lng: 21.47594, note: 'test' }];
+
+    it('tvingar verifierade koordinater över källans', () => {
+        const e = { locationName: 'Testhallen', lat: 65.2523, lng: 21.2211 };
+        expect(applyVenueFixInPlace(e, fixes)).toBe(true);
+        expect(e).toMatchObject({ lat: 65.32058, lng: 21.47594, isLocationVerified: true, geoPrecision: 'poi' });
+    });
+
+    it('rör inte event utan träff — även utan koordinater', () => {
+        const e = { locationName: 'Annan plats', lat: 1, lng: 2 };
+        expect(applyVenueFixInPlace(e, fixes)).toBe(false);
+        expect(e).toMatchObject({ lat: 1, lng: 2 });
+        expect(applyVenueFixInPlace({ locationName: null }, fixes)).toBe(false);
+    });
+
+    it('sätter koordinater även när eventet saknar dem (källa utan geo)', () => {
+        const e: { locationName: string; lat?: number; lng?: number } = { locationName: 'testhallen ' };
+        expect(applyVenueFixInPlace(e, fixes)).toBe(true);
+        expect(e.lat).toBe(65.32058);
     });
 });
