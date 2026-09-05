@@ -19,14 +19,51 @@
  */
 
 import { db } from '../config/firebase';
+import { stamped } from '../utils/firestoreStamp';
 import { VENUE_FIXES, matchVenueFix } from '../data/venueFixes';
 import { uploadShardedLayer } from './aggregate-events';
 
 const APPLY = process.argv.includes('--apply');
 
+/** Rätta KÄLLDOKUMENTEN i linkEvents — inte bara den publicerade kartbilden.
+ *  Utan detta re-aggregerar minin fel koordinater ur sin SQLite varje timme
+ *  och skogen kommer tillbaka (Piteå-natten 4–5/9: tre överskrivningar).
+ *  Via stamped() plockar minins inkrementella sync hem rättningen till sin
+ *  SQLite → alla framtida aggregat blir rätt, oavsett venue-fixes-steget.
+ *  Filtrerad 'in'-query på locationName (max 30 värden) — aldrig hela
+ *  kollektionen. */
+async function fixSourceDocs(firestore: NonNullable<typeof db>): Promise<number> {
+    const names = VENUE_FIXES.flatMap(f => f.names);
+    let fixedDocs = 0;
+    for (let i = 0; i < names.length; i += 30) {
+        const snap = await firestore.collection('linkEvents')
+            .where('locationName', 'in', names.slice(i, i + 30))
+            .get();
+        for (const doc of snap.docs) {
+            const v = doc.data() as { locationName?: string; lat?: number; lng?: number };
+            const fix = matchVenueFix(v.locationName, VENUE_FIXES);
+            if (!fix) continue;
+            const off = Math.abs((v.lat ?? 0) - fix.lat) > 1e-4 || Math.abs((v.lng ?? 0) - fix.lng) > 1e-4;
+            if (!off) continue;
+            console.log(`   🗂  linkEvents/${doc.id} | ${v.locationName} | ${v.lat},${v.lng} → ${fix.lat},${fix.lng}`);
+            if (APPLY) {
+                await doc.ref.update(stamped({
+                    lat: fix.lat, lng: fix.lng,
+                    isLocationVerified: true, geoPrecision: 'poi',
+                }));
+            }
+            fixedDocs++;
+        }
+    }
+    return fixedDocs;
+}
+
 async function main() {
     if (!db) throw new Error('Firestore ej initierad (service-account.json saknas).');
     console.log(APPLY ? '🔧 APPLY' : '🔍 DRY-RUN');
+
+    const fixedDocs = await fixSourceDocs(db);
+    console.log(`${APPLY ? 'Rättade' : 'Skulle rätta'} källdokument i linkEvents: ${fixedDocs}`);
 
     const indexSnap = await db.collection('aggregatedEvents').doc('destinations').get();
     const index = indexSnap.data();
