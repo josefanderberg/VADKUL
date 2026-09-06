@@ -39,7 +39,13 @@ function listTimes(times: ReminderTime[]): string {
  * fel eller väcka folk mitt i natten. Ägarvänligt val: klockan INAKTIVERAS
  * där i stället för att lova en notis vi inte kan pricka.
  */
-export default function EventReminderBell({ linkEvent }: { linkEvent: LinkEvent }) {
+export default function EventReminderBell({ linkEvent, onRequireLogin }: {
+    /** Bara fälten klockan läser — stadssidornas rader är inte hela LinkEvents. */
+    linkEvent: Pick<LinkEvent, 'id' | 'time' | 'hasSpecificTime'>;
+    /** Utloggad-klick: öppna inloggningsmodal i stället för 🔑-toasten
+     *  (stadssidorna har modalen till hands; kartkortet behåller toasten). */
+    onRequireLogin?: () => void;
+}) {
     const { user } = useAuth();
     const [isOn, setIsOn] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -73,7 +79,8 @@ export default function EventReminderBell({ linkEvent }: { linkEvent: LinkEvent 
         e.stopPropagation();
         if (disabled || busy) return;
         if (!user) {
-            toast('Logga in för att få påminnelser.', { icon: '🔑' });
+            if (onRequireLogin) onRequireLogin();
+            else toast('Logga in för att få påminnelser.', { icon: '🔑' });
             return;
         }
         setBusy(true);
