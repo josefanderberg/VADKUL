@@ -1,5 +1,11 @@
-const CACHE_NAME = 'vadkul-v1';
-const STATIC_CACHE = 'vadkul-static-v1';
+// v2 (2026-09-06): cache-first-villkoret matchade ".js" som SUBSTRÄNG och
+// träffade därmed alla .json-DATAFILER (events-today.json, events-
+// destinations.json, manifest.json …). De fastnade för evigt i cachen →
+// kartan bootade på veckor gammal eventdata och stod tom tills 5-min-pollen.
+// Versionsbumpen raderar de förgiftade cacharna hos alla besökare (activate
+// rensar allt som inte heter exakt så här).
+const CACHE_NAME = 'vadkul-v2';
+const STATIC_CACHE = 'vadkul-static-v2';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -47,13 +53,15 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(request)
             .then(cached => {
-                // For static assets, return cached version
+                // For static assets, return cached version.
+                // OBS: matcha på PATHNAME-SLUT, aldrig substräng — ".js" som
+                // includes() träffade ".json" och frös eventdatan (se v2-
+                // kommentaren överst). JSON går ALDRIG cache-first: aggregat-
+                // filerna byts varje natt under samma URL. Nexts chunkar under
+                // /_next/static/ är innehållshashade och säkra att cachea hårt.
                 if (cached && (
-                    request.url.includes('.png') ||
-                    request.url.includes('.jpg') ||
-                    request.url.includes('.css') ||
-                    request.url.includes('.js') ||
-                    request.url.includes('manifest.json')
+                    /\.(png|jpg|jpeg|webp|gif|svg|css|woff2?)$/.test(url.pathname) ||
+                    url.pathname.startsWith('/_next/static/')
                 )) {
                     return cached;
                 }
