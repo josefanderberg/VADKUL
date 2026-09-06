@@ -4,8 +4,8 @@
     "cirkus": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-28",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-06",
+      "emptyRetries": 2
     },
     "dalhalla": {
       "since": "2026-08-19",
@@ -22,8 +22,8 @@
     "folk-goteborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-28",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-06",
+      "emptyRetries": 2
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
@@ -38,8 +38,8 @@
     "nordmaling": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-28",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-06",
+      "emptyRetries": 2
     },
     "nybro": {
       "since": "2026-08-19",
@@ -56,8 +56,8 @@
     "orebro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-30",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-06",
+      "emptyRetries": 2
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -68,8 +68,8 @@
     "pitea": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-28",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-06",
+      "emptyRetries": 2
     },
     "pustervik": {
       "since": "2026-08-21",
@@ -93,6 +93,10 @@
       "since": "2026-09-01",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
+    "sollero-hembygdsforening": {
+      "since": "2026-09-06",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -108,8 +112,8 @@
     "tingsryd": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-28",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-06",
+      "emptyRetries": 2
     },
     "tjorn": {
       "since": "2026-08-19",
@@ -120,8 +124,8 @@
     "trelleborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-28",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-06",
+      "emptyRetries": 2
     },
     "vasteras": {
       "since": "2026-08-19",
