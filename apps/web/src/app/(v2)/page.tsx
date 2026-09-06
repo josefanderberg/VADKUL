@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { EventWish, LinkEvent } from '@/types';
-import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
+import { linkEventService, isBoostShownEveryDay, expandWeekly } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
@@ -477,6 +477,13 @@ export default function HomePage() {
     // "Ändra plats"-varvet: modalen göms, en center-pin + bekräfta-pill visas
     // och kartan kan panoreras. Bekräfta → pickedLocation = kartans mitt.
     const [repicking, setRepicking] = useState(false);
+    // REDIGERING (Josef 6/9: "om man skapar ett event kan man inte redigera
+    // det efteråt"): dokument-id:t på eventet som formuläret ändrar, null =
+    // vanligt skapande. Samma modal och fält — Spara går till updateUserEvent
+    // i stället för create. editingOriginalRef bär originalet (hostName,
+    // coverImage, attendees …) så oförändrade fält inte tappas.
+    const [editingEventId, setEditingEventId] = useState<string | null>(null);
+    const editingOriginalRef = useRef<LinkEvent | null>(null);
     // Aktiva önskningar (egen 30 s-poll — blandas ALDRIG in i events-listan,
     // aggregaten eller "Nästa"-poolen). selectedWish = öppet önske-kort.
     const [wishes, setWishes] = useState<EventWish[]>([]);
@@ -509,6 +516,8 @@ export default function HomePage() {
         setCreateKind('event');
         setFulfillingWish(null);
         setRepicking(false);
+        setEditingEventId(null);
+        editingOriginalRef.current = null;
     }, []);
 
     /**
@@ -525,6 +534,41 @@ export default function HomePage() {
         const t = new Date(); t.setMinutes(0, 0, 0); t.setHours(t.getHours() + 1);
         const pad = (n: number) => String(n).padStart(2, '0');
         setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
+        setCreationMode('editing');
+    }, []);
+
+    /**
+     * Öppna formuläret FÖRIFYLLT från ett befintligt eget event (kortets
+     * Redigera-knapp). Ett tillfälle i en veckoserie redigerar SERIEN
+     * (seriesId/basdokumentet); tiden förifylls från tillfället man tittar
+     * på — sparas den flyttar seriens veckodag/klockslag med, precis som
+     * skapa-formulärets text lovar.
+     */
+    const handleEditOwnEvent = useCallback((evt: LinkEvent) => {
+        const docId = (evt.seriesId ?? evt.id).split('__')[0];
+        editingOriginalRef.current = evt;
+        setEditingEventId(docId);
+        setCreateKind('event');
+        setFulfillingWish(null);
+        setRepicking(false);
+        setNewEventRole(evt.isTip || !!evt.url ? 'tip' : 'host');
+        setNewEventTitle(evt.title);
+        const t = evt.time;
+        const pad = (n: number) => String(n).padStart(2, '0');
+        setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
+        setNewEventCategory((evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other') as EventCategoryType);
+        setNewEventPlace(evt.locationName || '');
+        setNewEventPrice(evt.price ? String(evt.price) : '');
+        setNewEventDescription(evt.description || '');
+        setNewEventUrl(evt.url || '');
+        setNewEventHost(evt.isTip || evt.url ? evt.hostName || '' : '');
+        setNewEventRepeatWeekly(!!evt.repeatWeekly);
+        setNewEventRepeatWeeks(evt.repeatWeeks ?? null);
+        // Befintlig bild visas som förhandsvisning ("behåll"). Krysset tömmer
+        // den → bilden tas bort vid Spara; ny fil ersätter den.
+        setNewEventImage(null);
+        setNewEventImagePreview(evt.coverImage || '');
+        setPickedLocation({ lat: evt.lat, lng: evt.lng });
         setCreationMode('editing');
     }, []);
 
@@ -1452,6 +1496,64 @@ export default function HomePage() {
             // (inget fält skrivs alls). Samma normalisering som korten kör på
             // skrapade priser, gjord EN gång vid skapandet.
             const price = normalizePriceLabel(newEventPrice) ?? undefined;
+
+            // ── REDIGERING: samma formulär, men Spara uppdaterar dokumentet ──
+            if (editingEventId) {
+                const orig = editingOriginalRef.current;
+                // Bild: ny fil vinner; annars behålls originalet så länge för-
+                // handsvisningen står kvar; tömd förhandsvisning = ta bort bilden.
+                let editImage = newEventImagePreview ? (orig?.coverImage ?? '') : '';
+                if (coverImage) editImage = coverImage;
+                // Värden: tips ändrar via fältet (som vid skapande); eget event
+                // behåller originalets värd — den ska inte räknas om.
+                const editHostName = isTip ? hostName : (orig?.hostName || hostName);
+                await linkEventService.updateUserEvent(editingEventId, {
+                    title: newEventTitle,
+                    time,
+                    lat: pickedLocation.lat,
+                    lng: pickedLocation.lng,
+                    locationName: newEventPlace,
+                    description: newEventDescription,
+                    price,
+                    category: newEventCategory,
+                    hostName: editHostName,
+                    coverImage: editImage,
+                    url: tipUrl ?? '',
+                    isTip,
+                    repeatWeekly: newEventRepeatWeekly,
+                    repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
+                });
+                const updated: LinkEvent = {
+                    ...(orig ?? ({} as LinkEvent)),
+                    id: editingEventId, seriesId: undefined,
+                    url: tipUrl ?? '', title: newEventTitle.trim(), time,
+                    locationName: newEventPlace.trim(), lat: pickedLocation.lat, lng: pickedLocation.lng,
+                    hostName: editHostName, category: newEventCategory,
+                    coverImage: editImage, description: newEventDescription.trim(), price,
+                    userCreated: true, isTip,
+                    repeatWeekly: newEventRepeatWeekly,
+                    repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
+                } as LinkEvent;
+                // Optimistiskt: byt ut ALLA tillfällen som hör till dokumentet
+                // (en veckoserie ligger utvecklad i listan) mot de nya.
+                const occurrences = newEventRepeatWeekly ? expandWeekly(updated, new Date()) : [updated];
+                const belongsTo = (id: string) => id === editingEventId || id.startsWith(`${editingEventId}__`);
+                myCreatedRef.current = [...myCreatedRef.current.filter(e => !belongsTo(e.id)), updated];
+                lastUserEventsRef.current = [...lastUserEventsRef.current.filter(e => !belongsTo(e.id)), ...occurrences];
+                setEvents(prev => [...prev.filter(e => !belongsTo(e.id)), ...occurrences]
+                    .sort((a, b) => a.time.getTime() - b.time.getTime()));
+                // Följ eventet till dess (kanske nya) dag — annars redigerar man
+                // bort det ur den visade dagen och tror att det försvann.
+                const startToday0 = new Date(); startToday0.setHours(0, 0, 0, 0);
+                const startEvt0 = new Date(time); startEvt0.setHours(0, 0, 0, 0);
+                setDayOffset(Math.round((startEvt0.getTime() - startToday0.getTime()) / 86_400_000));
+                setDayRangeDays(1);
+                setSelectedEvent(occurrences[0] ?? updated);
+                toast.success('Eventet är uppdaterat! ✅');
+                resetCreateFlow();
+                return;
+            }
+
             const docId = await linkEventService.createUserEvent({
                 title: newEventTitle,
                 time,
@@ -1519,7 +1621,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatWeeks, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatWeeks, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -3481,11 +3583,12 @@ export default function HomePage() {
                         className="bg-card dark:border dark:border-white/10 rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4 max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain [touch-action:pan-y]"
                     >
                         <h2 id="create-event-title" className="text-xl font-bold text-slate-800 dark:text-white">
-                            {fulfillingWish ? 'Skapa eventet av önskan' : createKind === 'wish' ? 'Önska event' : 'Skapa event'}
+                            {editingEventId ? 'Ändra event' : fulfillingWish ? 'Skapa eventet av önskan' : createKind === 'wish' ? 'Önska event' : 'Skapa event'}
                         </h2>
                         {/* Läge: skapa på riktigt eller önska. Gömd när modalen öppnats
-                            från en önskan ("Skapa det här eventet") — då skapar man. */}
-                        {!fulfillingWish && (
+                            från en önskan ("Skapa det här eventet") — då skapar man —
+                            och vid redigering (ett event kan inte bli en önskan). */}
+                        {!fulfillingWish && !editingEventId && (
                             <div className="flex rounded-full bg-slate-100 dark:bg-slate-800 p-1 text-sm font-bold" role="tablist" aria-label="Skapa eller önska">
                                 <button
                                     type="button"
@@ -3804,7 +3907,9 @@ export default function HomePage() {
                                 {/* Tips kräver inget konto → aldrig "Logga in &"-varianten
                                     där. Önska och arrangera gör det fortfarande. */}
                                 {creatingEvent
-                                    ? (createKind === 'wish' ? 'Önskar…' : 'Skapar…')
+                                    ? (editingEventId ? 'Sparar…' : createKind === 'wish' ? 'Önskar…' : 'Skapar…')
+                                    : editingEventId
+                                    ? 'Spara ändringar'
                                     : createKind === 'event' && newEventRole === 'tip'
                                     ? 'Tipsa 💡'
                                     : user
@@ -3925,7 +4030,11 @@ export default function HomePage() {
             {creationMode === 'placing' && deepPlacing && (
                 <>
                     <div aria-hidden className="pointer-events-none fixed left-1/2 top-1/2 z-[1190] -translate-x-1/2 -translate-y-[85%] text-4xl drop-shadow-lg">📍</div>
-                    <div className="fixed inset-x-0 bottom-24 z-[1190] flex justify-center px-4 pointer-events-none">
+                    {/* Bannern PRECIS UNDER nålen (Josef 6/9: "passar bättre
+                        precis under den") — nålens fot står i kartans mitt, så
+                        rutan börjar strax under mitten i stället för i botten
+                        (där krockade den dessutom med dagväljaren). */}
+                    <div className="fixed inset-x-0 top-[calc(50%+18px)] z-[1190] flex justify-center px-4 pointer-events-none">
                         <div className="pointer-events-auto flex flex-col items-center gap-2.5 rounded-3xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-5 py-3.5 max-w-sm">
                             <div className="text-center">
                                 <p className="text-sm font-black text-slate-800">Var vill du att din aktivitet ska äga rum?</p>
@@ -3959,7 +4068,8 @@ export default function HomePage() {
             {creationMode === 'editing' && repicking && (
                 <>
                     <div aria-hidden className="pointer-events-none fixed left-1/2 top-1/2 z-[1190] -translate-x-1/2 -translate-y-[85%] text-4xl drop-shadow-lg">📍</div>
-                    <div className="fixed inset-x-0 bottom-24 z-[1190] flex justify-center px-4 pointer-events-none">
+                    {/* Samma placering som placerings-bannern: precis under nålen. */}
+                    <div className="fixed inset-x-0 top-[calc(50%+18px)] z-[1190] flex justify-center px-4 pointer-events-none">
                         <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-white/50 pl-4 pr-2 py-2">
                             <span className="text-sm font-semibold text-slate-700">Panorera kartan till rätt plats</span>
                             <button
@@ -4119,6 +4229,7 @@ export default function HomePage() {
                 onRequireLogin={() => openLogin('Logga in för att chatta')}
                 currentUserUid={user?.uid}
                 onDeleteOwnEvent={handleDeleteOwnEvent}
+                onEditOwnEvent={handleEditOwnEvent}
                 onBoostOwnEvent={handleBoostOwnEvent}
                 starredEventIds={starredEventIds}
                 canPlaceStar={starsAvailable > 0}

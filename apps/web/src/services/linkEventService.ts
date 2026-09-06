@@ -1,6 +1,6 @@
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
-import { doc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuthHeaders } from '../lib/authHeaders';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 
@@ -579,6 +579,43 @@ export const linkEventService = {
             },
             (err) => { console.warn('Kunde inte lyssna på anmälningar:', err); callback([]); }
         );
+    },
+
+    /**
+     * Uppdatera ett eget användarskapat event (reglerna släpper bara igenom
+     * hostUid == auth.uid, och aldrig boost-fälten). Tomma valfria fält
+     * RADERAS ur dokumentet (deleteField) — "inget pris" ska betyda inget
+     * pris-chip, inte en kvarglömd gammal etikett. `updatedAt` stämplas som
+     * scraperns stamped(): utan den missar den inkrementella SQLite-syncen
+     * ändringen (create går på createdAt och är redan täckt).
+     */
+    async updateUserEvent(id: string, input: {
+        title: string; time: Date; lat: number; lng: number;
+        locationName?: string; category?: string; description?: string;
+        price?: string; hostName: string; coverImage?: string; url?: string;
+        isTip?: boolean; repeatWeekly?: boolean; repeatWeeks?: number;
+    }): Promise<void> {
+        if (!db) throw new Error('Firestore ej initierad');
+        const payload: Record<string, unknown> = {
+            title: input.title.trim(),
+            time: Timestamp.fromDate(input.time),
+            lat: input.lat,
+            lng: input.lng,
+            locationName: input.locationName?.trim() || '',
+            category: input.category || 'other',
+            description: input.description?.trim() || '',
+            hostName: input.hostName,
+            url: input.url || '',
+            price: input.price ? input.price.slice(0, 40) : deleteField(),
+            coverImage: input.coverImage || deleteField(),
+            isTip: input.isTip ? true : deleteField(),
+            repeatWeekly: input.repeatWeekly ? true : deleteField(),
+            repeatWeeks: input.repeatWeekly && input.repeatWeeks && input.repeatWeeks >= 1
+                ? Math.floor(input.repeatWeeks)
+                : deleteField(),
+            updatedAt: serverTimestamp(),
+        };
+        await updateDoc(doc(db, 'linkEvents', id), payload);
     },
 
     /**

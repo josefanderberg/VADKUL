@@ -681,6 +681,8 @@ interface EventCardProps {
     /** Inloggad användares uid — ägaren av ett användarskapat event får ta bort det. */
     currentUserUid?: string;
     onDeleteOwnEvent?: (eventId: string) => void;
+    /** Redigera sitt eget event — öppnar skapa-formuläret förifyllt (6/9). */
+    onEditOwnEvent?: (evt: LinkEvent) => void;
     /** Boosta (featura) ett event — startar Stripe Checkout på vald nivå
      *  (nivåerna ägs av BOOST_TIERS; väljs i kortets BoostTierPicker). */
     onBoostOwnEvent?: (eventId: string, tier: BoostTier) => void;
@@ -698,7 +700,7 @@ interface EventCardProps {
     fullOpenNonce?: number;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -2447,6 +2449,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             && (selectedEvent.anonTip
                                 || (currentUserUid && selectedEvent.hostUid === currentUserUid)))}
                         onDeleteOwn={onDeleteOwnEvent ? () => onDeleteOwnEvent(selectedEvent.id) : undefined}
+                        // Redigera är snävare än radera: bara ägaren (anonyma
+                        // tips får raderas av alla, men inte skrivas om).
+                        canEdit={!!(selectedEvent.userCreated && currentUserUid
+                            && selectedEvent.hostUid === currentUserUid)}
+                        onEditOwn={onEditOwnEvent ? () => onEditOwnEvent(selectedEvent) : undefined}
                         // Boost: alla inloggade får boosta ALLA event — användarskapade
                         // (5/8) OCH skrapade (18/8: featuredUntil för skrapade bor i
                         // eventBoosts-overlayn, se createBoostCheckout/boostTargetRef).

@@ -1,4 +1,4 @@
-import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil } from 'lucide-react';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -63,6 +63,11 @@ interface LinkEventCardProps {
     /** Ägaren av ett användarskapat event får ta bort det (reglerna verifierar). */
     canDelete?: boolean;
     onDeleteOwn?: () => void;
+    /** Ägaren får REDIGERA sitt event (Josef 6/9) — öppnar skapa-formuläret
+     *  förifyllt. Snävare än canDelete: anonyma tips får raderas av vem som
+     *  helst (spam-städning) men bara ändras av sin ägare. */
+    canEdit?: boolean;
+    onEditOwn?: () => void;
     /** Ägaren får boosta sitt event (Stripe Checkout). Visas bredvid "Ta bort".
      *  Nivån (1 dag/vecka/månad) väljs i BoostTierPicker innan callbacken fyras. */
     onBoost?: (tier: BoostTier) => void;
@@ -95,7 +100,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
@@ -778,6 +783,19 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         >
                                             <Rocket size={14} />
                                             {isEventFeatured(linkEvent) ? 'Förläng boost' : 'Boosta eventet'}
+                                        </button>
+                                    )}
+                                    {canEdit && onEditOwn && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onEditOwn();
+                                            }}
+                                            className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-[#006AA7] hover:text-[#00598c] dark:text-sky-400 dark:hover:text-sky-300 py-1.5 transition-colors"
+                                        >
+                                            <Pencil size={13} />
+                                            Redigera eventet
                                         </button>
                                     )}
                                     {canDelete && onDeleteOwn && (
