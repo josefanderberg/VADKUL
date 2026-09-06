@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { composeSpotlightRows, spotDistKm, spotWhen, SPOTLIGHT_MAX_BOOSTED, SPOTLIGHT_MAX_VADKUL } from './citySpotlight';
+import { composeSpotlightRows, spotDistKm, spotWhen, spotFrame, SPOTLIGHT_MAX_BOOSTED, SPOTLIGHT_MAX_VADKUL } from './citySpotlight';
 
 const NOW = new Date('2026-09-04T18:00:00Z').getTime();
 const at = (h: number) => new Date(NOW + h * 36e5).toISOString();
@@ -48,5 +48,18 @@ describe('spotWhen', () => {
         expect(spotWhen('2026-09-12T15:00:00Z', NOW)).toMatch(/12 sep/);
         // Lokal midnatt (22:00Z sommartid) = datum utan klockslag.
         expect(spotWhen('2026-09-11T22:00:00Z', NOW)).not.toMatch(/\d\d:\d\d/);
+    });
+});
+
+describe('spotFrame', () => {
+    it('guld vinner över grön, grön över blå, tips är blå', () => {
+        expect(spotFrame({ boosted: true, hosted: true })).toBe('gold');
+        expect(spotFrame({ boosted: false, hosted: true })).toBe('hosted');
+        expect(spotFrame({ boosted: false, hosted: false })).toBe('tip');
+    });
+
+    it('hosted följer med raden genom composeSpotlightRows', () => {
+        const { vadkul } = composeSpotlightRows([{ ...ev('u1', at(1)), hosted: true }], [], new Set(), NOW);
+        expect(vadkul[0]).toMatchObject({ hosted: true, vadkul: true, boosted: false });
     });
 });

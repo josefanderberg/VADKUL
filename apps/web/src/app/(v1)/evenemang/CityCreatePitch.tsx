@@ -69,24 +69,29 @@ export default function CityCreatePitch({ cityName, createHref, collapsible }: P
                 kartans riktiga beteenden: VADKUL-event ligger alltid uppe som
                 bricka, boost ger guldbricka med ⭐ hela veckan före eventet. */}
             {/* Stegringen får inte bero på hur texterna råkar radbrytas
-                (nivå 3:s korta text gjorde rutan LÄGRE än 2:an — Josef 4/9):
-                min-höjderna 88/108/132 px garanterar 1 < 2 < 3 på alla
-                bredder, och nivå 3 har dessutom störst rubrik och padding. */}
+                (nivå 2:s långa text gjorde rutan lika hög som 3:an — Josef
+                4/9 + 6/9). Därför en RIKTIG trappa i varje riktning:
+                  • desktop (tre kolumner, bottenjusterade): min-höjder
+                    136/176/216 px — mer än texten någonsin tar i kolumnen —
+                    så stegen syns oavsett radbrytning;
+                  • mobil (staplade): stigande BREDD 82 % → 91 % → 100 %,
+                    högerställda, så rutorna bildar en trappa uppåt;
+                  • alla bredder: text, padding och rubrik växer per nivå. */}
             <div className="mt-4 grid gap-2 sm:grid-cols-3 sm:items-end">
-                <div className="rounded-2xl bg-white/5 border border-white/10 px-3.5 py-3 min-h-[88px]">
+                <div className="w-[82%] ml-auto sm:w-auto sm:ml-0 rounded-2xl bg-white/5 border border-white/10 px-3 py-2.5 sm:min-h-[136px]">
                     <p className="text-[10px] font-black uppercase tracking-wider text-sky-300/80">Nivå 1</p>
                     <p className="mt-0.5 text-sm font-black text-sky-100/90">Syns bra</p>
-                    <p className="mt-1 text-xs font-medium leading-snug text-sky-200/70">Externa event — vi hittar dem åt dig inför varje morgon och visar dem som prickar på kartan.</p>
+                    <p className="mt-1 text-[11px] font-medium leading-snug text-sky-200/70">Externa event — vi hittar dem åt dig inför varje morgon och visar dem som prickar på kartan.</p>
                 </div>
-                <div className="rounded-2xl bg-white/15 border border-sky-300/40 px-3.5 py-4 min-h-[108px] shadow-lg">
+                <div className="w-[91%] ml-auto sm:w-auto sm:ml-0 rounded-2xl bg-white/15 border border-sky-300/40 px-3.5 py-4 sm:min-h-[176px] shadow-lg">
                     <p className="text-[10px] font-black uppercase tracking-wider text-sky-200">Nivå 2 · Skapa gratis</p>
-                    <p className="mt-0.5 text-sm font-black text-white">📌 Syns mer</p>
+                    <p className="mt-0.5 text-base font-black text-white">📌 Syns mer</p>
                     <p className="mt-1 text-xs font-medium leading-snug text-sky-100">Skapat på VADKUL — egen eventbricka som ligger UPPE på kartan hela tiden, och överst på den här sidan.</p>
                 </div>
-                <div className="rounded-2xl bg-gradient-to-br from-[#FECC02]/25 to-[#FECC02]/10 border-2 border-[#FECC02] px-4 py-5 min-h-[132px] shadow-xl shadow-[#FECC02]/20">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-[#FECC02]">Nivå 3 · Boost</p>
-                    <p className="mt-0.5 text-base font-black text-[#FECC02]">⭐ Syns mest</p>
-                    <p className="mt-1.5 text-xs font-medium leading-snug text-sky-50">Guldbricka med stjärna som lyser på kartan en hel vecka före eventet — och första plats här.</p>
+                <div className="w-full rounded-2xl bg-gradient-to-br from-[#FECC02]/25 to-[#FECC02]/10 border-2 border-[#FECC02] px-4 py-5 sm:min-h-[216px] shadow-xl shadow-[#FECC02]/20">
+                    <p className="text-[11px] font-black uppercase tracking-wider text-[#FECC02]">Nivå 3 · Boost</p>
+                    <p className="mt-1 text-xl font-black text-[#FECC02]">⭐ Syns mest</p>
+                    <p className="mt-2 text-sm font-medium leading-snug text-sky-50">Guldbricka med stjärna som lyser på kartan en hel vecka före eventet — och första plats här.</p>
                 </div>
             </div>
             <Link

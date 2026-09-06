@@ -23,7 +23,23 @@ export interface SpotEvent {
     /** Tips (isTip på userCreated-dokumentet) — "Tipsat" i stället för
      *  "Skapat på VADKUL". */
     isTip?: boolean;
+    /** Arrangeras på VADKUL (isVadkulHostedEvent: userCreated utan url, inte
+     *  tips) — grön ram, som på kartan. */
+    hosted?: boolean;
 }
+
+/** Radens ram: guld för boostade, grön för VADKUL-arrangerade, blå (som förut)
+ *  för tips. Boosten vinner — den syns mest i exponeringstrappan. */
+export type SpotFrame = 'gold' | 'hosted' | 'tip';
+export function spotFrame(e: Pick<SpotRow, 'boosted' | 'hosted'>): SpotFrame {
+    if (e.boosted) return 'gold';
+    if (e.hosted) return 'hosted';
+    return 'tip';
+}
+
+/** Fler rader än så här → sektionen kapas till de första radernas höjd och
+ *  scrollar inuti (Josef 6/9: "bläddra genom dem innan man går till de andra"). */
+export const SPOTLIGHT_VISIBLE_ROWS = 3;
 
 export interface SpotRow extends SpotEvent {
     /** Skapad på VADKUL (userCreated) — nivå 2-markering. */

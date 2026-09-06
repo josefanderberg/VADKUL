@@ -5,7 +5,7 @@ import { writeEventSeed } from '@/utils/eventSeed';
 import dynamic from 'next/dynamic';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { mergeListedDays, filterDaysBySource } from '@/utils/cityOptIn';
-import { Heart, MapPin, Clock, Ticket, Users, ChevronDown } from 'lucide-react';
+import { Heart, ChevronDown } from 'lucide-react';
 import { PERIODS, periodKeys, relativeDayLabel } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 import { useDayFilter } from './dayFilter';
@@ -16,6 +16,7 @@ import { anchorScrollDelta, isPlainClick } from '@/utils/eventExpand';
 // chipet nere till höger på raden (Josef 2/9), vänster om statusbadgen.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import EventExpanded from './EventExpanded';
+import EventInfoRow from './EventInfoRow';
 
 // Inloggningsmodalen (samma som kartans) — laddas först när någon utloggad
 // trycker på ett hjärta. Stadssidorna är SEO-ytor och ska inte bära
@@ -359,34 +360,8 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggl
             : 'border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm'
     } ${dimmed ? 'opacity-55' : ''}`;
 
-    // Inforad (plats · tid · pris · antal) — samma stil/ikoner som eventkortets
-    // närhetslista. Allt är server-strängar → deterministiskt vid SSR.
-    const infoRow = (
-        <div className="flex items-center gap-x-2 text-[11px] font-bold text-slate-500 dark:text-zinc-400 overflow-hidden">
-            <span className="inline-flex items-center gap-1 min-w-0">
-                <MapPin size={11} className="text-[#006AA7] dark:text-sky-400 shrink-0" />
-                <span className="truncate">{e.place}</span>
-            </span>
-            {e.clock && (
-                <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
-                    <Clock size={11} className="text-[#006AA7] dark:text-sky-400" />
-                    kl {e.clock}
-                </span>
-            )}
-            {e.price && (
-                <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
-                    <Ticket size={11} className="text-[#006AA7] dark:text-sky-400" />
-                    {e.price}
-                </span>
-            )}
-            {e.attendees > 0 && (
-                <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
-                    <Users size={11} className="text-[#006AA7] dark:text-sky-400" />
-                    {e.attendees} kommer
-                </span>
-            )}
-        </div>
-    );
+    // Inforad (plats · tid · pris · antal) — delad med spotlight-raderna.
+    const infoRow = <EventInfoRow place={e.place} when={e.clock ? `kl ${e.clock}` : null} price={e.price} attendees={e.attendees} />;
 
     // MED bild: omslagsbild kant till kant, titel + emoji + statusbadge överlagd
     // på en mörk gradient, inforaden under — spara-hjärtat överlagrat uppe till
