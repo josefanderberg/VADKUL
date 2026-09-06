@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Tags, Globe, Mountain, Plus, Minus, Video, Target, Crosshair, Sparkles, Lock, Users, Satellite, Flag, Map as MapIcon, Moon } from 'lucide-react';
+import { Tags, Globe, Mountain, Plus, Minus, Video, Target, Crosshair, Lock, Users, Flag, Map as MapIcon } from 'lucide-react';
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView } from '../../utils/mapUtils';
@@ -12,11 +12,12 @@ import { readStartCity } from '../../utils/startCity';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
-// Baskartstilar (Voyager/satellit/mörk/nöjesfält) + klot/terräng/relief-hjälpare.
+// Nöjesfälts-kartan (enda basstilen) + klot/terräng-hjälpare. Voyager-URL:en är
+// kvar som reservväg om nöjesfälts-transformen inte går att hämta.
 import {
-    BOOTSTRAP_STYLE, DARK_STYLE_URL, SATELLITE_STYLE, STREETS_STYLE_URL,
+    BOOTSTRAP_STYLE, STREETS_STYLE_URL,
     THEMEPARK_LAND_COLOR, fetchAndTransformThemeParkStyle,
-    applyHillshade, applyProjection, applyTerrain,
+    applyProjection, applyTerrain,
 } from './v2MapBaseStyles';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
@@ -52,7 +53,7 @@ const LABEL_TITLE_MIN_ZOOM = 13;
 //      insug" (startRevealTravel) till de N närmast tappet.
 //   4. Kart-init (effekt, körs en gång): MapLibre-instans, zoom-lägen
 //      (brickor ↔ prickar), klick-hantering, bounds-rapportering.
-//   5. Stil-/läges-effekter: mapStyle, klot, 3D-terräng, kamera (recenter/zoom).
+//   5. Stil-/läges-effekter: basstilen, klot, 3D-terräng, kamera (recenter/zoom).
 //   6. DOM-markör-synken: de speciella grupperna som riktiga DOM-element.
 //   7. Render: kartcontainer + inline markör-CSS + overlays (multi-event-lista,
 //      WebGL-fallback, funktions-väskan).
@@ -541,11 +542,9 @@ export default function V2Map({
     // laddas om mitt under en zoom.
     const [isZooming, setIsZooming] = useState<boolean>(false);
     const isZoomingRef = useRef<boolean>(false);
-    // Default = 'themepark' ("Nöjesfält"-kartan). Satellit m.fl. går fortfarande att
-    // välja i Funktioner-väskan, men nöjesfält är förvald vid varje sidladdning.
-    const [mapStyle, setMapStyle] = useState<'streets' | 'satellite' | 'themepark' | 'dark' | 'orientering'>('themepark');
-    const mapStyleRef = useRef(mapStyle);
-    mapStyleRef.current = mapStyle;
+    // Kartan har EN basstil: nöjesfältet (ägarbeslut 4/9 — satellit, orientering,
+    // mörkt läge och vanliga Voyager är borttagna, "onödiga att ha"). Ingen
+    // stilväxel finns kvar; lägg inte tillbaka en.
     // Cache för den hämtade + mildrade nöjesfälts-stilen (Voyager-transform).
     const themeParkStyleRef = useRef<maplibregl.StyleSpecification | null>(null);
     // True om WebGL inte gick att initiera (t.ex. blockerad efter en tidigare
@@ -685,8 +684,7 @@ export default function V2Map({
         record: boolean;
     };
     const [shopFlags, setShopFlags] = useState<ShopFlags>({
-        // Nöjesfält (mapStyle='themepark') är förvald kartstil från start — allt
-        // annat av. Satellit m.fl. kan väljas i Funktioner-väskan.
+        // Kartstilarna är borta ur väskan (4/9) — nöjesfältet är enda basstilen.
         createEvent: true,    // PÅ som default — att skapa event är en kärnfunktion
                               // (onboardingen lovar det). Kan stängas av i väskan.
         multiplayer: false,   // kräver konto-registrering
@@ -705,16 +703,11 @@ export default function V2Map({
     const onActivateMultiplayerRef = useRef(onActivateMultiplayer);
     onActivateMultiplayerRef.current = onActivateMultiplayer;
 
-    // Inkluderar globe/terräng/kartstilarna i samma "is this feature active?"-
-    // modell som övriga shop-flaggor, så väskans rader kan hanteras likadant.
-    // mapStyle är inte boolean → varje stil mappas via likhet.
+    // Inkluderar globe/terräng i samma "is this feature active?"-modell som
+    // övriga shop-flaggor, så väskans rader kan hanteras likadant.
     const isFeatureActive = (key: string): boolean => {
         if (key === 'globe') return isGlobe;
         if (key === 'terrain') return is3DTerrain;
-        if (key === 'satellite') return mapStyle === 'satellite';
-        if (key === 'themepark') return mapStyle === 'themepark';
-        if (key === 'dark') return mapStyle === 'dark';
-        if (key === 'orientering') return mapStyle === 'orientering';
         return (shopFlags as Record<string, boolean>)[key] ?? false;
     };
 
@@ -731,10 +724,6 @@ export default function V2Map({
         }
         if (key === 'globe') { setIsGlobe(value); return; }
         if (key === 'terrain') { setIs3DTerrain(value); return; }
-        if (key === 'satellite') { setMapStyle(value ? 'satellite' : 'streets'); return; }
-        if (key === 'themepark') { setMapStyle(value ? 'themepark' : 'streets'); return; }
-        if (key === 'dark') { setMapStyle(value ? 'dark' : 'streets'); return; }
-        if (key === 'orientering') { setMapStyle(value ? 'orientering' : 'streets'); return; }
         setShopFlags(prev => ({ ...prev, [key]: value }));
     };
     const toggleFeature = (key: string) => setFeatureActive(key, !isFeatureActive(key));
@@ -2428,9 +2417,9 @@ export default function V2Map({
         map = new maplibregl.Map({
             container: mapContainerRef.current,
             // Bootstrap-stil: en synkron enfärgad bakgrund i nöjesfältets land-färg
-            // så kartan renderar direkt. mapStyle-effekten byter sedan till förvald
-            // 'themepark' (async fetch + transform) efter mount. Bakgrundsfärgen
-            // matchar themeparken → bytet syns inte som ett hopp (jfr. tidigare
+            // så kartan renderar direkt. Stil-effekten byter sedan till nöjesfältet
+            // (async fetch + transform) efter mount. Bakgrundsfärgen matchar
+            // themeparken → bytet syns inte som ett hopp (jfr. tidigare
             // satellit-bootstrap som blixtrade förbi en satellitvy).
             style: BOOTSTRAP_STYLE,
             // Startvy: DIN STAD om vi har en sparad (blocket ovan) — annars
@@ -2995,26 +2984,18 @@ export default function V2Map({
         else map.once('style.load', () => fn(map));
     };
 
-    // Byt baskartan när användaren togglar satellit-knappen. Markörerna ligger som
-    // DOM-element i container och påverkas inte av setStyle.
+    // Byt från bootstrap-stilen till nöjesfältet så snart kartan finns. Körs en
+    // gång — det finns bara en basstil. Markörerna ligger som DOM-element i
+    // container och påverkas inte av setStyle.
     useEffect(() => {
-        // Spegla aktiv kartstil som klass på containern så markör-CSS:en kan
-        // anpassa kontrast per stil (se .map-style-dark-reglerna).
-        const container = mapContainerRef.current;
-        if (container) {
-            container.classList.remove('map-style-streets', 'map-style-satellite', 'map-style-themepark', 'map-style-dark', 'map-style-orientering');
-            container.classList.add(`map-style-${mapStyle}`);
-        }
         const map = mapRef.current;
         if (!map) return;
+        let cancelled = false;
         // setStyle ersätter HELA stilen → projektionen nollställs och custom-källor
         // (DEM) försvinner. Återställ globe + terräng när nya stilen laddat klart.
         const afterLoad = () => {
             applyProjection(map, isGlobeRef.current);
             applyTerrain(map, is3DTerrainRef.current);
-            // Orienterings-reliefen lever bara i den stilen; setStyle har redan
-            // rensat ett ev. gammalt lager, så vi behöver bara lägga till det igen.
-            applyHillshade(map, mapStyleRef.current === 'orientering');
             // setStyle rensade GL-markörlagret (källa/bilder/lager) — återinstallera.
             // instant: användaren har redan sett markörerna — återställ allt direkt,
             // ingen ny pö-om-pö-stream (och ingen latch-återöppning av ladda-pillen).
@@ -3024,36 +3005,24 @@ export default function V2Map({
             map.setStyle(style);
             map.once('style.load', afterLoad);
         };
-        if (mapStyle === 'satellite') {
-            applyStyle(SATELLITE_STYLE);
-        } else if (mapStyle === 'themepark') {
-            // Nöjesfälts-kartan: Voyager i en mildare, naturlig palett. Hämta +
-            // transformera en gång, cacha sedan i themeParkStyleRef.
-            if (themeParkStyleRef.current) {
-                applyStyle(themeParkStyleRef.current);
-            } else {
-                fetchAndTransformThemeParkStyle()
-                    .then(style => {
-                        themeParkStyleRef.current = style;
-                        // Användaren kan ha hunnit byta stil under hämtningen —
-                        // applicera bara om nöjesfält fortfarande är valt.
-                        if (mapStyleRef.current === 'themepark') applyStyle(style);
-                    })
-                    .catch(() => {
-                        // Faller tillbaka till vanliga Voyager om hämtningen strular.
-                        if (mapStyleRef.current === 'themepark') applyStyle(STREETS_STYLE_URL);
-                    });
-            }
-        } else if (mapStyle === 'dark') {
-            applyStyle(DARK_STYLE_URL);
-        } else if (mapStyle === 'orientering') {
-            // Ljus Voyager-bas + hillshade-relief (läggs på i afterLoad).
-            applyStyle(STREETS_STYLE_URL);
+        // Nöjesfälts-kartan: Voyager i en mildare, naturlig palett. Hämta +
+        // transformera en gång, cacha sedan i themeParkStyleRef.
+        if (themeParkStyleRef.current) {
+            applyStyle(themeParkStyleRef.current);
         } else {
-            applyStyle(STREETS_STYLE_URL);
+            fetchAndTransformThemeParkStyle()
+                .then(style => {
+                    themeParkStyleRef.current = style;
+                    if (!cancelled) applyStyle(style);
+                })
+                .catch(() => {
+                    // Faller tillbaka till vanliga Voyager om hämtningen strular.
+                    if (!cancelled) applyStyle(STREETS_STYLE_URL);
+                });
         }
+        return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mapStyle]);
+    }, []);
 
     // Globe-läge: skifta projektion mercator ↔ globe. Helt fristående toggle.
     useEffect(() => {
@@ -3625,13 +3594,9 @@ export default function V2Map({
     }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, minuteTick]);
 
     // Bakgrunden bakom kartan syns vid snabb panorering (innan tiles laddat)
-    // och som "rymd" bakom klotet — matcha aktiv kartstil så det aldrig
-    // blixtrar ljusgrått på mörka kartor.
-    const containerBg = mapStyle === 'dark' ? '#141414'
-        : mapStyle === 'satellite' ? '#10181f'
-        : mapStyle === 'themepark' ? THEMEPARK_LAND_COLOR
-        : mapStyle === 'orientering' ? '#efe9dc'
-        : '#f1f5f9';
+    // och som "rymd" bakom klotet — nöjesfältets landfärg, så det aldrig
+    // blixtrar ljusgrått innan kaklen är på plats.
+    const containerBg = THEMEPARK_LAND_COLOR;
 
     return (
         <div className="absolute inset-0 z-0" style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0, background: containerBg }}>
@@ -3839,14 +3804,6 @@ export default function V2Map({
                     box-shadow: 0 1px 3px rgba(0,0,0,0.15);
                     z-index: 10;
                 }
-                /* ── Kontrast per kartstil ──────────────────────────────────
-                   Mörka kartan: hårfin ljus gloria + djupare skugga så mörka
-                   brickor inte smälter in i den nästan svarta bakgrunden.
-                   (Klassen sätts på kartcontainern i mapStyle-effekten.) */
-                .map-style-dark .pin-element {
-                    filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.45)) drop-shadow(0 5px 12px rgba(0,0,0,0.8));
-                }
-
                 /* ──────────────────────────────────────────────────────────
                    TILLSTÅNDS-KLASSER (Styrs av containerklassen)
                 ────────────────────────────────────────────────────────── */
@@ -3921,15 +3878,11 @@ export default function V2Map({
                 const crateItems: CrateItem[] = [
                     // Popup-meny: symbol + namn + kort info. Varje funktion har en egen
                     // passande accent-färg på symbolen; aktiv rad tonas i samma färg.
-                    // Upplåst överst: Satellit, Skapa event + kartstilarna Nöjesfält,
-                    // Orientering & 3D-terräng. Resten är låsta.
-                    { key: 'satellite', label: 'Satellit', desc: 'Byt mellan satellit- och vanlig karta', color: '#0d9488', icon: <Satellite size={20} /> },
+                    // Kartstilarna (Satellit, Nöjesfält, Orientering, Mörkt läge) är
+                    // borttagna 4/9 — kartan har en enda stil och inget att välja på.
                     { key: 'createEvent', label: 'Skapa event', desc: 'Skapa egna event på kartan', color: '#22c55e', icon: <Plus size={20} strokeWidth={2.5} /> },
-                    { key: 'themepark', label: 'Nöjesfält', desc: 'Naturfärgad karta — som satellit fast minimalistisk', color: '#db2777', icon: <Sparkles size={20} /> },
-                    { key: 'orientering', label: 'Orientering', desc: 'Topografisk karta som visar höjdskillnaderna i terrängen', color: '#a16207', icon: <Mountain size={20} /> },
                     { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} /> },
                     // ── Låsta funktioner ────────────────────────────────────────
-                    { key: 'dark', label: 'Mörkt läge', desc: 'Mörk karta — skön i mörker', color: '#475569', icon: <Moon size={20} />, locked: true },
                     { key: 'globe', label: 'Klot', desc: 'Visa kartan som en jordglob', color: '#0891b2', icon: <Globe size={20} />, locked: true },
                     { key: 'countries', label: 'Länder', desc: 'Visa länder på kartan', color: '#0284c7', icon: <MapIcon size={20} />, locked: true },
                     { key: 'golf', label: 'Golf', desc: 'Kommer snart', color: '#65a30d', icon: <Flag size={20} />, locked: true },

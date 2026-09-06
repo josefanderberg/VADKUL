@@ -1,45 +1,15 @@
-// ── Baskartstilar + kart-lägen (projektion/terräng/relief) ──────────────────
+// ── Baskartstilen + kart-lägen (projektion/terräng) ─────────────────────────
 // Allt här är rena, kartinstans-oberoende byggstenar: stil-URL:er, statiska
-// stil-specar och idempotenta på/av-hjälpare som V2Map kallar vid stilbyten.
-// Ingen React, inget komponent-state — bara MapLibre-konfiguration.
+// stil-specar och idempotenta på/av-hjälpare som V2Map kallar. Ingen React,
+// inget komponent-state — bara MapLibre-konfiguration.
 
 import maplibregl from 'maplibre-gl';
 
-// Två basstilar: standard vektor-karta (Voyager) och en raster-satellitvy
-// (ESRI World Imagery). Vi växlar via map.setStyle(); markörer behålls eftersom
-// de är DOM-element i container, inte en del av style-spec:en.
+// Voyager, den ljusa vektor-basen. Nöjesfälts-stilen byggs genom att
+// transformera den (fetchAndTransformThemeParkStyle) — den här URL:en används
+// direkt bara som reservväg om transformen inte går att hämta, och av
+// outreach-konsolens minikarta.
 export const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
-// Mörkt kartläge (CARTO Dark Matter) — direkt stil-URL, ingen transform behövs.
-export const DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-
-export const SATELLITE_STYLE: maplibregl.StyleSpecification = {
-    version: 8,
-    // Glyf-endpoint (Cartos, samma som Voyager/Dark-stilarna) så multi-event-
-    // prickarnas siffer-text kan renderas i GL även på den annars ren-raster
-    // satellitstilen. Skulle endpointen blockeras (t.ex. corp-proxy) ritas pricken
-    // ändå — bara siffran uteblir, ingen krasch.
-    glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
-    sources: {
-        satellite: {
-            type: 'raster',
-            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256,
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
-        },
-        // Transparent etikett-overlay med ort- och landsnamn ovanpå satellit-bilden,
-        // så man fortfarande ser var man är även när basbilden är fotorealistisk.
-        labels: {
-            type: 'raster',
-            tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
-            tileSize: 256,
-            attribution: 'Labels &copy; Esri'
-        }
-    },
-    layers: [
-        { id: 'satellite', type: 'raster', source: 'satellite' },
-        { id: 'labels', type: 'raster', source: 'labels' }
-    ]
-};
 
 // Nöjesfältets land-färger. Utzoomat (nationell vy) är landet EN mörk grön ton;
 // inzoomat, när grönska-lagren syns och landet får två gröna skalor, tonar
@@ -192,35 +162,5 @@ export function applyTerrain(map: maplibregl.Map, on: boolean) {
     } else {
         map.setTerrain(null);
         if (map.getSource(TERRAIN_DEM_ID)) map.removeSource(TERRAIN_DEM_ID);
-    }
-}
-
-// "Orienterings"-kartan: ett platt hillshade-lager ovanpå den ljusa Voyager-
-// basen som ritar ut höjdskillnaderna som skuggad relief — en topografisk
-// "orienterings"-look. Använder samma keylessa DEM som 3D-terrängen, men under
-// en EGEN käll-id så de två lägena inte tar bort varandras källa. Lager + källa
-// läggs till lazy och tas bort när läget stängs av.
-const HILLSHADE_DEM_ID = 'hillshade-dem';
-const HILLSHADE_LAYER_ID = 'hillshade-relief';
-export function applyHillshade(map: maplibregl.Map, on: boolean) {
-    if (on) {
-        if (!map.getSource(HILLSHADE_DEM_ID)) map.addSource(HILLSHADE_DEM_ID, TERRAIN_DEM_SOURCE);
-        if (!map.getLayer(HILLSHADE_LAYER_ID)) {
-            map.addLayer({
-                id: HILLSHADE_LAYER_ID,
-                type: 'hillshade',
-                source: HILLSHADE_DEM_ID,
-                paint: {
-                    'hillshade-exaggeration': 0.65,
-                    'hillshade-shadow-color': '#5b4636',
-                    'hillshade-highlight-color': '#fffdf7',
-                    'hillshade-accent-color': '#8a6d4a',
-                    'hillshade-illumination-direction': 315
-                }
-            });
-        }
-    } else {
-        if (map.getLayer(HILLSHADE_LAYER_ID)) map.removeLayer(HILLSHADE_LAYER_ID);
-        if (map.getSource(HILLSHADE_DEM_ID)) map.removeSource(HILLSHADE_DEM_ID);
     }
 }
