@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { mergeListedDays, filterDaysBySource } from '@/utils/cityOptIn';
 import { Heart, ChevronDown } from 'lucide-react';
-import { PERIODS, periodKeys, relativeDayLabel } from './periods';
+import { PERIODS, periodKeys, relativeDayLabel, todayKey } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 import { useDayFilter } from './dayFilter';
 import { dupKey } from '@/utils/groupDups';
@@ -585,10 +585,16 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     const periodReady = nowTs !== 0;
     const dayKeys = sel.kind === 'period' ? (periodReady ? periodKeys(sel.period) : null)
         : [sel.key];
+    // GÅRDAGAR SKA BORT (Josef 7/9): sidan är statiskt byggd och bakningens
+    // "idag" är deploydagens — nattens datapush rebygger inte. Dagar FÖRE
+    // besökarens riktiga idag (svensk tid) slängs helt efter mount; bara
+    // DAGENS passerade event ska ligga bakom "har redan varit", inte hela
+    // gårdagar. Pre-mount renderas allt (deterministisk + crawlbar SSR).
+    const freshDays = periodReady ? days.filter(d => d.key >= todayKey()) : days;
     // `beyond`-dagarna (glesa kategoriers senare event, utanför 14-dagars-
     // fönstret) finns bara i kategoriläget — i Alla-vyn är listan fönstret
     // + "…längre fram"-raden som förut (Josef 3/9: chippen sa 5, listan 1).
-    const horizonDays = category === null ? days.filter(d => !d.beyond) : days;
+    const horizonDays = category === null ? freshDays.filter(d => !d.beyond) : freshDays;
     const visDays = dayKeys ? horizonDays.filter(d => dayKeys.includes(d.key)) : horizonDays;
 
     const hourMatch = (e: { hour: number | null }) =>
@@ -689,7 +695,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
             return next;
         });
 
-    const selDayLabel = sel.kind === 'day' ? (days.find(d => d.key === sel.key)?.label ?? 'den dagen') : null;
+    const selDayLabel = sel.kind === 'day' ? (freshDays.find(d => d.key === sel.key)?.label ?? 'den dagen') : null;
     const unit = sel.kind === 'period'
         ? (sel.period === 'all' ? 'just nu' : PERIODS.find(p => p.key === sel.period)!.unit)
         : '';
@@ -711,7 +717,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                     />
                 ))}
                 <span className="shrink-0 mx-1 h-5 w-px bg-slate-200 dark:bg-zinc-800" aria-hidden />
-                {days.filter(d => !d.beyond).slice(2).map(d => (
+                {freshDays.filter(d => !d.beyond).slice(2).map(d => (
                     <Chip
                         key={d.key}
                         label={d.short}
