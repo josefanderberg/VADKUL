@@ -35,6 +35,28 @@ const firstNameOf = (displayName) => {
 
 const csvCell = (s) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
 
+// Stadsnamn → stadssideslug (sep-utskickets delningsbild i mejlet:
+// vadkul.se/evenemang/<slug>/delningsbild.png). Fylls BARA i när orten har en
+// stadssida — annars tom, så Zoho-fallbacken tar över i stället för att en
+// trasig bild-URL renderas. Sluggarna läses ur webbens cityPages.ts så listan
+// aldrig divergerar.
+const slugifyCity = (name) => name.toLowerCase()
+    .replaceAll('å', 'a').replaceAll('ä', 'a').replaceAll('ö', 'o')
+    .replaceAll('é', 'e').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+const loadCityPageSlugs = async () => {
+    try {
+        const src = await readFile(path.resolve(
+            path.dirname(fileURLToPath(import.meta.url)),
+            '../../apps/web/src/utils/cityPages.ts',
+        ), 'utf8');
+        return new Set([...src.matchAll(/slug:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]));
+    } catch {
+        console.warn('⚠️  Kunde inte läsa cityPages.ts — cityslug-kolumnen blir tom.');
+        return new Set();
+    }
+};
+
 // uid → stad ur Firestore. select('city') = projektionsfråga, hämtar bara
 // fältet (egress-snålt).
 const fetchCityByUid = async () => {
@@ -61,9 +83,10 @@ const fetchCityByUid = async () => {
     }
 };
 
-const [{ users = [] }, cityByUid] = await Promise.all([
+const [{ users = [] }, cityByUid, cityPageSlugs] = await Promise.all([
     readFile(src, 'utf8').then(JSON.parse),
     fetchCityByUid(),
+    loadCityPageSlugs(),
 ]);
 
 const seen = new Set();
@@ -72,21 +95,25 @@ for (const u of users) {
     const email = (u.email ?? '').trim().toLowerCase();
     if (!email || seen.has(email)) continue;
     seen.add(email);
+    const city = cityByUid.get(u.localId) ?? '';
+    const slug = city ? slugifyCity(city) : '';
     rows.push({
         email,
         firstName: firstNameOf(u.displayName),
-        city: cityByUid.get(u.localId) ?? '',
+        city,
+        cityslug: cityPageSlugs.has(slug) ? slug : '',
     });
 }
 rows.sort((a, b) => a.email.localeCompare(b.email));
 
 const date = new Date().toISOString().slice(0, 10);
 const out = `medlemmar-${date}.csv`;
-await writeFile(out, 'email,firstname,city\n'
-    + rows.map((r) => `${csvCell(r.email)},${csvCell(r.firstName)},${csvCell(r.city)}\n`).join(''));
+await writeFile(out, 'email,firstname,city,cityslug\n'
+    + rows.map((r) => `${csvCell(r.email)},${csvCell(r.firstName)},${csvCell(r.city)},${csvCell(r.cityslug)}\n`).join(''));
 
 const named = rows.filter((r) => r.firstName).length;
 const withCity = rows.filter((r) => r.city).length;
-console.log(`${out}: ${rows.length} adresser, ${named} med förnamn, ${withCity} med stad (${rows.length - withCity} utan → nationella utskicket)`);
+const withSlug = rows.filter((r) => r.cityslug).length;
+console.log(`${out}: ${rows.length} adresser, ${named} med förnamn, ${withCity} med stad (${rows.length - withCity} utan → nationella utskicket), ${withSlug} med stadssideslug`);
 // firebase-admin håller gRPC-anslutningar öppna — avsluta explicit.
 process.exit(0);

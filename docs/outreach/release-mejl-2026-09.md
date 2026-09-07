@@ -18,14 +18,25 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
       hämtat stjärnan…", påhittad kod → "Ogiltig gåvolänk." Länken i mejlet
       fungerar. (Testreceptets gotcha: API-nyckeln är referer-låst —
       `signInWithCustomToken` kräver `Referer: https://vadkul.se/`.)
-- [x] **Medlemslistan byggd 7/9:** `medlemmar-2026-09-07.csv` (gitignorad, här
-      i mappen) — **261 adresser, 249 med förnamn, 74 med stad** (187 utan →
-      fallback-texten "din stad"). 271 konton i Auth, 10 utan/dubblett-mejl.
-      **~46 nya sedan 19/8-listan (215).** Dröjer utskicket flera dagar: bygg
-      om (`build-medlemslista.mjs`, se medlemsmejl.md steg 0).
+- [x] **Medlemslistan byggd 7/9 (ombyggd samma kväll med `cityslug`):**
+      `medlemmar-2026-09-07.csv` (gitignorad, här i mappen) — **262 adresser,
+      249 med förnamn, 74 med stad** (188 utan → fallback-texten "din stad"),
+      **71 med stadssideslug** (styr delningsbilden i mejlet). ~47 nya sedan
+      19/8-listan (215). Dröjer utskicket flera dagar: bygg om
+      (`build-medlemslista.mjs`, se medlemsmejl.md steg 0).
 - [ ] **Importen i Campaigns: välj UPPDATERA befintliga kontakter**, inte
       hoppa över dubbletter — city-täckningen har ökat 32 → 74 och befintliga
       kontakter ska få sin stad ifylld. Mappa `city` → kontaktfältet **City**.
+- [ ] **Cityslug-fältet:** skapa ett eget kontaktfält **Cityslug** i Campaigns
+      och mappa CSV-kolumnen `cityslug` dit. Kolla i HTML-editorns
+      merge-tag-väljare vad taggen faktiskt heter (egna fält kan få t.ex.
+      `$[CONTACT_CF…]$`) och byt i så fall ut `$[CITYSLUG|stockholm]$` i
+      bildens `src` i HTML:en. Fallbacken ska vara `stockholm`.
+- [ ] **Testa delningsbilden i testutskick till RIKTIGA kontakter:** en med
+      stadssideslug (bilden ska visa den staden) och en utan (bilden ska visa
+      Stockholm). Extra skyddsnät finns: routen svarar 200 med en
+      fallback-bild även för trasig/okänd slug (verifierat 7/9), så en
+      felmappad tagg ger fel stad — aldrig trasig bild.
 - [ ] Verifiera merge-taggarna mot en RIKTIG kontakt (test till adress utanför
       listan visar attrapper som "TEST" — det är inte fel). Kolla
       fallback-läsningen med en kontakt utan stad.
@@ -46,11 +57,16 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
 
 ## Stadsanpassningen
 
-`$[CITY|…]$` med fallback, två ställen (färre än sist — 187 av 261 saknar stad,
-fallbacken är fortfarande normalfallet, så ingen `$[CITY]$` i ämnesraden):
+`$[CITY|…]$` med fallback på två ställen + `$[CITYSLUG|stockholm]$` i bildens
+URL (188 av 262 saknar stad — fallbacken är normalfallet, så ingen `$[CITY]$`
+i ämnesraden):
 
 1. Stadssidepunkten: "sidan för $[CITY|din stad]$"
 2. Stjärnsteget: "kanske något du själv ska på i $[CITY|din stad]$?"
+3. **Delningsbilden:** `https://vadkul.se/evenemang/$[CITYSLUG|stockholm]$/delningsbild.png`
+   — den dagsfärska "veckans höjdpunkter"-bilden för mottagarens stad (71 st),
+   Stockholm för resten. Bilden är ~1 MB och hämtas från vadkul.se när mejlet
+   öppnas (via mejlklientens bildproxy) — den bäddas INTE in i mejlet.
 
 ## Ämnesrad
 
@@ -71,8 +87,8 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 
 ## Preheader
 
-> Hela höstsäsongen är inne — konserter och arenor med biljettlänk, ombyggda
-> stadssidor, och en ny guldstjärna: ett dygns boost, gratis för dig.
+> Hela höstsäsongen är inne — ny design, konserter med biljettlänk, ombyggda
+> stadssidor och en ny guldstjärna: ett dygns boost, gratis för dig.
 
 ## Mejlet
 
@@ -84,17 +100,26 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 >
 > **Nytt på kartan sedan sist**
 >
+> - ✨ **Ny design på startsidan** — kartan har fått ett rejält lyft. Händer
+>   flera saker på samma plats bläddrar du mellan dem direkt i eventkortet,
+>   och att byta dag och hoppa mellan event går snabbare och smidigare än
+>   förut.
 > - 🎟️ **Konserter och arenor, med biljettlänk** — de stora scenerna finns nu
 >   på kartan, och många event har en **Köp biljett**-knapp direkt i kortet,
 >   ofta med pris.
 > - 🍂 **Höstprogrammen är inne** — vi har kopplat på en mängd nya lokala
 >   källor, så även mindre orter har fått ordentligt med event i höst.
-> - 🏙️ **Stadssidorna är ombyggda** — på sidan för $[CITY|din stad]$ kan du nu
->   filtrera på kategori med ett tryck och **fälla ut event direkt i listan**:
+> - 🏙️ **Stadssidorna är ombyggda** — på sidan för $[CITY|din stad]$ filtrerar
+>   du på kategori med ett tryck och **fäller ut event direkt i listan**:
 >   anmäl dig, öppna kartan eller dela — utan att lämna sidan.
 >   [vadkul.se/evenemang](https://vadkul.se/evenemang)
-> - 🔗 **Dela ett event** — varje event har en egen länk med en snygg
->   förhandsbild. Skicka till en kompis, så landar hen rakt på eventet.
+> - 🔗 **Dela — med automatisk förhandsbild** — varje event och stadssida har
+>   en egen länk, och delar du en stadssida får länken automatiskt en bild med
+>   **veckans höjdpunkter**. Skicka till en kompis, så landar hen rätt direkt.
+>
+> *(Här: delningsbilden för mottagarens stad — `$[CITYSLUG|stockholm]$` — med
+> bildtexten "Så här ser förhandsbilden ut just nu — den byggs om automatiskt
+> varje dag.")*
 >
 > **Boosta ditt event 🚀**
 >
@@ -124,9 +149,12 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 ## HTML-versionen
 
 [release-mejl-2026-09.html](release-mejl-2026-09.html) — samma mejlklient-säkra
-mall som sist (tabellayout, inline-CSS, max 600 px, inga bilder). Klistra in i
-Campaigns **HTML-editor** (inte drag-and-drop — mal sönder tabellayouten).
-Merge-taggarna `$[FNAME|där]$` och `$[CITY|…]$` (två ställen) står redan i.
+mall som sist (tabellayout, inline-CSS, max 600 px). Nytt 7/9 på Josefs
+begäran: logotypen i **fet kursiv** (Georgia/serif), en uppercase-kicker i
+topplisten, mer luft — och EN bild: delningsbilden per stad (se
+Stadsanpassningen). Klistra in i Campaigns **HTML-editor** (inte drag-and-drop
+— mal sönder tabellayouten). Merge-taggarna `$[FNAME|där]$`, `$[CITY|…]$` (två
+ställen) och `$[CITYSLUG|stockholm]$` (bildens src) står redan i.
 
 ## Vad som medvetet INTE är med
 
