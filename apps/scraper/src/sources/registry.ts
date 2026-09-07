@@ -3371,12 +3371,16 @@ export const SOURCES: Source[] = [
         engine: 'sitemap',
         config: {
                     sitemapUrl: 'https://www.norrtalje.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
+                    // Kalendern flyttade till /evenemang/<år>/<månad>/<slug>/ —
+                    // det gamla enslags-mönstret matchade 2 URL:er av 139 och
+                    // körde källan tom (karantän sedan 19/8).
+                    urlPatterns: [/\/evenemang\/\d{4}\/[a-zåäö]+\/[^/]+\/?$/i],
                     defaultCity: 'Norrtälje',
+                    maxUrls: 200,
                 },
-        updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 2 event-URLs (evenemang-mönster).',
-        lastVerified: '2026-06-04',
+        updateFrequency: 'every-3d',
+        notes: 'Om-probad 2026-09-07: 139 event-URLs i sitemapen. OBS månaden i URL:en är PUBLICERINGSmånad, inte eventets — datumet måste komma ur sidan.',
+        lastVerified: '2026-09-07',
     },
     {
         id: 'vaxholm',
@@ -6678,6 +6682,104 @@ export const SOURCES: Source[] = [
         notes: 'Dry-run 2026-09-03: 12 event, 5 i 30d-fönstret, 100 % datum/bild/beskrivning/ort. Komplement till mark-kommun (kommunkalendern) — egen domän och andra arrangörer (Rydals museum, hembygdsföreningar, Hyssnamakarna), så dedupen krockar inte.',
         lastVerified: '2026-09-03',
         discovery: { method: 'hint', probeUrl: 'https://www.rydalsmuseum.se', date: '2026-09-03', rawEventCount: 12, notes: 'Rydals museum länkar sin kalender hit.' },
+    },
+    {
+        id: 'vastsverige-trollhattan-vanersborg',
+        hostName: 'Visit Trollhättan Vänersborg',
+        region: 'trollhattan',
+        engine: 'sitemap',
+        config: {
+            // Trollhättans kommun har ingen egen kalender: www.trollhattan.se/evenemang
+            // är en landningssida vars ENDA eventlänkar går hit (?site=563).
+            // Samma mönster som Stenungsund/Mark ovan.
+            sitemapUrl: 'https://www.vastsverige.com/visittrollhattanvanersborg/evenemang/',
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 5000,
+            urlPatterns: [/\/visittrollhattanvanersborg\/evenemang\/[a-z0-9-]{3,}/i],
+            // Listsidans egna kategori-/undersidor ligger på samma URL-form och
+            // extraheras annars som "event" ("Årets höjdpunkter", "Evenemang i
+            // Trollhättan", "Matiga evenemang").
+            urlBlacklist: [/\/evenemang\/(hojdpunkter|portal|matevenemang|trollhattan|vanersborg)\/?$/i],
+            defaultCity: 'Trollhättan',
+            maxUrls: 80,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Täcker BÅDE Trollhättan och Vänersborg (destinationen är gemensam) — orten kommer ur JSON-LD:ns location, defaultCity är bara fallback.',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'hint', probeUrl: 'https://www.trollhattan.se/evenemang', date: '2026-09-07', notes: 'Kommunsajtens kalenderlänkar pekar allihop på vastsverige.com/visittrollhattanvanersborg.' },
+    },
+    {
+        id: 'folkets-hus-trollhattan',
+        hostName: 'Folkets Hus Kulturhuset',
+        region: 'trollhattan',
+        engine: 'sitemap',
+        config: {
+            // Trollhättans huvudscen (Hebeteatern, Kulturbaren, Ritz).
+            // WordPress + The Events Calendar, men tribe-REST är avstängt —
+            // Yoasts event-sitemap är vägen in. Sitemapen blandar in husets
+            // INFO-sidor (catering, hitta hit, kulturkortet …) som samma
+            // posttyp; de filtreras med urlBlacklist nedan.
+            sitemapUrl: 'https://www.trollhattan.fh.se/event-sitemap.xml',
+            urlPatterns: [/\/events\/event\/[a-z0-9-]{3,}/i],
+            urlBlacklist: [
+                /\/events\/event\/(catering|kulturkortet|ritz-teatercafe|hitta-hit|festmiddag|bibliotek|planskisser|nyhetsbrev|folkets-hus-kulturhuset-ar-kontantfritt|lankar|kontakta-oss|dagens-lunch)\/?$/i,
+            ],
+            defaultCity: 'Trollhättan',
+            defaultVenue: 'Folkets Hus Kulturhuset',
+            maxUrls: 120,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        notes: 'Yoast-JSON-LD:n är WebPage-graf UTAN Event-nod — datumet kommer ur textfallbacken ("23 oktober, KL 19:30"). OBS sidhuvudet skriver ut DAGENS datum ("Måndag 7 September 2026"); kontrollera vid nästa verifiering att inte alla event daterats till körningsdagen (Kulturbolaget-buggen).',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'manual', probeUrl: 'https://www.trollhattan.fh.se/event-sitemap.xml', date: '2026-09-07', rawEventCount: 72, notes: 'Trollhättan saknade helt lokala scener — 84 event i stan på en vecka men 3 från lokala arrangörer.' },
+    },
+    {
+        id: 'vastsverige-skovde',
+        hostName: 'Vastsverige Skövde',
+        region: 'skovde',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.vastsverige.com/skovde/evenemang/',
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 5000,
+            urlPatterns: [/\/skovde\/evenemang\/[a-z0-9-]{4,}/i],
+            urlBlacklist: [/\/evenemang\/(hojdpunkter|portal|matevenemang|evenemangskalendern)\/?$/i],
+            defaultCity: 'Skövde',
+            maxUrls: 60,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Skövdes kommunsajt och upplevskovde.se länkar båda hit som sin kalender. 11 event på listsidan 7/9.',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'hint', probeUrl: 'https://www.vastsverige.com/skovde/evenemang/', date: '2026-09-07', rawEventCount: 11 },
+    },
+    {
+        id: 'vastsverige-alingsas',
+        hostName: 'Vastsverige Alingsås',
+        region: 'alingsas',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.vastsverige.com/alingsas/evenemang/',
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 5000,
+            urlPatterns: [/\/alingsas\/evenemang\/[a-z0-9-]{4,}/i],
+            urlBlacklist: [/\/evenemang\/(hojdpunkter|portal|matevenemang|evenemangskalendern)\/?$/i],
+            defaultCity: 'Alingsås',
+            maxUrls: 60,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Komplement till alingsas-kommun (kommunkalendern) — andra arrangörer, egen domän, så dedupen krockar inte. 12 event på listsidan 7/9.',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'hint', probeUrl: 'https://www.vastsverige.com/alingsas/evenemang/', date: '2026-09-07', rawEventCount: 11 },
     },
     {
         id: 'visittorsas',
