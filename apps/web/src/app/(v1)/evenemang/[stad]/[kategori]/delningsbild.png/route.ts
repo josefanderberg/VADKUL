@@ -1,4 +1,5 @@
 import { CITIES, categoryBySlug, getCategoryCombos, getCityCategoryEvents } from '../../../cityData';
+import { kommunEvents } from '../../../cityShare';
 import { renderCityShareImage } from '../../../cityShareImage';
 
 // Kategorisidans delningsbild (t.ex. /evenemang/pitea/konserter) — samma
@@ -18,7 +19,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ stad: string; 
     const cat = categoryBySlug(kategori);
     if (!city || !cat) return renderCityShareImage({ headline: 'Se vad som händer nära dig', kicker: 'JUST NU I HELA SVERIGE', events: [] });
     // Datafel får aldrig ge en trasig bild: hellre rubrik utan rader.
-    const events = await getCityCategoryEvents(city, cat.dataKey).then(r => r.events).catch(() => []);
+    // kommunEvents: samma kommunfilter som stadssidans bild — grannkommunens
+    // event får inte synas under "JUST NU I <STADEN>".
+    const events = await getCityCategoryEvents(city, cat.dataKey).then(r => kommunEvents(city, r.events)).catch(() => []);
     return renderCityShareImage({
         headline: cat.h1(city.name),
         kicker: `JUST NU I ${city.name.toUpperCase()}`,

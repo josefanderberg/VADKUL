@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatCount, truncateTitle, pickShareLines } from './cityShare';
+import { formatCount, truncateTitle, pickShareLines, kommunEvents } from './cityShare';
 import { cityBricks } from './cityShareImage';
 import type { CityEvent } from './cityData';
 
@@ -110,5 +110,28 @@ describe('cityBricks', () => {
             ev({ id: 'b', time: new Date(now - 2 * 864e5).toISOString() }),
             ev({ id: 'c', time: new Date(now + 20 * 864e5).toISOString() }),
         ], now)).toEqual([]);
+    });
+});
+
+describe('kommunEvents — fallet som föranledde filtret (Vallentuna-bilden 7/9)', () => {
+    // Riktiga CITY_POINTS-koordinater: Vallentuna (59.53, 18.08), Täby (59.44, 18.07).
+    const vallentuna = { name: 'Vallentuna', lat: 59.53, lng: 18.08 };
+
+    it('behåller kommunens egna och kastar grannkommunens', () => {
+        const kept = kommunEvents(vallentuna, [
+            ev({ id: 'egen', locationName: 'Vallentuna bibliotek', lat: 59.53, lng: 18.08 }),
+            // Nämner Täby i platsen — namnet räcker som bevis, oavsett koordinat.
+            ev({ id: 'taby-namn', locationName: 'Täby Park', lat: 59.51, lng: 18.06 }),
+            // Inget ortnamn men ligger i Täby — geometrin fäller den.
+            ev({ id: 'taby-geo', locationName: 'Yogastudion', lat: 59.44, lng: 18.07 }),
+        ]);
+        expect(kept.map(e => e.id)).toEqual(['egen']);
+    });
+
+    it('nära mittpunkten utan ortnamn behålls (säkerhetsventilen)', () => {
+        const kept = kommunEvents(vallentuna, [
+            ev({ id: 'nara', locationName: 'Kulturhuset', lat: 59.535, lng: 18.09 }),
+        ]);
+        expect(kept.map(e => e.id)).toEqual(['nara']);
     });
 });

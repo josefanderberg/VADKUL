@@ -4,8 +4,22 @@
  */
 import type { CityEvent } from './cityData';
 import { pickRecommended, shortDayLabel, clockLabel } from './cityData';
+import { belongsToTown } from '@/utils/townBoundary';
+import { CITY_POINTS } from '@/utils/cityPoints';
 
 export type ShareLine = { emoji: string; title: string; when: string };
+
+/** KOMMUNFILTRET på delningsbilden (Josef 7/9): bilden lovar "i <Staden>" och
+ *  delas i kommunens egna FB-grupper — grannkommunens event i raderna var
+ *  exakt det som fick Landskrona-gruppen att avvisa oss 1/9 (Vallentuna-
+ *  bilden visade två Täby-rader). Samma townBoundary-logik som sidinläggs-
+ *  bandet, mot webbens fulla ortlista. Filtrerar ALLT bilden bygger på —
+ *  rader, idag/veckan-siffror och kartbrickor säger samma sak. Stadssidan
+ *  själv filtreras INTE (radie-tilldelningen kvar) — bara bilden lovar kommun. */
+export function kommunEvents(city: { name: string; lat: number; lng: number }, events: CityEvent[]): CityEvent[] {
+    const self = { name: city.name, lat: city.lat, lng: city.lng };
+    return events.filter(e => belongsToTown({ locationName: e.locationName, lat: e.lat, lng: e.lng }, self, CITY_POINTS));
+}
 
 /** "1234" → "1 234" (svensk tusentalsavgränsning, vanligt mellanslag). */
 export function formatCount(n: number): string {

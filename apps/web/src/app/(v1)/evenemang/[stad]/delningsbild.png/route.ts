@@ -1,4 +1,5 @@
 import { CITIES, getCityEvents } from '../../cityData';
+import { kommunEvents } from '../../cityShare';
 import { renderCityShareImage } from '../../cityShareImage';
 
 // Stadssidans delningsbild — se cityShareImage.tsx.
@@ -27,7 +28,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ stad: string }
     const city = CITIES.find(c => c.slug === stad);
     if (!city) return renderCityShareImage({ headline: 'Se vad som händer nära dig', kicker: 'JUST NU I HELA SVERIGE', events: [] });
     // Datafel får aldrig ge en trasig bild: hellre rubrik utan rader.
-    const events = await getCityEvents(city).then(r => r.events).catch(() => []);
+    // kommunEvents: bilden delas i kommunens FB-grupper och får inte visa
+    // grannkommunens event (Landskrona-avslaget 1/9, Täby-raderna 7/9).
+    const events = await getCityEvents(city).then(r => kommunEvents(city, r.events)).catch(() => []);
     return renderCityShareImage({
         headline: `Vad händer i ${city.name}?`,
         kicker: `JUST NU I ${city.name.toUpperCase()}`,
