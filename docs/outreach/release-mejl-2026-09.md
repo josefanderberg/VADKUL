@@ -34,9 +34,10 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
       bildens `src` i HTML:en. Fallbacken ska vara `stockholm`.
 - [ ] **Testa delningsbilden i testutskick till RIKTIGA kontakter:** en med
       stadssideslug (bilden ska visa den staden) och en utan (bilden ska visa
-      Stockholm). Extra skyddsnät finns: routen svarar 200 med en
-      fallback-bild även för trasig/okänd slug (verifierat 7/9), så en
-      felmappad tagg ger fel stad — aldrig trasig bild.
+      Stockholm). **VIKTIGT:** blir taggen INTE ersatt (fel taggnamn) blir
+      sluggen skräp → routen svarar då 200 med den NATIONELLA fallback-bilden,
+      som visar "0 evenemang" (verifierat 7/9) — aldrig trasig bild, men ful.
+      Testutskicket är alltså det som skyddar mot 0-bilden.
 - [ ] Verifiera merge-taggarna mot en RIKTIG kontakt (test till adress utanför
       listan visar attrapper som "TEST" — det är inte fel). Kolla
       fallback-läsningen med en kontakt utan stad.
@@ -114,8 +115,9 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 >   anmäl dig, öppna kartan eller dela — utan att lämna sidan.
 >   [vadkul.se/evenemang](https://vadkul.se/evenemang)
 > - 🔗 **Dela — med automatisk förhandsbild** — varje event och stadssida har
->   en egen länk, och delar du en stadssida får länken automatiskt en bild med
->   **veckans höjdpunkter**. Skicka till en kompis, så landar hen rätt direkt.
+>   en egen länk, och delar du en stadssida på **Facebook, Messenger eller
+>   WhatsApp** får länken automatiskt en bild med **veckans höjdpunkter**.
+>   Skicka till en kompis, så landar hen rätt direkt.
 >
 > *(Här: delningsbilden för mottagarens stad — `$[CITYSLUG|stockholm]$` — med
 > bildtexten "Så här ser förhandsbilden ut just nu — den byggs om automatiskt
@@ -150,8 +152,9 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 
 [release-mejl-2026-09.html](release-mejl-2026-09.html) — samma mejlklient-säkra
 mall som sist (tabellayout, inline-CSS, max 600 px). Nytt 7/9 på Josefs
-begäran: logotypen i **fet kursiv** (Georgia/serif), en uppercase-kicker i
-topplisten, mer luft — och EN bild: delningsbilden per stad (se
+begäran: logotypen som i **WelcomeOverlay** (sans, font-weight 900, kursiv,
+versaler, gult streck under — INTE serif, den varianten revs), en
+uppercase-kicker i topplisten, mer luft — och EN bild: delningsbilden per stad (se
 Stadsanpassningen). Klistra in i Campaigns **HTML-editor** (inte drag-and-drop
 — mal sönder tabellayouten). Merge-taggarna `$[FNAME|där]$`, `$[CITY|…]$` (två
 ställen) och `$[CITYSLUG|stockholm]$` (bildens src) står redan i.
