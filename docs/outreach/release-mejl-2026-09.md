@@ -10,13 +10,14 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
 
 ## Före utskick — checklista
 
-- [ ] **BLOCKERARE: STJARNA3 finns INTE i koden än.** Lägg in i
-      `STAR_GIFT_CODES` (`apps/functions/src/index.ts`, samma lista som
-      STJARNA2) och kör `firebase deploy --only functions:redeemStarGift`.
-      **Lärdomen från 19/8: koden räcker inte — utan deployen svarar prod
-      "Ogiltig gåvolänk." och felet syns bara som en liten toast.** Skarptesta
-      mot prod som sist: tillfälligt Auth-konto → custom token →
-      `signInWithCustomToken` → POST till callable-endpointen → radera kontot.
+- [x] ~~BLOCKERARE: STJARNA3 saknas i koden~~ — **DEPLOYAD + SKARPTESTAD 7/9.**
+      STJARNA3 + kortformerna `3`/`S3` i `STAR_GIFT_CODES` (commit 6fee86c),
+      `firebase deploy --only functions:redeemStarGift` körd. Testat mot prod
+      med tillfälligt konto (raderat efteråt): STJARNA3 → `success:true`
+      "Du har en stjärna! ⭐", andra försöket och S3-aliaset → "Du har redan
+      hämtat stjärnan…", påhittad kod → "Ogiltig gåvolänk." Länken i mejlet
+      fungerar. (Testreceptets gotcha: API-nyckeln är referer-låst —
+      `signInWithCustomToken` kräver `Referer: https://vadkul.se/`.)
 - [x] **Medlemslistan byggd 7/9:** `medlemmar-2026-09-07.csv` (gitignorad, här
       i mappen) — **261 adresser, 249 med förnamn, 74 med stad** (187 utan →
       fallback-texten "din stad"). 271 konton i Auth, 10 utan/dubblett-mejl.
