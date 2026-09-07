@@ -20,6 +20,28 @@
 import { Source } from './types';
 import { SNOWBALL_SOURCES } from './registry-snowball';
 
+/**
+ * Orter vars stadssida är tunn och vars scener säljer via Tickster (mätt
+ * 2026-09-07). Orter som gav NOLL på ortssidan är medvetet utelämnade:
+ * Sölvesborg, Borgholm, Olofström. `slug` bara när ortsnamnet inte duger
+ * som URL-segment.
+ */
+const TICKSTER_TOWNS: Array<{ city: string; region: string; slug?: string }> = [
+    { city: 'Ljungby', region: 'ljungby-tickster' },
+    { city: 'Enköping', region: 'enkoping-tickster' },
+    { city: 'Markaryd', region: 'markaryd-tickster' },
+    { city: 'Älmhult', region: 'almhult-tickster' },
+    { city: 'Säffle', region: 'saffle-tickster' },
+    { city: 'Tranås', region: 'tranas-tickster' },
+    { city: 'Karlshamn', region: 'karlshamn-tickster' },
+    { city: 'Kinna', region: 'kinna-tickster' },
+    { city: 'Östhammar', region: 'osthammar-tickster' },
+    { city: 'Stenungsund', region: 'stenungsund-tickster' },
+    { city: 'Skövde', region: 'skovde-tickster' },
+    { city: 'Laholm', region: 'laholm-tickster' },
+    { city: 'Höör', region: 'hoor-tickster' },
+];
+
 export const SOURCES: Source[] = [
     // ─── BILJETTPLATTFORMAR (sitemap → detaljsidans JSON-LD Event) ───────────
     {
@@ -6835,6 +6857,43 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-09-07',
         discovery: { method: 'manual', probeUrl: 'https://www.markaryd.com/evenemang-i-markaryd', date: '2026-09-07', rawEventCount: 45, notes: 'Kalender-ID sniffat ur sidans clients6.google.com-anrop.' },
     },
+    // ─── TICKSTER PER ORT — småorternas höstsäsong ───────────────────────────
+    // Problemet (mätt 7/9): de nya småortssidorna visar ~0 event i november och
+    // december. Orternas scener SÄLJER säsongen — den ligger på Tickster — men
+    // `tickster-sitemap` har urlDateRegex, och där STYR fönstret hur mycket som
+    // hämtas: att bredda 30 → 180 dagar hade tagit körningen från ~1 000 till
+    // ~5 000 detaljsidor (~1 h → ~5 h i nattkedjan, varje vecka).
+    //
+    // Ticksters ORTSSIDA listar samma säsong för en ort i taget. 14 orter
+    // probade 7/9 gav ~50 event bortom 30-dagarsfönstret — Säffle 12 (t.o.m.
+    // april -27), Tranås 11, Stenungsund 11, Enköping 5, Älmhult/Karlshamn 4 —
+    // i månader där sidorna i dag är tomma. Kostnad: en renderad listsida per
+    // ort + ~100 detaljsidor, en gång i veckan.
+    //
+    // Sidan byggs i JS → isHtmlCatalog + useBrowser. INGEN urlDateRegex här:
+    // poängen är just de långt framåt liggande. Dubbletter mot tickster-sitemap
+    // faller på url-dedupen i runnern.
+    ...TICKSTER_TOWNS.map(({ city, region, slug }): Source => ({
+        id: `tickster-ort-${region}`,
+        hostName: 'Tickster',
+        region,
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}`,
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 4000,
+            urlPatterns: [/\/se\/sv\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
+            defaultCity: city,
+            maxUrls: 40,
+        },
+        updateFrequency: 'weekly',
+        status: 'experimental',
+        windowDays: 180,
+        notes: `Ticksters ortssida för ${city}. Listsidan visar ~16 åt gången — finns mer bakom paginering, hämta fler sidor om orten går tom.`,
+        lastVerified: '2026-09-07',
+        discovery: { method: 'manual', probeUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}`, date: '2026-09-07' },
+    })),
     {
         id: 'visittorsas',
         hostName: 'Visit Torsås',
