@@ -22,6 +22,7 @@ import { RawEvent, EngineContext, Engine } from '../types';
 import { dedupeSeries } from '../../scrapers/pro';
 import { domainLimiter } from '../rateLimiter';
 import { cleanDescription } from '../../utils/text';
+import { parseSwedishDateWeekdayChecked } from '../../utils/swedishDate';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -42,6 +43,21 @@ export interface CrunchoConfig {
      * med olika uri per dag) → serie-dedup på (arrangör, titel).
      */
     eventsRoute?: { portletId: string };
+    /**
+     * TREDJE varianten (almhult.se 2026-09-07): listan ligger bakom portletens
+     * ROT-route, inte /events — den svarar tomt här:
+     *   GET <pageUrl>?sv.target=<id>&sv.<id>.route=/&query=&venue=&dateFrom=
+     *       &dateTo=&category=&page=N&svAjaxReqParam=ajax
+     * 12 per sida, `showLoadMoreButton` säger om det finns fler.
+     *
+     * GOTCHA 1: sidan har NIO registerInitialState-blobbar och den första är
+     * bara filterinställningar — portletId:t måste tas från den som bär
+     * `events[]`. GOTCHA 2: datumen är {nextDate: 'fredag 11 sep', nextTime:
+     * '20.00'} UTAN år; veckodagen används som facit (se
+     * parseSwedishDateWeekdayChecked). GOTCHA 3: `image` är en JWT vars
+     * payload bär den riktiga bild-URL:en.
+     */
+    pageRoute?: { portletId: string };
     /**
      * Cruncho som HOSTAD widget (burlovlommastaffanstorp.cruncho.co,
      * vellinge.cruncho.co — upptäckt 2026-08-26). Kommunsajten bäddar in en
@@ -383,6 +399,113 @@ export function mapCrunchoRouteEvent(
     };
 }
 
+export interface CrunchoPageEvent {
+    id?: string;
+    name?: string;
+    link?: string;
+    venue?: string;
+    description?: string;
+    image?: string;
+    bookingLink?: string | null;
+    date?: { nextDate?: string; nextTime?: string; additionalOccasions?: unknown } | null;
+    categories?: Array<{ name?: string }> | null;
+}
+
+/** `image` är en JWT — den riktiga URL:en ligger i payloadens `url`. */
+export function decodeCrunchoImage(token?: string): string | undefined {
+    if (!token || !token.includes('.')) return undefined;
+    try {
+        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+        const url = decodeURIComponent(String(payload?.url ?? ''));
+        return /^https?:\/\//.test(url) ? url : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/** Mappa en rot-route-post → RawEvent. Exporterad för test. */
+export function mapCrunchoPageEvent(
+    e: CrunchoPageEvent,
+    cfg: CrunchoConfig,
+    now: Date = new Date(),
+): RawEvent | null {
+    const title = (e.name || '').trim();
+    if (!title || !e.link) return null;
+
+    const nextDate = e.date?.nextDate?.trim();
+    if (!nextDate) return null;
+    const nextTime = e.date?.nextTime?.trim();
+    const start = parseSwedishDateWeekdayChecked(
+        nextTime ? `${nextDate} ${nextTime}` : nextDate, now,
+    );
+    if (!start) return null;
+
+    // url = primärnyckel. `link` bär event-id:t och är den enda stabila,
+    // unika adressen; bookingLink saknas på merparten.
+    let url: string;
+    try { url = new URL(e.link, cfg.pageUrl).toString(); } catch { return null; }
+
+    const cats = (e.categories ?? []).map(c => c?.name).filter(Boolean).join(' ');
+    return {
+        externalId: e.id,
+        title,
+        startDate: start,
+        url,
+        venueName: e.venue?.trim() || undefined,
+        city: cfg.defaultCity,
+        description: cleanDescription(e.description || '') || undefined,
+        imageUrl: decodeCrunchoImage(e.image),
+        classifyHints: cats || undefined,
+        hasSpecificTime: nextTime ? true : undefined,
+    };
+}
+
+/** Tredje Cruncho-varianten: paginera portletens rot-route. */
+async function scrapePageRoute(
+    config: CrunchoConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const { portletId } = config.pageRoute!;
+    const all: RawEvent[] = [];
+    const MAX_PAGES = 30;   // 12/sida ⇒ tak 360 event
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+        const url = `${config.pageUrl}?sv.target=${portletId}`
+            + `&sv.${portletId}.route=/&query=&venue=&dateFrom=&dateTo=&category=`
+            + `&page=${page}&svAjaxReqParam=ajax`;
+        let data: { showLoadMoreButton?: boolean; events?: CrunchoPageEvent[] };
+        await domainLimiter.wait(url);
+        try {
+            const res = await fetch(url, {
+                headers: {
+                    'User-Agent': config.userAgent ?? DEFAULT_UA,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                signal: ctx.signal ?? AbortSignal.timeout(config.timeoutMs ?? 25_000),
+            });
+            if (!res.ok) { ctx.log(`rot-route HTTP ${res.status} (page=${page})`); break; }
+            data = await res.json();
+        } catch (err) {
+            ctx.log(`rot-route-fel page=${page}: ${(err as Error).message}`);
+            break;
+        }
+        const items = data.events ?? [];
+        if (!items.length) break;
+        let mapped = 0;
+        for (const it of items) {
+            const ev = mapCrunchoPageEvent(it, config);
+            if (ev) { all.push(ev); mapped++; }
+        }
+        ctx.log(`rot-route sida ${page}: ${items.length} poster → ${mapped} mappade`);
+        if (!data.showLoadMoreButton) break;
+    }
+
+    const deduped = dedupeSeries(all.sort((a, b) => a.startDate.getTime() - b.startDate.getTime()));
+    ctx.log(`cruncho rot-route: ${all.length} tillfällen → ${deduped.length} efter serie-dedup`);
+    return deduped;
+}
+
 /** Nyare Cruncho-webapp: paginera igenom portletens /events-route. */
 async function scrapeEventsRoute(
     config: CrunchoConfig,
@@ -434,6 +557,7 @@ export const crunchoEngine = async (
 ): Promise<RawEvent[]> => {
     if (config.hostedApi) return scrapeHostedApi(config, ctx);
     if (config.eventsRoute) return scrapeEventsRoute(config, ctx);
+    if (config.pageRoute) return scrapePageRoute(config, ctx);
 
     const sep = config.pageUrl.includes('?') ? '&' : '?';
     const url = `${config.pageUrl}${sep}offset=${config.offset ?? 1000}`;

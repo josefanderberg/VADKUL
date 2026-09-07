@@ -3030,6 +3030,29 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-04',
     },
     {
+        id: 'almhult-cruncho',
+        hostName: 'Upplev Älmhult',
+        region: 'almhult-cruncho',
+        engine: 'cruncho',
+        config: {
+            pageUrl: 'https://www.almhult.se/evenemang',
+            // Rot-route-varianten, inte /events (den svarar tomt här). portletId
+            // är den blob som bär events[] — sidan har nio, och den FÖRSTA är
+            // bara filterinställningar. Se pageRoute i engines/cruncho.ts.
+            pageRoute: { portletId: '12.18df5c9518529a085143c84a' },
+            defaultCity: 'Älmhult',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Hittad 7/9 2026 genom att skörda VILKA domäner som publicerar Älmhults-event: '
+            + '143 kom härifrån medan sitemap-källan `almhult` ovan såg 12. Datumen saknar år '
+            + '("fredag 11 sep") — veckodagen används som facit, och poster där ingen närliggande '
+            + 'årgång ger rätt veckodag SLÄNGS hellre än dateras fel.',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'probe-xhr', probeUrl: 'https://www.almhult.se/evenemang', date: '2026-09-07', rawEventCount: 143, notes: 'Rot-routen sniffad genom att klicka "Läs in fler evenemang" i Puppeteer.' },
+    },
+    {
         id: 'stromstad',
         hostName: 'Strömstad Kommun',
         region: 'stromstad',

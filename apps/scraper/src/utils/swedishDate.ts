@@ -131,6 +131,46 @@ export function parseSwedishDate(dateStr: string, now: Date = new Date()): Date 
 }
 
 /**
+ * Datum utan år MEN med veckodag ("fredag 11 sep", "tisdag 8 sep 15.00").
+ *
+ * `parseSwedishDate` gissar året framåt (inferYearForward) och struntar i
+ * veckodagen. För källor som skriver ut veckodagen är den en GRATIS
+ * facitkontroll: stämmer inte veckodagen med det gissade året är gissningen
+ * fel. Vi provar därför året före och efter, och returnerar null hellre än ett
+ * datum vi vet är fel dag — ett event på fel dag är värre än inget event.
+ *
+ * Byggd 2026-09-07 för Älmhults Cruncho-kalender, men det var samma krav som
+ * stoppade Ystad-Österlen 4/9 ("kräver veckodagsvaliderad årsinferens").
+ *
+ * Saknar strängen veckodag beter sig funktionen exakt som parseSwedishDate.
+ */
+export function parseSwedishDateWeekdayChecked(dateStr: string, now: Date = new Date()): Date | null {
+    const first = parseSwedishDate(dateStr, now);
+    if (!first) return null;
+
+    const wd = dateStr.toLowerCase().match(new RegExp(`\\b(${WEEKDAY_PATTERN})\\b`));
+    if (!wd) return first;                       // ingen veckodag att validera mot
+    const want = WEEKDAY_MAP[wd[1]];
+    if (first.getDay() === want) return first;
+
+    // Fel veckodag ⇒ fel år. Prova grannåren, men BARA framåt i tiden: rätt
+    // veckodag ligger alltid ~6 eller ~11 år bort åt andra hållet också, och
+    // ett passerat datum är aldrig ett kommande event. Samma 30-dagarsgräns
+    // bakåt som inferYearForward använder (flerdagarsevent som redan börjat).
+    const floor = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    for (const delta of [1, 2, -1]) {
+        const cand = new Date(first);
+        cand.setFullYear(first.getFullYear() + delta);
+        // setFullYear kan rulla över (29 feb) — kontrollera att dagen står kvar.
+        if (cand.getDate() !== first.getDate() || cand.getMonth() !== first.getMonth()) continue;
+        if (cand.getDay() !== want) continue;
+        if (cand < floor) continue;
+        return cand;
+    }
+    return null;
+}
+
+/**
  * Scanna en längre text efter ALLA datum och returnera bästa kandidaten.
  *
  * "Bästa" = första **framtida** datum (>= idag), eller idag.
