@@ -137,8 +137,9 @@ export const redeemCode = region.https.onCall(async (data: any, context: functio
 // att gissa gör mindre (Josef 22/8), men listan sätter taket. Ny kampanj = ny
 // kod här + functions-deploy. STJARNA1 = publika kampanjer (FB-grupper m.m.),
 // ARRANGOR1 = arrangörs-outreachen (docs/outreach/), MEDLEM1 = medlems-
-// utskicket via Zoho Campaigns, STJARNA2 = mejlutskicket aug -26.
-const STAR_GIFT_CODES = ['STJARNA1', 'ARRANGOR1', 'MEDLEM1', 'STJARNA2'];
+// utskicket via Zoho Campaigns, STJARNA2 = mejlutskicket aug -26,
+// STJARNA3 = mejlutskicket sep -26.
+const STAR_GIFT_CODES = ['STJARNA1', 'ARRANGOR1', 'MEDLEM1', 'STJARNA2', 'STJARNA3'];
 
 // KORTFORMER (22/8): länkarna ska vara korta i mejl och inlägg —
 // vadkul.se/s/2 i stället för vadkul.se/?stjarna=STJARNA2&utm_…
@@ -148,6 +149,7 @@ const STAR_GIFT_CODES = ['STJARNA1', 'ARRANGOR1', 'MEDLEM1', 'STJARNA2'];
 const STAR_CODE_ALIASES: Record<string, string> = {
     '1': 'STJARNA1', 'S1': 'STJARNA1',
     '2': 'STJARNA2', 'S2': 'STJARNA2',
+    '3': 'STJARNA3', 'S3': 'STJARNA3',
     'A1': 'ARRANGOR1',
     'M1': 'MEDLEM1',
 };
