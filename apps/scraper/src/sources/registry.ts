@@ -2015,8 +2015,12 @@ export const SOURCES: Source[] = [
             defaultCity: 'Piteå',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-sitemap 2026-06-03: 17 evenemang-URLs. Text-parser.',
-        lastVerified: '2026-06-04',
+        notes: 'Probe-sitemap 2026-06-03: 17 evenemang-URLs. Text-parser. '
+            + 'KARANTÄN sedan 19/8. Diagnos 7/9: /Upplev/Evenemang/ finns inte kvar — '
+            + 'av 7663 URL:er i sitemapen är de "event-ordiga" skolklassers kalendrar '
+            + '(Porsnässkolan klass 6A …). Mönsterfix hjälper inte, det krävs en ny '
+            + 'källa. Stadens utbud kommer i dag från visitpitea.',
+        lastVerified: '2026-09-07',
     },
     {
         id: 'dorotea',
@@ -2097,9 +2101,16 @@ export const SOURCES: Source[] = [
                     urlPatterns: [/\/(?:sv\/)?kalender\/[^/]+\/?$/i],
                     defaultCity: 'Nyköping',
                 },
+        disabled: true,
         updateFrequency: 'every-3d',
-        notes: 'Probe-sitemap 2026-06-04: 2404 event-URLs (kalender-mönster).',
-        lastVerified: '2026-06-04',
+        notes: 'AVSTÄNGD 2026-09-07. "2404 event-URLs" var fel läsning: 2534 av 2535 '
+            + 'kalender-URL:er ligger under /arkiv/kalender/ och är NÄMNDSPROTOKOLL '
+            + '2018-2026 ("2021-06-14_1330_sammantrade_kommunstyrelsens-protokoll"). '
+            + 'Dry-run 7/9: 300 sidor hämtade, 300 utan event-struktur, 0 event — '
+            + '7,5 minuter av nattkedjan per körning för ingenting. Nyköping behöver '
+            + 'en RIKTIG källa (kommunens kalender ligger inte i sitemapen); '
+            + 'visitsormland täcker länet men inte staden.',
+        lastVerified: '2026-09-07',
     },
     {
         id: 'svalov',
@@ -3291,8 +3302,11 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Västerås',
                 },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 4 event-URLs (kalender-mönster).',
-        lastVerified: '2026-06-04',
+        notes: 'Probe-sitemap 2026-06-04: 4 event-URLs (kalender-mönster). '
+            + 'KARANTÄN sedan 19/8. Diagnos 7/9: 42 566 URL:er i sitemapen, 15 matchar '
+            + 'mönstret och ALLA 15 faller på default-blacklisten (nämnd/protokoll). '
+            + 'Inga riktiga event-URL:er finns kvar — ny källa krävs.',
+        lastVerified: '2026-09-07',
     },
     {
         id: 'tierp',
