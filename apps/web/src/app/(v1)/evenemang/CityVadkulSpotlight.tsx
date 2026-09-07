@@ -374,10 +374,13 @@ export default function CityVadkulSpotlight(props: Props) {
     if (boosted.length === 0 && vadkul.length === 0) {
         return (
             <div className="mt-4 flex items-center gap-3 rounded-2xl border border-dashed border-[#006AA7]/40 dark:border-sky-400/40 bg-sky-50/60 dark:bg-sky-950/20 px-4 py-3">
-                <span aria-hidden className="text-xl">🎈</span>
+                <span aria-hidden className="text-xl">🚀</span>
                 <p className="flex-1 text-xs leading-snug font-medium text-slate-600 dark:text-zinc-400">
+                    {/* Eventidé-vinkeln (Josef 7/9): exemplen ska låta som något
+                        man kan bygga vidare på — inte privata hemmakvällar
+                        ("middag, vinprovning" revs). */}
                     <strong className="text-slate-900 dark:text-zinc-100">Ditt event överst här.</strong>{' '}
-                    Spelkväll, middag, vinprovning — event skapade på VADKUL visas först på den här sidan.
+                    Quizkväll, kurs, popup-marknad — testa din eventidé gratis, den visas först på den här sidan.
                 </p>
                 <Link href={props.createHref} className="shrink-0 rounded-full bg-[#006AA7] px-3.5 py-2 text-xs font-black text-white hover:bg-[#00598c] transition-colors">
                     Skapa event
