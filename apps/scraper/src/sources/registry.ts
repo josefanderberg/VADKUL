@@ -3020,7 +3020,13 @@ export const SOURCES: Source[] = [
         // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
         // småortssidorna och tål inte att tappa dem.
         windowDays: 180,
-        notes: 'Probe-sitemap 2026-06-04: 12 event-URLs (evenemang-mönster).',
+        notes: 'Probe-sitemap 2026-06-04: 12 event-URLs (evenemang-mönster). '
+            + 'ÖPPET (7/9 2026): almhult.se/evenemang kör en CRUNCHO-kalender med 143 event — vi ser 12. '
+            + 'Eventlistan ligger i registerInitialState-bloben 12.18df5c9518529a085143c84a (sidan har NIO '
+            + 'blobbar; den första är bara filterinställningar, och /events-routen svarar tom JSON). '
+            + 'Cruncho-motorn känner inte igen formen: datumen är {nextDate: \'tisdag 8 sep\'} utan år, inte ISO. '
+            + 'Kräver en tredje variant i engines/cruncho.ts med veckodagsvaliderad årsinferens — samma krav '
+            + 'som stoppade Ystad-Österlen 4/9.',
         lastVerified: '2026-06-04',
     },
     {
