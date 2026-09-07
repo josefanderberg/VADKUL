@@ -10,14 +10,18 @@
  *   userAgent?:  string
  *   timeoutMs?:  number
  *
- * Detta är en enkel parser som täcker huvudfallen. För kantfall (recurring events,
- * komplex unfolding) finns biblioteket `node-ical` om vi vill uppgradera senare.
+ * Detta är en enkel parser som täcker huvudfallen. För kantfall (komplex
+ * unfolding) finns biblioteket `node-ical` om vi vill uppgradera senare.
+ *
+ * KÄND BEGRÄNSNING: RRULE expanderas inte — ett återkommande event ger bara
+ * sin FÖRSTA förekomst. Ligger den bakåt i tiden faller eventet ur fönstret
+ * helt. (Markaryds feed 7/9: 19 av 422 VEVENT har RRULE.)
  */
 
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
-import { decodeHtmlEntities } from '../../utils/text';
+import { decodeHtmlEntities, cleanDescription, cleanLocationName } from '../../utils/text';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -25,7 +29,14 @@ const DEFAULT_UA =
 
 export interface IcalConfig {
     urls: string[];
+    /**
+     * Sidan eventen är publicerade på — används som länkmål när VEVENT saknar
+     * URL (se synthesizeUrl nedan). Utelämnad → .ics-URL:en själv, vilket är
+     * ett dåligt länkmål; sätt den alltid för feeds utan URL-fält.
+     */
     defaultUrl?: string;
+    /** Ort när LOCATION saknar den. */
+    defaultCity?: string;
     userAgent?: string;
     timeoutMs?: number;
 }
@@ -142,7 +153,38 @@ function parseVEvents(ics: string): Array<Record<string, { value: string; params
     return events;
 }
 
-function vEventToRawEvent(v: any, fallbackUrl: string): RawEvent | null {
+/**
+ * Länkmål per event. Publika Google Calendar-feeds (som flera små kommuners
+ * turistkalendrar körs på) har INGEN URL-rad i sina VEVENT — utan det här
+ * skulle varje event i feeden få samma `url`, och eftersom url är primärnyckel
+ * i hela pipelinen skulle 45 event dedupas ner till ETT. UID:t är stabilt över
+ * körningar, så det blir nyckeln; länken landar på kalendersidan där eventet
+ * faktiskt är publicerat.
+ */
+export function synthesizeUrl(fallbackUrl: string, uid?: string): string {
+    if (!uid) return fallbackUrl;
+    const sep = fallbackUrl.includes('?') ? '&' : '?';
+    return `${fallbackUrl}${sep}uid=${encodeURIComponent(uid)}`;
+}
+
+/**
+ * "Musikhuset i Markaryd, Drottninggatan 54, 285 38 Markaryd, Sverige"
+ * → venue "Musikhuset i Markaryd", ort "Markaryd", adressen hel till geokodaren.
+ * Utan orten hamnar geokodningen på fel Kulturhus i landet.
+ */
+export function splitIcsLocation(raw: string | undefined, defaultCity?: string):
+    { venueName?: string; address?: string; city?: string } {
+    const loc = cleanLocationName(raw ?? '');
+    if (!loc) return { city: defaultCity };
+    const parts = loc.split(',').map(p => p.trim()).filter(Boolean);
+    const postal = loc.match(/\b\d{3}\s?\d{2}\s+([^,]+)/);
+    const city = postal ? postal[1].trim() : defaultCity;
+    // Ett enda segment är antingen ren venue eller ren adress — låt den vara.
+    const venueName = parts.length > 1 ? parts[0] : loc;
+    return { venueName, address: parts.length > 1 ? loc : undefined, city };
+}
+
+function vEventToRawEvent(v: any, fallbackUrl: string, cfg: IcalConfig): RawEvent | null {
     const summary = v['SUMMARY']?.value;
     if (!summary) return null;
     const dt = v['DTSTART'];
@@ -150,16 +192,23 @@ function vEventToRawEvent(v: any, fallbackUrl: string): RawEvent | null {
     if (!start) return null;
     const end = v['DTEND'] ? parseIcsDate(v['DTEND'].value, v['DTEND'].params) : null;
 
-    const location = v['LOCATION']?.value ? unescape(v['LOCATION'].value) : undefined;
+    const uid = v['UID']?.value;
+    const { venueName, address, city } = splitIcsLocation(
+        v['LOCATION']?.value ? unescape(v['LOCATION'].value) : undefined,
+        cfg.defaultCity,
+    );
     return {
-        externalId: v['UID']?.value,
+        externalId: uid,
         title: decodeHtmlEntities(unescape(summary)).trim(),
         startDate: start,
         endDate: end || undefined,
-        url: v['URL']?.value || fallbackUrl,
-        venueName: location,
-        // Vissa feeds (WP-kalendrar) lägger HTML i DESCRIPTION — avkoda entiteter
-        description: v['DESCRIPTION']?.value ? decodeHtmlEntities(unescape(v['DESCRIPTION'].value)) : undefined,
+        url: v['URL']?.value || synthesizeUrl(fallbackUrl, uid),
+        venueName,
+        address,
+        city,
+        // Google Calendar och WP-kalendrar lägger HTML i DESCRIPTION — strippa
+        // taggarna, annars hamnar "<h2><b>…" i beskrivningen på kortet.
+        description: v['DESCRIPTION']?.value ? cleanDescription(unescape(v['DESCRIPTION'].value)) : undefined,
         organizer: v['ORGANIZER']?.value,
     };
 }
@@ -180,7 +229,7 @@ export const icalEngine = async (
         const vevents = parseVEvents(ics);
         ctx.log(`  ${vevents.length} VEVENT entries`);
         for (const v of vevents) {
-            const ev = vEventToRawEvent(v, config.defaultUrl || url);
+            const ev = vEventToRawEvent(v, config.defaultUrl || url, config);
             if (!ev) continue;
             const dedup = ev.externalId || ev.url + '|' + ev.startDate.toISOString();
             if (seen.has(dedup)) continue;

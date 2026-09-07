@@ -2210,9 +2210,18 @@ export const SOURCES: Source[] = [
                     urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
                     defaultCity: 'Falkenberg',
                 },
+        // Mätt 2026-09-07: samma 124 sidor hämtas oavsett fönster, men med
+        // default-fönstret (30 d) sparades bara 41 av dem — 81 färdighämtade
+        // höstevent kastades. Med 180 d: 122. Sitemap-källor filtrerar först
+        // vid sparning, så bredden är gratis här (till skillnad från källor
+        // med urlDateRegex, där fönstret styr hur mycket som hämtas).
+        windowDays: 180,
         updateFrequency: 'every-3d',
-        notes: 'Probe-sitemap 2026-06-04: 287 event-URLs (evenemang-mönster).',
-        lastVerified: '2026-06-04',
+        notes: 'Probe-sitemap 2026-06-04: 287 event-URLs (evenemang-mönster). '
+            + 'Fönstret breddat 7/9 efter mätning (41 → 122 sparade). '
+            + 'OBS: samma mätning på karlshamn/saffle/solvesborg gav NOLL skillnad — '
+            + 'deras "outside" är passerade event, inte framtida. Mät innan du breddar.',
+        lastVerified: '2026-09-07',
     },
     {
         id: 'katrineholm',
@@ -3392,6 +3401,9 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Norrtälje',
                     maxUrls: 200,
                 },
+        // Sitemapen hämtas i sin helhet oavsett fönster — 30 dagar hade kastat
+        // höstens spelningar efter att sidorna redan var hämtade.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         notes: 'Om-probad 2026-09-07: 139 event-URLs i sitemapen. OBS månaden i URL:en är PUBLICERINGSmånad, inte eventets — datumet måste komma ur sidan.',
         lastVerified: '2026-09-07',
@@ -6747,6 +6759,10 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
+        // Scenen släpper hela höst- och julsäsongen på en gång. Med default-
+        // fönstret (30 d) hade 48 av 70 event kastats EFTER att sidorna redan
+        // hämtats — fönstret filtrerar först vid sparning, så bredden är gratis.
+        windowDays: 180,
         notes: 'Yoast-JSON-LD:n är WebPage-graf UTAN Event-nod — datumet kommer ur textfallbacken ("23 oktober, KL 19:30"). OBS sidhuvudet skriver ut DAGENS datum ("Måndag 7 September 2026"); kontrollera vid nästa verifiering att inte alla event daterats till körningsdagen (Kulturbolaget-buggen).',
         lastVerified: '2026-09-07',
         discovery: { method: 'manual', probeUrl: 'https://www.trollhattan.fh.se/event-sitemap.xml', date: '2026-09-07', rawEventCount: 72, notes: 'Trollhättan saknade helt lokala scener — 84 event i stan på en vecka men 3 från lokala arrangörer.' },
@@ -6794,6 +6810,30 @@ export const SOURCES: Source[] = [
         notes: 'Komplement till alingsas-kommun (kommunkalendern) — andra arrangörer, egen domän, så dedupen krockar inte. 12 event på listsidan 7/9.',
         lastVerified: '2026-09-07',
         discovery: { method: 'hint', probeUrl: 'https://www.vastsverige.com/alingsas/evenemang/', date: '2026-09-07', rawEventCount: 11 },
+    },
+    {
+        id: 'markaryd-turism',
+        hostName: 'c/o Markaryd',
+        region: 'markaryd',
+        engine: 'ical',
+        config: {
+            // markaryd.com/evenemang-i-markaryd renderar en INBÄDDAD publik
+            // Google Calendar (inga event i HTML:en, allt via clients6.google.com).
+            // Feeden är samma kalender som .ics — stabilare än att rendera sidan.
+            urls: ['https://calendar.google.com/calendar/ical/4bd8fed0205452afd9ada9ecd14d7d6214aed320b0a4d954ee976f05c6b06b33%40group.calendar.google.com/public/basic.ics'],
+            defaultUrl: 'https://www.markaryd.com/evenemang-i-markaryd',
+            defaultCity: 'Markaryd',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Markaryd låg SIST av alla stadssidor 7/9 (39 event totalt, 7 på en vecka, '
+            + 'event bara 3 av 8 dagar) och kommunen saknade källa helt. Feeden har 422 VEVENT, '
+            + '45 kommande, med adress och beskrivning. VEVENT saknar URL-rad — motorn syntetiserar '
+            + 'url ur UID (se synthesizeUrl i engines/ical.ts), annars kollapsar hela feeden till '
+            + 'ETT event på den delade nyckeln. Första ical-källan i registryt.',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'manual', probeUrl: 'https://www.markaryd.com/evenemang-i-markaryd', date: '2026-09-07', rawEventCount: 45, notes: 'Kalender-ID sniffat ur sidans clients6.google.com-anrop.' },
     },
     {
         id: 'visittorsas',
