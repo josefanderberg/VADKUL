@@ -213,6 +213,11 @@ const DEFAULT_URL_BLACKLIST: RegExp[] = [
  * Default title-blacklist — sidor vars titel innehåller dessa är inte events
  * (cookie-banners, site-index, generiska fallbacks).
  */
+/** Titel som aldrig är ett event. Exporterad för test. */
+export function isBlacklistedTitle(title: string): boolean {
+    return DEFAULT_TITLE_BLACKLIST.some(re => re.test(title.trim()));
+}
+
 const DEFAULT_TITLE_BLACKLIST: RegExp[] = [
     /^startsida$/i,
     /^hem$/i,
@@ -220,6 +225,12 @@ const DEFAULT_TITLE_BLACKLIST: RegExp[] = [
     /^cookie/i,
     /^sok\s*resultat/i,
     /^404\b/,
+    // Hoppa-till-innehåll-länkar. På sidor utan tydlig h1 plockar
+    // cheerio-fallbacken skiplänken som titel — "Till innehållet" dök upp
+    // som ett event daterat 2027 på enkoping.se 7/9 2026. Alla svenska
+    // offentliga sajter har någon variant av den.
+    /^(hoppa |g[åa] )?till (huvud)?inneh[åa]llet?$/i,
+    /^skip to (main )?content$/i,
     // Trafik/parkering i titel
     /^\d+ parkeringar.*avst[äa]ngd/i,
     /trafikst[öo]rning/i,
@@ -643,7 +654,7 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string)
     if (!title) return null;
 
     // Skippa sidor vars titel matchar blacklist (cookie-banners, trafikinfo etc)
-    if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(title))) return null;
+    if (isBlacklistedTitle(title)) return null;
 
     // 1) Strukturerade datumkällor (microdata + <time datetime>)
     let startDate: Date | null = null;
@@ -1077,7 +1088,7 @@ export function extractFromHtml(html: string, url: string, defaultCity?: string)
         // arenor (Hovet, Avicii Arena …) lägger "Entréer öppnar" som första
         // Event-nod och själva matchen/konserten som andra — sidan ska då ge
         // det riktiga eventet, inte tomt.
-        if (DEFAULT_TITLE_BLACKLIST.some(re => re.test(candidate.title))) { sawBlacklisted = true; continue; }
+        if (isBlacklistedTitle(candidate.title)) { sawBlacklisted = true; continue; }
         if (!candidate.city && defaultCity) candidate.city = defaultCity;
         ev = candidate;
         break;

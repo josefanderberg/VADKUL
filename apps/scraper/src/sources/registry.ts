@@ -2996,16 +2996,24 @@ export const SOURCES: Source[] = [
         engine: 'sitemap',
         config: {
                     sitemapUrl: 'https://enkoping.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
+                    // Kalendern ligger på underwebben "Upplev Enköping", inte
+                    // under /evenemang/. Det gamla mönstret matchade kommunens
+                    // INFO-sidor om evenemang ("bidrag-for-att-arrangera-…"),
+                    // inte eventen: 6 träffar mot kalenderns 76.
+                    urlPatterns: [/\/evenemangskalender\/lista\/[^/]+\.html$/i],
                     defaultCity: 'Enköping',
+                    maxUrls: 150,
                 },
         updateFrequency: 'weekly',
         // Fönstret vidgat 3/9 2026: dry-run visade +4 event mellan 30 och 180
         // dagar fram som 30-dagarsfiltret slängde. Orten är en av de nya
         // småortssidorna och tål inte att tappa dem.
         windowDays: 180,
-        notes: 'Probe-sitemap 2026-06-04: 12 event-URLs (evenemang-mönster).',
-        lastVerified: '2026-06-04',
+        notes: 'Om-probad 7/9 2026: 76 event-URLer i sitemapen under '
+            + 'upplev-enkoping/evenemang/evenemangskalender/lista/. Ingen JSON-LD, men '
+            + 'detaljsidan bär <time datetime> och "Datum: 6 oktober 2026" i texten — '
+            + 'år finns, ingen gissning behövs.',
+        lastVerified: '2026-09-07',
     },
     {
         id: 'habo',
