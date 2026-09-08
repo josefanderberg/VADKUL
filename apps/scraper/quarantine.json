@@ -33,7 +33,9 @@
     },
     "louisdegeer": {
       "since": "2026-08-30",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-08",
+      "emptyRetries": 1
     },
     "nordmaling": {
       "since": "2026-08-19",
@@ -45,12 +47,6 @@
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-09-03",
-      "emptyRetries": 2
-    },
-    "nykoping": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-04",
       "emptyRetries": 2
     },
     "orebro": {
@@ -71,11 +67,9 @@
       "lastRetry": "2026-09-06",
       "emptyRetries": 2
     },
-    "pustervik": {
-      "since": "2026-08-21",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-08-30",
-      "emptyRetries": 1
+    "pro": {
+      "since": "2026-09-08",
+      "reason": "4 raka tomma körningar (3 fel)"
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",
@@ -91,7 +85,9 @@
     },
     "sdhl": {
       "since": "2026-09-01",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-08",
+      "emptyRetries": 1
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
@@ -100,8 +96,8 @@
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-01",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-08",
+      "emptyRetries": 2
     },
     "stockholm": {
       "since": "2026-08-19",

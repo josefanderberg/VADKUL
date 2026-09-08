@@ -10,6 +10,11 @@
       "date": "2026-08-25",
       "note": "bulk-probe"
     },
+    "2lang.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "a-beyondparkour.com": {
       "verdict": "FAIL",
       "date": "2026-08-25",
@@ -18,6 +23,21 @@
     "activagecenter.com": {
       "verdict": "FAIL",
       "date": "2026-08-25",
+      "note": "bulk-probe"
+    },
+    "ahussweden.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
+    "alingsasdansklubb.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
+    "alottayoga.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
       "note": "bulk-probe"
     },
     "alphasverige.se": {
@@ -33,6 +53,11 @@
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "anoteket.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "arbetetsmuseum.se": {
       "date": "2026-08-20",
@@ -108,6 +133,11 @@
       "date": "2026-08-25",
       "note": "bulk-probe"
     },
+    "bohuslanguide.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "bokadirekt.se": {
       "verdict": "FAIL",
       "date": "2026-08-25",
@@ -127,6 +157,11 @@
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "borasdansforening.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "borasdjurpark.se": {
       "date": "2026-08-19",
@@ -168,6 +203,11 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "bryggerietvisby.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "brygghusetboras.se": {
       "date": "2026-08-19",
       "note": "bulk-probe",
@@ -182,6 +222,16 @@
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "catscorner.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
+    "christoffernyqvist.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "dalsed.se": {
       "date": "2026-08-23",
@@ -201,6 +251,11 @@
     "dans.se": {
       "verdict": "FAIL",
       "date": "2026-08-25",
+      "note": "bulk-probe"
+    },
+    "dansinord.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
       "note": "bulk-probe"
     },
     "degerfors.se": {
@@ -1661,6 +1716,16 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "edition-festival.com": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
+    "editnews.com": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "efskyrkan.nu": {
       "verdict": "FAIL",
       "date": "2026-09-01",
@@ -1670,6 +1735,11 @@
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "elite.se": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-09-08",
+      "note": "bara 0 framtida event (kräver ≥3)"
     },
     "entryevent.se": {
       "verdict": "FAIL",
@@ -1690,6 +1760,11 @@
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "fienta.com": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "filipstad.se": {
       "date": "2026-08-23",
@@ -1730,6 +1805,11 @@
       "date": "2026-08-25",
       "note": "bulk-probe"
     },
+    "fredrikanderssonproductions.com": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "fritidsbanken.se": {
       "verdict": "FAIL",
       "date": "2026-08-25",
@@ -1747,6 +1827,11 @@
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "gas-festival.com": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "gellivare.se": {
       "date": "2026-08-23",
@@ -1787,6 +1872,11 @@
       "date": "2026-08-23",
       "note": "bara 0 framtida event (kräver ≥3)",
       "verdict": "SMOKE-FAIL"
+    },
+    "hagmyren.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "hallstahammar.se": {
       "date": "2026-08-23",
@@ -1841,6 +1931,11 @@
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "horart.com": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "hosttradgardsmassa.se": {
       "verdict": "FAIL",
@@ -1900,6 +1995,11 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "jordhammarsherrgard.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "k-v.se": {
       "verdict": "FAIL",
       "date": "2026-09-01",
@@ -1938,6 +2038,16 @@
       "date": "2026-08-20",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "klosterlikoren.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
+    "klovsjostenugnsbageri.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "konsertkongress.se": {
       "date": "2026-08-20",
@@ -2009,6 +2119,11 @@
       "date": "2026-09-01",
       "note": "bulk-probe"
     },
+    "laughseats.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "laxa.se": {
       "date": "2026-08-23",
       "note": "bara 0 framtida event (kräver ≥3)",
@@ -2027,6 +2142,11 @@
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "likeit-loveit.com": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-09-08",
+      "note": "ingen Sverige-signal (utländsk domän + inga svenska tecken)"
     },
     "lindesberg.se": {
       "date": "2026-08-23",
@@ -2122,6 +2242,11 @@
       "date": "2026-09-01",
       "note": "bulk-probe"
     },
+    "mittnordvast.se": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-09-08",
+      "note": "bara 0 framtida event (kräver ≥3)"
+    },
     "mittsverigebanan.se": {
       "verdict": "FAIL",
       "date": "2026-09-01",
@@ -2135,6 +2260,11 @@
     "mordmysterium.se": {
       "verdict": "FAIL",
       "date": "2026-08-25",
+      "note": "bulk-probe"
+    },
+    "motionskicken.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
       "note": "bulk-probe"
     },
     "munkedal.se": {
@@ -2151,6 +2281,11 @@
       "date": "2026-08-19",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "musikdagar.com": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "musikthalia.se": {
       "verdict": "FAIL",
@@ -2296,6 +2431,11 @@
       "date": "2026-09-01",
       "note": "bulk-probe"
     },
+    "raa.se": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-09-08",
+      "note": "bara 0 framtida event (kräver ≥3)"
+    },
     "ragunda.se": {
       "date": "2026-08-23",
       "note": "bulk-probe",
@@ -2333,6 +2473,11 @@
     "salsasundsvall.se": {
       "verdict": "FAIL",
       "date": "2026-09-01",
+      "note": "bulk-probe"
+    },
+    "salver.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
       "note": "bulk-probe"
     },
     "sarakulturhus.se": {
@@ -2455,6 +2600,16 @@
       "date": "2026-09-01",
       "note": "bulk-probe"
     },
+    "soundcloud.com": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
+    "sportbilsdagen.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "stadsscen.se": {
       "verdict": "FAIL",
       "date": "2026-09-01",
@@ -2509,10 +2664,19 @@
       "date": "2026-08-23",
       "verdict": "PASS"
     },
+    "svenskaturistforeningen.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "swedishlapland.com": {
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "swinginmotion.se": {
+      "verdict": "PASS",
+      "date": "2026-09-08"
     },
     "tangokompaniet.com": {
       "verdict": "FAIL",
@@ -2583,6 +2747,11 @@
       "date": "2026-08-23",
       "note": "bulk-probe",
       "verdict": "FAIL"
+    },
+    "torsebrosvamp.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "trastocksfestivalen.se": {
       "date": "2026-08-20",
@@ -4056,6 +4225,11 @@
       "date": "2026-09-01",
       "note": "bara 2 framtida event (kräver ≥3)"
     },
+    "vadhanderisverige.se": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-09-08",
+      "note": "bara 0 framtida event (kräver ≥3)"
+    },
     "vadstena.se": {
       "date": "2026-08-20",
       "note": "bulk-probe",
@@ -4069,6 +4243,11 @@
     "vagusskolan.se": {
       "verdict": "FAIL",
       "date": "2026-09-01",
+      "note": "bulk-probe"
+    },
+    "valkojan.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
       "note": "bulk-probe"
     },
     "vallentuna.se": {
@@ -4089,6 +4268,11 @@
     "varberg.se": {
       "date": "2026-08-23",
       "verdict": "PASS"
+    },
+    "varbergsolhall.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "varjesteg.se": {
       "verdict": "FAIL",
@@ -4137,6 +4321,11 @@
     "vemdalen.se": {
       "date": "2026-08-23",
       "verdict": "PASS"
+    },
+    "vemdalsbio.com": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-09-08",
+      "note": "bara 0 framtida event (kräver ≥3)"
     },
     "victoria.se": {
       "verdict": "FAIL",
@@ -7001,9 +7190,19 @@
       "date": "2026-08-25",
       "note": "bulk-probe"
     },
+    "webnode.se": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
+    },
     "ydre.se": {
       "date": "2026-08-23",
       "verdict": "PASS"
+    },
+    "yogatribe.nu": {
+      "verdict": "FAIL",
+      "date": "2026-09-08",
+      "note": "bulk-probe"
     },
     "yogazon.se": {
       "verdict": "FAIL",

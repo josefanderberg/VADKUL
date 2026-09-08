@@ -742,4 +742,22 @@ export const SNOWBALL_SOURCES: Source[] = [
         notes: 'web-snöboll 2026-09-01: wp-v2, smoke 15 event ok. Hänvisad av 2 event i DB (t.ex. "Emma Denward Transformation/Jazz i Malmö").',
         lastVerified: '2026-09-01',
     },
+
+    {
+        id: 'sb-swinginmotion-se',
+        hostName: 'Swinginmotion',
+        region: 'national',
+        engine: 'sitemap' as const,
+        config: { sitemapUrl: 'https://www.swinginmotion.se/sitemap.xml', urlPatterns: [/\/event\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: '', maxUrls: 200 },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://www.swinginmotion.se/sitemap.xml',
+            date: '2026-09-08',
+            rawEventCount: 10,
+        },
+        notes: 'web-snöboll 2026-09-08: sitemap-json-ld, smoke 10 event ok. Hänvisad av 4 event i DB (t.ex. "Socialdans för West Coast Swing 26/9").',
+        lastVerified: '2026-09-08',
+    },
 ];
