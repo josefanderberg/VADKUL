@@ -85,7 +85,8 @@
     "emulator:test": "npx -y firebase-tools emulators:start --only firestore,ui --config firebase.test.json --project demo-vadkul-test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "city-gaps": "ts-node src/scripts/city-gaps.ts"
+    "city-gaps": "ts-node src/scripts/city-gaps.ts",
+    "probe-datumslug": "ts-node src/scripts/probe-datumslug.ts"
   },
   "keywords": [],
   "author": "",

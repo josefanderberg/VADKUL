@@ -1828,9 +1828,20 @@ export const SOURCES: Source[] = [
         id: 'ostra-goinge',
         hostName: 'Östra Göinge Kommun',
         region: 'ostra-goinge',
-        engine: 'sitevision',
-        config: { urls: ['https://www.ostragoinge.se/uppleva-och-gora/evenemang'], defaultCity: 'Östra Göinge' },
+        engine: 'sitemap',
+        config: {
+            // Kalendersidan renderar bara det närmaste; sitemapen bär hela
+            // årets kalender med datum-prefixad slug (65 KOMMANDE 8/9 2026).
+            sitemapUrl: 'https://ostragoinge.se/sitemap.xml',
+            urlPatterns: [/\/evenemang[^/]*\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+            defaultCity: 'Östra Göinge',
+            maxUrls: 200,
+        },
         updateFrequency: 'every-3d',
+        windowDays: 180,
+        notes: 'Bytt från sitevision- till sitemap-motorn 8/9 2026 efter probe-datumslug.',
+        lastVerified: '2026-09-08',
     },
     {
         id: 'bengtsfors',
@@ -1912,9 +1923,18 @@ export const SOURCES: Source[] = [
         id: 'kil',
         hostName: 'Kil Kommun',
         region: 'kil',
-        engine: 'sitevision',
-        config: { urls: ['https://www.kil.se/kalender'], defaultCity: 'Kil' },
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://kil.se/sitemap.xml',
+            urlPatterns: [/\/evenemang[^/]*\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+            defaultCity: 'Kil',
+            maxUrls: 200,
+        },
         updateFrequency: 'every-3d',
+        windowDays: 180,
+        notes: 'Bytt från sitevision- till sitemap-motorn 8/9 2026 efter probe-datumslug (15 kommande i arkivet).',
+        lastVerified: '2026-09-08',
     },
     {
         id: 'fagersta',
