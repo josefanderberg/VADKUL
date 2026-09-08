@@ -131,6 +131,25 @@ export function parseSwedishDate(dateStr: string, now: Date = new Date()): Date 
 }
 
 /**
+ * Flytta året FRAMÅT tills veckodagen stämmer, eller ge null. Bakåt provas
+ * aldrig: rätt veckodag finns alltid ~6 och ~11 år åt andra hållet också, och
+ * ett passerat datum är aldrig ett kommande event. Samma 30-dagarsgolv bakåt
+ * som inferYearForward, för flerdagarsevent som redan börjat.
+ */
+function shiftYearToWeekday(d: Date, wanted: number, now: Date): Date | null {
+    const floor = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    for (const delta of [1, 2, -1]) {
+        const cand = new Date(d);
+        cand.setFullYear(d.getFullYear() + delta);
+        if (cand.getDate() !== d.getDate() || cand.getMonth() !== d.getMonth()) continue;
+        if (cand.getDay() !== wanted) continue;
+        if (cand < floor) continue;
+        return cand;
+    }
+    return null;
+}
+
+/**
  * Datum utan år MEN med veckodag ("fredag 11 sep", "tisdag 8 sep 15.00").
  *
  * `parseSwedishDate` gissar året framåt (inferYearForward) och struntar i
@@ -245,17 +264,28 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
         if (d) pushDated(d);
     }
 
-    // 3. "DD MONTH [HH:MM]" utan år — gissa år framåt
+    // 3. "[veckodag] DD MONTH [HH:MM]" utan år — gissa år framåt.
+    //
+    // Står VECKODAGEN utskriven ("onsdagen den 28 oktober") är den gratis facit
+    // på gissningen: stämmer den inte med det gissade året är gissningen fel.
+    // Vi flyttar då fram året tills veckodagen går ihop, och slänger
+    // kandidaten om ingen närliggande årgång stämmer — ett event på fel dag är
+    // värre än ett event mindre. Saknas veckodag är beteendet oförändrat.
     const noYearRe = new RegExp(
-        `(\\d{1,2})\\s+(${MONTH_PATTERN})(?:[\\s,]+(?:kl\\.?\\s*)?(\\d{1,2})[:.](\\d{2}))?`,
+        `(?:(${WEEKDAY_PATTERN})(?:en)?\\s+(?:den\\s+)?)?(\\d{1,2})\\s+(${MONTH_PATTERN})(?:[\\s,]+(?:kl\\.?\\s*)?(\\d{1,2})[:.](\\d{2}))?`,
         'g',
     );
     let n: RegExpExecArray | null;
     while ((n = noYearRe.exec(clean)) !== null) {
-        const d = inferYearForward(
-            parseInt(n[1], 10), MONTH_MAP[n[2]],
-            n[3] ? parseInt(n[3], 10) : 0, n[4] ? parseInt(n[4], 10) : 0, now,
-        );
+        const wanted = n[1] !== undefined ? WEEKDAY_MAP[n[1]] : undefined;
+        const day = parseInt(n[2], 10);
+        const month = MONTH_MAP[n[3]];
+        const hour = n[4] ? parseInt(n[4], 10) : 0;
+        const minute = n[5] ? parseInt(n[5], 10) : 0;
+        let d = inferYearForward(day, month, hour, minute, now);
+        if (d && wanted !== undefined && d.getDay() !== wanted) {
+            d = shiftYearToWeekday(d, wanted, now);
+        }
         if (d && !datedKeys.has(dayKey(d))) candidates.push(d);
     }
 

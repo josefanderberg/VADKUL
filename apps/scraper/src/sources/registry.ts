@@ -3258,6 +3258,76 @@ export const SOURCES: Source[] = [
         windowDays: 180,
     },
     {
+        id: 'visiteksjo',
+        hostName: 'Visit Eksjö',
+        region: 'eksjo-turism',
+        engine: 'sitemap',
+        config: {
+            // Turistsajten, skild från kommunens `eksjo` ovan (som bara bär
+            // bibliotekets arkiv). Samma datum-slug-form: 71 event-URLer.
+            sitemapUrl: 'https://visiteksjo.se/sitemap.xml',
+            urlPatterns: [/\/evenemang\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+            defaultCity: 'Eksjö',
+            maxUrls: 200,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Hittad 8/9 2026 i runtknuten-svepet (40 event i Eksjö kom härifrån).',
+        lastVerified: '2026-09-08',
+        discovery: { method: 'hint', probeUrl: 'https://visiteksjo.se/sitemap.xml', date: '2026-09-08', rawEventCount: 71 },
+    },
+    {
+        id: 'musikhuset-gavle',
+        hostName: 'Musikhuset Gävle',
+        region: 'gavle-musikhuset',
+        engine: 'sitemap',
+        config: {
+            // WordPress, men wp/v2/event ger PUBLICERINGSdatum och ACF-fälten
+            // är inte exponerade i REST — därför katalogsidan + textfallback.
+            // Datumen står i löptext utan år ("onsdagen den 28 oktober kl
+            // 19.00"); veckodagen validerar årsgissningen i swedishDate.
+            sitemapUrl: 'https://musikhuset.nu/event/',
+            isHtmlCatalog: true,
+            urlPatterns: [/musikhuset\.nu\/event\/[a-z0-9-]{4,}\/$/i],
+            defaultCity: 'Gävle',
+            defaultVenue: 'Musikhuset Gävle',
+            maxUrls: 60,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Hittad 8/9 2026 i runtknuten-svepet (33 event i Gävle kom härifrån).',
+        lastVerified: '2026-09-08',
+        discovery: { method: 'hint', probeUrl: 'https://musikhuset.nu/event/', date: '2026-09-08', rawEventCount: 33 },
+    },
+    {
+        id: 'visitisabergsregionen',
+        hostName: 'Visit Isabergsregionen',
+        region: 'gislaved',
+        engine: 'sitemap',
+        config: {
+            // Ingen sitemap och ingen JSON-LD — listsidan bär länkarna och
+            // detaljsidans datum står i löptext ("Lördag 12 september").
+            // /evenemang utan språkprefix serverar ENGELSKA länkar (/en/…) —
+            // hämta /sv/evenemang, annars matchar mönstret ingenting.
+            sitemapUrl: 'https://visitisabergsregionen.se/sv/evenemang',
+            isHtmlCatalog: true,
+            urlPatterns: [/\/sv\/evenemang\/[a-z0-9-]{4,}\/$/i],
+            defaultCity: 'Gislaved',
+            maxUrls: 60,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Hittad 8/9 2026 i runtknuten-svepet (41 event i Gislaved). OBS: detaljsidorna '
+            + 'innehåller hela dagsprogram med många klockslag — kontrollera vid nästa '
+            + 'verifiering att rätt datum valts.',
+        lastVerified: '2026-09-08',
+        discovery: { method: 'hint', probeUrl: 'https://visitisabergsregionen.se/evenemang', date: '2026-09-08', rawEventCount: 46 },
+    },
+    {
         id: 'tjorn',
         hostName: 'Tjörn Kommun',
         region: 'tjorn',
