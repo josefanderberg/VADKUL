@@ -213,6 +213,28 @@ const DEFAULT_URL_BLACKLIST: RegExp[] = [
  * Default title-blacklist — sidor vars titel innehåller dessa är inte events
  * (cookie-banners, site-index, generiska fallbacks).
  */
+/**
+ * Text ur ett element DÄR ELEMENTGRÄNSER BLIR MELLANSLAG.
+ *
+ * cheerios `.text()` klistrar ihop syskon-noder utan separator. Rubriker som
+ * sätts rad för rad i egna spans — gummifabriken.se skriver
+ * `<span class="table">Kultursöndag</span><span class="table">Den andre</span>` —
+ * blev därför "KultursöndagDen andre": trasigt på kartan och dessutom omöjligt
+ * att deduplicera mot samma event från en annan källa.
+ *
+ * Undantaget är äkta inline-formatering (`<em>`, `<b>`, `<sup>` …) som mycket
+ * väl kan sitta MITT i ett ord ("Thank<em>s</em>") — där skulle ett mellanslag
+ * bryta ordet. `<span>` räknas INTE dit: den används oftare som radbrytande
+ * layoutbox än inuti ord. Exporterad för test.
+ */
+const INLINE_TAGS = /^(b|i|em|strong|u|sup|sub|mark|small|abbr|cite|q)$/i;
+export function elementTextWithBreaks(html: string): string {
+    return html
+        .replace(/<(\/?)([a-z0-9]+)([^>]*)>/gi, (m, _slash, tag) => (INLINE_TAGS.test(tag) ? '' : ' '))
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 /** Titel som aldrig är ett event. Exporterad för test. */
 export function isBlacklistedTitle(title: string): boolean {
     return DEFAULT_TITLE_BLACKLIST.some(re => re.test(title.trim()));
@@ -642,7 +664,7 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string)
     const siteName = (titleParts.length > 1 ? titleParts[titleParts.length - 1] : '').toLowerCase();
     let title = '';
     $('h1').each((_i, el) => {
-        const t = $(el).text().replace(/\s+/g, ' ').trim();
+        const t = decodeHtmlEntities(elementTextWithBreaks($.html(el))).replace(/\s+/g, ' ').trim();
         if (!t) return;
         const tl = t.toLowerCase();
         if (!title && tl !== siteName) title = t;   // första icke-logga som fallback

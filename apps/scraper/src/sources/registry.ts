@@ -1443,6 +1443,30 @@ export const SOURCES: Source[] = [
         discovery: { method: 'hint', probeUrl: 'https://entretranas.se/upplev-tranas/evenemang/', date: '2026-09-07', rawEventCount: 54, notes: 'Domänen skördad ur runtknuten.se/tranas.' },
     },
     {
+        id: 'gummifabriken',
+        hostName: 'Gummifabriken',
+        region: 'varnamo-gummifabriken',
+        engine: 'sitemap',
+        config: {
+            // Värnamos kulturhus (bibliotek, scen, mötesplats). 212 event-URLer
+            // i sitemapen. Ingen JSON-LD och ingen <time datetime> — datumet
+            // står som "Datum 15 juni 2026" i texten, MED år, så textfallbacken
+            // räcker och ingen årsgissning behövs.
+            sitemapUrl: 'https://www.gummifabriken.se/sitemap.xml',
+            urlPatterns: [/\/evenemang\/[a-z0-9-]+$/i],
+            defaultCity: 'Värnamo',
+            maxUrls: 250,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Hittad 7/9 2026 i runtknuten-svepet över 57 kommuner (94 event i Värnamo kom härifrån). '
+            + 'Eventen ligger på olika platser i huset OCH på filialbiblioteken — ingen defaultVenue, '
+            + 'platsen tas ur sidans Plats-fält.',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'hint', probeUrl: 'https://www.gummifabriken.se/sitemap.xml', date: '2026-09-07', rawEventCount: 212 },
+    },
+    {
         id: 'norsjo',
         hostName: 'Norsjö Kommun',
         region: 'norsjo',
