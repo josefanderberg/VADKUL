@@ -1689,9 +1689,22 @@ export const SOURCES: Source[] = [
         id: 'vetlanda',
         hostName: 'Vetlanda Kommun',
         region: 'vetlanda',
-        engine: 'sitevision',
-        config: { urls: ['https://www.vetlanda.se/uppleva-och-gora/evenemangskalender'], defaultCity: 'Vetlanda' },
+        engine: 'sitemap',
+        config: {
+            // Kalendersidan renderar bara ett fåtal kort och har varken
+            // "visa fler"-knapp eller items-API (sniffat 7/9 2026) — men
+            // sitemapen bär hela arkivet: 90 event med datum-prefixad slug.
+            sitemapUrl: 'https://vetlanda.se/sitemap.xml',
+            urlPatterns: [/\/evenemang[^/]*\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+            defaultCity: 'Vetlanda',
+            maxUrls: 250,
+        },
         updateFrequency: 'every-3d',
+        windowDays: 180,
+        notes: 'Bytt från sitevision- till sitemap-motorn 7/9 2026 (4 → 90 event i arkivet). '
+            + 'Hittad i runtknuten-svepet över 57 kommuner.',
+        lastVerified: '2026-09-07',
     },
     {
         id: 'ljungby',
@@ -2359,12 +2372,17 @@ export const SOURCES: Source[] = [
         engine: 'sitemap',
         config: {
                     sitemapUrl: 'https://www.nassjo.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?aktivitet(?:er)?\/[^/]+\/?$/i],
+                    urlPatterns: [/\/evenemang[^/]*\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+                    urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+                    maxUrls: 250,
                     defaultCity: 'Nässjö',
                 },
         updateFrequency: 'every-3d',
-        notes: 'Probe-sitemap 2026-06-04: 253 event-URLs (aktivitet-mönster).',
+        notes: 'Om-probad 7/9 2026 i runtknuten-svepet: eventen ligger djupt i arkivet med '
+            + 'datum-prefixad slug (…/evenemang/ÅÅÅÅ-MM-DD-slug), inte på /evenemang/<slug> som '
+            + 'det gamla mönstret letade efter. Runt Knuten ser 36 event här.',
         lastVerified: '2026-06-04',
+        windowDays: 180,
     },
     {
         id: 'upplands-vasby',
@@ -2961,12 +2979,17 @@ export const SOURCES: Source[] = [
         engine: 'sitemap',
         config: {
                     sitemapUrl: 'https://www.kalmar.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
+                    urlPatterns: [/\/evenemang[^/]*\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+                    urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+                    maxUrls: 250,
                     defaultCity: 'Kalmar',
                 },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 19 event-URLs (evenemang-mönster).',
+        notes: 'Om-probad 7/9 2026 i runtknuten-svepet: eventen ligger djupt i arkivet med '
+            + 'datum-prefixad slug (…/evenemang/ÅÅÅÅ-MM-DD-slug), inte på /evenemang/<slug> som '
+            + 'det gamla mönstret letade efter. Runt Knuten ser 22 event här.',
         lastVerified: '2026-06-04',
+        windowDays: 180,
     },
     {
         id: 'skara',
@@ -3202,12 +3225,17 @@ export const SOURCES: Source[] = [
         engine: 'sitemap',
         config: {
                     sitemapUrl: 'https://www.eksjo.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
+                    urlPatterns: [/\/evenemang[^/]*\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+                    urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+                    maxUrls: 250,
                     defaultCity: 'Eksjö',
                 },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 8 event-URLs (evenemang-mönster).',
+        notes: 'Om-probad 7/9 2026 i runtknuten-svepet: eventen ligger djupt i arkivet med '
+            + 'datum-prefixad slug (…/evenemang/ÅÅÅÅ-MM-DD-slug), inte på /evenemang/<slug> som '
+            + 'det gamla mönstret letade efter. Runt Knuten ser 31 event här.',
         lastVerified: '2026-06-04',
+        windowDays: 180,
     },
     {
         id: 'tjorn',
@@ -3552,13 +3580,21 @@ export const SOURCES: Source[] = [
         region: 'vaxjo',
         engine: 'sitemap',
         config: {
-                    sitemapUrl: 'https://www.vaxjo.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
+                    // Kalendern bor på underwebben upplev.vaxjo.se, inte på
+                    // vaxjo.se — det gamla mönstret hittade 2 URLer, den här
+                    // sitemapen har 221. Datumet ligger i URL:en, så
+                    // urlDateRegex förfiltrerar innan detaljhämtningen.
+                    sitemapUrl: 'https://upplev.vaxjo.se/sitemap.xml',
+                    urlPatterns: [/\/evenemang\/evenemang\/\d{4}-\d{2}-\d{2}-[^/]+$/i],
+                    urlDateRegex: /\/evenemang\/evenemang\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
                     defaultCity: 'Växjö',
+                    maxUrls: 250,
                 },
-        updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 2 event-URLs (evenemang-mönster).',
-        lastVerified: '2026-06-04',
+        updateFrequency: 'every-3d',
+        windowDays: 180,
+        notes: 'Om-probad 7/9 2026 i runtknuten-svepet: 221 event-URLer på upplev.vaxjo.se '
+            + '(gamla mönstret mot vaxjo.se gav 2).',
+        lastVerified: '2026-09-07',
     },
     {
         id: 'alvesta',
