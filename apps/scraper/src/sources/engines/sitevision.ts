@@ -1065,6 +1065,43 @@ function makeAbsoluteUrl(url: string | undefined, base: string): string | undefi
 }
 
 /**
+ * Kortlistor kapar långa titlar med ellips ("Musikcafé: Miraim Aïda – …").
+ * En kapad titel ser trasig ut på kartan och förstör dedupen mot andra källor,
+ * så den hämtas hel ur detaljsidans og:title när fetchDetailDesc är på.
+ * Exporterad för test.
+ */
+export function isTruncatedTitle(title: string): boolean {
+    return /(?:\.\.\.|…)\s*$/.test(title.trim());
+}
+
+/**
+ * Hel titel ur en detaljsida. Ordning: og:title → <h1> → <title> minus
+ * sajtnamnet efter sista " - "/" | ". SiteVision-sajter saknar ofta og-taggar
+ * (entretranas.se 7/9 2026 har varken og:title eller og:description), så h1 är
+ * den som faktiskt bär. Exporterad för test.
+ */
+export function fullTitleFromHtml(html: string): string {
+    const og = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]*)"/i)
+        || html.match(/<meta[^>]+content="([^"]*)"[^>]+property="og:title"/i);
+    if (og?.[1]) return decodeHtmlEntities(og[1]).replace(/\s+/g, ' ').trim();
+
+    const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    if (h1?.[1]) {
+        const t = decodeHtmlEntities(h1[1].replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+        if (t) return t;
+    }
+
+    const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (title?.[1]) {
+        const t = decodeHtmlEntities(title[1]).replace(/\s+/g, ' ').trim();
+        // "Paradmarscher 2026 - Entré Tranås" → "Paradmarscher 2026"
+        const cut = t.replace(/\s+[-|–]\s+[^-|–]{1,40}$/, '').trim();
+        return cut || t;
+    }
+    return '';
+}
+
+/**
  * Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter
  * (Strömsund 106/111 utan desc, Svenljunga 30/30) är text-tomma medan
  * detaljsidan har meta/og-description. Throttlat via domainLimiter; bara
@@ -1091,18 +1128,33 @@ async function backfillDescriptions(
 ): Promise<void> {
     if (!config.fetchDetailDesc) return;
     let filled = 0;
+    let retitled = 0;
     for (const ev of events) {
-        if (ev.description || !ev.url) continue;
+        const needsDesc = !ev.description;
+        const needsTitle = isTruncatedTitle(ev.title);
+        if ((!needsDesc && !needsTitle) || !ev.url) continue;
         const html = await fetchHtml(ev.url, config);
         if (!html) continue;
-        const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
-            || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
-        const desc = m?.[1]
-            ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
-            : undefined;
-        if (desc && desc.length >= 20) { ev.description = truncateAtBoundary(desc, DEFAULT_DESCRIPTION_MAX); filled++; }
+
+        if (needsDesc) {
+            const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
+                || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
+            const desc = m?.[1]
+                ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
+                : undefined;
+            if (desc && desc.length >= 20) { ev.description = truncateAtBoundary(desc, DEFAULT_DESCRIPTION_MAX); filled++; }
+        }
+
+        if (needsTitle) {
+            const full = fullTitleFromHtml(html);
+            // Bara om detaljsidans titel verkligen är HELARE än kortets.
+            if (full && !isTruncatedTitle(full) && full.length > ev.title.length - 3) {
+                ev.title = full; retitled++;
+            }
+        }
     }
     if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);
+    if (retitled) ctx.log(`  detalj-titel: ${retitled} kapade titlar lagade ur og:title`);
 }
 
 export const sitevisionEngine = async (

@@ -1418,6 +1418,31 @@ export const SOURCES: Source[] = [
         notes: 'Probe 2026-06: 53 events.',
     },
     {
+        id: 'entre-tranas',
+        hostName: 'Entré Tranås',
+        region: 'tranas-entre',
+        engine: 'sitevision',
+        config: {
+            // Tranås turistsajt. 54 event server-renderade på listsidan, ingen
+            // paginering — "Hitta fler evenemang"-knappen länkar bara vidare
+            // till kommunens kalender (källan `tranas`).
+            urls: ['https://entretranas.se/upplev-tranas/evenemang/'],
+            defaultCity: 'Tranås',
+            maxItems: 120,
+            // Korten kapar långa titlar med ellips ("Musikcafé: Miraim Aïda – …")
+            // och saknar brödtext — detaljsidans og:title/og:description lagar båda.
+            fetchDetailDesc: true,
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Kompletterar `tranas` (kommunkalendern) med turistsidans egna arrangörer — '
+            + 'vinfestival, utställningar, Parkhallen-danser, musikcaféer. Detaljsidorna bär '
+            + '<time datetime> med år.',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'hint', probeUrl: 'https://entretranas.se/upplev-tranas/evenemang/', date: '2026-09-07', rawEventCount: 54, notes: 'Domänen skördad ur runtknuten.se/tranas.' },
+    },
+    {
         id: 'norsjo',
         hostName: 'Norsjö Kommun',
         region: 'norsjo',
