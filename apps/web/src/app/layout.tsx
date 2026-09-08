@@ -125,12 +125,16 @@ export default async function RootLayout({
             <head>
                 <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
                 {/* ALLA favicons på blå platta (#006AA7) sedan 30/8 — vitt moln på
-                    transparent syns inte i sökresultatens vita cirkel. Nytt filnamn
-                    (-bla) i stället för överskrivning: favicons cachas hårt. Ordningen är
+                    transparent syns inte i sökresultatens vita cirkel. 7/9: -helbla
+                    ersatte -bla: den rundade plattan hade genomskinliga hörn och
+                    förminskat moln, vilket blev "fyrkant i cirkel" när Google beskar —
+                    blått ska gå ända ut i kanterna (Google/iOS rundar själva) och
+                    molnet ha samma storlek som gamla favicon.png. Nytt filnamn i
+                    stället för överskrivning: favicons cachas hårt. Ordningen är
                     medveten: Safari väljer sist deklarerade ikonen, Chrome går på sizes. */}
-                <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192-bla.png" />
-                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32-bla.png" />
-                <link rel="apple-touch-icon" href="/favicon-192-bla.png" />
+                <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192-helbla.png" />
+                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32-helbla.png" />
+                <link rel="apple-touch-icon" href="/favicon-192-helbla.png" />
                 <meta name="theme-color" content="#38bdf8" />
                 {/* Impact kräver value-attributet (inte content) — spread eftersom Reacts typer saknar value på meta */}
                 <meta name="impact-site-verification" {...({ value: 'dfee543c-aa2e-4d41-8f1e-0496d288b344' } as Record<string, string>)} />
