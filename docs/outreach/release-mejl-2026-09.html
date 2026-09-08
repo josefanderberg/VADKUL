@@ -67,7 +67,7 @@
                     </tr>
                     <tr>
                       <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">&#127961;&#65039;</td>
-                      <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;padding:5px 0;"><strong>Stadssidorna &auml;r ombyggda</strong> &mdash; p&aring; sidan f&ouml;r $[CITY|din stad]$ filtrerar du p&aring; kategori med ett tryck och <strong>f&auml;ller ut event direkt i listan</strong>: anm&auml;l dig, &ouml;ppna kartan eller dela &mdash; utan att l&auml;mna sidan. <a href="https://vadkul.se/evenemang?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-sep-2026&amp;utm_content=stadssida" style="color:#006AA7;font-weight:bold;">vadkul.se/evenemang</a></td>
+                      <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;padding:5px 0;"><strong>Stadssidorna &auml;r ombyggda</strong> &mdash; p&aring; sidan f&ouml;r $[UD:CITY|din stad]$ filtrerar du p&aring; kategori med ett tryck och <strong>f&auml;ller ut event direkt i listan</strong>: anm&auml;l dig, &ouml;ppna kartan eller dela &mdash; utan att l&auml;mna sidan. <a href="https://vadkul.se/evenemang?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-sep-2026&amp;utm_content=stadssida" style="color:#006AA7;font-weight:bold;">vadkul.se/evenemang</a></td>
                     </tr>
                     <tr>
                       <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">&#128279;</td>
@@ -77,13 +77,18 @@
                 </td>
               </tr>
 
-              <!-- Delningsbilden: veckans h&ouml;jdpunkter per stad (Zoho-merge p&aring;
-                   cityslug ur CSV:n; fallback stockholm s&aring; bilden ALDRIG blir
-                   trasig f&ouml;r kontakter utan stad/stadssida) -->
+              <!-- Delningsbilden. LÄRDOM 8/9: Zoho rehostar ALLA externa img-URL:er
+                   till stratus.campaign-image.eu vid inklistring/spar — en dynamisk
+                   URL med merge-tagg ($[UD:CITYSLUG|stockholm]$) fryses därför till
+                   den nationella 0-evenemang-fallbacken. Per-stad-bild är alltså
+                   OMÖJLIG i Zohos editor. I Zoho: ladda upp en DAGSFÄRSK
+                   Stockholmsbild manuellt (JPEG <1 MB, sips -s format jpeg) och låt
+                   src peka på Zohos kopia. Cityslug-fältet/-taggen behålls i listan
+                   för framtida bruk. -->
               <tr>
                 <td style="padding:6px 36px 4px;">
-                  <img src="https://vadkul.se/evenemang/$[CITYSLUG|stockholm]$/delningsbild.png" width="528" alt="Veckans h&ouml;jdpunkter p&aring; VADKUL" style="display:block;width:100%;max-width:528px;height:auto;border:1px solid #e2e8f0;border-radius:10px;">
-                  <p style="margin:8px 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#94a3b8;text-align:center;">S&aring; h&auml;r ser f&ouml;rhandsbilden ut just nu &mdash; den byggs om automatiskt varje dag.</p>
+                  <img src="https://vadkul.se/evenemang/stockholm/delningsbild.png" width="528" alt="Veckans h&ouml;jdpunkter p&aring; VADKUL" style="display:block;width:100%;max-width:528px;height:auto;border:1px solid #e2e8f0;border-radius:10px;">
+                  <p style="margin:8px 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#94a3b8;text-align:center;">S&aring; h&auml;r ser f&ouml;rhandsbilden ut f&ouml;r Stockholm just nu &mdash; varje stad f&aring;r sin egen.</p>
                 </td>
               </tr>
 
@@ -110,7 +115,7 @@
                         <p style="margin:0 0 8px;font-size:16px;color:#8a6400;"><strong>Och en ny stj&auml;rna till dig &#11088;</strong></p>
                         <p style="margin:0 0 12px;">Som tack f&ouml;r att du &auml;r medlem: en <strong>guldstj&auml;rna</strong> &mdash; en gratis boost i <strong>24 timmar</strong> till valfritt event. S&aring; h&auml;r:</p>
                         <p style="margin:0 0 4px;"><strong>1.</strong> &Ouml;ppna l&auml;nken nedan och logga in</p>
-                        <p style="margin:0 0 4px;"><strong>2.</strong> &Ouml;ppna valfritt event p&aring; kartan &mdash; kanske n&aring;got du sj&auml;lv ska p&aring; i $[CITY|din stad]$?</p>
+                        <p style="margin:0 0 4px;"><strong>2.</strong> &Ouml;ppna valfritt event p&aring; kartan &mdash; kanske n&aring;got du sj&auml;lv ska p&aring; i $[UD:CITY|din stad]$?</p>
                         <p style="margin:0 0 16px;"><strong>3.</strong> Tryck p&aring; &#11088;</p>
 
                         <!-- Knapp -->

@@ -27,17 +27,26 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
 - [ ] **Importen i Campaigns: välj UPPDATERA befintliga kontakter**, inte
       hoppa över dubbletter — city-täckningen har ökat 32 → 74 och befintliga
       kontakter ska få sin stad ifylld. Mappa `city` → kontaktfältet **City**.
-- [ ] **Cityslug-fältet:** skapa ett eget kontaktfält **Cityslug** i Campaigns
-      och mappa CSV-kolumnen `cityslug` dit. Kolla i HTML-editorns
-      merge-tag-väljare vad taggen faktiskt heter (egna fält kan få t.ex.
-      `$[CONTACT_CF…]$`) och byt i så fall ut `$[CITYSLUG|stockholm]$` i
-      bildens `src` i HTML:en. Fallbacken ska vara `stockholm`.
-- [ ] **Testa delningsbilden i testutskick till RIKTIGA kontakter:** en med
-      stadssideslug (bilden ska visa den staden) och en utan (bilden ska visa
-      Stockholm). **VIKTIGT:** blir taggen INTE ersatt (fel taggnamn) blir
-      sluggen skräp → routen svarar då 200 med den NATIONELLA fallback-bilden,
-      som visar "0 evenemang" (verifierat 7/9) — aldrig trasig bild, men ful.
-      Testutskicket är alltså det som skyddar mot 0-bilden.
+- [ ] **Merge-taggarna MÅSTE skapas för hand (LÄRDOM 8/9):** Zoho har BARA
+      tre fördefinierade kontakttaggar — FNAME, LNAME, EMAIL. **`$[CITY]$` har
+      aldrig varit en giltig tagg** (augustimejlet levererade sannolikt rå
+      taggtext till mottagarna; testutskickens "TEST"-attrapper maskerar ALLT
+      taggformat och bevisar ingenting). Gör: Inställningar →
+      Sammanslagningstaggar → Skapa → Contact Custom Tag: fält City, namn
+      `CITY`, mailstandard `din stad` → taggen blir `$[UD:CITY|din stad]$`
+      (formen HTML:en nu använder). Skapa även `CITYSLUG` (standard
+      `stockholm`) för framtiden.
+- [ ] **Delningsbilden är STATISK i Zoho (LÄRDOM 8/9):** editorn rehostar
+      alla externa img-URL:er till stratus.campaign-image.eu vid varje spar —
+      en URL med merge-tagg fryses till 0-evenemang-fallbacken. Per-stad-bild
+      går alltså INTE i Zoho. Gör: ladda upp en dagsfärsk Stockholmsbild
+      (JPEG <1 MB: `sips -s format jpeg -s formatOptions 85 …`) via
+      editorns bildknapp på utskicksdagen; bildtexten i HTML:en är redan
+      anpassad ("för Stockholm just nu — varje stad får sin egen").
+- [ ] **Verifiera med SKARPT utskick till enmanslista** (klonad kampanj →
+      listan `Skarptest` med bara ägaren): "Hej Josef!", "sidan för Växjö"
+      ×2, Stockholmsbilden laddad. Zohos testmejl-funktion kan INTE verifiera
+      merge (attrapper) — lita aldrig på den.
 - [ ] Verifiera merge-taggarna mot en RIKTIG kontakt (test till adress utanför
       listan visar attrapper som "TEST" — det är inte fel). Kolla
       fallback-läsningen med en kontakt utan stad.
@@ -58,16 +67,17 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
 
 ## Stadsanpassningen
 
-`$[CITY|…]$` med fallback på två ställen + `$[CITYSLUG|stockholm]$` i bildens
-URL (188 av 262 saknar stad — fallbacken är normalfallet, så ingen `$[CITY]$`
-i ämnesraden):
+`$[UD:CITY|din stad]$` (custom-taggen, se checklistan) med fallback på två
+ställen (188 av 262 saknar stad — fallbacken är normalfallet, så ingen
+stad i ämnesraden):
 
-1. Stadssidepunkten: "sidan för $[CITY|din stad]$"
-2. Stjärnsteget: "kanske något du själv ska på i $[CITY|din stad]$?"
-3. **Delningsbilden:** `https://vadkul.se/evenemang/$[CITYSLUG|stockholm]$/delningsbild.png`
-   — den dagsfärska "veckans höjdpunkter"-bilden för mottagarens stad (71 st),
-   Stockholm för resten. Bilden är ~1 MB och hämtas från vadkul.se när mejlet
-   öppnas (via mejlklientens bildproxy) — den bäddas INTE in i mejlet.
+1. Stadssidepunkten: "sidan för $[UD:CITY|din stad]$"
+2. Stjärnsteget: "kanske något du själv ska på i $[UD:CITY|din stad]$?"
+
+Delningsbilden är en statisk Stockholmsbild uppladdad i Zoho — per-stad-bild
+via `$[UD:CITYSLUG|stockholm]$` i img-src är omöjlig eftersom Zoho rehostar
+externa bild-URL:er (se checklistan). Cityslug-kolumnen/-fältet behålls ändå
+— datat är på plats om Zoho någon gång tillåter dynamiska bilder.
 
 ## Ämnesrad
 
