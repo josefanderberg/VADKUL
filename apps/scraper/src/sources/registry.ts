@@ -1649,8 +1649,24 @@ export const SOURCES: Source[] = [
         hostName: 'Ljungby Kommun',
         region: 'ljungby',
         engine: 'sitevision',
-        config: { urls: ['https://www.ljungby.se/uppleva-och-gora/evenemangskalender'], defaultCity: 'Ljungby' },
+        config: {
+            // Listsidan server-renderar bara 6 kort och "Se fler evenemang"
+            // hämtar 6 åt gången — därför såg källan 6 event medan kalendern
+            // har 208. Soleil items-API:t bär hela listan (samma mönster som
+            // malmo ovan); id:n sniffade ur "Se fler"-XHR:en 2026-09-07.
+            urls: ['https://www.ljungby.se/arkiv/evenemang/'],
+            itemsApi: {
+                pageId: '4.39b9eecc18df28a9e455e93',
+                portletId: '12.427d197819121133d79576cd',
+            },
+            defaultCity: 'Ljungby',
+        },
         updateFrequency: 'every-3d',
+        windowDays: 180,
+        notes: 'items-API tillagt 7/9 2026: 6 → 208 event i kalendern. '
+            + 'start.iso.full bär färdig ISO med år, så ingen årsgissning behövs.',
+        lastVerified: '2026-09-07',
+        discovery: { method: 'probe-xhr', probeUrl: 'https://www.ljungby.se/appresource/4.39b9eecc18df28a9e455e93/12.427d197819121133d79576cd/items?start=0&num=100', date: '2026-09-07', rawEventCount: 208 },
     },
     {
         id: 'sagobygden',

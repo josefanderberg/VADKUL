@@ -169,11 +169,21 @@ export interface SiteVisionConfig {
     eventServiceApi?: { paths: string };
 }
 
-/** Rått item ur soleil items-API:t (bara fälten vi läser). */
+/**
+ * Rått item ur soleil items-API:t (bara fälten vi läser).
+ *
+ * TVÅ FORMER i naturen — samma endpoint, olika fältnamn:
+ *  A) malmo.se (2026-07-09): `url`, `dates:{date,time,locations}`, `place[]`
+ *  B) ljungby.se (2026-09-07): `uri`, `start:{iso:{date,time}}`, `end`,
+ *     `fields:[{id:'sol.event.location', value}]`, `canceled`
+ * Mappern läser båda; en källa som bara ger den ena formen påverkas inte.
+ */
 interface SoleilItem {
     id?: string;
     title?: string;
     url?: string;
+    /** Form B — samma roll som `url`. */
+    uri?: string;
     desc?: string;
     image?: string;
     place?: string[];
@@ -182,6 +192,13 @@ interface SoleilItem {
         time?: string | null;   // "18:00" | null
         locations?: string[];
     };
+    /** Form B: färdig ISO med år — ingen årsgissning behövs. */
+    start?: { iso?: { date?: string; time?: string | null } | null } | null;
+    end?: { iso?: { date?: string; time?: string | null } | null } | null;
+    /** Form B: metadatarader; platsen ligger under id 'sol.event.location'. */
+    fields?: Array<{ id?: string; value?: string }> | null;
+    /** Form B: inställt event ska inte publiceras. */
+    canceled?: boolean;
 }
 
 /** "2026-07-10" + ev. "18:00" → lokal Date. Exporterad för test. */
@@ -205,18 +222,23 @@ export function mapSoleilItem(
     defaultCity: string | undefined,
 ): RawEvent | null {
     const title = (item.title || '').trim();
-    const parsed = parseSoleilDate(item.dates?.date, item.dates?.time);
-    const eventUrl = makeAbsoluteUrl(item.url, baseUrl);
+    if (item.canceled) return null;                     // inställt — publicera inte
+    const parsed = parseSoleilDate(item.dates?.date, item.dates?.time)
+        ?? parseSoleilDate(item.start?.iso?.date, item.start?.iso?.time);
+    const eventUrl = makeAbsoluteUrl(item.url ?? item.uri, baseUrl);
     if (!title || !parsed || !eventUrl) return null;
 
     const venueName = item.place?.find(Boolean)?.trim()
         || item.dates?.locations?.find(Boolean)?.trim()
+        || item.fields?.find(f => f?.id === 'sol.event.location')?.value?.trim()
         || undefined;
 
+    const parsedEnd = parseSoleilDate(item.end?.iso?.date, item.end?.iso?.time);
     return {
         externalId: item.id,
         title,
         startDate: parsed.date,
+        endDate: parsedEnd && parsedEnd.date > parsed.date ? parsedEnd.date : undefined,
         url: eventUrl,
         venueName,
         city: defaultCity,
