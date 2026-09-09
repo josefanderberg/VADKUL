@@ -7243,6 +7243,37 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-08-26',
         discovery: { method: 'probe-xhr', probeUrl: 'https://www.shl.se/api/gameday/gameheader', date: '2026-08-26', notes: 'Hittad med scout/sniff-one.cjs mot https://www.shl.se/spelschema. Samma API på alla tre hockeyligor.' },
     },
+    // ─── SVENSKA ISHOCKEYFÖRBUNDET — hela säsongen ──────────────────────────
+    // sportality-motorn ovan ser bara ett rullande ~5-dagarsfönster (ligans
+    // eget säsongs-API är bevisat stängt, se scrapers/sportality.ts). Förbundet
+    // publicerar samma scheman öppet och server-renderat, hela säsongen på en
+    // sida. Dessa tre är åskådarserierna; registrets övriga 83 ligor är
+    // ungdom, preseason och cuper.
+    //
+    // Dubbletter mot sportality faller på url-dedupen? NEJ — olika domäner ger
+    // olika url. Cross-source-dedupen (npm run dedupe-cross) matchar på titel +
+    // tid och tar hand om överlappet; behåll båda tills den är verifierad, för
+    // sportality bär matcher som flyttats i sista stund.
+    ...([
+        { id: 'swehockey-shl', league: '20961', name: 'SHL' },
+        { id: 'swehockey-hockeyallsvenskan', league: '20962', name: 'HockeyAllsvenskan' },
+        { id: 'swehockey-ndhl', league: '20958', name: 'NDHL' },
+    ].map(({ id, league, name }): Source => ({
+        id,
+        hostName: name,
+        region: 'national',
+        engine: 'swehockey',
+        config: { leagueId: league, leagueName: name },
+        updateFrequency: 'weekly',
+        status: 'experimental',
+        windowDays: 240,
+        notes: `${name}:s hela säsongsschema från stats.swehockey.se. `
+            + 'Tabellen är grupperad per datum — första matchen en speldag bär datumet, '
+            + 'resten ärver det (306 av 364 matcher saknar eget datum). Veckokadens räcker: '
+            + 'ett säsongsschema ändras sällan.',
+        lastVerified: '2026-09-09',
+        discovery: { method: 'manual', probeUrl: `https://stats.swehockey.se/ScheduleAndResults/Schedule/${league}`, date: '2026-09-09', notes: 'Hittad efter att ligans eget API visat sig ha ett rullande 5-dagarsfönster.' },
+    }))),
     {
         id: 'hockeyallsvenskan',
         hostName: 'HockeyAllsvenskan',
