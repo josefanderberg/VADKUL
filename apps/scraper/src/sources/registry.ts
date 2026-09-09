@@ -1657,9 +1657,20 @@ export const SOURCES: Source[] = [
         id: 'sundbyberg',
         hostName: 'Sundbyberg Kommun',
         region: 'sundbyberg',
-        engine: 'sitevision',
-        config: { urls: ['https://www.sundbyberg.se/uppleva-och-gora/evenemang'], defaultCity: 'Sundbyberg' },
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.sundbyberg.se/sitemap.xml',
+            urlPatterns: [/\/arkiv\/evenemang-och-aktiviteter\/[^/]+\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+            defaultCity: 'Sundbyberg',
+            maxUrls: 250,
+        },
         updateFrequency: 'every-3d',
+        windowDays: 180,
+        notes: 'Bytt från sitevision- till sitemap-motorn 9/9 2026 (probe-datumslug). '
+            + 'Arkivet är uppdelat per typ (kulturevenemang, idrott …) — därför ett fritt '
+            + 'segment mellan arkivroten och datum-slugen.',
+        lastVerified: '2026-09-09',
     },
     {
         id: 'taby',
@@ -1891,9 +1902,20 @@ export const SOURCES: Source[] = [
         id: 'tranemo',
         hostName: 'Tranemo Kommun',
         region: 'tranemo',
-        engine: 'sitevision',
-        config: { urls: ['https://www.tranemo.se/kalender'], defaultCity: 'Tranemo' },
+        engine: 'sitemap',
+        config: {
+            // Kalendersidan renderar bara det närmaste; arkivet ligger i
+            // sitemapen under /arkiv/evenemang/<år>/ (77 kommande 9/9 2026).
+            sitemapUrl: 'https://www.tranemo.se/sitemap.xml',
+            urlPatterns: [/\/arkiv\/evenemang\/\d{4}\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+            defaultCity: 'Tranemo',
+            maxUrls: 250,
+        },
         updateFrequency: 'every-3d',
+        windowDays: 180,
+        notes: 'Bytt från sitevision- till sitemap-motorn 9/9 2026 (probe-datumslug).',
+        lastVerified: '2026-09-09',
     },
     {
         id: 'vargarda',
@@ -1956,9 +1978,18 @@ export const SOURCES: Source[] = [
         id: 'borlange-stad',
         hostName: 'Borlänge Kommun',
         region: 'borlange',
-        engine: 'sitevision',
-        config: { urls: ['https://www.borlange.se/evenemang'], defaultCity: 'Borlänge' },
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.borlange.se/sitemap.xml',
+            urlPatterns: [/\/evenemangskalender\/visit-events\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i],
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
+            defaultCity: 'Borlänge',
+            maxUrls: 250,
+        },
         updateFrequency: 'every-3d',
+        windowDays: 180,
+        notes: 'Bytt från sitevision- till sitemap-motorn 9/9 2026 (probe-datumslug).',
+        lastVerified: '2026-09-09',
     },
     {
         id: 'malung-salen',
@@ -3549,14 +3580,22 @@ export const SOURCES: Source[] = [
         engine: 'sitemap',
         config: {
                     sitemapUrl: 'https://vasteras.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?kalender\/[^/]+\/?$/i],
+                    // Kalendern ligger på /kalender/kalenderhandelser/<datum>-<slug>.html
+                    // — 636 URLer. Det gamla mönstret krävde EN nivå under
+                    // /kalender/ och matchade därför 15 sidor som alla föll på
+                    // nämnd-/protokoll-blacklisten. Mönstret är hårt ankrat till
+                    // kalenderhandelser: samma datum-slug-form används även för
+                    // nyheter (408), lovaktiviteter (257) och bygglovskungörelser.
+                    urlPatterns: [/\/kalender\/kalenderhandelser\/\d{4}-\d{2}-\d{2}-[^/]+\.html$/i],
+                    urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
                     defaultCity: 'Västerås',
+                    maxUrls: 250,
                 },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 4 event-URLs (kalender-mönster). '
-            + 'KARANTÄN sedan 19/8. Diagnos 7/9: 42 566 URL:er i sitemapen, 15 matchar '
-            + 'mönstret och ALLA 15 faller på default-blacklisten (nämnd/protokoll). '
-            + 'Inga riktiga event-URL:er finns kvar — ny källa krävs.',
+        notes: 'LAGAD 9/9 2026: 636 event under /kalender/kalenderhandelser/. '
+            + 'Diagnosen 7/9 ("inga riktiga event-URLer finns kvar") var FEL — jag sökte '
+            + 'bara efter /evenemang*/, och Västerås kallar segmentet kalenderhandelser. '
+            + 'Släppt ur karantän i samma veva.',
         lastVerified: '2026-09-07',
     },
     {

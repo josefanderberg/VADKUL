@@ -23,8 +23,24 @@ import { SOURCES } from '../sources/registry';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
     + '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-/** Formen vi letar efter — samma som de fem lagade källorna fick. */
-const DATE_SLUG = /\/evenemang[^/]*\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i;
+/**
+ * Formen vi letar efter: ett sökvägssegment följt av <ÅÅÅÅ-MM-DD>-slug.
+ *
+ * Första versionen krävde att segmentet hette "evenemang*" — den missade
+ * Västerås, som kallar sitt /kalender/kalenderhandelser/ (636 event). Nu
+ * matchas VILKET segment som helst och skriptet grupperar träffarna per
+ * sökvägsprefix i stället, så rätt segment framträder av sig självt.
+ */
+const DATE_SLUG = /\/\d{4}-\d{2}-\d{2}-[^/]+(?:\.html)?$/i;
+
+/**
+ * Sökvägar som använder SAMMA datum-slug-form men aldrig är event. Västerås
+ * har 408 nyheter, 257 lovaktiviteter och 63 bygglovskungörelser i just den
+ * formen — utan den här listan drunknar signalen.
+ */
+// Ordgräns, inte snedstreck: Hammarös mötesprotokoll ligger under
+// "moten-och-protokoll" och slank igenom när mönstret krävde "/protokoll".
+const NOT_EVENTS = /(?:^|[/-])(nyhet|nyheter|pressmeddelande|bygglov|kungorelse|kungörelse|protokoll|sammantrade|anslagstavla|upphandling|driftstorning|trafikstorning|overklaga|rattssakerhet)/i;
 
 interface Row {
     id: string; host: string; sitemap: string; mode: string;
@@ -115,14 +131,21 @@ async function main() {
             const own = Array.isArray(s.config?.urlPatterns)
                 ? urls.filter(u => s.config.urlPatterns.some((re: RegExp) => re.test(u))).length
                 : 0;
-            const ds = urls.filter(u => DATE_SLUG.test(u));
+            const ds = urls.filter(u => DATE_SLUG.test(u) && !NOT_EVENTS.test(u));
             if (ds.length === 0) continue;
             const today = new Date(); today.setHours(0, 0, 0, 0);
             const future = ds.filter(u => { const d = urlDate(u); return d !== null && d >= today; });
+            // Vilket sökvägsprefix bär eventen? Det är svaret på VAR de bor.
+            const byPrefix = new Map<string, number>();
+            for (const u of future) {
+                const prefix = u.replace(/^https?:\/\/[^/]+/, '').replace(/\/\d{4}-\d{2}-\d{2}-.*$/, '/');
+                byPrefix.set(prefix, (byPrefix.get(prefix) ?? 0) + 1);
+            }
+            const top = [...byPrefix.entries()].sort((a, b) => b[1] - a[1])[0];
             rows.push({
                 id: s.id, host: s.hostName, sitemap: sm, mode: extractionMode(s.config || {}),
                 own, dateSlug: ds.length, future: future.length, total: urls.length,
-                sample: future[0] ?? ds[0],
+                sample: top ? `${top[1]} st under ${top[0]}` : (future[0] ?? ds[0]),
             });
             if (!asJson) process.stderr.write(`  ${rows.length} träffar / ${idx} probade\r`);
         }
