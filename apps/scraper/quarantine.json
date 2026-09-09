@@ -55,12 +55,6 @@
       "lastRetry": "2026-09-05",
       "emptyRetries": 2
     },
-    "pitea": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-06",
-      "emptyRetries": 2
-    },
     "pro": {
       "since": "2026-09-08",
       "reason": "4 raka tomma körningar (3 fel)"
@@ -91,12 +85,6 @@
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-09-08",
-      "emptyRetries": 2
-    },
-    "stockholm": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-05",
       "emptyRetries": 2
     },
     "tingsryd": {

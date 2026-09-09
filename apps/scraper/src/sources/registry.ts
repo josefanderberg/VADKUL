@@ -2170,12 +2170,13 @@ export const SOURCES: Source[] = [
             defaultCity: 'Piteå',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-sitemap 2026-06-03: 17 evenemang-URLs. Text-parser. '
-            + 'KARANTÄN sedan 19/8. Diagnos 7/9: /Upplev/Evenemang/ finns inte kvar — '
-            + 'av 7663 URL:er i sitemapen är de "event-ordiga" skolklassers kalendrar '
-            + '(Porsnässkolan klass 6A …). Mönsterfix hjälper inte, det krävs en ny '
-            + 'källa. Stadens utbud kommer i dag från visitpitea.',
-        lastVerified: '2026-09-07',
+        disabled: true,
+        notes: 'AVSTÄNGD 9/9 2026 — ÖVERFLÖDIG. /Upplev/Evenemang/ finns inte kvar på '
+            + 'pitea.se (av 7663 sitemap-URLer är de "event-ordiga" skolklassers kalendrar), '
+            + 'och stadens utbud täcks redan av snöbollskällan `sb-visitpitea-se` som '
+            + 'hittade 135 event i nattkörningen 8/9. Två vägar till samma kalender '
+            + 'behövs inte.',
+        lastVerified: '2026-09-09',
     },
     {
         id: 'dorotea',
@@ -5333,14 +5334,21 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
+        disabled: true,
         discovery: { method: 'probe-sitemap', probeUrl: 'https://visitstockholm.se/sitemap.xml', date: '2026-06-11' },
         // Tyst källa (0 event). Diagnos 2026-06-22: sajten är ombyggd till en
         // ren turist-/POI-katalog. Sitemap (1711 URL:er) saknar daterade event —
         // /evenemang/ finns inte längre, innehållet ligger under /o/ (restauranger,
         // barer, sevärdheter, evergreen-artiklar). 0 av 1711 matchar urlPatterns.
         // Ingen daterad evenemangsfeed kvar att skrapa → inte en selektor-fix.
-        notes: 'Tyst 2026-06-22: visitstockholm.se ombyggd till POI-katalog (/o/...). Sitemap saknar daterade event, 0/1711 matchar. Ingen evenemangsfeed kvar — kandidat för dead.',
-        lastVerified: '2026-06-22',
+        notes: 'AVSTÄNGD 9/9 2026. visitstockholm.se är ombyggd till POI-katalog utan '
+            + 'daterade event. Kalendern finns på visitstockholm.COM/events/ men listas INTE '
+            + 'i deras sitemap (4 av 2056 URLer rör /events/, alla sektionssidor) och '
+            + 'detaljsidornas JSON-LD bär bara en Organization-nod — det hade krävt '
+            + 'katalogskrapning plus textdatum. Marginalnyttan är låg: Stockholm har landets '
+            + 'rikaste utbud redan, och de ~28 posterna är mest långkörande utställningar '
+            + 'vi får via andra källor.',
+        lastVerified: '2026-09-09',
     },
     {
         id: 'trosa',
