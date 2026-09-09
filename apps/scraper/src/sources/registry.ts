@@ -1348,7 +1348,11 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'weekly',
         status: 'experimental',
-        notes: 'Probe 2026-06: 1 event. wp/v2 + content-parser. SOMNAD 2026-07-27: wp/v2/evenemang svarar 404 (CPT/REST borttagen?) — 0 event i DB. Re-proba REST-routes eller byt till sitemap.',
+        disabled: true,
+        notes: 'AVSTÄNGD 9/9 2026 — ERSATT av `visitorebro-accent`. wp/v2/evenemang har svarat '
+            + '404 sedan 27/7; sajten bytte plattform till Accent, och feeden ger 356 event '
+            + 'mot den här källans 0. Behåll inte båda: samma kalender, olika väg in.',
+        lastVerified: '2026-09-09',
     },
     {
         id: 'conventum',
@@ -6696,6 +6700,23 @@ export const SOURCES: Source[] = [
         notes: 'Kalix kalender är en kurerad ström av lokala Facebook-event (Accent API). 26 poster, 96 % exakta koordinater, 100 % bild. Vid upptäckt fanns 0 av de 16 i fönstret redan i DB:n — feeden når FB-sidor vårt eget flöde missar. URL:erna normaliseras till slash-formen så de dedupar mot facebook-scrapern.',
         lastVerified: '2026-08-26',
         discovery: { method: 'probe-xhr', probeUrl: 'https://data.accentapi.com/feed/35230.json', date: '2026-08-26', rawEventCount: 26, notes: 'Feed-id sniffat med apps/scraper/scout/xhr-batch-scout.cjs mot kalix.se/evenemang. Ingen katalog över feeds finns — id:t står i widgetens script-tagg.' },
+    },
+    {
+        id: 'visitorebro-accent',
+        hostName: 'Visit Örebro',
+        region: 'orebro-accent',
+        engine: 'accentfeed',
+        config: { feedId: '25634810', defaultCity: 'Örebro' },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Ersätter den karantänsatta `orebro` (wp/v2/evenemang svarar 404 sedan 27/7). '
+            + 'Visit Örebros kalender bytte plattform till Accent: 356 poster i feeden med '
+            + 'färdig event_start_utc. GOTCHA: visitorebro.se svarar 454 på vanlig curl '
+            + '(inte UA-baserat — även Chrome-UA blockas), så sajten går bara att probea i '
+            + 'Puppeteer. Själva feeden på data.accentapi.com är däremot öppen.',
+        lastVerified: '2026-09-09',
+        discovery: { method: 'probe-xhr', probeUrl: 'https://data.accentapi.com/feed/25634810.json', date: '2026-09-09', rawEventCount: 356, notes: 'Feed-id sniffat ur XHR:erna på visitorebro.se/evenemangskalender i Puppeteer.' },
     },
     {
         id: 'soderkoping-guide',
