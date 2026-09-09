@@ -377,6 +377,19 @@ else
     echo "⚠️ AI-audit misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Datainvariant-vakt: fördelningsmönster per källa (KB-kapningsvakten) ───
+# Granskar publicerbara framtida event i spegeln FÖRE re-aggregate — larmar på
+# tidskluster/likriktade tider/tappade klockslag som varken health eller
+# AI-auditen ser (KB 29/8: 56 event på 7 tidsstämplar, frisk körning, rimliga
+# event). 🚨-raderna landar i Telegram-rapporten; vakten ändrar aldrig data.
+echo "" >> "$LOG_FILE"
+echo "── INVARIANT-VAKT (fördelningsmönster per källa) ──" >> "$LOG_FILE"
+if npm run invariants >> "$LOG_FILE" 2>&1; then
+    echo "Invariant-vakt OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Invariant-vakt misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Re-aggregate så audit-fyllda fält (price/category/emoji + hidden) når web ──
 # Aggregate kördes redan av npm-scriptet ovan (start/today), men då hade audit
 # inte hunnit fylla i price/category/emoji eller dölja junk för dagens nya events.
@@ -435,6 +448,10 @@ QUAR_RELEASED="$(grep '▶️ SLÄPPT:' "$LOG_FILE" | sed 's/.*SLÄPPT: //;s/ �
 JANITOR_SUMMARY="$(grep -oE 'Janitor-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Janitor-summering: //')"
 COST_SUMMARY="$(grep -oE 'Kostnadsvakt-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Kostnadsvakt-summering: //')"
 COST_WARNINGS="$(grep '⚠️ KOSTNADSVAKT:' "$LOG_FILE" | sed 's/.*KOSTNADSVAKT: //' | head -5 | tr '\n' '|' | sed 's/|$//;s/|/ — /g' | cut -c1-400)"
+
+# Invariant-vaktens utfall (sätts av steget ovan)
+INV_SUMMARY="$(grep -oE 'Invariantvakt-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Invariantvakt-summering: //')"
+INV_ALARMS="$(grep '🚨 INVARIANT:' "$LOG_FILE" | sed 's/.*INVARIANT: //' | head -5 | tr '\n' '|' | sed 's/|$//;s/|/ — /g' | cut -c1-400)"
 
 # ─── Hämta Firebase-statistik (dubbletter, daglig fördelning, FB-info) ──────
 echo "" >> "$LOG_FILE"
@@ -502,6 +519,8 @@ QUAR_RELEASED="$QUAR_RELEASED" \
 JANITOR_SUMMARY="$JANITOR_SUMMARY" \
 COST_SUMMARY="$COST_SUMMARY" \
 COST_WARNINGS="$COST_WARNINGS" \
+INV_SUMMARY="$INV_SUMMARY" \
+INV_ALARMS="$INV_ALARMS" \
 LOG_FILE_PATH="$LOG_FILE" \
 /usr/bin/python3 - >"$PAYLOAD_FILE" <<'PYEOF'
 import os, html
@@ -600,6 +619,15 @@ if cost_summary:
 if cost_warnings:
     db_facts.append({"title": "🚨 VARNINGAR",     "value": cost_warnings})
 
+# ── Datainvarianter (fördelningsmönster per källa) ──
+inv_summary = os.environ.get("INV_SUMMARY", "")
+inv_alarms  = os.environ.get("INV_ALARMS", "")
+inv_facts = []
+if inv_summary:
+    inv_facts.append({"title": "🧪 Status",  "value": inv_summary})
+if inv_alarms:
+    inv_facts.append({"title": "🚨 LARM",    "value": inv_alarms})
+
 def facts(rows):
     return "\n".join(f"• <b>{esc(r['title'])}:</b> {esc(r['value'])}" for r in rows)
 
@@ -613,6 +641,7 @@ parts = [
     section("👤 Facebook Events", fb_facts),
     section("⏸️ Källkarantän", quar_facts),
     section("🚨 Databas & kostnadsvakt" if cost_warnings else "🧹 Databas & kostnadsvakt", db_facts),
+    section("🚨 Datainvarianter" if inv_alarms else "🧪 Datainvarianter", inv_facts),
 ]
 text = "\n".join(p for p in parts if p)
 

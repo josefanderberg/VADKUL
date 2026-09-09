@@ -72,6 +72,7 @@
     "web-snowball": "ts-node src/scripts/web-snowball.ts",
     "db-janitor": "ts-node src/scripts/db-janitor.ts",
     "cost-guard": "ts-node src/scripts/cost-guard.ts",
+    "invariants": "ts-node src/scripts/check-invariants.ts",
     "backfill-run": "ts-node src/scripts/backfill-run.ts",
     "daily-report": "ts-node src/scripts/daily-report.ts",
     "aggregate": "ts-node src/scripts/aggregate-events.ts",
