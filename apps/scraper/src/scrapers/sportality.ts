@@ -12,11 +12,24 @@
  *
  * FÄLLOR:
  *  - `gameheader` är ett RULLANDE fönster på ~5 speldatum och tar INGA
- *    datumparametrar (`?date=`/`?from=` ignoreras tyst — samma svar). Hela
- *    säsongsschemat ligger bakom `/api/sports-v2/game-schedule`, som kräver
- *    seasonUuid + seriesUuid; seriesUuid finns i settings men seasonUuid har
- *    vi inte hittat (spelschema-sidan gör inget anrop att sniffa). Med
- *    every-3d-kadens fångas matcherna ändå in efterhand, ~5 dagar i förväg.
+ *    datumparametrar (`?date=`/`?from=` ignoreras tyst — samma svar). Det gör
+ *    att HELA ligan bara har ~7 kommande matcher i vår DB åt gången; en SHL-
+ *    säsong är ~360 hemmamatcher. Med every-3d-kadens fångas de in efterhand,
+ *    ~5 dagar i förväg.
+ *
+ *    Säsongsschemat ligger bakom `/api/sports-v2/game-schedule`, som kräver
+ *    `seasonUuid` OCH `gameTypeUuid` (400:an listar båda vid namn). UTRETT
+ *    IGEN 2026-09-09 — vägen är STÄNGD, leta inte om:
+ *      · `/api/site/settings` bär bara seriesUuid (SHL = qQ9-bb0bzEWUk) och
+ *        lag-/sport-uuid:n. Inget season-fält, inga standard-uuid:n alls.
+ *      · shl.se/spelschema, /tabell och /statistik anropar BARA gameheader,
+ *        upcoming-live-games och game-metadata — inget säsongsscopat anrop.
+ *      · Klubbsajterna kör samma skal: orebrohockey.se/spelschema gör exakt
+ *        samma sex anrop, och dess egen gameheader svarar tomt.
+ *      · `seasonUuid=`/`=all` ger 500, utelämnad ger 400. Inga gissbara värden.
+ *      · `/api/sports-v2/seasons` och `/series/<uuid>/seasons` finns inte (404).
+ *    Full säsongstäckning kräver alltså en annan datakälla — `everysport-matcher`
+ *    i registryt är byggd för just det och väntar bara på EVERYSPORT_API_KEY.
  *  - Feeden blandar in CHL-matcher spelade UTOMLANDS (Logspeed CZ Aréna i
  *    Plzeň dök upp i SHL-feeden). Vi tar bara matcher där HEMMALAGET är
  *    svenskt — hemmalaget avgör arenans land.
