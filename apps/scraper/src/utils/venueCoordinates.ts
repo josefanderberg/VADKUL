@@ -1,4 +1,4 @@
-import { upsertKnownVenue, lookupVenueExact, lookupVenueSmart, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet, lookupTatortNear } from './sqliteHelper';
+import { upsertKnownVenue, lookupVenueExact, lookupVenueSmart, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet, lookupTatortNear, findTatortInText } from './sqliteHelper';
 
 // Växjö venue coordinates lookup table — källa för initial DB-seedning.
 // Lägg inte till nya venues här; använd manage-venues.ts eller known_venues-tabellen direkt.
@@ -836,6 +836,19 @@ async function geocodeVenueSwedenLive(
             console.log(`[Geocoding/SE] City-level fallback "${foundCity}": [${result[0]}, ${result[1]}]`);
             return [result[0], result[1], 'stad-centroid'];
         }
+    }
+
+    // Försök 4 (sista utvägen): ORTNAMN INBÄDDAT I STRÄNGEN, mot hela
+    // SCB-tätortsregistret. Paraply-källorna sätter arrangören som plats —
+    // "Naturskyddsföreningen i Töreboda", "Mariestads Naturskyddsförening" —
+    // och då failar allt ovan. Försök 3 skannar bara SWEDISH_GEO_CITIES (~95
+    // orter); registret har 2 017. Mätning 9/9 2026: 1 588 kommande event låg
+    // helt utan koordinat och 555 av dem bar ett tätortsnamn på det här viset.
+    // Ortcentroid, alltså — märks som sådan och aldrig som en exakt plats.
+    const embedded = findTatortInText(cleaned);
+    if (embedded && (!accept || accept(embedded.lat, embedded.lng))) {
+        console.log(`[Geocoding/SE] Inbäddat ortnamn "${embedded.name}" i "${cleaned}": [${embedded.lat}, ${embedded.lng}]`);
+        return [embedded.lat, embedded.lng, 'ort-centroid'];
     }
 
     console.log(`[Geocoding/SE] No results for "${cleaned}".`);

@@ -721,6 +721,86 @@ export function lookupTatortNear(
     return best ? [best.lat, best.lng] : null;
 }
 
+/**
+ * Tätortsnamn som ALDRIG får matchas fritt i en textsträng — de är också
+ * vanliga svenska ord och skulle placera event i fel del av landet
+ * ("Vi ses i…" → tätorten Vi, "bara för medlemmar" → tätorten Bara).
+ * Femteckensgolvet nedan fångar de kortaste; det här är resten.
+ */
+const TATORT_STOPPORD = new Set([
+    // Ortnamn som lika gärna är vanliga ord i en venue-sträng.
+    'hamnen', 'kyrkan', 'staden', 'centrum', 'skogen', 'stranden', 'graven',
+    'valla', 'kärna', 'backe', 'floda', 'björna', 'norrby', 'söderby',
+]);
+
+/** Alla tätortsnamn ≥5 tecken, längsta först. Laddas en gång per process. */
+let tatortScanList: string[] | null = null;
+function tatortNamesForScan(): string[] {
+    if (tatortScanList) return tatortScanList;
+    const rows = sqlite.prepare('SELECT DISTINCT name FROM tatorter').all() as { name: string }[];
+    tatortScanList = namesEligibleForScan(rows.map(r => r.name));
+    return tatortScanList;
+}
+
+/**
+ * Vilka ortnamn får skannas fritt i en textsträng, längsta först.
+ *
+ * Golvet på 5 tecken är MÄTT, inte tyckt (2026-09-09): registrets kortare namn
+ * är Vi, Vad, Ås, Ed, Bara, Berg, Sund, Holm, Lund … som alla är vanliga ord
+ * och skulle placera event i fel del av landet. Att sänka till 4 gav 19 fler
+ * träffar av 1 588 — inte värt risken. Ren funktion, exporterad för test.
+ */
+export function namesEligibleForScan(names: string[]): string[] {
+    return names
+        .map(n => (n || '').trim())
+        .filter(n => n.length >= 5 && !TATORT_STOPPORD.has(n.toLowerCase()))
+        .sort((a, b) => b.length - a.length);   // Västerhaninge före Haninge
+}
+
+/**
+ * Hitta ett ORTNAMN inbäddat i en fri textsträng. Ren funktion — `names` ska
+ * vara sorterad med längsta först (se namesEligibleForScan). Exporterad för test.
+ *
+ * Ordgräns på båda sidor och valfritt genitiv-s, så "Mariestads
+ * Naturskyddsförening" träffar Mariestad men "Lundgrensgatan" inte träffar Lund.
+ */
+export function matchTatortInText(text: string, names: string[]): string | null {
+    const t = (text || '').toLowerCase();
+    if (t.length < 5) return null;
+    for (const name of names) {
+        const lower = name.toLowerCase();
+        const idx = t.indexOf(lower);
+        if (idx === -1) continue;
+        const before = idx === 0 ? '' : t[idx - 1];
+        let after = t.slice(idx + lower.length);
+        if (after.startsWith('s')) after = after.slice(1);      // "Mariestads …"
+        if (before && /\p{L}/u.test(before)) continue;
+        if (after && /\p{L}/u.test(after[0])) continue;
+        return name;
+    }
+    return null;
+}
+
+/**
+ * Ortnamn inbäddat i en textsträng → koordinat ur SCB-registret.
+ *
+ * Paraply-källorna sätter ARRANGÖREN som locationName — "Naturskyddsföreningen
+ * i Töreboda", "Mariestads Naturskyddsförening". Geokodningen misslyckas på hela
+ * strängen, men ortnamnet sitter inuti den. Mätning 2026-09-09: av 1 588
+ * kommande event utan koordinat bar 555 (35 %) ett tätortsnamn på det viset.
+ *
+ * Tvetydiga namn (samma tätortsnamn i flera kommuner) hoppas över — utan ankare
+ * går det inte att välja rätt, och en gissning hade blivit fel halva tiden.
+ * Resultatet är en ORTCENTROID och ska märkas som sådan, aldrig som exakt plats.
+ */
+export function findTatortInText(text: string): { name: string; lat: number; lng: number } | null {
+    const name = matchTatortInText(text, tatortNamesForScan());
+    if (!name) return null;
+    const rows = tatortByNameStmt.all(name) as { lat: number; lng: number }[];
+    if (rows.length !== 1) return null;
+    return { name, lat: rows[0].lat, lng: rows[0].lng };
+}
+
 // ─── Geocode-cache ───────────────────────────────────────────────────────────
 
 export interface GeocodeCacheHit {
