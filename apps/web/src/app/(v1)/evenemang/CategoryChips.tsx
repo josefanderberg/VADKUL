@@ -62,7 +62,7 @@ const BASE = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border t
 const IDLE = 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400';
 const ON = 'bg-[#006AA7] border-[#006AA7] text-white';
 
-export default function CategoryChips({ citySlug, cityName, cityTitle, allCount, categories, sourceCounts, inPlace }: {
+export default function CategoryChips({ citySlug, cityName, cityTitle, allCount, categories, sourceCounts, inPlace, popCount = 0 }: {
     citySlug: string;
     cityName: string;
     /** Stadssidans <title> — återställs när man går tillbaka till Alla. */
@@ -74,9 +74,13 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
      *  redan innan något hämtats. */
     sourceCounts: Record<string, number>;
     inPlace: boolean;
+    /** Antal 🔥-flaggade rader i stadens lista (från servern). 0 → chippen
+     *  renderas inte alls (gamla lager utan pop-fältet, eller stad utan
+     *  populära event — ett filter som tömmer listan ska inte erbjudas). */
+    popCount?: number;
 }) {
     const pathname = usePathname();
-    const { setCategory } = useDayFilter();
+    const { setCategory, popularOnly, setPopularOnly } = useDayFilter();
     // Frågedelen (?kategori=) läses EFTER mount och hålls i egen state — inte
     // useSearchParams, som kräver en Suspense-gräns på statiska sidor. Vår
     // egen pushState uppdaterar den direkt; bakåt/framåt via popstate.
@@ -130,8 +134,10 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
 
     return (
         <div className="mt-8">
+            {/* "Populärt i {stad}" → "Utforska": 🔥-chippen äger ordet
+                Populära sedan 10/9 — två "populär" på samma skärm förvirrar. */}
             {hasCategories && (
-                <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-2">Populärt i {cityName}</h2>
+                <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-2">Utforska {cityName}</h2>
             )}
             <div className="flex flex-wrap gap-2">
                 {hasCategories && (
@@ -164,6 +170,22 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                         </Link>
                     );
                 })}
+                {/* 🔥 Populära (Josef 10/9) — ett FILTER, ingen kategorilänk:
+                    ren knapp (ingen undersida att indexera), smalnar listan på
+                    plats via kontexten. Bara på stadssidan (inPlace) — på
+                    kategorisidan navigerar chipsen och filtret saknar yta. */}
+                {inPlace && popCount > 0 && (
+                    <button
+                        type="button"
+                        onClick={() => setPopularOnly(!popularOnly)}
+                        aria-pressed={popularOnly}
+                        className={`${BASE} ${popularOnly ? ON : IDLE}`}
+                    >
+                        <span aria-hidden>🔥</span>
+                        Populära
+                        <span className={`font-black ${popularOnly ? 'text-white/70' : 'text-slate-400 dark:text-zinc-500'}`}>{popCount}</span>
+                    </button>
+                )}
                 <SourceChips citySlug={citySlug} sourceCounts={sourceCounts} />
             </div>
         </div>

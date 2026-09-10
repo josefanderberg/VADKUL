@@ -372,6 +372,7 @@ function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
             attendees: 0,
             isLocationVerified: evt.isLocationVerified || false,
             emoji: evt.emoji || undefined,
+            pop: evt.pop || undefined,
             hasSpecificTime: hasSpecificTimeOf(evt, time),
             endDate,
         };

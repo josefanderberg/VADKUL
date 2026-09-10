@@ -196,6 +196,10 @@ export interface LinkEvent {
   attendees?: number;
   /** Per-event-emoji från AI-audit (🧘/🏃 osv) — föredras framför kategori-default på kartpinnen. */
   emoji?: string;
+  /** true = 🔥 Populär, klassad av pipelinen (apps/scraper utils/popularEvent)
+   *  och bakad i aggregaten. Utelämnas när inte populär — gamla cachade lager
+   *  saknar fältet helt, så undefined betyder alltid "inte populär". */
+  pop?: boolean;
   /** Användarskapade event: skaparens uid — styr "Ta bort eventet" på kortet. */
   hostUid?: string;
   /**

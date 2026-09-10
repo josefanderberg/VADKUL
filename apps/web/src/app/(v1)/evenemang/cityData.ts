@@ -54,11 +54,16 @@ export type CityEvent = {
      *  1 = engångshändelse; 400 = rutinverksamhet typ "sommarcafé". Grunden
      *  för rekommendations-rankingen. */
     repeatCount: number;
+    /** 🔥 Populär — klassad av pipelinen (apps/scraper utils/popularEvent),
+     *  bakad i events-destinations.json. Utelämnas när inte populär. */
+    pop?: boolean;
 };
 
 type RawDest = {
     id: string; title: string; time: string; hasSpecificTime: boolean;
     lat: number; lng: number; locationName: string; category: string;
+    /** 🔥-flaggan ur aggregatet — bara på flaggade event. */
+    pop?: boolean;
     /** FINNS INTE i events-destinations.json — bara i kartans min-lager, där en
      *  LLM valt en fri emoji per event. Stod som `emoji: string` fram till 1/9,
      *  vilket dolde att stadssidorna visade 📍 på varje rad. Optional nu, och
@@ -67,6 +72,8 @@ type RawDest = {
 };
 type RawCard = { id: string; hostName?: string; coverImage?: string; price?: string; attendees?: number };
 
+// Speglas av normTitlePop i apps/scraper/src/utils/popularEvent.ts (🔥-
+// klassningens repeatCount) — ändras den ena måste den andra med.
 const normTitle = (t: string) => t.toLowerCase().replace(/[^a-z0-9åäö]+/g, ' ').trim();
 
 // Bildvakten (data:-platshållare, rotrelativa sökvägar, port-mismatch) delas
@@ -228,6 +235,7 @@ async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>):
                 attendees: card?.attendees || undefined,
                 description: descs.get(e.id),
                 repeatCount: titleFreq.get(normTitle(e.title)) ?? 1,
+                pop: e.pop || undefined,
             };
         });
     return { events, updatedAt };
@@ -243,6 +251,9 @@ async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>):
 // morgon/dagtid mest är rutinverksamhet. Vikterna är känsel, inte vetenskap —
 // justera fritt.
 
+// Speglas (tillsammans med ROUTINE_WORDS nedan) i apps/scraper/src/utils/
+// popularEvent.ts — 🔥-klassningen använder samma ordlistor. Ändras den ena
+// måste den andra med.
 const SPECIAL_WORDS = /festival|premiär|vernissage|invigning|turné|mässa|stand.?up|konsert|final|release|cirkus|opera|musikal|nationaldag|midsommar|utställning|föreställning/;
 
 // Rutinverksamhet som ska bort även när titeln råkar vara unik (varje församling

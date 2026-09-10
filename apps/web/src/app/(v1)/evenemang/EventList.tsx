@@ -230,6 +230,8 @@ export function buildListedDays(events: CityEvent[], cityName: string): { days: 
         // Fler-radens chips filtrerar per källa. Sidornas egna rader är
         // aldrig från en opt-in-källa, så fältet uteblir där (mindre HTML).
         ...sourceField(e.id),
+        // 🔥-flaggan bara när satt — samma mindre-HTML-mönster som source.
+        ...(e.pop ? { pop: true } : {}),
     });
     const buildDay = (k: string, list: CityEvent[], beyond: boolean): ListedDay => {
         // ALLA dagens event listas (ingen budget). Dagens dubbletter

@@ -254,6 +254,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                             title: categoryTitle(cat, city.name),
                         }))}
                         sourceCounts={sourceCounts}
+                        popCount={events.reduce((n, e) => n + (e.pop ? 1 : 0), 0)}
                     />
                 </EventDayList>
                 </DayFilterProvider>

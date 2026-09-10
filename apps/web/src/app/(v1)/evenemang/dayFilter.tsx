@@ -39,6 +39,13 @@ type DayFilterState = {
     /** Antal event per källa ur JSON:en — chipsens siffror. */
     optInTotals: Record<string, number> | null;
     setOptInTotals: (t: Record<string, number> | null) => void;
+    /** 🔥 POPULÄRA (Josef 10/9): true = listan visar bara pipeline-flaggade
+     *  rader (ListedEvent.pop — klassade i apps/scraper utils/popularEvent).
+     *  Alltid false vid SSR: serverns HTML förblir kompletta listan
+     *  (hydreringsdeterminism + SEO-kanarien), filtret smalnar efter mount —
+     *  samma kontrakt som optInSources. */
+    popularOnly: boolean;
+    setPopularOnly: (v: boolean) => void;
 };
 
 /** Samma form som DayFilteredList:s ListedDay — typad löst här för att
@@ -54,11 +61,13 @@ export function DayFilterProvider({ children }: { children: ReactNode }) {
     const [optInSources, setOptInSources] = useState<string[]>([]);
     const [optInDays, setOptInDays] = useState<OptInDay[] | null>(null);
     const [optInTotals, setOptInTotals] = useState<Record<string, number> | null>(null);
+    const [popularOnly, setPopularOnly] = useState(false);
 
     return (
         <DayFilterCtx.Provider value={{
             sel, setSel, hours, setHours, category, setCategory,
             optInSources, setOptInSources, optInDays, setOptInDays, optInTotals, setOptInTotals,
+            popularOnly, setPopularOnly,
         }}>
             {children}
         </DayFilterCtx.Provider>

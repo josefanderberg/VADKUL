@@ -26,6 +26,14 @@ interface CategoryFilterProps {
      *  dragning — MapLibre fyrar ingen 'click' då): öppen kolumn fäller ihop
      *  sig (Josef 31/8). Panorering lämnar den alltså i fred. */
     closeNonce?: number;
+    /** 🔥 Populära-filtret (Josef 10/9) — INTE en kategori: eget state i sidan,
+     *  cirkeln ligger överst i kolumnen och togglar hela kartans smalning. */
+    popularOnly?: boolean;
+    onTogglePopular?: () => void;
+    /** false = inget event i lagret bär pop-flaggan (gammalt cachat aggregat
+     *  eller pipeline-regression) — cirkeln döljs helt i stället för att
+     *  erbjuda ett filter som tömmer kartan. */
+    popularAvailable?: boolean;
 }
 
 /**
@@ -46,7 +54,10 @@ interface CategoryFilterProps {
  * stänger kolumnen (Josef 31/8, via closeNonce — ersätter 12/8-beslutet att
  * den bara stängs manuellt); att DRA kartan lämnar den öppen.
  */
-export default function CategoryFilter({ events, selected, onToggle, onClear, familyOptIn = false, closeNonce = 0 }: CategoryFilterProps) {
+export default function CategoryFilter({
+    events, selected, onToggle, onClear, familyOptIn = false, closeNonce = 0,
+    popularOnly = false, onTogglePopular, popularAvailable = false,
+}: CategoryFilterProps) {
     // Startar ALLTID GÖMD (Josef 12/8, skärpt från 11/8): kolumnen tar nästan
     // hela högersidan på mobil. Första versionen lät ett gammalt "visa"-val i
     // localStorage vinna över defaulten — då såg det ut som att defaulten
@@ -59,6 +70,11 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
     useEffect(() => {
         if (closeNonce > 0) setHidden(true);
     }, [closeNonce]);
+
+    // Antal 🔥-event i vyn — cirkelns badge. events är redan popular-smalnat
+    // när filtret är PÅ (sidan filtrerar panel-listan), så talet stämmer i
+    // båda lägena.
+    const popCount = useMemo(() => events.reduce((n, e) => n + (e.pop ? 1 : 0), 0), [events]);
 
     const counts = useMemo(() => {
         const c = new Map<string, number>();
@@ -210,9 +226,9 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
                             className="peer pointer-events-auto bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
                         >
                             <Layers size={20} className={hidden ? 'text-slate-400' : 'text-slate-700'} />
-                            {selected.size > 0 && (
+                            {(selected.size > 0 || popularOnly) && (
                                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white tabular-nums">
-                                    {selected.size}
+                                    {selected.size + (popularOnly ? 1 : 0)}
                                 </span>
                             )}
                         </button>
@@ -246,6 +262,42 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
                         skärmen faktiskt erbjuder. */}
                     {!hidden && (
                         <div className="absolute right-0 top-[52px] flex flex-col items-end gap-2 max-h-[calc(100dvh-148px)] 2xl:max-h-[calc(100dvh-100px)] overflow-y-auto overscroll-contain [touch-action:pan-y] no-scrollbar p-1 -m-1 mt-0 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
+                            {/* 🔥 Populära ALLRA överst (Josef 10/9) — samma cirkel-
+                                anatomi som kategorierna men eget state: den är ett
+                                LÄGE (smalnar hela kartan), ingen kategori. Döljs
+                                helt när lagret saknar pop-flaggor (gammal cache). */}
+                            {popularAvailable && onTogglePopular && (
+                                <div className="flex flex-row-reverse items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={onTogglePopular}
+                                        aria-pressed={popularOnly}
+                                        aria-label={`Populära — ${popCount} event i vyn`}
+                                        style={{ background: sourceGradientCss('#E8590C') }}
+                                        className={`peer pointer-events-auto relative h-10 w-10 shrink-0 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all border ${
+                                            popularOnly
+                                                ? 'border-transparent ring-2 ring-[#006AA7]'
+                                                : 'border-white/40 dark:border-slate-700'
+                                        }`}
+                                    >
+                                        <span aria-hidden>🔥</span>
+                                        {popCount > 0 && (
+                                            <span
+                                                aria-hidden
+                                                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-[10px] font-black tabular-nums flex items-center justify-center border border-slate-200 dark:border-slate-600 shadow leading-none pointer-events-none"
+                                            >
+                                                {popCount > 99 ? '99+' : popCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <span
+                                        aria-hidden
+                                        className="pointer-events-none whitespace-nowrap rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-lg border border-white/50 dark:border-slate-700"
+                                    >
+                                        Populära
+                                    </span>
+                                </div>
+                            )}
                             {/* Opt-in-raderna ALLTID överst, avstängda tills man
                                 kryssar i dem — och alltid samma rader, så toppen
                                 av kolumnen står still när vyn byter. I familj-
@@ -255,7 +307,7 @@ export default function CategoryFilter({ events, selected, onToggle, onClear, fa
                             <span className="w-6 mr-2 border-t border-white/80 dark:border-slate-600" aria-hidden />
                             {/* Rensa-kryss — bara ett kryss, samma cirkel som resten.
                                 Betydelsen ("visa alla") ligger i tooltip/aria. */}
-                            {selected.size > 0 && (
+                            {(selected.size > 0 || popularOnly) && (
                                 <button
                                     type="button"
                                     onClick={onClear}
