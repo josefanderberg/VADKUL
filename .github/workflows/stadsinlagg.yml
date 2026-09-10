@@ -81,7 +81,10 @@ jobs:
         env:
           WEB_ENV: ${{ secrets.WEB_ENV }}
 
+      # Dry-run rör aldrig Meta — nycklarna behövs bara när det schemaläggs
+      # på riktigt, så en granskningskörning ska inte falla på att de saknas.
       - name: Kontrollera FB-nycklar
+        if: ${{ inputs.commit }}
         run: |
           node -e "
           const fs = require('fs');
