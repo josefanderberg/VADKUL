@@ -123,7 +123,13 @@ export function popularScore(e: PopularInput, repeatCount: number): number {
     // FÖRESTÄLLNINGAR, inte veckorutiner: "MAMMA MIA! THE PARTY" spelas ~20
     // kvällar och fick −39 av rutindetektorn (ägarfyndet 10/9). Flerdatums-
     // produktion med biljettsläpp är en etablerad uppsättning → litet plus.
-    if (repeatCount <= 1) s += 12;
+    const nt = normTitlePop(e.title);
+    // Stadsfestnamn ("Kulturnatten") delas AV DESIGN mellan städer — sju
+    // kommuners kulturnätter gav rc=7 och −22 som åt upp huvudevent-bonusen
+    // (Eskilstuna-fyndet 10/9). Unikhets-termen hoppar över dem helt.
+    const citywideMain = CITYWIDE_MAIN.test(nt);
+    if (citywideMain) { /* varken plus eller straff */ }
+    else if (repeatCount <= 1) s += 12;
     // >60 datum i fönstret ≈ dagligen = bokningsbar VERKSAMHET även med
     // biljettsystem ("Öppen ateljé" ×135 via Tickster smet in på 41) —
     // varken plus eller straff.
@@ -142,10 +148,9 @@ export function popularScore(e: PopularInput, repeatCount: number): number {
     // Arena/stadion i platsnamnet = kapacitetsproxy.
     if (e.locationName && ARENA_VENUE.test(e.locationName)) s += 8;
 
-    const nt = normTitlePop(e.title);
     if (SPECIAL_WORDS.test(nt)) s += 8;
     if (EXTRA_DRAW_WORDS.test(nt)) s += 8;
-    if (CITYWIDE_MAIN.test(nt)) s += 35;
+    if (citywideMain) s += 35;
     if (CLASS_WORDS.test(nt)) s -= 15;
     if (CINEMA.test(nt) || (e.locationName != null && CINEMA.test(e.locationName))) s -= 20;
 
