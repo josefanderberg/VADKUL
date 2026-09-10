@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -323,5 +323,39 @@ describe('cheerioFallback — "Mer i kalendariet"-korten förgiftar inte sidan',
 
     it('titeln är sidans egen, inte ett korts', () => {
         expect(cheerioFallback(NKM_PAGE, URL, 'Norrköping')!.title).toBe('Augustifesten: Familjedag i Skulpturparken');
+    });
+});
+
+// Andra Konstmuseum-buggen (2026-09-11): gamla "Barnens Konstfredag"-sidor
+// ("fre 10 april kl 14:00–16:00" — passerad fredag) kastades rätt av
+// veckodagskontrollen, och fritexten tog då en utställningsperiod längre ner
+// ("t.o.m. 6 februari 2027") + sidans klocktid → framtida kluster.
+describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
+    const NOW = new Date(2026, 8, 11, 10, 0);   // fre 11 sep 2026
+    const page = (own: string) => `<html><body><h1>Barnens Konstfredag: Grafik</h1>
+<div class="calendar-date"> ${own} </div>
+<p>Utställningen Healing the Earth pågår t.o.m. 6 februari 2027.</p></body></html>`;
+
+    it('passerad fredag utan årtal → null (hoppas över), inte bannerns 6 februari 2027', () => {
+        expect(dateFromDetailSelector(page('fre 10 april kl 14:00&#8211;16:00'), '.calendar-date', NOW)).toBeNull();
+    });
+
+    it('fritext-fallbacken hade tagit bannerns datum — det är därför fältet behövs', () => {
+        const ev = cheerioFallback(page('fre 10 april kl 14:00&#8211;16:00'), 'https://www.norrkopingskonstmuseum.se/kalender/x/', 'Norrköping');
+        expect(ev?.startDate.getFullYear()).toBe(2027);
+    });
+
+    it('kommande datum med rätt veckodag + klocktid', () => {
+        const r = dateFromDetailSelector(page('fre 25 september kl 14:00&#8211;16:00'), '.calendar-date', NOW)!;
+        expect([r.date.getFullYear(), r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([2026, 8, 25, 14]);
+        expect(r.hasTime).toBe(true);
+    });
+
+    it('datum utan klocktid → hasTime false', () => {
+        expect(dateFromDetailSelector(page('lör 26 september'), '.calendar-date', NOW)!.hasTime).toBe(false);
+    });
+
+    it('fältet saknas → null', () => {
+        expect(dateFromDetailSelector('<html><body><h1>X</h1><p>26 september</p></body></html>', '.calendar-date', NOW)).toBeNull();
     });
 });

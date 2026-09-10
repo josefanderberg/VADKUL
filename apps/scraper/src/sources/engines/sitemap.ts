@@ -142,6 +142,34 @@ export interface SitemapConfig {
     useBrowser?: boolean;
     /** Vänta så här länge efter networkidle2 innan vi läser DOM (default 2000ms) */
     browserSettleMs?: number;
+    /**
+     * Detaljsidans EGET datumfält (ex '.calendar-date'). Satt → datumet tas
+     * BARA därifrån (dateFromDetailSelector); ger fältet inget datum hoppas
+     * sidan över i stället för att falla tillbaka på andra datum på sidan.
+     *
+     * Norrköpings Konstmuseum 2026-09-11: gamla programpunkter ("fre 10 april
+     * kl 14:00–16:00") kastades rätt av veckodagskontrollen — och fritext-
+     * fallbacken plockade då en banner/utställningsperiod ("6 februari 2027",
+     * "26 september") + sidans klocktid → 20 passerade event i framtida kluster.
+     */
+    detailDateSelector?: string;
+}
+
+/**
+ * Datumet ur detaljsidans egna datumfält (SitemapConfig.detailDateSelector).
+ * findFirstDateInText med veckodagskontroll: "fre 10 april" som inte går ihop
+ * med något kommande år ger null (passerad programpunkt → hoppas över), ett
+ * passerat datum med rätt veckodag returneras som det är och faller sedan på
+ * fönsterfiltret. null även när fältet saknas.
+ */
+export function dateFromDetailSelector(
+    html: string, selector: string, now: Date = new Date(),
+): { date: Date; hasTime: boolean } | null {
+    const $ = cheerio.load(html);
+    const text = decodeHtmlEntities($(selector).first().text()).replace(/\s+/g, ' ').trim();
+    if (!text) return null;
+    const date = findFirstDateInText(text, now);
+    return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
 }
 
 /**
@@ -1220,6 +1248,13 @@ export const sitemapEngine = async (
             if (!html) { failed++; events.push(null); continue; }
             const ev = extractFromHtml(html, entry.url, config.defaultCity);
             if (!ev) { noEvent++; events.push(null); continue; }
+            if (config.detailDateSelector) {
+                // Sidans eget datumfält är sanningen — ingen fritext-fallback.
+                const own = dateFromDetailSelector(html, config.detailDateSelector);
+                if (!own) { noEvent++; events.push(null); continue; }
+                ev.startDate = own.date;
+                ev.hasSpecificTime = own.hasTime;
+            }
             if (config.catalogDates) {
                 // Katalogen är sanningen om DAGEN; detaljsidans klockslag behålls.
                 if (!entry.catalogDate) { noEvent++; events.push(null); continue; }

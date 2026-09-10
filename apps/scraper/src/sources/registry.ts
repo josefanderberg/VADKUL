@@ -4497,6 +4497,10 @@ export const SOURCES: Source[] = [
             sitemapUrl: 'https://www.norrkopingskonstmuseum.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?kalender\/[^/]+\/?$/i],
             defaultCity: 'Norrköping',
+            // 2026-09-11: datumet BARA ur sidans eget fält ("lör 15 augusti kl
+            // 11:00–15:00") — fritexten bär "Mer i kalendariet"-kort och
+            // utställningsperioder som kapade datumen (~108 fel event).
+            detailDateSelector: '.calendar-date',
         },
         // Fokusstad 2026-08-09: 254 av 254 hittade event låg utanför 30d-fönstret.
         windowDays: 180,
