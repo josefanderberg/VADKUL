@@ -8,6 +8,15 @@
  */
 const TM_HOST = /(^|\.)ticketmaster\.(se|com|dk|no|fi|de|nl|evyy\.net)$/i;
 
+/**
+ * Är länken en affiliate-redirect som ger provision (Impact, live 31/8)? Den
+ * nakna ticketmaster.se-adressen ger INGENTING. Spegel av apps/scraper
+ * utils/ticketSources.isAffiliateLink — ändras den ena ska den andra följa.
+ */
+export function isAffiliateUrl(url: string | null | undefined): boolean {
+    return !!url && /evyy\.net|impactradius|prf\.hn|\.sjv\.io/i.test(url);
+}
+
 export function isTicketmasterEvent(e: { id?: string | null; url?: string | null } | null | undefined): boolean {
     if (!e) return false;
     for (const raw of [e.url, e.id]) {

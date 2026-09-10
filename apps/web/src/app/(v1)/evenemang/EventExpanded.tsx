@@ -123,7 +123,10 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose]);
 
-    const outlink = eventOutlink(e.id, api?.url);
+    // Radens affiliatelänk (bookUrl) gäller från första klicket — utan den gick
+    // BOKA till den rena ticketmaster.se-adressen (ingen provision) tills
+    // API-svaret kommit.
+    const outlink = eventOutlink(e.id, api?.url ?? e.bookUrl);
     // Värdens favicon ur utlänkens domän (id:t är källans URL för skrapade
     // event, så den finns redan innan API-svaret).
     const faviconUrl = hostFaviconUrl(outlink ?? e.id);

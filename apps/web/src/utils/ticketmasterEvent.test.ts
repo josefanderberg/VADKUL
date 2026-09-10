@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTicketmasterEvent } from './ticketmasterEvent';
+import { isTicketmasterEvent, isAffiliateUrl } from './ticketmasterEvent';
 
 describe('isTicketmasterEvent', () => {
     it('känner igen rena ticketmaster.se-adresser (id-fältet)', () => {
@@ -35,5 +35,21 @@ describe('isTicketmasterEvent', () => {
         expect(isTicketmasterEvent({ id: '', url: '' })).toBe(false);
         expect(isTicketmasterEvent(null)).toBe(false);
         expect(isTicketmasterEvent(undefined)).toBe(false);
+    });
+});
+
+// Provisionslänken — stadssidornas BOKA-knapp och guldkant (10/9) visas bara
+// där klicket faktiskt ger pengar.
+describe('isAffiliateUrl', () => {
+    it('Impact-redirecten är affiliate', () => {
+        expect(isAffiliateUrl('https://ticketmaster.evyy.net/c/8469859/2038747/23885?u=https%3A%2F%2Fwww.ticketmaster.se%2Fevent%2F1')).toBe(true);
+    });
+    it('den nakna biljettlänken och andra säljare är det inte', () => {
+        expect(isAffiliateUrl('https://www.ticketmaster.se/event/mamma-mia')).toBe(false);
+        expect(isAffiliateUrl('https://www.universe.com/events/x?ref=ticketmaster')).toBe(false);
+    });
+    it('tomt är inte affiliate', () => {
+        expect(isAffiliateUrl(undefined)).toBe(false);
+        expect(isAffiliateUrl('')).toBe(false);
     });
 });

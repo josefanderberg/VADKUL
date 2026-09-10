@@ -4,6 +4,7 @@ import { emojiForCategory } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { planCategoryChips, CATEGORY_PAGE_MIN_BIG } from '@/utils/categoryChips';
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
+import { isAffiliateUrl } from '@/utils/ticketmasterEvent';
 import { applyVenueFixInPlace } from '@/data/venueFixes';
 
 // Stadssidornas dataunderlag. Läser samma events-JSON som kartan använder som
@@ -57,6 +58,10 @@ export type CityEvent = {
     /** 🔥 Populär — klassad av pipelinen (apps/scraper utils/popularEvent),
      *  bakad i events-destinations.json. Utelämnas när inte populär. */
     pop?: boolean;
+    /** AFFILIATELÄNKEN (Impact-redirecten ur cards-lagrets url) — bara på
+     *  biljettevent där klicket ger provision (utils/ticketmasterEvent.
+     *  isAffiliateUrl). Stadssidornas BOKA-knapp + guldkant (Josef 10/9). */
+    bookUrl?: string;
 };
 
 type RawDest = {
@@ -70,7 +75,7 @@ type RawDest = {
      *  emojin härleds ur category vid mappningen nedan. */
     emoji?: string;
 };
-type RawCard = { id: string; hostName?: string; coverImage?: string; price?: string; attendees?: number };
+type RawCard = { id: string; hostName?: string; coverImage?: string; price?: string; attendees?: number; url?: string };
 
 // Speglas av normTitlePop i apps/scraper/src/utils/popularEvent.ts (🔥-
 // klassningens repeatCount) — ändras den ena måste den andra med.
@@ -236,6 +241,7 @@ async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>):
                 description: descs.get(e.id),
                 repeatCount: titleFreq.get(normTitle(e.title)) ?? 1,
                 pop: e.pop || undefined,
+                bookUrl: isAffiliateUrl(card?.url) ? card!.url : undefined,
             };
         });
     return { events, updatedAt };

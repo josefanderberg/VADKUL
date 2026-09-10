@@ -12,6 +12,7 @@ import { useDayFilter } from './dayFilter';
 import { dupKey } from '@/utils/groupDups';
 import { useAuth } from '@/context/AuthContext';
 import { anchorScrollDelta, isPlainClick } from '@/utils/eventExpand';
+import { recordEventClick } from '@/services/eventStatsService';
 // Kartans ettords-kategorietiketter (Musik, Sport, Familj …) — kategori-
 // chipet nere till höger på raden (Josef 2/9), vänster om statusbadgen.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
@@ -95,6 +96,10 @@ export type ListedEvent = {
     /** 🔥 Populär (pipeline-klassad, apps/scraper utils/popularEvent) — bara
      *  på flaggade rader, samma mindre-HTML-mönster som source. */
     pop?: boolean;
+    /** AFFILIATELÄNKEN (Josef 10/9: "de vi kan tjäna pengar på … måste vara
+     *  mer synliga") — bara på biljettevent med provisionslänk (cityData,
+     *  isAffiliateUrl). Raden får guldkant + BOKA i guld vänster om hjärtat. */
+    bookUrl?: string;
     /** Dagens dubbletter (samma titel eller omslagsbild — groupDups): ÖVRIGA tillfällen utöver
      *  radens representant. Det som skiljer (tid & plats) radas upp bakom
      *  radens utfällning; representanten bär bild, status och hjärta. */
@@ -356,11 +361,27 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggl
             onMapClick={() => seedMapHandoff(shown)}
         />
     );
+    // AFFILIATE-RADEN (Josef 10/9): guldkant + BOKA i guld vänster om hjärtat
+    // — klicket ger provision. Inte på passerade rader (går inte att boka).
+    const book = dimmed ? undefined : e.bookUrl;
+    const bookLink = (className: string) => book && (
+        <a
+            href={book}
+            target="_blank"
+            rel="sponsored noopener noreferrer"
+            onClick={() => recordEventClick({ id: e.id, url: book, title: e.title, hostName: e.hostName ?? undefined })}
+            className={`${className} z-10 inline-flex items-center justify-center h-8 px-3.5 rounded-full bg-gradient-to-r from-[#fbbf24] to-[#d97706] hover:from-[#fcd34d] hover:to-[#f59e0b] text-amber-950 text-[11px] font-black uppercase tracking-widest shadow-md shadow-amber-900/30 ring-1 ring-inset ring-white/40 active:scale-[0.97] transition-all`}
+        >
+            Boka
+        </a>
+    );
     // Utfälld rad markeras med blå kant (samma blå som chipsen/dagpillen).
     const liBase = `rounded-xl bg-white dark:bg-zinc-900 border transition-all [content-visibility:auto] ${
         expanded
             ? 'border-[#006AA7]/60 dark:border-sky-400/60 shadow-md'
-            : 'border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm'
+            : book
+                ? 'border-[#FECC02] ring-1 ring-[#FECC02] shadow-sm shadow-amber-500/20 hover:shadow-md'
+                : 'border-slate-200 dark:border-zinc-800 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:shadow-sm'
     } ${dimmed ? 'opacity-55' : ''}`;
 
     // Inforad (plats · tid · pris · antal) — delad med spotlight-raderna.
@@ -408,6 +429,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggl
                 </Link>
                 {dups.length > 0 && <div className="px-4 pb-2.5 -mt-0.5"><DupList dups={dups} repTitle={e.title} onPick={pick} activeId={expandedId} /></div>}
                 {panel}
+                {bookLink('absolute top-2 right-12')}
                 <button
                     type="button"
                     onClick={() => onToggleSave(e.id)}
@@ -452,6 +474,7 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggl
                         {!expanded && <span className="block mt-1">{infoRow}</span>}
                     </span>
                 </Link>
+                {bookLink('shrink-0 self-center ml-2')}
                 <button
                     type="button"
                     onClick={() => onToggleSave(e.id)}
