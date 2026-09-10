@@ -81,30 +81,17 @@ jobs:
         env:
           WEB_ENV: ${{ secrets.WEB_ENV }}
 
-      # Dry-run rör aldrig Meta — nycklarna behövs bara när det schemaläggs
-      # på riktigt, så en granskningskörning ska inte falla på att de saknas.
-      - name: Kontrollera FB-nycklar
-        if: ${{ inputs.commit }}
-        run: |
-          node -e "
-          const fs = require('fs');
-          const env = { ...process.env };
-          try {
-            for (const l of fs.readFileSync('../web/.env', 'utf8').split('\n')) {
-              const m = l.match(/^([A-Z_]+)=\"?([^\"]*)\"?\s*\$/);
-              if (m && !env[m[1]]) env[m[1]] = m[2];
-            }
-          } catch {}
-          const tok = env.FB_PAGE_TOKEN || env.FB_PAGE_ACCESS_TOKEN;
-          if (!tok || !env.FB_PAGE_ID) {
-            console.error('❌ FB-sidans nycklar saknas i CI. Lägg till GitHub-secrets FB_PAGE_ID + FB_PAGE_TOKEN (eller FB_PAGE_ID + FB_PAGE_ACCESS_TOKEN i WEB_ENV).');
-            process.exit(1);
-          }
-          console.log('FB-nycklar OK (sida ' + env.FB_PAGE_ID.slice(0, 4) + '…)');
-          "
+      # Ägarens nycklar ligger på GitHub men inte nödvändigtvis under exakt
+      # FB_PAGE_ID/FB_PAGE_TOKEN — proben provar alla kandidater (inkl.
+      # FB_SCRAPE_TOKEN och WEB_ENV:s rader) mot Graph API och exporterar en
+      # verifierad sidtoken via $GITHUB_ENV. Failar bara vid commit=true;
+      # dry-run visar diagnosen men schemalägger ändå inget.
+      - name: Hitta FB-nycklar (probe mot Graph API)
+        run: node scripts/fb-key-probe.js ${{ inputs.commit == true && '--require' || '' }}
         env:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_SCRAPE_TOKEN: ${{ secrets.FB_SCRAPE_TOKEN }}
 
       - name: Seed SQLite ur aggregat-JSON
         run: npx ts-node src/scripts/seed-sqlite-from-aggregate.ts
@@ -117,6 +104,5 @@ jobs:
           if [ "${{ inputs.commit }}" = "true" ]; then ARGS="$ARGS --commit"; fi
           echo "→ schedule-city-posts $ARGS"
           npx ts-node src/scripts/schedule-city-posts.ts $ARGS
-        env:
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+        # FB_PAGE_ID/FB_PAGE_TOKEN kommer från probens $GITHUB_ENV-export —
+        # ett env-block här skulle skugga dem med tomma secretvärden.
