@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import type { CityDayCounts } from './cityData';
-import { todayKey, weekKeys } from './periods';
+import { periodKeys, todayKey, weekKeys } from './periods';
 
 // Topplista över städerna på /evenemang. Eventdatat (antal per dag och stad)
 // bakas in statiskt vid build — här räknar vi bara ut vilka datum "idag"/"i
@@ -35,11 +35,15 @@ import { todayKey, weekKeys } from './periods';
 
 // 'name' = A–Ö (Josef 2/9: "så blir det lättare att hitta sin stad") —
 // då byts platssiffran mot bokstavsavdelare och ingen sifferkolumn markeras.
-type SortKey = 'today' | 'week' | 'total' | 'name';
+// 'weekend' (Josef 10/9: "så man kan se vilka som har mest i helgen") —
+// ingen FJÄRDE sifferkolumn (tränger ut stadsnamnet på en telefon): första
+// kolumnen visar "i helgen" i helgsorteringen, annars "idag".
+type SortKey = 'today' | 'weekend' | 'week' | 'total' | 'name';
 
 const SORTS: { key: SortKey; label: string }[] = [
     { key: 'total', label: 'Flest totalt' },
     { key: 'week', label: 'Mest i veckan' },
+    { key: 'weekend', label: 'Mest i helgen' },
     { key: 'today', label: 'Mest idag' },
     { key: 'name', label: 'A–Ö' },
 ];
@@ -63,18 +67,20 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
     const rows = useMemo(() => {
         const tKey = mounted ? todayKey() : null;
         const wKeys = mounted ? weekKeys() : null;
+        const hKeys = mounted ? periodKeys('weekend') : null;
+        const sum = (keys: string[], c: CityDayCounts) => keys.reduce((s, k) => s + (c.byDay[k] ?? 0), 0);
         return cities
             .map(c => ({
                 ...c,
                 today: tKey ? (c.byDay[tKey] ?? 0) : null,
-                week: wKeys ? wKeys.reduce((sum, k) => sum + (c.byDay[k] ?? 0), 0) : null,
+                weekend: hKeys ? sum(hKeys, c) : null,
+                week: wKeys ? sum(wKeys, c) : null,
             }))
             // Innan klockan lästs finns bara eventtotalen att sortera på — då
             // hoppar listan rätt när dagstalen landar (mounted-hoppet).
             .sort((a, b) => {
                 if (sort === 'name') return collator.compare(a.name, b.name);
-                const pick = (r: typeof a) =>
-                    sort === 'total' ? r.total : ((sort === 'week' ? r.week : r.today) ?? r.total);
+                const pick = (r: typeof a) => (sort === 'total' ? r.total : r[sort] ?? r.total);
                 return pick(b) - pick(a) || b.total - a.total;
             });
     }, [cities, sort, mounted]);
@@ -147,7 +153,9 @@ export default function CityLeaderboard({ cities }: { cities: CityDayCounts[] })
                                 {c.name}
                                 <span className="hidden font-semibold text-slate-400 dark:text-zinc-500 sm:inline"> — vad händer?</span>
                             </span>
-                            <Stat value={c.today} label="idag" active={sort === 'today'} />
+                            {sort === 'weekend'
+                                ? <Stat value={c.weekend} label="i helgen" active />
+                                : <Stat value={c.today} label="idag" active={sort === 'today'} />}
                             <Stat value={c.week} label="i veckan" active={sort === 'week'} />
                             <Stat value={c.total} label="totalt" active={sort === 'total'} />
                         </Link>
