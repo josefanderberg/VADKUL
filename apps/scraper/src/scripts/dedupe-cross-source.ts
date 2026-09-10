@@ -182,26 +182,21 @@ export function ticketTwinKey(r: Pick<Row, 'url' | 'time'>): string | null {
 }
 
 /**
- * Slå ihop dedup-grupper som delar en biljett-tvilling (ticketTwinKey).
- * Rader utanför alla grupper (plats-lösa som inte kunde fästas) tas med om de
- * har en biljettnyckel — biljett-id:t räcker som identitet utan plats.
+ * Slå ihop dedup-grupper vars rader är LÄNKADE av en extra regel (biljett-
+ * tvillingar, titelvarianter). Länkade rader utanför alla grupper (plats-lösa
+ * som inte kunde fästas) blir egna grupper först, så de kan dras med.
  */
-export function mergeTicketTwins(groups: Row[][], rows: Row[]): Row[][] {
+export function mergeLinkedRows(groups: Row[][], links: [Row, Row][]): Row[][] {
     const all = groups.map((g) => [...g]);
     const groupOf = new Map<Row, number>();
     all.forEach((g, i) => g.forEach((r) => groupOf.set(r, i)));
-    for (const r of rows) {
-        if (!groupOf.has(r) && ticketTwinKey(r)) { groupOf.set(r, all.length); all.push([r]); }
+    for (const pair of links) {
+        for (const r of pair) if (!groupOf.has(r)) { groupOf.set(r, all.length); all.push([r]); }
     }
     const parent = all.map((_, i) => i);
     const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
-    const firstByKey = new Map<string, number>();
-    for (const [r, gi] of groupOf) {
-        const k = ticketTwinKey(r);
-        if (!k) continue;
-        const first = firstByKey.get(k);
-        if (first === undefined) { firstByKey.set(k, gi); continue; }
-        const a = find(first), b = find(gi);
+    for (const [x, y] of links) {
+        const a = find(groupOf.get(x)!), b = find(groupOf.get(y)!);
         if (a !== b) parent[Math.max(a, b)] = Math.min(a, b);
     }
     const merged = new Map<number, Row[]>();
@@ -210,6 +205,87 @@ export function mergeTicketTwins(groups: Row[][], rows: Row[]): Row[][] {
         merged.set(root, [...(merged.get(root) ?? []), ...g]);
     });
     return [...merged.values()];
+}
+
+/** Par av rader som delar biljett-tvillingnyckel (ticketTwinKey). */
+export function ticketTwinLinks(rows: Row[]): [Row, Row][] {
+    const first = new Map<string, Row>();
+    const links: [Row, Row][] = [];
+    for (const r of rows) {
+        const k = ticketTwinKey(r);
+        if (!k) continue;
+        const f = first.get(k);
+        if (f) links.push([f, r]); else first.set(k, r);
+    }
+    return links;
+}
+
+/** Slå ihop dedup-grupper som delar en biljett-tvilling (ticketTwinKey). */
+export function mergeTicketTwins(groups: Row[][], rows: Row[]): Row[][] {
+    return mergeLinkedRows(groups, ticketTwinLinks(rows));
+}
+
+/**
+ * TITELVARIANTER (2026-09-10, Växjö): "Dans för parkinson" (regionteatern.se)
+ * och "Dans för Parkinson, Växjö" (Facebook) — samma arrangör, samma tid,
+ * samma bild (men olika filer: .webp mot .jpg), och titelnyckeln missade dem
+ * för ", Växjö". Regeln: den kortare normaliserade titeln (minst två ord, 8
+ * tecken) är BÖRJAN på den längre, vid ordgräns — ett tillägg, inte en annan
+ * titel ("Konsert" ⊄ "Konserthuset", ett ord räcker aldrig).
+ */
+export function isTitleVariant(a: string, b: string): boolean {
+    const [s, l] = a.length <= b.length ? [a, b] : [b, a];
+    if (s === l || s.length < 8 || s.split(' ').length < 2) return false;
+    return l.startsWith(s + ' ');
+}
+
+/** Inställt/flyttat i titeln — en sådan variant slås aldrig ihop: vann den
+ *  vanliga titeln skulle ett inställt event se ut att bli av. */
+const CANCELLED_RE = /\b(installd|installt|installda|cancelled|canceled|uppskjuten|uppskjutet|flyttad|flyttat)\b/;
+
+/**
+ * Par av titelvarianter med EXAKT samma starttid och samma plats-nyckel
+ * (~5 km) — tiden och platsen bär identiteten, titeln bekräftar den.
+ *
+ * Två spärrar (mätt mot datan 10/9, 338 par bland kommande event):
+ *  - KEDJOR: är en kort titel början på FLERA olika längre titlar som inte
+ *    själva är varianter av varandra ("Barnens konstfredag" → "…: Mini-cirkus"
+ *    + "…: Fart, rytm och rörelse") är den en serierubrik, inte samma event —
+ *    ingen länk alls från den (union-find hade annars slagit ihop alla).
+ *  - INSTÄLLT: "Lucinda Williams" / "Lucinda Williams - inställd" länkas inte.
+ */
+export function titleVariantLinks(rows: Row[]): [Row, Row][] {
+    const buckets = new Map<string, Row[]>();
+    for (const r of rows) {
+        const lk = locationKey(r);
+        const t = new Date(r.time);
+        if (!lk || isNaN(t.getTime())) continue;
+        const k = `${t.toISOString()}|${lk}`;
+        if (!buckets.has(k)) buckets.set(k, []);
+        buckets.get(k)!.push(r);
+    }
+    const links: [Row, Row][] = [];
+    for (const b of buckets.values()) {
+        if (b.length < 2) continue;
+        const norm = b.map((r) => normalizeTitle(r.title));
+        // Serierubriker: korta titlar som är början på ≥ 2 olika längre titlar
+        // som inte själva är varianter av varandra.
+        const distinct = [...new Set(norm)];
+        const ambiguous = new Set(distinct.filter((s) => {
+            const longer = distinct.filter((l) => l.length > s.length && isTitleVariant(s, l));
+            return longer.some((a, i) => longer.slice(i + 1).some((c) => !isTitleVariant(a, c)));
+        }));
+        for (let i = 0; i < b.length; i++) {
+            for (let j = i + 1; j < b.length; j++) {
+                const [x, y] = [norm[i], norm[j]];
+                if (!isTitleVariant(x, y)) continue;
+                const short = x.length <= y.length ? x : y;
+                if (ambiguous.has(short) || CANCELLED_RE.test(x) || CANCELLED_RE.test(y)) continue;
+                links.push([b[i], b[j]]);
+            }
+        }
+    }
+    return links;
 }
 
 export function scoreOf(r: Row): number {
@@ -253,7 +329,9 @@ async function main() {
     if (skippedNoLocation) console.log(`(${skippedNoLocation} events utan plats-nyckel hoppade — dedupas ej)`);
     if (attached) console.log(`(${attached} plats-lösa tvillingar fästa vid sitt geokodade kluster)`);
     // Biljett-tvillingar (samma Nortic-id + starttid under två adresser).
-    const groups = mergeTicketTwins(built.groups, rows);
+    const variantLinks = titleVariantLinks(rows);
+    const groups = mergeLinkedRows(mergeTicketTwins(built.groups, rows), variantLinks);
+    if (variantLinks.length) console.log(`(${variantLinks.length} titelvarianter — samma tid + plats, ena titeln = den andra + tillägg)`);
     const twinGroups = groups.filter((g) => {
         const keys = g.map(ticketTwinKey).filter(Boolean);
         return new Set(keys).size < keys.length;

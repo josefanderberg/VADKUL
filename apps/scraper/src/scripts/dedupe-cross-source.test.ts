@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins } from './dedupe-cross-source';
+import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows } from './dedupe-cross-source';
 
 const base = {
     url: 'https://example.se/e/1',
@@ -186,5 +186,52 @@ describe('biljett-tvillingar (Nortic)', () => {
         const merged = mergeTicketTwins(buildDedupGroups(rows).groups, rows);
         expect(merged).toHaveLength(1);
         expect(merged[0]).toHaveLength(3);
+    });
+});
+
+// Växjö 11/9: "Dans för parkinson" (regionteatern.se) och "Dans för
+// Parkinson, Växjö" (Facebook) — samma tid, ~500 m isär, samma bild i olika
+// filformat. Titelnyckeln missade dem för ", Växjö".
+describe('titelvarianter', () => {
+    const at = { ...base, time: '2026-09-11T12:00:00.000Z', lat: 56.8787, lng: 14.8094 };
+    const teatern = { ...at, url: 'https://www.regionteatern.se/events/dans-for-parkinson-2', title: 'Dans för parkinson', firestoreId: 'r' };
+    const fb = { ...at, url: 'https://www.facebook.com/events/1721209066222367/', title: 'Dans för Parkinson, Växjö', lat: 56.8827, lng: 14.8045, firestoreId: 'f' };
+
+    it('kortare titel = början på den längre vid ordgräns', () => {
+        expect(isTitleVariant('dans for parkinson', 'dans for parkinson vaxjo')).toBe(true);
+        expect(isTitleVariant('dans for parkinson vaxjo', 'dans for parkinson')).toBe(true);
+    });
+
+    it('ett ord, för kort, mitt i ett ord eller identiskt räcker inte', () => {
+        expect(isTitleVariant('konsert', 'konsert med bandet')).toBe(false);
+        expect(isTitleVariant('bob hans', 'bob hansson live')).toBe(false);
+        expect(isTitleVariant('dans for parkinson', 'dans for parkinson')).toBe(false);
+    });
+
+    it('Parkinson-paret länkas och slås ihop', () => {
+        const rows = [teatern, fb];
+        const links = titleVariantLinks(rows);
+        expect(links).toHaveLength(1);
+        const merged = mergeLinkedRows(buildDedupGroups(rows).groups, links);
+        expect(merged).toHaveLength(1);
+        expect(merged[0]).toHaveLength(2);
+    });
+
+    it('annan starttid eller annan ort länkas inte', () => {
+        expect(titleVariantLinks([teatern, { ...fb, time: '2026-09-11T14:00:00.000Z' }])).toHaveLength(0);
+        expect(titleVariantLinks([teatern, { ...fb, lat: 57.78, lng: 14.16 }])).toHaveLength(0); // Jönköping
+    });
+
+    it('serierubrik som är början på flera OLIKA program länkas inte (ingen kedja)', () => {
+        const serie = { ...at, url: 'u0', title: 'Barnens konstfredag' };
+        const a = { ...at, url: 'u1', title: 'Barnens konstfredag: Mini-cirkus på sportlovet' };
+        const b = { ...at, url: 'u2', title: 'Barnens Konstfredag: Fart, rytm och rörelse' };
+        expect(titleVariantLinks([serie, a, b])).toHaveLength(0);
+    });
+
+    it('inställt slås aldrig ihop med den vanliga titeln', () => {
+        const live = { ...at, url: 'u1', title: 'Lucinda Williams' };
+        const off = { ...at, url: 'u2', title: 'Lucinda Williams - inställd' };
+        expect(titleVariantLinks([live, off])).toHaveLength(0);
     });
 });
