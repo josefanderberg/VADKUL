@@ -29,6 +29,18 @@ const OUR_IMPACT_REDIRECTS: Record<string, string> = {
 };
 const WRAPPABLE_HOST = /(^|\.)ticketmaster\.(se|dk|no)$/i;
 
+/**
+ * Trasiga käll-värdar → fungerande (rapport 10/9: elitettan.se UTAN www
+ * pekar på en död IP och hänger för evigt i webbläsaren, medan
+ * www.elitettan.se CNAME:ar till Sportality och svarar direkt — deras
+ * apex-DNS är trasig, inte vår länk). Lagrade URL:er rörs ALDRIG
+ * (primärnyckel + share-slug-bas) — precis som affiliate-städningen sker
+ * reparationen här i utkanten, på länken vi skickar besökaren till.
+ */
+const HOST_REPAIRS: Record<string, string> = {
+    'elitettan.se': 'www.elitettan.se',
+};
+
 export function publicUrl(raw: string): string {
     try {
         let u = new URL(raw);
@@ -39,6 +51,8 @@ export function publicUrl(raw: string): string {
             const inner = u.searchParams.get('u') || u.searchParams.get('url');
             if (inner && /^https?:\/\//.test(inner)) u = new URL(inner);
         }
+        const repaired = HOST_REPAIRS[u.hostname.toLowerCase()];
+        if (repaired) u.hostname = repaired;
         for (const [hostPart, params] of Object.entries(FOREIGN_AFFILIATE_PARAMS)) {
             if (!u.hostname.includes(hostPart)) continue;
             if (u.searchParams.get('c') !== '8469859' && !u.searchParams.has('ref')) continue;

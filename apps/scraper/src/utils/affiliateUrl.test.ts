@@ -83,3 +83,14 @@ describe('publicUrl', () => {
         expect(publicUrl(evil)).toBe(evil);
     });
 });
+
+describe('publicUrl — värdreparationer (10/9)', () => {
+    it('elitettan.se utan www (död apex-DNS) → www.elitettan.se', () => {
+        expect(publicUrl('https://elitettan.se/matcher/2026/6536466'))
+            .toBe('https://www.elitettan.se/matcher/2026/6536466');
+    });
+    it('rör inte redan korrekta www-länkar', () => {
+        expect(publicUrl('https://www.elitettan.se/matcher/2026/1'))
+            .toBe('https://www.elitettan.se/matcher/2026/1');
+    });
+});
