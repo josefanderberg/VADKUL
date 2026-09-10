@@ -1075,7 +1075,21 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (!sc) return;
         let startedAtTop = false;
         let touchStartY = 0;
+        // UNDER TAKET DRAR SVEPET KORTET (Josef 10/9, iPhone): det låg förr i
+        // en DYNAMISK touch-action på scrollbehållaren (none under taket, pan-y
+        // på taket). iOS WebKit tillämpar inte alltid en sådan ändring på redan
+        // ritat innehåll — på taket gick det att scrolla från bilden men
+        // "nästan aldrig" från beskrivningstexten eller Anmäl-knappen (gamla
+        // none låg kvar där tills området ritades om). Nu är touch-action
+        // ALLTID pan-y och det här beslutet fattas i JS: vid gest-START (som
+        // förr) avgörs om svepet ska dra kortet, och då hindrar preventDefault
+        // webbläsaren från att scrolla — pointermove driver kortet, samma
+        // mekanism som dra-ner-vid-toppen nedan. Väljarlistan scrollar alltid.
+        let dragsSheet = false;
         const onTouchStart = (e: TouchEvent) => {
+            // maxVhRef, inte MAX_HEIGHT_VH: effekten binds en gång per valt
+            // event, taket följer viewporten (rotation/storlek).
+            dragsSheet = !chooserActiveRef.current && heightVhRef.current < maxVhRef.current - 5;
             // BARA textfälten lämnas åt webbläsaren (markera text, flytta
             // markören) — knappar/länkar är DRAGYTA, samma filosofi som
             // onPointerDown (Josef 31/8). 'button' låg tidigare i exkluderingen
@@ -1093,6 +1107,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             pullingRef.current = false;
         };
         const onTouchMove = (e: TouchEvent) => {
+            if (dragsSheet) { if (e.cancelable) e.preventDefault(); return; }
             if (!startedAtTop) return;
             const dy = e.touches[0].clientY - touchStartY;
             if (!pullingRef.current) {
@@ -2392,16 +2407,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     ref={scrollContainerRef}
                     className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar"
                     style={{
-                        // Innehållet scrollar FÖRST när kortet vuxit till nästan
-                        // helskärm (≥90vh). Under det tar kortets drag-handler
-                        // gesten → hela behållaren åker upp/ner i stället för att
-                        // scrolla innehållet. touch-action låses vid gest-start,
-                        // så ETT svep växer kortet hela vägen upp och NÄSTA svep
-                        // scrollar den nedre delen.
-                        // VÄLJARLISTAN (Josef 2/9): alltid pan-y — svepet
-                        // scrollar listan upp under överkanten, kortet står
-                        // still (se contentTouchLockRef för pointer-sidan).
-                        touchAction: !chooserActive && heightVhRef.current < MAX_HEIGHT_VH - 5 ? 'none' : 'pan-y'
+                        // Innehållet scrollar FÖRST när kortet vuxit till taket.
+                        // Under det tar kortets drag-handler gesten → hela
+                        // behållaren åker upp/ner i stället för att scrolla
+                        // innehållet; ETT svep växer kortet hela vägen upp och
+                        // NÄSTA svep scrollar den nedre delen. Beslutet fattas
+                        // vid gest-start i touch-lyssnaren (dragsSheet) — INTE
+                        // här: en touch-action som växlar none ↔ pan-y fastnade
+                        // på iPhone över text och knappar (Josef 10/9).
+                        // VÄLJARLISTAN (Josef 2/9): svepet scrollar listan upp
+                        // under överkanten, kortet står still (se
+                        // contentTouchLockRef för pointer-sidan).
+                        touchAction: 'pan-y'
                     }}
                 >
                     {/* VÄLJARLÄGET: innehållet ÄR väljarlistan tills man valt
