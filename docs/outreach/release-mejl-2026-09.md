@@ -18,11 +18,10 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
       hämtat stjärnan…", påhittad kod → "Ogiltig gåvolänk." Länken i mejlet
       fungerar. (Testreceptets gotcha: API-nyckeln är referer-låst —
       `signInWithCustomToken` kräver `Referer: https://vadkul.se/`.)
-- [x] **Medlemslistan byggd 7/9 (ombyggd samma kväll med `cityslug`):**
-      `medlemmar-2026-09-07.csv` (gitignorad, här i mappen) — **262 adresser,
-      249 med förnamn, 74 med stad** (188 utan → fallback-texten "din stad"),
-      **71 med stadssideslug** (styr delningsbilden i mejlet). ~47 nya sedan
-      19/8-listan (215). Dröjer utskicket flera dagar: bygg om
+- [x] **Medlemslistan ombyggd 10/9:** `medlemmar-2026-09-10.csv` (gitignorad,
+      här i mappen) — **281 adresser, 267 med förnamn, 87 med stad** (194 utan
+      → fallback-texten "din stad"), 84 med stadssideslug. 294 konton i Auth,
+      ~19 nya sedan 7/9-listan (262). Dröjer utskicket flera dagar: bygg om
       (`build-medlemslista.mjs`, se medlemsmejl.md steg 0).
 - [ ] **Importen i Campaigns: välj UPPDATERA befintliga kontakter**, inte
       hoppa över dubbletter — city-täckningen har ökat 32 → 74 och befintliga
@@ -58,12 +57,16 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
 
 ## Siffrorna i mejlet
 
-- **"Över 35 000 kommande evenemang"** — SQLite-spegeln 7/9: 37 990 framtida
-  synliga rader i `link_events`. Avrundat nedåt med marginal; kolla igen vid
-  utskick om det dröjer.
+- **"Över 45 000 kommande evenemang"** — SQLite-spegeln 10/9: 47 998 framtida
+  synliga rader i `link_events` (var 37 990 den 7/9 → 35 000 i första
+  utkastet). Avrundat nedåt med marginal; kolla igen vid utskick om det dröjer.
 - Boostpriset **99 kr/vecka** = Stripe-livepriset, oförändrat sedan 19/8.
-- **~500 sidvisningar om dagen** — samma ärliga trafiksiffra som 19/8; har
-  trafiken ändrats markant, uppdatera eller stryk.
+- **"100 nya besökare på under 30 minuter"** — ägarens milstolpe (10/9),
+  ersätter "~500 sidvisningar om dagen". Skrivet som **besökare**, inte
+  "användare": i ett medlemsmejl läses "användare" som nya konton, och
+  kontona växte 272 → 294 på tre dagar — det är GA-besökare som avses.
+- **Boost = alltid 🔥 populär** — ägarbeslut 10/9 (bypass i popularFilter),
+  används som säljargument i boost-rutan.
 
 ## Stadsanpassningen
 
@@ -83,7 +86,7 @@ externa bild-URL:er (se checklistan). Cityslug-kolumnen/-fältet behålls ändå
 
 **ANVÄND DENNA:**
 
-- `Över 35 000 event i höst — och en ny stjärna till dig ⭐`
+- `Över 45 000 event i höst — och en ny stjärna till dig ⭐`
 
 Siffran är hooken och står först (mobil kapar vid ~40 tecken), "ny stjärna"
 signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test —
@@ -98,16 +101,17 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 
 ## Preheader
 
-> Hela höstsäsongen är inne — ny design, konserter med biljettlänk, ombyggda
-> stadssidor och en ny guldstjärna: ett dygns boost, gratis för dig.
+> Hela höstsäsongen är inne — ny design, nya 🔥 Populära-knappen, konserter
+> med biljettlänk och en ny guldstjärna: ett dygns boost, gratis för dig.
 
 ## Mejlet
 
 > Hej $[FNAME|där]$!
 >
 > Höstsäsongen är här — och kartan på **vadkul.se** är fullare än någonsin:
-> **över 35 000 kommande evenemang**, från arenakonserter till syföreningar.
-> Det viktigaste sedan sist:
+> **över 45 000 kommande evenemang**, från arenakonserter till syföreningar
+> — och med en mängd nya lokala källor har även mindre orter fått ordentligt
+> med event i höst. Det viktigaste sedan sist:
 >
 > **Nytt på kartan sedan sist**
 >
@@ -115,12 +119,15 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 >   flera saker på samma plats bläddrar du mellan dem direkt i eventkortet,
 >   och att byta dag och hoppa mellan event går snabbare och smidigare än
 >   förut.
+> - 🔥 **Nyhet: 🔥 Populära** — tryck på eldknappen på kartan, så visas bara
+>   det som sticker ut: arenamatcher, konserter, stadsfester och annat som
+>   folk faktiskt samlas kring. Populära event har dessutom en tjockare kant
+>   på kartan, så de syns även när knappen är av. Samma filter finns på
+>   stadssidorna.
 > - 🎟️ **Konserter och arenor, med biljettlänk** — de stora scenerna finns nu
 >   på kartan, och många event har en **Köp biljett**-knapp direkt i kortet,
 >   ofta med pris.
-> - 🍂 **Höstprogrammen är inne** — vi har kopplat på en mängd nya lokala
->   källor, så även mindre orter har fått ordentligt med event i höst.
-> - 🏙️ **Stadssidorna är ombyggda** — på sidan för $[CITY|din stad]$ filtrerar
+> - 🏙️ **Stadssidorna är ombyggda** — på sidan för $[UD:CITY|din stad]$ filtrerar
 >   du på kategori med ett tryck och **fäller ut event direkt i listan**:
 >   anmäl dig, öppna kartan eller dela — utan att lämna sidan.
 >   [vadkul.se/evenemang](https://vadkul.se/evenemang)
@@ -129,15 +136,17 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 >   WhatsApp** får länken automatiskt en bild med **veckans höjdpunkter**.
 >   Skicka till en kompis, så landar hen rätt direkt.
 >
-> *(Här: delningsbilden för mottagarens stad — `$[CITYSLUG|stockholm]$` — med
-> bildtexten "Så här ser förhandsbilden ut just nu — den byggs om automatiskt
-> varje dag.")*
+> *(Här: dagsfärsk Stockholms-delningsbild, uppladdad i Zoho, med bildtexten
+> "Så här ser förhandsbilden ut för Stockholm just nu — varje stad får sin
+> egen.")*
 >
 > **Boosta ditt event 🚀**
 >
 > Arrangerar du något? Boosten är kvar: **99 kr för en hel vecka** — eventet
 > får en **guldmarkör ⭐** och ligger alltid synligt på kartan, före allt
-> annat. Kartan har runt **500 sidvisningar om dagen**. Öppna ditt event och
+> annat — och ett boostat event räknas alltid som **🔥 populärt**, så det syns
+> även för den som filtrerar. Och publiken växer: nyligen nådde vi en ny
+> milstolpe med **100 nya besökare på under 30 minuter**. Öppna ditt event och
 > tryck på **Boosta**.
 >
 > **Och en ny stjärna till dig ⭐**
