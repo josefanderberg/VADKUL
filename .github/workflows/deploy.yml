@@ -101,6 +101,19 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
+      # Förvärmning (10/9): deployen tömmer CDN-cachen och kalla event-API:t
+      # tar ~35 s+ för destinations-lagret — efterkontrollen fick 503/timeout
+      # två gånger 10/9 trots att hostingen låg ute korrekt. Värm alla tre
+      # lagren med generös timeout INNAN kontrollen mäter. Får aldrig fälla
+      # deployen — ett varmningsfel syns som varning och kontrollen avgör.
+      - name: Förvärm event-API:ts CDN-cache
+        run: |
+          for layer in destinations cards descriptions; do
+            curl -fsS -o /dev/null --compressed --max-time 180 "https://vadkul.se/api/events/$layer" \
+              || { sleep 10; curl -fsS -o /dev/null --compressed --max-time 180 "https://vadkul.se/api/events/$layer"; } \
+              || echo "::warning::$layer gick inte att förvärma"
+          done
+
       # Direkt efterkontroll — misslyckas den blir körningen röd och GitHub
       # mejlar. Samma kontroller som SEO-kanarien, fast direkt efter deploy.
       - name: Efterkontroll
@@ -110,7 +123,9 @@ jobs:
           h1=$(curl -fsS --max-time 30 https://vadkul.se/evenemang/malmo | grep -c '<h1' || true)
           [ "${h1:-0}" -ge 1 ] || { echo '::error::Stadssidan saknar <h1> efter deploy — SSR trasig?'; fail=1; }
           curl -fsS -o /dev/null --max-time 30 https://vadkul.se/sitemap.xml || { echo '::error::sitemap.xml svarar inte'; fail=1; }
-          curl -fsS -o /dev/null --compressed --max-time 60 https://vadkul.se/api/events/destinations || { echo '::error::/api/events/destinations svarar inte'; fail=1; }
+          # 90 s-marginal: kall funktion + stort lager har mätts till ~35 s,
+          # och förvärmningssteget ovan ska redan ha gjort det här varmt.
+          curl -fsS -o /dev/null --compressed --max-time 90 https://vadkul.se/api/events/destinations || { echo '::error::/api/events/destinations svarar inte'; fail=1; }
           # Delningsbilden (4/9): stadssidan ska peka på en og:image som svarar
           # med en riktig PNG — annars visar Facebook ingen bild vid delning.
           og=$(curl -fsS --max-time 30 https://vadkul.se/evenemang/pitea | grep -oE 'property="og:image" content="[^"]+"' | head -1 | sed 's/.*content="//;s/"$//')
