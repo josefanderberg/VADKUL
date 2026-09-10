@@ -3,7 +3,7 @@
 # Gör samma sak som schedule-city-posts.ts på en av maskinerna: schemalägger
 # FB-inlägg hos Meta (Meta publicerar vid utsatt tid, så runnerns livstid
 # spelar ingen roll) och loggar i outreachLog. Eventdatat kommer ur de
-# incheckade aggregat-JSON:erna (seed-sqlite-from-aggregate.js) — minins
+# incheckade aggregat-JSON:erna (seed-sqlite-from-aggregate.ts) — minins
 # events.db finns inte här.
 #
 # IG-tvillingarna: runnerns lokala ig-queue.json försvinner med jobbet, men
@@ -107,7 +107,7 @@ jobs:
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
 
       - name: Seed SQLite ur aggregat-JSON
-        run: node scripts/seed-sqlite-from-aggregate.js
+        run: npx ts-node src/scripts/seed-sqlite-from-aggregate.ts
 
       - name: Stadsinlägg
         run: |
