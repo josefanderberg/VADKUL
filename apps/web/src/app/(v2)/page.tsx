@@ -2070,6 +2070,16 @@ export default function HomePage() {
     const cityTourKeyRef = useRef<number | null>(null);
     cityTourKeyRef.current = cityTourTarget?.key ?? null;
     useEffect(() => { setBoundsCityKey(cityTourKeyRef.current); }, [mapBounds]);
+    // TYST LANDNING (sameCityView i V2Map): står kameran redan i stadens vy
+    // flyttas den inte → ingen moveend → rutan mättes aldrig om under det nya
+    // hoppets nyckel, och areaCounts stod kvar på null — stadsrutan "…" och
+    // ingen "Inget här idag"-banner förrän man drog i kartan (Josef 10/9).
+    // Landningskvittot betyder att vyn ÄR stadens, så rutan gäller för
+    // nyckeln. Bara för PÅGÅENDE hopp — ett sent kvitto från ett tidigare hopp
+    // får inte skriva över ett nyare.
+    useEffect(() => {
+        if (landedTourKey != null && landedTourKey === cityTourKeyRef.current) setBoundsCityKey(landedTourKey);
+    }, [landedTourKey]);
 
     // ── Stadsrutan + kategorikolumnen ────────────────────────────────────────
     /**
