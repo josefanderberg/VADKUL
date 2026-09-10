@@ -29,6 +29,9 @@ interface FloatingNavbarProps {
        Josef: "we don't need that anymore". Skapa-knappen ärvde platsen.) */
     /* (plusHint låg här: plusset blinkade när onboardingens actionruta flugit
        hem hit. Actionrutan är borttagen 26/8 — för många popups.) */
+    /** Visningsrundan efter veckoblinken (Josef 10/9): true i 4 s → skapa-
+     *  knappen står i sitt hover-läge (större + etiketten framme). */
+    createHint?: boolean;
 }
 
 /** Etiketten för vald dag/period ("Idag", "Imorgon", "Hela veckan", "3–9 aug").
@@ -63,10 +66,10 @@ export const getDayLabel = (offset: number, days = 1) => {
  * är också pointer-events-none så den osynliga etikettytan inte slukar
  * kartklick.
  */
-const HoverLabel = ({ children }: { children: React.ReactNode }) => (
+const HoverLabel = ({ children, show = false }: { children: React.ReactNode; show?: boolean }) => (
     <span
         aria-hidden
-        className="pointer-events-none opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 shadow-lg border border-white/50"
+        className={`pointer-events-none ${show ? 'opacity-100' : 'opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100'} transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 shadow-lg border border-white/50`}
     >
         {children}
     </span>
@@ -82,6 +85,7 @@ export default function FloatingNavbar({
     closeSearchNonce = 0,
     onLoginClick,
     onOpenProfile,
+    createHint = false,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
@@ -191,7 +195,9 @@ export default function FloatingNavbar({
                             <button
                                 type="button"
                                 onClick={handleProfileClick}
-                                className={`peer pointer-events-auto bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative ${user?.photoURL ? 'p-0.5' : 'p-2.5'}`}
+                                // hover:scale-105 som skapa-knappen (Josef 10/9:
+                                // "så fattar man att de går att klicka på").
+                                className={`peer pointer-events-auto bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200 relative ${user?.photoURL ? 'p-0.5' : 'p-2.5'}`}
                                 aria-label={user ? 'Min profil' : 'Logga in'}
                             >
                                 {user?.photoURL ? (
@@ -229,14 +235,16 @@ export default function FloatingNavbar({
                                     type="button"
                                     onClick={handlePlusClick}
                                     disabled={plusDropping}
-                                    aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eget event på kartan'}
-                                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] hover:scale-105 active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
+                                    aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska'}
+                                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${createHint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
                                 >
                                     {creationMode === 'placing'
                                         ? <Check size={20} className="text-white shrink-0" />
-                                        : <MapPinPlus size={20} className="text-[#FECC02] shrink-0 group-hover:scale-110 transition-transform duration-200" />}
+                                        : <MapPinPlus size={20} className={`text-[#FECC02] shrink-0 transition-transform duration-200 ${createHint ? 'scale-110' : 'group-hover:scale-110'}`} />}
                                 </button>
-                                <HoverLabel>{creationMode === 'placing' ? 'Välj denna plats' : 'Lägg in eller tipsa'}</HoverLabel>
+                                {/* Josef 10/9: "Skapa event, tipsa eller önska" (var
+                                    "Lägg in eller tipsa") — alla tre vägarna in. */}
+                                <HoverLabel show={createHint && creationMode === 'idle'}>{creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska'}</HoverLabel>
                             </div>
                         )}
                     </div>
@@ -276,9 +284,12 @@ export default function FloatingNavbar({
                                     setSearchOpen(true);
                                     searchInputRef.current?.focus(); // synkront i gesten → mobiltangentbord
                                 }}
-                                className={`peer pointer-events-auto flex items-center h-10 rounded-full border border-white/50 transition-colors ${searchOpen
-                                    ? 'relative z-[1200] w-full max-w-[520px] bg-white px-4 shadow-xl'
-                                    : 'w-10 justify-center bg-white/90 backdrop-blur-md shadow-lg hover:bg-white cursor-pointer'}`}
+                                // Hopfälld: hover:scale-105 som skapa-knappen
+                                // (Josef 10/9). Utfälld: ingen skalning — ett
+                                // brett sökfält som växer under musen är fel.
+                                className={`peer pointer-events-auto flex items-center h-10 rounded-full border border-white/50 ${searchOpen
+                                    ? 'relative z-[1200] w-full max-w-[520px] bg-white px-4 shadow-xl transition-colors'
+                                    : 'w-10 justify-center bg-white/90 backdrop-blur-md shadow-lg hover:bg-white hover:scale-105 active:scale-95 transition duration-200 cursor-pointer'}`}
                             >
                                 <Search size={searchOpen ? 16 : 20} aria-hidden className={searchOpen ? 'text-slate-400 shrink-0 mr-2' : 'text-slate-700 shrink-0'} />
                                 <input

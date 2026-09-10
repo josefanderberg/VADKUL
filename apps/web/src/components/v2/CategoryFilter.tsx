@@ -34,6 +34,9 @@ interface CategoryFilterProps {
      *  eller pipeline-regression) — cirkeln döljs helt i stället för att
      *  erbjuda ett filter som tömmer kartan. */
     popularAvailable?: boolean;
+    /** Visningsrundan efter veckoblinken (Josef 10/9): true i 4 s → knappen
+     *  står i sitt hover-läge (större + etiketten framme) utan att man hovrat. */
+    popularHint?: boolean;
 }
 
 /**
@@ -56,7 +59,7 @@ interface CategoryFilterProps {
  */
 export default function CategoryFilter({
     events, selected, onToggle, onClear, familyOptIn = false, closeNonce = 0,
-    popularOnly = false, onTogglePopular, popularAvailable = false,
+    popularOnly = false, onTogglePopular, popularAvailable = false, popularHint = false,
 }: CategoryFilterProps) {
     // Startar ALLTID GÖMD (Josef 12/8, skärpt från 11/8): kolumnen tar nästan
     // hela högersidan på mobil. Första versionen lät ett gammalt "visa"-val i
@@ -223,7 +226,8 @@ export default function CategoryFilter({
                             // som navbarens (profil/hjärta/sök/skapa), och de är
                             // vita utan dark:-variant. Med dark:bg-slate-900 blev
                             // den här ensam mörk i raden.
-                            className="peer pointer-events-auto bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
+                            // hover:scale-105 som skapa-knappen (Josef 10/9).
+                            className="peer pointer-events-auto bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200 relative"
                         >
                             <Layers size={20} className={hidden ? 'text-slate-400' : 'text-slate-700'} />
                             {selected.size > 0 && (
@@ -254,13 +258,18 @@ export default function CategoryFilter({
                                 aria-pressed={popularOnly}
                                 aria-label={popularOnly ? `Visar bara populära (${popCount} i vyn) — tryck för alla event` : 'Visa bara populära event'}
                                 style={popularOnly ? { background: sourceGradientCss('#E8590C') } : undefined}
-                                className={`peer pointer-events-auto relative h-10 w-10 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all border ${
+                                // Hover = lite större + flamman växer, som skapa-
+                                // knappen (Josef 10/9); popularHint håller samma
+                                // läge framme under visningsrundan.
+                                className={`peer group pointer-events-auto relative h-10 w-10 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all duration-200 border active:scale-95 ${
+                                    popularHint ? 'scale-105' : 'hover:scale-105'
+                                } ${
                                     popularOnly
                                         ? 'border-transparent ring-2 ring-white'
                                         : 'bg-white/90 backdrop-blur-md border-white/50 hover:bg-white'
                                 }`}
                             >
-                                <span aria-hidden>🔥</span>
+                                <span aria-hidden className={`inline-block transition-transform duration-200 ${popularHint ? 'scale-110' : 'group-hover:scale-110'}`}>🔥</span>
                                 {popCount > 0 && (
                                     <span
                                         aria-hidden
@@ -275,7 +284,9 @@ export default function CategoryFilter({
                                 className={`pointer-events-none transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold shadow-lg border border-white/50 ${
                                     popularOnly
                                         ? 'opacity-100 text-[#c2410c]'
-                                        : 'opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 text-slate-700'
+                                        : popularHint
+                                            ? 'opacity-100 text-slate-700'
+                                            : 'opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 text-slate-700'
                                 }`}
                             >
                                 {popularOnly ? 'Visar bara populära' : 'Visa bara populära'}

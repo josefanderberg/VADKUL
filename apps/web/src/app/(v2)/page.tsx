@@ -872,15 +872,47 @@ export default function HomePage() {
     // med flit: den flippar false→true EN gång, så senare kvitton (poll,
     // cards-merge) inte startar om hålltimern och förlänger veckovisningen.
     const weekPulsePainted = weekShown != null && paintRoundNonce > weekShown.paintBase;
+
+    // STEG 4 — VISNINGSRUNDAN (Josef 10/9): 1 s efter att veckan visats
+    // "hovras" 🔥-knappen (lite större + etiketten) i 4 s, och 1 s efter det
+    // skapa-knappen lika länge — så man ser vad de gör utan att leta. EN gång
+    // per sidladdning, och bara efter en veckoblink som fick gå klart (rör man
+    // kartan mitt i pulsen rivs den och rundan uteblir).
+    // Tredje steget ('toggle', Josef 10/9): 1 s efter skapa-knappen blir
+    // "Tryck för att växla" lite större och det EJ valda segmentet ("Hela
+    // veckan") står i sitt hover-läge, också 4 s.
+    // Fjärde och sista ('city'): 1 s senare står stadsknappen överst i sitt
+    // hover-läge i 4 s — ingen text, bara effekten.
+    const [tourHint, setTourHint] = useState<'popular' | 'create' | 'toggle' | 'city' | null>(null);
+    const tourHintPlayedRef = useRef(false);
+    const tourHintTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+    const playTourHints = useCallback(() => {
+        if (tourHintPlayedRef.current) return;
+        tourHintPlayedRef.current = true;
+        tourHintTimersRef.current = [
+            // 4 s per text (Josef 10/9: 2 s var för kort), 1 s paus emellan.
+            setTimeout(() => setTourHint('popular'), 1000),
+            setTimeout(() => setTourHint(null), 5000),
+            setTimeout(() => setTourHint('create'), 6000),
+            setTimeout(() => setTourHint(null), 10000),
+            setTimeout(() => setTourHint('toggle'), 11000),
+            setTimeout(() => setTourHint(null), 15000),
+            setTimeout(() => setTourHint('city'), 16000),
+            setTimeout(() => setTourHint(null), 20000),
+        ];
+    }, []);
+    useEffect(() => () => tourHintTimersRef.current.forEach(clearTimeout), []);
+
     useEffect(() => {
         if (!tourPlaying || pulseSuppressed) return;
         if (!weekShown || weekShown.nonce !== tourCycleNonce) return;
         const hide = setTimeout(() => {
             setWeekShown(null);
             setDayRangeDays(pulseBackRef.current);
+            playTourHints();
         }, weekPulsePainted ? TOUR_PULSE_HOLD_MS : TOUR_PULSE_PAINT_FALLBACK_MS);
         return () => clearTimeout(hide);
-    }, [tourPlaying, tourCycleNonce, pulseSuppressed, weekShown, weekPulsePainted]);
+    }, [tourPlaying, tourCycleNonce, pulseSuppressed, weekShown, weekPulsePainted, playTourHints]);
 
     /** Ny stad → kör pulsen igen, och glöm ett tidigare eget periodval. */
     const startCityPulse = useCallback(() => {
@@ -3158,6 +3190,7 @@ export default function HomePage() {
                 closeSearchNonce={closeSearchNonce}
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
+                createHint={tourHint === 'create'}
             />
             )}
 
@@ -3176,6 +3209,7 @@ export default function HomePage() {
                 popularOnly={popularOnly}
                 onTogglePopular={handleTogglePopular}
                 popularAvailable={popularAvailable}
+                popularHint={tourHint === 'popular'}
             />
             )}
 
@@ -3203,7 +3237,15 @@ export default function HomePage() {
             href={cityLink.href}
             title={cityLink.label}
             aria-label={cityLink.aria}
-            className="relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-colors active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70"
+            // hover:scale-105 som skapa-knappen (Josef 10/9: "så fattar man att
+            // de går att klicka på"). transitionDuration inline: duration-500
+            // styr inflygningens animation OCH övergångarna — hovern ska vara
+            // lika kvick som knapparna (200 ms).
+            // tourHint 'city' = visningsrundans sista steg: samma hover-läge i 4 s.
+            className={`relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
+                tourHint === 'city' ? 'bg-slate-900/90 scale-105' : 'bg-slate-900/80 hover:bg-slate-900/90 hover:scale-105'
+            }`}
+            style={{ transitionDuration: '200ms' }}
         >
             {/* BARA stadsnamnet (Josef 31/8: "Evenemang stad för stad"-under-
                 raden revs samma kväll som den lades till — namnet ÄR länken,
@@ -3278,7 +3320,8 @@ export default function HomePage() {
             {!toggleHintDone && (
                 <span
                     aria-hidden
-                    className="pointer-events-none rounded-full border border-white/10 bg-slate-900/70 px-2.5 py-1 text-[9.5px] font-black uppercase leading-none tracking-[0.14em] text-white/70 shadow-lg backdrop-blur-md animate-in fade-in duration-300"
+                    // Visningsrundans tredje steg: lite större i 4 s (Josef 10/9).
+                    className={`pointer-events-none rounded-full border border-white/10 bg-slate-900/70 px-2.5 py-1 text-[9.5px] font-black uppercase leading-none tracking-[0.14em] text-white/70 shadow-lg backdrop-blur-md animate-in fade-in duration-300 transition-transform ${tourHint === 'toggle' ? 'scale-[1.15]' : ''}`}
                 >
                     Tryck för att växla
                 </span>
@@ -3331,19 +3374,23 @@ export default function HomePage() {
                                 ? dayRangeDays >= WEEK_RANGE_MIN_DAYS
                                 : dayRangeDays < WEEK_RANGE_MIN_DAYS;
                             return (
+                                // HOVER på det EJ valda segmentet (Josef 10/9):
+                                // en svag vit platta — "lite så som det ser ut
+                                // när det är valt" — så man ser att det går att
+                                // växla dit.
                                 <span
                                     key={row.days}
-                                    className={`flex items-center justify-between gap-2 rounded-full px-3 py-1.5 transition-colors duration-300 ${
-                                        active ? 'bg-white shadow-sm' : ''
+                                    className={`group/seg flex items-center justify-between gap-2 rounded-full px-3 py-1.5 transition-colors duration-300 ${
+                                        active ? 'bg-white shadow-sm' : tourHint === 'toggle' ? 'bg-white/20' : 'hover:bg-white/20'
                                     }`}
                                 >
                                     <span
-                                        className={`whitespace-nowrap text-[11px] font-black uppercase tracking-[0.12em] leading-none transition-colors duration-300 ${active ? 'text-slate-900' : 'text-white/45'}`}
+                                        className={`whitespace-nowrap text-[11px] font-black uppercase tracking-[0.12em] leading-none transition-colors duration-300 ${active ? 'text-slate-900' : tourHint === 'toggle' ? 'text-white/90' : 'text-white/45 group-hover/seg:text-white/90'}`}
                                     >
                                         {row.label}
                                     </span>
                                     <span
-                                        className={`shrink-0 tabular-nums text-base font-extrabold leading-none transition-colors duration-300 ${active ? 'text-slate-900' : 'text-white/55'}`}
+                                        className={`shrink-0 tabular-nums text-base font-extrabold leading-none transition-colors duration-300 ${active ? 'text-slate-900' : tourHint === 'toggle' ? 'text-white/90' : 'text-white/55 group-hover/seg:text-white/90'}`}
                                     >
                                         {eventsLoaded && dayCountReady && typeof row.count === 'number' ? row.count : '…'}
                                     </span>
