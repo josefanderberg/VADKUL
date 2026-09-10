@@ -293,7 +293,9 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
                 dagval i listans filterrad speglas alltså här och tvärtom. */}
             {/* z-20: under toppnaven (z-40) — chipsen får inte rita över den
                 när heron scrollas upp bakom naven. */}
-            <div className="absolute top-2 left-2 z-20 flex gap-1">
+            {/* flex-wrap + right-2: fem chips (I helgen tillbaka 10/9) ryms
+                knappt på en 320 px-telefon — hellre en rad till än klippt. */}
+            <div className="absolute top-2 left-2 right-2 z-20 flex flex-wrap gap-1">
                 {PERIODS.map(p => {
                     const active = sel.kind === 'period' && sel.period === p.key;
                     return (

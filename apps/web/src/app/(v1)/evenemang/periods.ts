@@ -7,10 +7,13 @@
 
 // 'week' ersatte 'weekend' 18/8 (Josef): veckan visar volymen bättre — samma
 // byte som intro-radens "N i veckan" och topplistans "Mest i veckan".
-export type Period = 'all' | 'today' | 'tomorrow' | 'week';
+// 'weekend' TILLBAKA 10/9 som eget val bredvid veckan (Josef: "det är ju ändå
+// det många söker efter") — bara chippet, inga egna helgsidor.
+export type Period = 'all' | 'today' | 'tomorrow' | 'weekend' | 'week';
 
 const TZ = 'Europe/Stockholm';
 const keyFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+const dowFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' });
 const dateKey = (d: Date) => keyFmt.format(d);
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
@@ -18,6 +21,7 @@ export const PERIODS: { key: Period; label: string; unit: string }[] = [
     { key: 'all', label: 'Alla', unit: 'event' },
     { key: 'today', label: 'Idag', unit: 'idag' },
     { key: 'tomorrow', label: 'Imorgon', unit: 'imorgon' },
+    { key: 'weekend', label: 'I helgen', unit: 'i helgen' },
     { key: 'week', label: 'I veckan', unit: 'i veckan' },
 ];
 
@@ -52,6 +56,13 @@ export function periodKeys(period: Period): string[] | null {
     const now = new Date();
     if (period === 'today') return [dateKey(now)];
     if (period === 'tomorrow') return [dateKey(addDays(now, 1))];
+    if (period === 'weekend') {
+        // I helgen = nästkommande lör+sön; på lördag = idag+imorgon, på söndag = idag.
+        const dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(dowFmt.format(now));
+        if (dow === 0) return [dateKey(now)];
+        const sat = addDays(now, 6 - dow);
+        return [dateKey(sat), dateKey(addDays(sat, 1))];
+    }
     // I veckan = idag + 6 dagar framåt (samma definition som weekKeys).
     return weekKeys();
 }
