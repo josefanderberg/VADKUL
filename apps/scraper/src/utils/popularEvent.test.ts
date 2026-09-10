@@ -157,6 +157,28 @@ describe('isPopularEvent — Växjö-arketyperna 10/9', () => {
             locationName: 'Regionteatern',
         }, 1)).toBe(false);
     });
+    it('biovisning trycks ut — via platsen OCH via titeln (10/9)', () => {
+        expect(isPopularEvent(base({
+            url: 'https://www.tickster.com/se/sv/events/x/1',
+            title: 'The Throne (사도)', category: 'stage',
+            locationName: 'Bio Skandia',
+        }), 5)).toBe(false);
+        expect(isPopularEvent(base({ title: '20 år med Met på bio: Ett jubileumsfirande' }), 1)).toBe(false);
+        // "biograf" som substring i ett vanligt ord ska INTE straffa.
+        const plain = popularScore(base(), 1);
+        expect(popularScore(base({ title: 'Konsert i Bionässkogen' }), 1)).toBe(plain);
+    });
+    it('stadsfestens HUVUDEVENT lyfts, programpunkterna inte (Eskilstuna 10/9)', () => {
+        const kommun = (title: string) => isPopularEvent({
+            url: 'https://visiteskilstuna.se/evenemangsguiden/x',
+            title, time: '2026-09-19T12:00:00', category: 'other', hasSpecificTime: true,
+            coverImage: 'https://visiteskilstuna.se/bild.jpg', price: null, attendees: 0,
+            locationName: 'Eskilstuna',
+        }, 3);
+        expect(kommun('Kulturnatten')).toBe(true);
+        expect(kommun('Kulturnatt på stadsmuseet')).toBe(false);
+        expect(kommun('Rio under Kulturnatten')).toBe(false);
+    });
     it('arena i platsnamnet ger bonus, "hallen" gör det inte', () => {
         const atArena = popularScore(base({ locationName: 'Vida Arena' }), 1);
         const atHall = popularScore(base({ locationName: 'Folkets hus-hallen' }), 1);

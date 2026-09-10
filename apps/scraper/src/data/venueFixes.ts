@@ -41,6 +41,27 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 21.47594,
         note: 'Bio 3:an, Hamngatan 52 (Småstaden), Piteå — rapport 27/8, Saga-salongen låg i skogen',
     },
+    {
+        // Kollektivet Livet (Stadsgårdsterminalen/gamla Birkaterminalen,
+        // Stadsgårdsleden 19, Södermalm). TRE källor, TRE koordinater ~760 m
+        // isär (rapport 10/9: samma konsert på två brickor "några hundra
+        // meter ifrån"): egna sajten geokodades till Slussen (18.0712),
+        // Nortic till Fotografiska-kvarteret (18.0846), Tickster nästan rätt.
+        // Koordinat: OSM:s egen POI för scenen (node "Kollektivet Livet").
+        names: [
+            'Kollektivet Livet', 'Kollektivet Livet, Stockholm',
+            'Kollektivet Livet Bar & Scen',
+            'Kollektivet Livet (Lilla Scen)', 'Lilla Scen, Kollektivet Livet',
+            'Kollektivet Livet (Stora scen)', 'Stora Scen, Kollektivet Livet',
+            'Stora scen, Kollektivet Livet',
+            'Kollektivet Livet (KL Terrassen)', 'KL Terrassen, Kollektivet Livet',
+            'Hallen, Kollektivet Livet',
+        ],
+        city: 'Stockholm',
+        lat: 59.31931,
+        lng: 18.07831,
+        note: 'Kollektivet Livet, Stadsgårdsleden 19 (OSM-POI) — rapport 10/9, tre källor spretade Slussen↔Fotografiska',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */

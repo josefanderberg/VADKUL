@@ -57,13 +57,25 @@ const ROUTINE_WORDS = /gudstjänst|morgonbön|middagsbön|aftonbön|vägkyrka|so
 /** EGNA dragord utöver spegel-listan (INTE en spegel av cityData — kamp-
  *  sport/galor saknas där): FCR30-fallet 10/9, MMA-galan på Fortnox Arena
  *  hade inga andra signaler än titeln och arenan. */
-const EXTRA_DRAW_WORDS = /\bgala\b|\bderby\b|boxning|\bmma\b|fight club|fight night/;
+const EXTRA_DRAW_WORDS = /\bgala\b|\bderby\b|boxning|\bmma\b|fight club|fight night|kulturnatt|stadsfest|karneval/;
+
+/** STADSFESTENS HUVUDEVENT (Eskilstuna-fyndet 10/9): "Kulturnatten" från
+ *  kommunguiden har inga starka signaler (ingen biljett/arena) men fyller
+ *  hela stan. Bara EXAKT titel — under-eventen ("Kulturnatt på stadsmuseet",
+ *  "Rio under Kulturnatten") är venue-programpunkter och ska INTE lyftas. */
+const CITYWIDE_MAIN = /^(kulturnatt(en)?|stadsfest(en)?|stadsfestival(en)?|karneval(en)?)$/;
 
 /** Målgrupps-/kursklasser: betald verksamhet som ser ut som event (bild,
  *  pris, scen-kategori) men är en KLASS — "Dans för Parkinson" (850 kr =
  *  terminsavgift) flaggades i Växjö 10/9. Straff, inte veto: en stor
  *  festival med "workshop" i titeln kan fortfarande kvala på övriga signaler. */
 const CLASS_WORDS = /prova.?på|\bkurs(en)?\b|nybörjar|workshop|studiecirkel|babyrytmik|föräldragrupp|\byoga\b|för parkinson|för seniorer|för daglediga/;
+
+/** Biograf-visningar (ägarbeslut 10/9: "biofilmer känns inte bra bland
+ *  populära"): repertoarfilm på bio är inte ett stort event ens via
+ *  biljettsystem — "The Throne på Bio Skandia" och "Met på bio" flaggades.
+ *  Matchar plats ("Bio Skandia", Filmstaden) OCH titel ("BIO: …", "på bio"). */
+const CINEMA = /\bbio\b|biograf|filmstaden|\bkino\b|\bcinema\b/i;
 
 /** Seriematch-/motståndarmönstret "Lag A - Lag B". */
 const MATCH_DASH = /\s[-–]\s/;
@@ -133,7 +145,9 @@ export function popularScore(e: PopularInput, repeatCount: number): number {
     const nt = normTitlePop(e.title);
     if (SPECIAL_WORDS.test(nt)) s += 8;
     if (EXTRA_DRAW_WORDS.test(nt)) s += 8;
+    if (CITYWIDE_MAIN.test(nt)) s += 35;
     if (CLASS_WORDS.test(nt)) s -= 15;
+    if (CINEMA.test(nt) || (e.locationName != null && CINEMA.test(e.locationName))) s -= 20;
 
     if (e.coverImage) s += 8;              // arrangören har lagt jobb på eventet
     if (e.price) s += 6;                   // biljettbelagt = arrangemang
