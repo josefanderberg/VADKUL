@@ -2275,10 +2275,14 @@ export default function HomePage() {
         [user],
     );
 
-    const handleTogglePopular = useCallback(
-        () => startTransition(() => setPopularOnly(v => !v)),
-        [],
-    );
+    const handleTogglePopular = useCallback(() => {
+        // Ett 🔥-klick är ett AKTIVT val (Josef 10/9): träffar det landnings-
+        // pulsens veckofönster ska vyn STANNA på veckan i stället för att
+        // kastas tillbaka till dagen — samma tystnadsregel som stadsrutans
+        // eget periodval (pulseSuppressed river puls-timrarna, fasen fryser).
+        setPulseSuppressed(true);
+        startTransition(() => setPopularOnly(v => !v));
+    }, []);
 
     // Byt visad dag/intervall — från dagväljaren eller återställningsknappen.
     // Ett medvetet dagval är att ta över rodret: stoppa bildspelet, annars
@@ -3971,14 +3975,29 @@ export default function HomePage() {
                                 ut" (samma ribba överallt är ägarbeslut 10/9, tom vy i
                                 småstad är ärlig men ska förklara sig). */}
                             {popularOnly ? (
-                                <>
-                                    <p className="text-sm font-bold text-slate-800">
-                                        Inga populära event här {promptDayLabel}.
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        Visa alla event, byt dag — eller zooma ut.
-                                    </p>
-                                </>
+                                canOfferWeek ? (
+                                    // Veckan HAR populära event (areaCounts.week räknar
+                                    // genom matchesFilter, alltså 🔥-smalnat) — förstavalet
+                                    // är då att vidga tidsfönstret MED filtret kvar
+                                    // (Josef 10/9), inte att släppa det.
+                                    <>
+                                        <p className="text-sm font-bold text-slate-800">
+                                            Inga populära event här {promptDayLabel} — men {areaCounts?.week} i veckan.
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            Byt till hela veckan med Populära kvar — eller visa alla event.
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-sm font-bold text-slate-800">
+                                            Inga populära event här {promptDayLabel}.
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            Visa alla event, byt dag — eller zooma ut.
+                                        </p>
+                                    </>
+                                )
                             ) : canOfferWeek ? (
                                 <>
                                     <p className="text-sm font-bold text-slate-800">
@@ -4002,13 +4021,26 @@ export default function HomePage() {
                             )}
                         </div>
                         {popularOnly ? (
-                            <button
-                                type="button"
-                                onClick={handleTogglePopular}
-                                className="shrink-0 px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
-                            >
-                                Visa alla
-                            </button>
+                            <div className="shrink-0 flex flex-col items-stretch gap-1.5">
+                                {canOfferWeek && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDayRangeChange(0, 7)}
+                                        className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
+                                    >
+                                        Visa veckan
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={handleTogglePopular}
+                                    className={canOfferWeek
+                                        ? 'px-4 py-2 rounded-full bg-white border border-slate-300 text-slate-700 text-sm font-bold hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors'
+                                        : 'px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors'}
+                                >
+                                    Visa alla
+                                </button>
+                            </div>
                         ) : canOfferWeek ? (
                             <button
                                 type="button"
