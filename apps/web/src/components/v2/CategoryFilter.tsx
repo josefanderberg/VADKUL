@@ -226,9 +226,9 @@ export default function CategoryFilter({
                             className="peer pointer-events-auto bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-lg border border-white/50 hover:bg-white transition-colors relative"
                         >
                             <Layers size={20} className={hidden ? 'text-slate-400' : 'text-slate-700'} />
-                            {(selected.size > 0 || popularOnly) && (
+                            {selected.size > 0 && (
                                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#006AA7] text-white text-[10px] font-black flex items-center justify-center border border-white tabular-nums">
-                                    {selected.size + (popularOnly ? 1 : 0)}
+                                    {selected.size}
                                 </span>
                             )}
                         </button>
@@ -239,6 +239,49 @@ export default function CategoryFilter({
                             {hidden ? 'Visa kategorier' : 'Göm kategorier'}
                         </span>
                     </div>
+
+                    {/* 🔥 EGEN KNAPP under lagerknappen (Josef 10/9: "utanför
+                        kategoriknappen" + "man ser inte ifall den är aktiverad"):
+                        alltid synlig, och läget är omisskännligt — AV = vit
+                        cirkel som grannknapparna, PÅ = eldorange kropp med vit
+                        ring OCH namn-pillen "Visar bara populära" permanent
+                        framme. Döljs helt när lagret saknar pop-flaggor. */}
+                    {popularAvailable && onTogglePopular && (
+                        <div className="mt-2 flex flex-row-reverse items-center gap-2 pointer-events-none">
+                            <button
+                                type="button"
+                                onClick={onTogglePopular}
+                                aria-pressed={popularOnly}
+                                aria-label={popularOnly ? `Visar bara populära (${popCount} i vyn) — tryck för alla event` : 'Visa bara populära event'}
+                                style={popularOnly ? { background: sourceGradientCss('#E8590C') } : undefined}
+                                className={`peer pointer-events-auto relative h-10 w-10 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all border ${
+                                    popularOnly
+                                        ? 'border-transparent ring-2 ring-white'
+                                        : 'bg-white/90 backdrop-blur-md border-white/50 hover:bg-white'
+                                }`}
+                            >
+                                <span aria-hidden>🔥</span>
+                                {popCount > 0 && (
+                                    <span
+                                        aria-hidden
+                                        className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-[10px] font-black tabular-nums flex items-center justify-center border border-slate-200 dark:border-slate-600 shadow leading-none pointer-events-none"
+                                    >
+                                        {popCount > 99 ? '99+' : popCount}
+                                    </span>
+                                )}
+                            </button>
+                            <span
+                                aria-hidden
+                                className={`pointer-events-none transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold shadow-lg border border-white/50 ${
+                                    popularOnly
+                                        ? 'opacity-100 text-[#c2410c]'
+                                        : 'opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 text-slate-700'
+                                }`}
+                            >
+                                {popularOnly ? 'Visar bara populära' : 'Visa bara populära'}
+                            </span>
+                        </div>
+                    )}
 
                     {/* Cirkelkolumn — under knappen, höger-justerad. p-1/-m-1 så
                         ringar, badges och skuggor inte klipps av scroll-containern.
@@ -261,43 +304,10 @@ export default function CategoryFilter({
                         (14/8): annars hade listan fått 48px kortare utrymme än
                         skärmen faktiskt erbjuder. */}
                     {!hidden && (
-                        <div className="absolute right-0 top-[52px] flex flex-col items-end gap-2 max-h-[calc(100dvh-148px)] 2xl:max-h-[calc(100dvh-100px)] overflow-y-auto overscroll-contain [touch-action:pan-y] no-scrollbar p-1 -m-1 mt-0 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
-                            {/* 🔥 Populära ALLRA överst (Josef 10/9) — samma cirkel-
-                                anatomi som kategorierna men eget state: den är ett
-                                LÄGE (smalnar hela kartan), ingen kategori. Döljs
-                                helt när lagret saknar pop-flaggor (gammal cache). */}
-                            {popularAvailable && onTogglePopular && (
-                                <div className="flex flex-row-reverse items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={onTogglePopular}
-                                        aria-pressed={popularOnly}
-                                        aria-label={`Populära — ${popCount} event i vyn`}
-                                        style={{ background: sourceGradientCss('#E8590C') }}
-                                        className={`peer pointer-events-auto relative h-10 w-10 shrink-0 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all border ${
-                                            popularOnly
-                                                ? 'border-transparent ring-2 ring-[#006AA7]'
-                                                : 'border-white/40 dark:border-slate-700'
-                                        }`}
-                                    >
-                                        <span aria-hidden>🔥</span>
-                                        {popCount > 0 && (
-                                            <span
-                                                aria-hidden
-                                                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-[10px] font-black tabular-nums flex items-center justify-center border border-slate-200 dark:border-slate-600 shadow leading-none pointer-events-none"
-                                            >
-                                                {popCount > 99 ? '99+' : popCount}
-                                            </span>
-                                        )}
-                                    </button>
-                                    <span
-                                        aria-hidden
-                                        className="pointer-events-none whitespace-nowrap rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-lg border border-white/50 dark:border-slate-700"
-                                    >
-                                        Populära
-                                    </span>
-                                </div>
-                            )}
+                        // top-[100px] när 🔥-knappen finns (40px knapp + mt-2 + gap),
+                        // annars ursprungliga top-[52px] — kolumnen börjar alltid
+                        // strax under sista knappen i högerstacken.
+                        <div className={`absolute right-0 ${popularAvailable && onTogglePopular ? 'top-[100px] max-h-[calc(100dvh-196px)] 2xl:max-h-[calc(100dvh-148px)]' : 'top-[52px] max-h-[calc(100dvh-148px)] 2xl:max-h-[calc(100dvh-100px)]'} flex flex-col items-end gap-2 overflow-y-auto overscroll-contain [touch-action:pan-y] no-scrollbar p-1 -m-1 mt-0 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200`}>
                             {/* Opt-in-raderna ALLTID överst, avstängda tills man
                                 kryssar i dem — och alltid samma rader, så toppen
                                 av kolumnen står still när vyn byter. I familj-
@@ -307,7 +317,7 @@ export default function CategoryFilter({
                             <span className="w-6 mr-2 border-t border-white/80 dark:border-slate-600" aria-hidden />
                             {/* Rensa-kryss — bara ett kryss, samma cirkel som resten.
                                 Betydelsen ("visa alla") ligger i tooltip/aria. */}
-                            {(selected.size > 0 || popularOnly) && (
+                            {selected.size > 0 && (
                                 <button
                                     type="button"
                                     onClick={onClear}

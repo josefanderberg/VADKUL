@@ -271,7 +271,7 @@ const BADGE_SIDE_PAD = 6;
 // (se COUNT_BADGE-kommentaren ovan för varför den inte är ett eget lager).
 // gold = GULD-kropp UTAN ⭐ (Ticketmaster, ägarbeslut 1/9: "som boost-eventen")
 // — ⭐-badgen förblir boostens/stjärngåvans kvitto och följer bara starred.
-export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false, count = 0, gold = false): { data: ImageData; pixelRatio: number } | null {
+export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false, count = 0, gold = false, pop = false): { data: ImageData; pixelRatio: number } | null {
     if (typeof document === 'undefined') return null;
     const DPR = 2.5;
     const S = BRICKA_IMG_S;      // brickans kropp (logiska px), nära DOM:ens 44
@@ -326,10 +326,12 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     ctx.shadowColor = 'transparent';
     // Ram: vald = tydlig opak vit (markeringen man är "på"); stjärnmärkt = varm
     // ljusgul kant mot guldkroppen; sparad = ljusblå (#5BA3CC, samma som DOM);
-    // önskan = STRECKAD vit (drömlinje); annars svag vit kant för djup.
+    // önskan = STRECKAD vit (drömlinje); 🔥 populär = något tjockare, nästan
+    // opak vit (Josef 10/9: "litelite tjockare border") — syns även med
+    // filtret AV, guld/vald/sparad vinner; annars svag vit kant för djup.
     if (wish) ctx.setLineDash([5, 4]);
-    ctx.lineWidth = selected ? 3.5 : goldBody || saved ? 2.5 : 2;
-    ctx.strokeStyle = selected ? '#ffffff' : goldBody ? '#fff3c4' : saved ? '#5BA3CC' : wish ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = selected ? 3.5 : goldBody || saved ? 2.5 : pop ? 3 : 2;
+    ctx.strokeStyle = selected ? '#ffffff' : goldBody ? '#fff3c4' : saved ? '#5BA3CC' : wish ? 'rgba(255,255,255,0.9)' : pop ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.28)';
     ctx.stroke();
     ctx.restore();
 

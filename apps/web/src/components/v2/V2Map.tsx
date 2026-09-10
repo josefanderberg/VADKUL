@@ -86,7 +86,7 @@ type PlainFeature = {
 type CycleRotation = {
     icon: string;
     count: number;
-    frames: { emoji: string; color?: string; saved?: boolean; gold?: boolean; eventId: string }[];
+    frames: { emoji: string; color?: string; saved?: boolean; gold?: boolean; pop?: boolean; eventId: string }[];
 };
 
 // Det event vars frame en cyklande multibricka visar JUST NU. frameIdx (pumpens
@@ -843,7 +843,7 @@ export default function V2Map({
     const plainData = useMemo(() => {
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
-        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; count?: number }>();
+        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; pop?: boolean; count?: number }>();
         // Rotation för multi-grupper med ≥2 OLIKA emojis: gruppens bricka pekar på
         // en EGEN cykel-bild (`cycle:<gruppnyckel>:<frame-ids>`) vars PIXLAR
         // cykelpumpen byter på plats via map.updateImage — ingen setData, ingen
@@ -916,14 +916,18 @@ export default function V2Map({
             // den syntes guldkroppen bara när reveal-systemet råkade tända
             // just den brickan.
             const drawGold = drawStar || group.some(e => isTicketmasterEvent(e) && !isEventPast(e, nowMs));
+            // 🔥 Populär (pipeline-flaggan) → något tjockare vit kant (Josef
+            // 10/9) så de sticker ut även med filtret AV. Guld/vald/sparad
+            // vinner ram-striden i bakningen — pop ändrar bara default-kanten.
+            const drawPop = group.some(e => e.pop && !isEventPast(e, nowMs));
             const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
             // count i bild-id:t: "+N"-siffran bakas IN i bilden (se v2MapBricka),
             // så två grupper med samma emoji men olika antal får OLIKA bilder —
             // och ett ändrat antal ger ett nytt id (gamla bilden återanvänds
             // aldrig med fel siffra).
             const badgeCount = group.length > 1 ? group.length : 0;
-            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : drawGold ? ':tm' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
-            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, gold: drawGold, count: badgeCount });
+            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
+            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, gold: drawGold, pop: drawPop, count: badgeCount });
             // Bygg gruppens rotation (ej för den valda — den sköts av DOM-synken).
             // Blir den ≥2 frames pekar brickan på gruppens EGEN cykel-bild i
             // stället för rep-ikonen.
@@ -958,8 +962,10 @@ export default function V2Map({
                     // drawGold följer med varje frame: en TM-grupp cyklar vidare
                     // (till skillnad från stjärnmärkta) men får inte blinka
                     // mellan guld och kategori-färg när pumpen byter pixlar.
-                    frames.push({ emoji: em, color: col, saved: drawSav, gold: drawGold, eventId: ev.id });
-                    frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}${drawGold ? ':tm' : ''}`);
+                    // drawPop följer gruppen (som guldet): kanten ska inte
+                    // blinka av/på när cykeln byter frame.
+                    frames.push({ emoji: em, color: col, saved: drawSav, gold: drawGold, pop: drawPop, eventId: ev.id });
+                    frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}${drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}`);
                 }
                 if (frames.length > 1) {
                     // Gruppnyckeln i bild-id:t → aldrig delat mellan grupper.
@@ -971,7 +977,7 @@ export default function V2Map({
                     const cycleId = `cycle:${key}:c${badgeCount}:${frameIds.join('|')}`;
                     // Registrera cykel-bilden med frame 0 som utgångsutseende så
                     // syncPlainLayer bakar + addImage:ar den som alla andra.
-                    if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, gold: frames[0].gold, count: badgeCount });
+                    if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, gold: frames[0].gold, pop: frames[0].pop, count: badgeCount });
                     rotations.set(key, { icon: cycleId, count: badgeCount, frames });
                     finalIcon = cycleId;
                 }
@@ -1051,7 +1057,7 @@ export default function V2Map({
     // gång per databygge så träffbedömningen kan gå via de ~50 tända nycklarna
     // i stället för att loopa alla tiotusentals features per klick/mousemove.
     const plainFeatureByKeyRef = useRef<Map<string, PlainFeature>>(new Map());
-    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; count?: number }>>(new Map());
+    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; pop?: boolean; count?: number }>>(new Map());
     // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
     // symbolerna faktiskt SYNS (baka ikoner, tila GeoJSON i workern, rendera) —
     // utan spårning släcktes ladda-pillen vid hämtat-klart och kartan såg tom ut.
@@ -1226,7 +1232,7 @@ export default function V2Map({
             if (!info) continue;
             let baked = bakedIconsRef.current.get(id);
             if (!baked) {
-                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0, info.gold);
+                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0, info.gold, info.pop);
                 if (b) { bakedIconsRef.current.set(id, b); baked = b; }
             }
             if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
@@ -2325,7 +2331,7 @@ export default function V2Map({
                 const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}${fr.gold ? ':tm' : ''}:c${pick.rot.count}`;
                 let baked = bakedIconsRef.current.get(frameId);
                 if (!baked) {
-                    const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved, false, false, pick.rot.count, fr.gold);
+                    const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved, false, false, pick.rot.count, fr.gold, fr.pop);
                     if (b) { bakedIconsRef.current.set(frameId, b); baked = b; }
                 }
                 return baked;
