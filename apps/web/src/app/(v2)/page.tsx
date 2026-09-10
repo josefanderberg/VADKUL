@@ -3774,7 +3774,11 @@ export default function HomePage() {
                             onChange={e => setNewEventTitle(e.target.value)}
                             placeholder={createKind === 'wish' ? 'Vad önskar du hände här?' : 'Namn på event'}
                             aria-label={createKind === 'wish' ? 'Vad önskar du hände här?' : 'Namn på event'}
-                            autoFocus
+                            // Autofokus BARA med mus/styrplatta (Josef 10/9): på
+                            // mobilen öppnade den tangentbordet direkt och man
+                            // hamnade mitt i formuläret — där väntar vi tills
+                            // man själv trycker i ett fält.
+                            autoFocus={typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches}
                             maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-500 focus:outline-none"
                         />
