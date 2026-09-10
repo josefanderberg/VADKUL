@@ -2,6 +2,7 @@ import { db } from '../config/firebase';
 import { publicUrl } from '../utils/affiliateUrl';
 import { sqlite } from '../utils/sqliteHelper';
 import { applyVenueFixInPlace } from '../data/venueFixes';
+import { buildTitleFreq, isPopularEvent, normTitlePop } from '../utils/popularEvent';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -19,6 +20,8 @@ interface DestinationLayer {
     category: string;
     /** Per-event-emoji från AI-audit (🧘/🏃 osv) — webben föredrar denna framför kategori-default. */
     emoji?: string;
+    /** true = 🔥 Populär (utils/popularEvent). Utelämnas annars (bytes × 30k event i aggregatet). */
+    pop?: true;
 }
 
 interface CardLayer {
@@ -42,6 +45,8 @@ interface CardLayer {
     emoji?: string;
     /** true = koordinaten är stadens mittpunkt (geoPrecision='stad-centroid'). */
     approxGeo?: boolean;
+    /** true = 🔥 Populär (utils/popularEvent). Utelämnas annars (bytes × 30k event i aggregatet). */
+    pop?: true;
 }
 
 export async function runAggregation(opts: { includeUnpublished?: boolean } = {}) {
@@ -85,6 +90,12 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         return [0, 0];
     };
 
+    // 🔥-klassningen behöver global titelfrekvens (rutindetektorn) — räknas
+    // över exakt den radmängd som aggregeras, samma semantik som webbens
+    // repeatCount i cityData.
+    const titleFreq = buildTitleFreq(rows);
+    let popCount = 0;
+
     let skippedNoUrl = 0;
     rows.forEach(row => {
         const id = row.url; // Use url as unique identifier
@@ -108,6 +119,21 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             ? row.hasSpecificTime === 1
             : !((t.getHours() === 0 && t.getMinutes() === 0) || (t.getUTCHours() === 0 && t.getUTCMinutes() === 0));
 
+        const pop = isPopularEvent(
+            {
+                url: id,
+                title: row.title || '',
+                time: row.time,
+                category: row.category || 'other',
+                hasSpecificTime,
+                coverImage: row.coverImage,
+                price: row.price,
+                attendees: Number(row.attendees) || 0,
+            },
+            titleFreq.get(normTitlePop(row.title || '')) ?? 1,
+        ) ? true as const : undefined;
+        if (pop) popCount++;
+
         destinations.push({
             id,
             title: row.title || '',
@@ -120,7 +146,8 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             lng: safeLng,
             locationName: row.locationName || '',
             category: row.category || 'other',
-            emoji: row.emoji || undefined
+            emoji: row.emoji || undefined,
+            pop
         });
 
         cards.push({
@@ -142,7 +169,8 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             // Positionen är stadens mittpunkt, inte platsen — låter webben visa
             // "ungefär i {stad}" i stället för att låtsas vara en exakt nål.
             // Utelämnas helt annars (bytes × 30k event i aggregatet).
-            approxGeo: row.geoPrecision === 'stad-centroid' ? true : undefined
+            approxGeo: row.geoPrecision === 'stad-centroid' ? true : undefined,
+            pop
         });
 
         descriptions[id] = row.description || '';
@@ -151,6 +179,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     if (skippedNoUrl > 0) {
         console.log(`   ⏭  ${skippedNoUrl} event utan url hoppades över (saknar aggregat-nyckel).`);
     }
+    console.log(`   🔥 ${popCount} av ${destinations.length} event klassade som Populära (${destinations.length ? Math.round(popCount / destinations.length * 100) : 0} %)`);
     if (droppedCoords > 0) {
         console.log(`   ⚠️  ${droppedCoords} event hade ogiltiga koordinater (utanför WGS84) — sanerade till 0,0 i kartlagret`);
     }

@@ -37,9 +37,9 @@ import { SOURCES } from '../sources/registry';
  * Storstadsnära städer är markerade `metro` — deras radie svämmar över av
  * grannstadens utbud, så per-capita-talet är missvisande för dem.
  */
-interface City { name: string; lat: number; lng: number; pop: number; region?: string; metro?: boolean }
+export interface City { name: string; lat: number; lng: number; pop: number; region?: string; metro?: boolean }
 
-const CITIES: City[] = [
+export const CITIES: City[] = [
     { name: 'Stockholm', lat: 59.3293, lng: 18.0686, pop: 984748, region: 'stockholm' },
     { name: 'Göteborg', lat: 57.7089, lng: 11.9746, pop: 604616, region: 'goteborg' },
     { name: 'Malmö', lat: 55.6050, lng: 13.0038, pop: 362133, region: 'malmo' },
@@ -98,7 +98,7 @@ const RX_AGG = /^(Tickster|TicketMaster|Ticketmaster|Billetto|Eventbrite|Nortic|
 
 const EARTH_KM = 6371;
 const rad = (x: number) => (x * Math.PI) / 180;
-function distKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+export function distKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
     const dLat = rad(bLat - aLat);
     const dLng = rad(bLng - aLng);
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(aLat)) * Math.cos(rad(bLat)) * Math.sin(dLng / 2) ** 2;
@@ -205,4 +205,6 @@ function main() {
     console.log('\nSvagast lokalt utbud:', rows.slice(0, 8).map((r) => r.name).join(', '));
 }
 
-main();
+// Vakten gör CITIES/distKm importerbara (analyze-popular) utan att rapporten
+// drar igång — samma mönster som aggregate-events.
+if (require.main === module) main();
