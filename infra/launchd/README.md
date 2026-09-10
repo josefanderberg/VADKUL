@@ -39,23 +39,34 @@ launchctl kickstart gui/$(id -u)/se.vadkul.scraper.nightly   # kör nu
 tail -f ~/Library/Logs/vadkul-scraper/nightly.log            # kedjans logg
 ```
 
-## se.vadkul.digest-daily — AVVECKLAD 2026-08-26
+## se.vadkul.digest-daily — morgoninlägget (ÅTERINFÖRT 2026-09-10)
 
-Jobbet (07:00: bygg dagens 10-lista → Telegram-utkast → auto-publicera till
-Instagram-karusell + Facebook) är **borttaget på ägarens begäran**. Listorna
-drog inget engagemang, och morgonutkastet i Telegram fyllde ingen funktion.
-`--auto`-läget är borta ur `publish-digest.ts` och plisten är avinstallerad
-(`~/Library/LaunchAgents/se.vadkul.digest-daily.plist.disabled-20260826`).
+07:00 varje morgon: `publish-digest.ts --auto` bygger **6 av de bästa eventen
+kommande veckan** (kvällstid + bildkvalitet rankar; en per stad,
+kategori-spridning; kronologisk ordning med veckodag/datum per rad) och
+publicerar direkt till Instagram-karusell + Facebook, med ett kvitto till
+Telegram. Ingen approval-loop.
 
-Det manuella `/list10` (bot-daemon → `npm run digest`) finns kvar för ad
-hoc-listor med `byt`/`bild`/`klar` — inget publiceras utan att någon svarar
-"klar". Torrkörning utan Telegram/IG/FB:
+Historik: den gamla varianten (10 av DAGENS event) avvecklades 2026-08-26 —
+listorna drog inget engagemang. Ägaren återinförde automatiken 2026-09-10 i
+6/vecka-formatet. Ändra inte antal/fönster utan att fråga ägaren.
+
+**Installeras automatiskt**: nattkedjans launchd-synk (`run-daily.sh`)
+kopierar plisten från repot och bootar om jobbet när filen ändrats — en
+`git pull` räcker. Manuell install vid behov:
 
 ```sh
-cd apps/scraper && npm run digest -- --dry
+cp infra/launchd/se.vadkul.digest-daily.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/se.vadkul.digest-daily.plist
 ```
 
-Återinför inte automatiken utan att fråga ägaren.
+Det manuella `/list10` (bot-daemon → `npm run digest`) är orört: 10 av dagens
+event med `byt`/`bild`/`klar`-gaten. Torrkörning utan Telegram/IG/FB:
+
+```sh
+cd apps/scraper && npm run digest -- --dry           # dagens-läget (10)
+cd apps/scraper && npm run digest -- --dry --auto    # vecko-läget (6)
+```
 
 ## se.vadkul.ig-queue
 

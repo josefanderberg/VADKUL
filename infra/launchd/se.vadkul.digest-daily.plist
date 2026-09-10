@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      VADKUL morgoninlägg → Instagram-karusell + Facebook + Telegram-kvitto.
+
+      Kör 07:00 varje morgon: publish-digest.ts i auto-läge bygger listan med
+      de 6 BÄSTA eventen KOMMANDE VECKAN (kvällstid + bildkvalitet rankar,
+      en per stad, kategori-spridning, kronologisk ordning med datum per rad)
+      och publicerar direkt — ingen approval-loop, inget "/list10" behövs.
+
+      Historik: 10-listan med DAGENS event avvecklades 2026-08-26 (inget
+      engagemang); ägaren återinförde automatiken 2026-09-10 i 6/vecka-formatet.
+
+      Skiljer sig från det manuella /list10 (bot-daemon → npm run digest), som
+      fortfarande bygger 10 av dagens med byt/bild/klar-gaten. Auto-jobbet tar
+      samma lock (/tmp/vadkul-publish-digest.lock), så om /list10 råkar köra
+      exakt 07:00 kör bara den ena.
+
+      07:00 (inte natten) för att nattkedjan (00:30) ska ha hunnit skrapa +
+      efterbehandla + geokoda innan listan byggs.
+
+      Installeras AUTOMATISKT av nattkedjan (launchd-synken i run-daily.sh) —
+      ingen manuell launchctl behövs på minin.
+    -->
+    <key>Label</key>
+    <string>se.vadkul.digest-daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>cd /Users/ai/Repos/VADKUL/apps/scraper &amp;&amp; /usr/local/bin/npx ts-node src/scripts/publish-digest.ts --auto</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/ai</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/ai/Library/Logs/vadkul-scraper/digest-daily.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/ai/Library/Logs/vadkul-scraper/digest-daily-err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
