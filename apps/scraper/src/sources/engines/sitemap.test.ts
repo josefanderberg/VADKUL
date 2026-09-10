@@ -282,3 +282,46 @@ describe('extractFromHtml — blacklistad JSON-LD-nod diskvalificerar bara sig s
         expect(extractFromHtml(html, 'https://example.se/', 'Kalmar')).toBeNull();
     });
 });
+
+// Nedskalat utsnitt ur Norrköpings Konstmuseums detaljsida (probad 2026-09-11):
+// sidans eget datum står bara som text i .calendar-date, och "Mer i
+// kalendariet" längre ner är LÄNKKORT (<a class="calendar-item">) med egna
+// datum. Rubriken ligger i en annan kolumn än korten. Före fixen fick ~88
+// event kortens "fre 11 sep" + sidans egen klocktid.
+const NKM_PAGE = `<html><head><title>Augustifesten: Familjedag i Skulpturparken | Evenemang på Norrköpings Konstmuseum</title></head><body>
+<div class="fusion-row">
+ <div class="fusion-title"><h1 class="fusion-title-heading">Augustifesten: Familjedag i Skulpturparken</h1></div>
+ <div class="fusion-text"><p><div class="calendar-date"> lör 15 augusti kl 11:00&#8211;15:00 </div></p></div>
+ <div class="fusion-text"><p>Välkommen till en dag i Skulpturparken med workshops och musik.</p></div>
+</div>
+<div class="fusion-row">
+ <div class="fusion-title"><h2>Mer i kalendariet</h2></div>
+</div>
+<div class="fusion-row calendar-list">
+ <a class="calendar-item link-decoration-hover" href="https://www.norrkopingskonstmuseum.se/kalender/fredagsvisning-subterranean-hunger/">
+  <img src="https://www.norrkopingskonstmuseum.se/wp-content/uploads/x-150x150.jpg" />
+  <div class="calendar-description"><h4><span>Fredagsvisning: Subterranean Hunger – Sara-Vide Ericson</span></h4>
+  <span class="calendar-item-date"> fre 11 sep </span></div>
+ </a>
+ <a class="calendar-item link-decoration-hover" href="https://www.norrkopingskonstmuseum.se/kalender/lordagsvisning/">
+  <img src="https://www.norrkopingskonstmuseum.se/wp-content/uploads/y-150x150.jpg" />
+  <div class="calendar-description"><h4><span>Lördagsvisning</span></h4>
+  <span class="calendar-item-date"> lör 12 sep </span></div>
+ </a>
+</div>
+</body></html>`;
+
+describe('cheerioFallback — "Mer i kalendariet"-korten förgiftar inte sidan', () => {
+    const URL = 'https://www.norrkopingskonstmuseum.se/kalender/augustifesten-familjedag/';
+
+    it('tar sidans egna datum (15 augusti kl 11), inte kortens "fre 11 sep"', () => {
+        const ev = cheerioFallback(NKM_PAGE, URL, 'Norrköping')!;
+        expect(ev.startDate.getMonth()).toBe(7);    // augusti
+        expect(ev.startDate.getDate()).toBe(15);
+        expect(ev.startDate.getHours()).toBe(11);
+    });
+
+    it('titeln är sidans egen, inte ett korts', () => {
+        expect(cheerioFallback(NKM_PAGE, URL, 'Norrköping')!.title).toBe('Augustifesten: Familjedag i Skulpturparken');
+    });
+});

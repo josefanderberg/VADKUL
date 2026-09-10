@@ -604,7 +604,9 @@ const ICON_GLYPH_SELECTOR = '.material-icons, [class*="material-icons"], [class*
 const RELATED_HEADING = new RegExp(
     '^(?:rekommenderade|relaterade|liknande|fler|andra|övriga|populära|utvalda|kommande)\\s+'
     + '(?:evenemang|event|konserter|spelningar|föreställningar|aktiviteter|arrangemang|upplevelser|tips)'
-    + '|^(?:du kanske också|missa inte|se även|läs även|mer från|relaterat|rekommenderat|tips på)',
+    + '|^(?:du kanske också|missa inte|se även|läs även|mer från|relaterat|rekommenderat|tips på)'
+    // Norrköpings Konstmuseum 2026-09-11: "Mer i kalendariet".
+    + '|^(?:mer|fler|mera) i (?:kalendariet|kalendern|programmet)',
     'i',
 );
 
@@ -629,6 +631,20 @@ const RELATED_HEADING = new RegExp(
  */
 function stripRelatedBlocks($: cheerio.CheerioAPI): void {
     const mainH1 = $('h1').first()[0];
+    // LÄNKKORT TILL ANDRA EVENT (Norrköpings Konstmuseum 2026-09-11): "Mer i
+    // kalendariet" är <a class="calendar-item"> med bild, rubrik och
+    // <span class="calendar-item-date">fre 11 sep</span>. Rubriken ligger i en
+    // ANNAN kolumn än korten, så rubrikregeln nedan når dem inte — ~88 event
+    // fick kortets "fre 11 sep" + sidans egen klocktid och hamnade i tidskluster
+    // samma dag. Ett kort (länk med datum-element + rubrik eller bild) är aldrig
+    // sidans eget datum; sidans rubrik (första h1) skyddas som ovan.
+    $('a').each((_i, el) => {
+        const a = $(el);
+        if (!a.find('[class*="date"], time').length) return;
+        if (!a.find('h1, h2, h3, h4, h5, h6, img').length) return;
+        if (mainH1 && a.find('h1').toArray().includes(mainH1)) return;
+        a.remove();
+    });
     $('h2, h3, h4').each((_i, el) => {
         const heading = $(el);
         const text = heading.text().replace(/\s+/g, ' ').trim();
