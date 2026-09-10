@@ -268,6 +268,15 @@ const DOT_RADIUS_EXPR: maplibregl.ExpressionSpecification =
 // helt olika många kilometer beroende på skärmbredd (zoom 11 ≈ 25 km på desktop
 // men ≈ 8 km på mobil) — se zoomForSpan i utils/mapUtils.
 const FIRST_CLICK_SPAN_M = 100_000;
+// Ambient-zoomen bakom välkomstrutan: +AMBIENT_ZOOM_IN på AMBIENT_SLOW_MS, och
+// när eventen ritats ut (minst AMBIENT_SLOW_MIN_MS in) rampar farten upp till
+// AMBIENT_FAST_MS-takt. 10/9 (Josef): "det laggar lite i början, men man märker
+// det inte på 120 000" — utritningen får den långsamma takten, resten den snabba.
+const AMBIENT_ZOOM_IN = 0.7;
+const AMBIENT_SLOW_MS = 120_000;
+const AMBIENT_FAST_MS = 60_000;
+const AMBIENT_SLOW_MIN_MS = 4_000;
+const AMBIENT_RAMP_S = 2;
 
 /**
  * Zoomen som ger startvyns "lagom avstånd" på just den här skärmen: kust till
@@ -478,7 +487,10 @@ export default function V2Map({
     //  - Stängs rutan FRYSER kartan där den är (map.stop, inget hopp till
     //    målet). Andra kamerarörelser (stadshopp, GPS-hem) avbryter den
     //    automatiskt och den återstartas inte — engångs per öppning.
+    //  - Växlar upp till dubbla farten när eventen ritats ut (effekten efter
+    //    symbolsPainted-latchen längre ner, 10/9).
     const ambientZoomActiveRef = useRef(false);
+    const ambientStartRef = useRef({ at: 0, target: 0 });
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
@@ -493,7 +505,9 @@ export default function V2Map({
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         ambientZoomActiveRef.current = true;
         // +0.7 zoom över 2 minuter, linjärt — rörelse man anar, inte ser.
-        map.easeTo({ zoom: map.getZoom() + 0.7, duration: 120_000, easing: t => t });
+        const target = map.getZoom() + AMBIENT_ZOOM_IN;
+        ambientStartRef.current = { at: performance.now(), target };
+        map.easeTo({ zoom: target, duration: AMBIENT_SLOW_MS, easing: t => t });
     }, [chromeHidden, selectedEvent, mapInstance]);
     const markersRef = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLElement; lastStateKey: string }>>(new Map());
     // Grupp-nycklar som någon gång visats som bricka via att vara markerade.
@@ -2091,6 +2105,37 @@ export default function V2Map({
     // Spegla latchen uppåt (se onPaintedChange). Egen effekt så den fångar
     // ÅTERÖPPNINGEN också, inte bara första målningen som onFirstPaint.
     useEffect(() => { onPaintedChange?.(symbolsPainted); }, [symbolsPainted, onPaintedChange]);
+
+    // Ambient-zoomens UPPVÄXLING (se ambient-effekten överst): den kryper i
+    // 120 s-takt tills eventen ritats ut OCH minst 4 s gått — det är där det
+    // laggar — och rampar sedan på AMBIENT_RAMP_S upp till dubbla farten mot
+    // samma mål. Bara om rörelsen fortfarande pågår: ett stadshopp som avbrutit
+    // den startar inte om den, och ett valt event (flyTo) rörs inte.
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map || !symbolsPainted || !chromeHidden) return;
+        const wait = AMBIENT_SLOW_MIN_MS - (performance.now() - ambientStartRef.current.at);
+        const timer = setTimeout(() => {
+            if (!ambientZoomActiveRef.current || !map.isEasing()) return;
+            const dz = ambientStartRef.current.target - map.getZoom();
+            const r1 = AMBIENT_ZOOM_IN / (AMBIENT_SLOW_MS / 1000);   // zoom/s nu
+            const r2 = AMBIENT_ZOOM_IN / (AMBIENT_FAST_MS / 1000);   // zoom/s efter rampen
+            const R = AMBIENT_RAMP_S;
+            const rampDz = ((r1 + r2) / 2) * R;
+            if (dz <= rampDz) return;
+            // Farten går linjärt r1 → r2 under R s, sedan r2 till målet.
+            const S = R + (dz - rampDz) / r2;
+            const f = (s: number) => s <= R
+                ? r1 * s + ((r2 - r1) * s * s) / (2 * R)
+                : rampDz + r2 * (s - R);
+            map.easeTo({
+                zoom: ambientStartRef.current.target,
+                duration: S * 1000,
+                easing: t => f(t * S) / dz,
+            });
+        }, Math.max(0, wait));
+        return () => clearTimeout(timer);
+    }, [symbolsPainted, chromeHidden]);
 
     // Håll reveal-systemet i synk med datan: rensa bort nycklar som inte längre
     // finns (inkl. MapLibres interna feature-state, så en återanvänd nyckel börjar
