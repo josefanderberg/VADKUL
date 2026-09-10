@@ -79,6 +79,12 @@ Instagrams Content Publishing API kan inte schemalägga alls — bara
 `schedule-city-posts.ts --commit` schemalägger FB-inlägget hos Meta och
 lägger IG-versionen i kön; jobbet tömmer den.
 
+Sedan 2026-09-10 kör timjobbet dessutom `--importera-fb-schema --commit`
+före publiceringen: FB-inlägg schemalagda från en annan maskin (t.ex.
+Actions-workflown `stadsinlagg.yml`, vars lokala kö dör med runnern) får
+då sina IG-tvillingar automatiskt inom en timme. Plisten hålls uppdaterad
+av nattkedjans launchd-synk (`run-daily.sh`).
+
 En post som blivit mer än 6 timmar gammal publiceras inte utan markeras
 `förfallen` — ett veckoinlägg ska inte trilla ut ett dygn försent. Jobbet
 skapar aldrig nya inlägg, det tömmer bara kön.

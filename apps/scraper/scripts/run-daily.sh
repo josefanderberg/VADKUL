@@ -86,30 +86,34 @@ if [ "$JOB_NAME" = "nightly" ]; then
 fi
 
 # ─── Launchd-synk (bara nightly): repo-ägda jobb installeras vid pull ────────
-# Morgoninlägget (se.vadkul.digest-daily, 07:00) återinfördes 2026-09-10 på
-# ägarens begäran. Plisten bor i repot och installeras här så en git pull
-# räcker — ingen manuell launchctl på minin. Idempotent: kopierar och bootar
-# om BARA när repofilen skiljer sig från den installerade. Avinstallera genom
-# att ta bort plisten ur repot OCH köra `launchctl bootout` för hand (synken
-# rör aldrig jobb vars repofil saknas). Fel får aldrig stoppa kedjan.
+# Plists i whitelisten bor i repot och installeras/uppdateras här så en git
+# pull räcker — ingen manuell launchctl på minin. Idempotent: kopierar och
+# bootar om BARA när repofilen skiljer sig från den installerade.
+# se.vadkul.scraper.nightly är MEDVETET utanför: en bootout av den skulle
+# döda kedjan som kör just nu. Avinstallera genom att ta bort plisten ur
+# repot OCH köra `launchctl bootout` för hand (synken rör aldrig jobb vars
+# repofil saknas). Fel får aldrig stoppa kedjan.
+# Historik: digest-daily (morgoninlägget 07:00) återinfört 2026-09-10 på
+# ägarens begäran; ig-queue fick FB-schema-importen samma dag.
 if [ "$JOB_NAME" = "nightly" ]; then
-    PLIST_NAME="se.vadkul.digest-daily"
-    PLIST_SRC="$REPO_ROOT/infra/launchd/$PLIST_NAME.plist"
-    PLIST_DST="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
-    if [ -f "$PLIST_SRC" ] && ! cmp -s "$PLIST_SRC" "$PLIST_DST" 2>/dev/null; then
-        echo "" >> "$LOG_FILE"
-        echo "── LAUNCHD-SYNK ($PLIST_NAME) ──" >> "$LOG_FILE"
-        if cp "$PLIST_SRC" "$PLIST_DST" 2>> "$LOG_FILE"; then
-            launchctl bootout "gui/$(id -u)/$PLIST_NAME" >> "$LOG_FILE" 2>&1 || true
-            if launchctl bootstrap "gui/$(id -u)" "$PLIST_DST" >> "$LOG_FILE" 2>&1; then
-                echo "$PLIST_NAME installerad/uppdaterad (kör 07:00)." >> "$LOG_FILE"
+    for PLIST_NAME in se.vadkul.digest-daily se.vadkul.ig-queue; do
+        PLIST_SRC="$REPO_ROOT/infra/launchd/$PLIST_NAME.plist"
+        PLIST_DST="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
+        if [ -f "$PLIST_SRC" ] && ! cmp -s "$PLIST_SRC" "$PLIST_DST" 2>/dev/null; then
+            echo "" >> "$LOG_FILE"
+            echo "── LAUNCHD-SYNK ($PLIST_NAME) ──" >> "$LOG_FILE"
+            if cp "$PLIST_SRC" "$PLIST_DST" 2>> "$LOG_FILE"; then
+                launchctl bootout "gui/$(id -u)/$PLIST_NAME" >> "$LOG_FILE" 2>&1 || true
+                if launchctl bootstrap "gui/$(id -u)" "$PLIST_DST" >> "$LOG_FILE" 2>&1; then
+                    echo "$PLIST_NAME installerad/uppdaterad." >> "$LOG_FILE"
+                else
+                    echo "⚠️ launchctl bootstrap misslyckades för $PLIST_NAME — installera manuellt (infra/launchd/README.md)." >> "$LOG_FILE"
+                fi
             else
-                echo "⚠️ launchctl bootstrap misslyckades för $PLIST_NAME — installera manuellt (infra/launchd/README.md)." >> "$LOG_FILE"
+                echo "⚠️ Kunde inte kopiera $PLIST_NAME.plist — installera manuellt." >> "$LOG_FILE"
             fi
-        else
-            echo "⚠️ Kunde inte kopiera $PLIST_NAME.plist — installera manuellt." >> "$LOG_FILE"
         fi
-    fi
+    done
 fi
 
 # ─── IG-inbox (bara nightly): IG-tvillingar schemalagda från annan maskin ───
