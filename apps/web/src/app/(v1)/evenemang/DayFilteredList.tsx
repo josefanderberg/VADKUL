@@ -5,7 +5,8 @@ import { writeEventSeed } from '@/utils/eventSeed';
 import dynamic from 'next/dynamic';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { mergeListedDays, filterDaysBySource } from '@/utils/cityOptIn';
-import { Heart, ChevronDown } from 'lucide-react';
+import { Heart, ChevronDown, Loader2 } from 'lucide-react';
+import { SOURCE_DEFS } from '@/utils/sources';
 import { PERIODS, periodKeys, relativeDayLabel, todayKey } from './periods';
 import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 import { useDayFilter } from './dayFilter';
@@ -939,6 +940,19 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                 dagar väntar (aldrig i SSR:en, där allt redan är utskrivet). */}
             {hasMoreDays && <div ref={sentinelRef} aria-hidden className="h-px" />}
 
+            {/* Vald källa hämtas (stadens opt-in.json, ~1 MB i Stockholm):
+                laddrader i stället för en tom lista (Josef 10/9). */}
+            {sourceLoading && (
+                <div role="status" aria-live="polite" className="mt-6 flex flex-col gap-2">
+                    <p className="flex items-center gap-2 text-sm font-black text-[#006AA7] dark:text-sky-400">
+                        <Loader2 size={16} className="animate-spin" aria-hidden />
+                        Hämtar {SOURCE_DEFS.find(s => s.key === sourceOnly)?.label ?? ''}-event…
+                    </p>
+                    {[0, 1, 2, 3].map(i => (
+                        <div key={i} className="h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 animate-pulse" style={{ animationDelay: `${i * 120}ms` }} />
+                    ))}
+                </div>
+            )}
             {shownDays.length === 0 && !sourceLoading && (
                 popularOnly ? (
                     // 🔥-läget tömde listan — svaret är "släpp filtret", inte

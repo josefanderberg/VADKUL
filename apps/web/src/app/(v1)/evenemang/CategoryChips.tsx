@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { useDayFilter } from './dayFilter';
 import { isPlainClick } from '@/utils/eventExpand';
 import { useAuth } from '@/context/AuthContext';
@@ -239,7 +239,7 @@ function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
     /** Välj/avvälj en källa — föräldern släcker kategori + 🔥 (antingen–eller). */
     onSelect: (key: string) => void;
 }) {
-    const { optInSources, setOptInSources, optInDays, setOptInDays, optInTotals, setOptInTotals } = useDayFilter();
+    const { optInSources, setOptInSources, optInDays, setOptInDays, optInTotals, setOptInTotals, setSourceOnly } = useDayFilter();
     const { user } = useAuth();
     const [open, setOpen] = useState(false);
     const [status, setStatus] = useState<'idle' | 'loading' | 'failed'>('idle');
@@ -276,7 +276,9 @@ function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
                 if (json.totals) setOptInTotals(json.totals);
                 setStatus('idle');
             })
-            .catch(() => { if (!cancelled) setStatus('failed'); });
+            // Misslyckat → tillbaka till Alla (annars snurrar listans laddrader
+            // för evigt); "Kunde inte hämtas — tryck igen" står kvar i raden.
+            .catch(() => { if (!cancelled) { setStatus('failed'); setSourceOnly(null); } });
         return () => { cancelled = true; };
         // status medvetet utanför deps: effekten ska inte köras om av sin egen
         // 'loading'-skrivning, bara av att en källa slås på.
@@ -314,8 +316,10 @@ function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
                                 type="button"
                                 onClick={() => pick(s.key)}
                                 aria-pressed={on}
+                                aria-busy={on && status === 'loading'}
                                 className={`${BASE} ${on ? ON : IDLE}`}
                             >
+                                {on && status === 'loading' && <Loader2 size={12} className="animate-spin" aria-hidden />}
                                 {s.label}
                                 {n !== undefined && (
                                     <span className={`font-black ${on ? 'text-white/70' : 'text-slate-400 dark:text-zinc-500'}`}>{n}</span>
@@ -323,7 +327,15 @@ function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
                             </button>
                         );
                     })}
-                    {status === 'loading' && <span className="text-[11px] font-bold text-slate-400 dark:text-zinc-500">Hämtar…</span>}
+                    {/* Stockholms källista är ~1 MB — på mobil flera sekunder.
+                        Laddningen ska SYNAS (Josef 10/9: "nu ser det ut som det
+                        inte funkar"): snurra i chippet + pulserande text här,
+                        och laddrader i listan (DayFilteredList). */}
+                    {status === 'loading' && (
+                        <span role="status" className="inline-flex items-center gap-1.5 text-[11px] font-black text-[#006AA7] dark:text-sky-400 animate-pulse">
+                            Hämtar {SOURCE_DEFS.find(s => s.key === sourceOnly)?.label ?? ''}…
+                        </span>
+                    )}
                     {status === 'failed' && <span className="text-[11px] font-bold text-rose-500">Kunde inte hämtas — tryck igen</span>}
                 </div>
             )}
