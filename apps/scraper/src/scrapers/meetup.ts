@@ -1,5 +1,8 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
+import { addEventToDb, eventExistsInDb, refreshEventContent } from '../utils/dbHelper';
+import { getSqliteEvent } from '../utils/sqliteHelper';
+import { pickBetterDescription } from '../utils/contentRefresh';
+import { meetupFullDescription, stripMeetupMarkdown, MEETUP_SNIPPET_MAX } from '../utils/meetupDescription';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { searchGoogleImage } from '../utils/imageSearch';
 
@@ -86,7 +89,10 @@ async function extractMeetupEvent(page: Page, url: string) {
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
         await page.waitForSelector('h1', { timeout: 8000 }).catch(() => {});
 
-        return await page.evaluate(() => {
+        const details = await page.evaluate(() => {
+            // Next.js-datan bär HELA beskrivningen — JSON-LD:ns är kapad vid
+            // 155 tecken (utils/meetupDescription). Tolkas i Node nedan.
+            const nextData = document.getElementById('__NEXT_DATA__')?.textContent || '';
             // Try JSON-LD first
             const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
             for (const s of scripts) {
@@ -108,6 +114,7 @@ async function extractMeetupEvent(page: Page, url: string) {
                             lng: d.location?.geo?.longitude ? parseFloat(d.location.geo.longitude) : null,
                             image: typeof d.image === 'string' ? d.image : (Array.isArray(d.image) ? d.image[0] : ''),
                             organizer: d.organizer?.name || 'Meetup',
+                            nextData,
                         };
                     }
                 } catch (_) {}
@@ -116,8 +123,10 @@ async function extractMeetupEvent(page: Page, url: string) {
             // Fallback: grab title + og:image at minimum
             const title = (document.querySelector('h1')?.textContent || '').trim();
             const image = (document.querySelector('meta[property="og:image"]') as HTMLMetaElement)?.content || '';
-            return { title, startDate: '', description: '', locationName: '', address: '', city: '', lat: null, lng: null, image, organizer: 'Meetup' };
+            return { title, startDate: '', description: '', locationName: '', address: '', city: '', lat: null, lng: null, image, organizer: 'Meetup', nextData };
         });
+        const rawDescription = meetupFullDescription(details.nextData, url) ?? details.description;
+        return { ...details, rawDescription, description: stripMeetupMarkdown(rawDescription) };
     } catch {
         return null;
     }
@@ -129,6 +138,7 @@ export async function scrapeMeetup() {
     const { now, end, todayEnd } = getDateRange();
     let browser: Browser | null = null;
     let totalSaved = 0;
+    let totalRefreshed = 0;
 
     try {
         browser = await puppeteer.launch({
@@ -175,7 +185,22 @@ export async function scrapeMeetup() {
         // Phase 2: Scrape each event page
         for (const url of allLinks) {
             try {
-                if (await eventExistsInDb(url)) continue;
+                if (await eventExistsInDb(url)) {
+                    // Kända event hoppas över — utom de som bara fick JSON-LD-
+                    // snutten (kapad vid 155 tecken, alla Meetup-event t.o.m.
+                    // 10/9): hämta om och byt till hela texten när den bevisligen
+                    // är en fortsättning av snutten (jämförs i rå markdown, som
+                    // snutten sparades i).
+                    const stored = (getSqliteEvent(url)?.description ?? '').trim();
+                    if (stored.length > MEETUP_SNIPPET_MAX) continue;
+                    const known = await extractMeetupEvent(page, url);
+                    if (known && pickBetterDescription(stored, known.rawDescription)
+                        && await refreshEventContent(url, { description: known.description })) {
+                        totalRefreshed++;
+                        console.log(`  📝 Hel beskrivning: ${known.title}`);
+                    }
+                    continue;
+                }
 
                 console.log(`  Scraping: ${url}`);
                 const details = await extractMeetupEvent(page, url);
@@ -233,7 +258,7 @@ export async function scrapeMeetup() {
             }
         }
 
-        console.log(`\nMeetup klart! Sparade ${totalSaved} nya event.`);
+        console.log(`\nMeetup klart! Sparade ${totalSaved} nya event, ${totalRefreshed} fick hel beskrivning.`);
 
     } finally {
         if (browser) await browser.close();
