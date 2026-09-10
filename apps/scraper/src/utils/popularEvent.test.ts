@@ -75,8 +75,20 @@ describe('popularScore', () => {
         expect(tickster).toBeGreaterThan(none);
         expect(tm).toBeGreaterThan(tickster);
     });
-    it('mångfaldig titel straffas logaritmiskt', () => {
+    it('mångfaldig titel straffas logaritmiskt — för OBILJETTERAT', () => {
         expect(popularScore(base(), 400)).toBeLessThan(popularScore(base(), 1) - 60);
+    });
+    it('biljettsatt flerdatums-produktion straffas INTE (Mamma Mia-fyndet 10/9)', () => {
+        const mammaMia = (rc: number) => popularScore({
+            url: 'https://www.ticketmaster.se/event/mamma-mia-the-party-ticket',
+            title: 'MAMMA MIA! THE PARTY',
+            time: '2026-09-11T19:00:00', category: 'stage', hasSpecificTime: true,
+            coverImage: 'https://tm.se/bild.jpg', price: '', attendees: 0,
+            locationName: 'Tyrol, Stockholm',
+        }, rc);
+        expect(mammaMia(30)).toBeGreaterThanOrEqual(POPULAR_THRESHOLD);
+        // Unik titel får fortfarande mer än flerdatums (12 vs 6).
+        expect(mammaMia(1)).toBe(mammaMia(30) + 6);
     });
     it('vardagsförmiddag utan bild/pris hamnar långt under ribban', () => {
         const s = popularScore(base({

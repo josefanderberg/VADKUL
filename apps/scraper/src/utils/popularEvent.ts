@@ -100,14 +100,23 @@ export const POPULAR_THRESHOLD = 40;
 export function popularScore(e: PopularInput, repeatCount: number): number {
     let s = 0;
 
-    // Unikhet: engångstitel = händelse, mångfaldig titel = verksamhet.
-    s += repeatCount <= 1 ? 12 : Math.round(-8 * Math.log2(repeatCount));
-
     // Biljettsläpp: någon tar betalt = arrangemang med publik. Ticketmaster/
     // affiliate tyngst (ägarens prioritet 1/9), övriga kuraterade system näst.
     const ticketed = isTrustedTicketSource(e.url) || isAffiliateLink(e.url) || ticketBoost(e.url) > 0;
     if (/ticketmaster/i.test(e.url) || isAffiliateLink(e.url)) s += 14;
     else if (ticketed) s += 10;
+
+    // Unikhet: engångstitel = händelse, mångfaldig titel = verksamhet — MEN
+    // bara för obiljetterat. Ett kuraterat biljettsystem listar
+    // FÖRESTÄLLNINGAR, inte veckorutiner: "MAMMA MIA! THE PARTY" spelas ~20
+    // kvällar och fick −39 av rutindetektorn (ägarfyndet 10/9). Flerdatums-
+    // produktion med biljettsläpp är en etablerad uppsättning → litet plus.
+    if (repeatCount <= 1) s += 12;
+    // >60 datum i fönstret ≈ dagligen = bokningsbar VERKSAMHET även med
+    // biljettsystem ("Öppen ateljé" ×135 via Tickster smet in på 41) —
+    // varken plus eller straff.
+    else if (ticketed) s += repeatCount <= 60 ? 6 : 0;
+    else s += Math.round(-8 * Math.log2(repeatCount));
 
     // Kategori: musik/scen/marknad bär, kurser drar ned (dragScore-skalan).
     s += (rankCategory(e.category) - 2) * 4;
