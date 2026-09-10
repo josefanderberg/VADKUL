@@ -24,7 +24,8 @@ const CITY_RADIUS_KM = 30;   // samma default som city-gaps
 interface Row {
     url: string; title: string | null; time: string; category: string | null;
     hasSpecificTime: number | null; coverImage: string | null; price: string | null;
-    attendees: number | null; hostName: string | null; lat: number | null; lng: number | null;
+    attendees: number | null; hostName: string | null; locationName: string | null;
+    lat: number | null; lng: number | null;
 }
 
 function main() {
@@ -36,7 +37,7 @@ function main() {
     now.setHours(0, 0, 0, 0);
     const rows = sqlite.prepare(`
         SELECT url, title, time, category, hasSpecificTime, coverImage, price,
-               attendees, hostName, lat, lng
+               attendees, hostName, locationName, lat, lng
         FROM link_events
         WHERE hidden = 0 AND status = 'published' AND time >= ?
         ORDER BY time ASC
@@ -56,6 +57,7 @@ function main() {
             category: row.category || 'other', hasSpecificTime,
             coverImage: row.coverImage, price: row.price,
             attendees: Number(row.attendees) || 0,
+            locationName: row.locationName,
         };
         const rc = titleFreq.get(normTitlePop(input.title)) ?? 1;
         const score = popularScore(input, rc);

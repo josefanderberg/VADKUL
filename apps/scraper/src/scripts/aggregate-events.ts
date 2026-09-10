@@ -129,6 +129,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
                 coverImage: row.coverImage,
                 price: row.price,
                 attendees: Number(row.attendees) || 0,
+                locationName: row.locationName,
             },
             titleFreq.get(normTitlePop(row.title || '')) ?? 1,
         ) ? true as const : undefined;

@@ -100,11 +100,13 @@ describe('isPopularEvent — veton', () => {
     it('gudstjänst vetas trots kvällstid, bild och pris', () => {
         expect(isPopularEvent(base({ title: 'Gudstjänst med kyrkokören' }), 1)).toBe(false);
     });
-    it('körrep vetas (isNoiseEvent), konserterande kör går fri', () => {
+    it('körrep vetas (isChoirRehearsal), konserterande kör går fri', () => {
         expect(isPopularEvent(base({ title: 'Diskantkören' }), 1)).toBe(false);
         expect(isPopularEvent(base({ title: 'Julkonsert med Diskantkören' }), 1)).toBe(true);
     });
-    it('seriematch "Lag - Lag" vetas', () => {
+    it('seriematch utan biljett/arena faller på POÄNGEN (inget veto längre)', () => {
+        // Div-matchen: ingen biljettkälla, ingen arena, ingen dragtitel —
+        // bild+pris från base räcker inte till ribban.
         expect(isPopularEvent(base({ title: 'IFK Berga - Ariana FC', category: 'sport' }), 1)).toBe(false);
     });
     it('bibliotek vetas via domänen', () => {
@@ -112,6 +114,41 @@ describe('isPopularEvent — veton', () => {
     });
     it('trasig URL kastar inte — poängen avgör', () => {
         expect(() => isPopularEvent(base({ url: '' }), 1)).not.toThrow();
+    });
+});
+
+describe('isPopularEvent — Växjö-arketyperna 10/9', () => {
+    it('biljettsatt arenamatch (Växjö Lakers via Tickster på Vida Arena) → populär', () => {
+        expect(isPopularEvent({
+            url: 'https://www.tickster.com/se/sv/events/h6w0lfl05dh8ufp/2026-09-11/vaxjo',
+            title: 'Växjö Lakers - Tappara Tempere',
+            time: '2026-09-11T17:00:00', category: 'other', hasSpecificTime: true,
+            coverImage: 'https://tickster.com/bild.jpg', price: null, attendees: 0,
+            locationName: 'Vida Arena',
+        }, 1)).toBe(true);
+    });
+    it('kampsportsgala på arena utan biljettkälla (FCR30, kommunkalendern) → populär', () => {
+        expect(isPopularEvent({
+            url: 'https://upplev.vaxjo.se/evenemang/evenemang/2026-07-01-fcr30---fight-c',
+            title: 'FCR30 - Fight Club Rush',
+            time: '2026-09-12T13:30:00', category: 'sport', hasSpecificTime: true,
+            coverImage: 'https://vaxjo.se/bild.jpg', price: '', attendees: 0,
+            locationName: 'Fortnox Arena',
+        }, 1)).toBe(true);
+    });
+    it('betald målgruppsklass ("Dans för Parkinson", 850 kr, scen-kategori) → INTE populär', () => {
+        expect(isPopularEvent({
+            url: 'https://www.facebook.com/events/1721209066222367/',
+            title: 'Dans för Parkinson, Växjö',
+            time: '2026-09-11T12:00:00', category: 'stage', hasSpecificTime: true,
+            coverImage: 'https://fb.com/bild.jpg', price: '850 kr', attendees: 0,
+            locationName: 'Regionteatern',
+        }, 1)).toBe(false);
+    });
+    it('arena i platsnamnet ger bonus, "hallen" gör det inte', () => {
+        const atArena = popularScore(base({ locationName: 'Vida Arena' }), 1);
+        const atHall = popularScore(base({ locationName: 'Folkets hus-hallen' }), 1);
+        expect(atArena).toBe(atHall + 8);
     });
 });
 
