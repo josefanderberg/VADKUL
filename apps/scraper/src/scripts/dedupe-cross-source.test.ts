@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups } from './dedupe-cross-source';
+import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins } from './dedupe-cross-source';
 
 const base = {
     url: 'https://example.se/e/1',
@@ -144,5 +144,47 @@ describe('scoreOf — affiliatelänken vinner (1/9)', () => {
         const naken = rad({ url: 'https://www.ticketmaster.se/event/mamma-mia' });
         const vanlig = rad({ url: 'https://arrangoren.se/mamma-mia' });
         expect(scoreOf(naken)).toBe(scoreOf(vanlig));
+    });
+});
+
+// Samma Nortic-biljett under två adresser, olika titel och bildfil (Malmö
+// 12/9: Common Ground Jazz Club, Oscar Stembridge på Plan B).
+describe('biljett-tvillingar (Nortic)', () => {
+    const plan = { ...base, time: '2026-09-12T17:00:00.000Z', locationName: 'Plan B', lat: 55.58401, lng: 13.0264 };
+    const www = { ...plan, url: 'https://www.nortic.se/ticket/event/82316#a0', title: 'Oscar Stembridge // Live at Plan B — Malmö', firestoreId: 'w' };
+    const tix = { ...plan, url: 'https://tickets.nortic.se/ticket/event/82316#a0', title: 'Oscar Stembridge + Rushour // Live at Plan B — Malmö', firestoreId: 't' };
+
+    it('samma id + starttid ger samma nyckel oavsett värd', () => {
+        expect(ticketTwinKey(www)).toBe(ticketTwinKey(tix));
+        expect(ticketTwinKey(www)).toBe('nortic:82316|2026-09-12T17:00:00.000Z');
+    });
+
+    it('icke-Nortic och ogiltig tid ger ingen nyckel', () => {
+        expect(ticketTwinKey(base)).toBeNull();
+        expect(ticketTwinKey({ ...www, time: 'inte ett datum' })).toBeNull();
+    });
+
+    it('titelgrupperingen missar dem — biljett-sammanslagningen tar dem', () => {
+        const rows = [www, tix];
+        const { groups } = buildDedupGroups(rows);
+        expect(groups.some((g) => g.length > 1)).toBe(false);
+        const merged = mergeTicketTwins(groups, rows);
+        expect(merged).toHaveLength(1);
+        expect(merged[0].map((r) => r.firestoreId).sort()).toEqual(['t', 'w']);
+    });
+
+    it('annat id eller annan starttid slås INTE ihop', () => {
+        const otherId = { ...tix, url: 'https://tickets.nortic.se/ticket/event/85666#a0', firestoreId: 'o' };
+        const otherTime = { ...tix, time: '2026-09-13T17:00:00.000Z', firestoreId: 'n' };
+        const rows = [www, otherId, otherTime];
+        expect(mergeTicketTwins(buildDedupGroups(rows).groups, rows)).toHaveLength(3);
+    });
+
+    it('en tvilling redan i en titelgrupp drar med hela gruppen', () => {
+        const sameTitleOtherSource = { ...www, url: 'https://kollektivet.example/oscar', firestoreId: 'k' };
+        const rows = [www, sameTitleOtherSource, tix];
+        const merged = mergeTicketTwins(buildDedupGroups(rows).groups, rows);
+        expect(merged).toHaveLength(1);
+        expect(merged[0]).toHaveLength(3);
     });
 });

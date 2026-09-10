@@ -165,6 +165,53 @@ export function buildDedupGroups(rows: Row[]): GroupingResult {
     return { groups, skippedNoLocation, attached };
 }
 
+/**
+ * BILJETT-TVILLINGAR (2026-09-10): samma Nortic-biljett ligger under TVÅ
+ * adresser — www.nortic.se/ticket/event/85666 och tickets.nortic.se/ticket/
+ * event/85666 — från olika källor, ofta med olika titel ("COMMON GROUND JAZZ
+ * CLUB: INVITES UNDERGROUND" / "COMMON GROUND JAZZ CLUB") och olika bildfil.
+ * url är primärnyckel, så båda levde; titelnyckeln ovan missade dem och
+ * stadssidornas bild-gruppering likaså (23 par i landet). Samma biljett-id +
+ * exakt samma starttid = samma event, oavsett värd och titel.
+ */
+export function ticketTwinKey(r: Pick<Row, 'url' | 'time'>): string | null {
+    const m = r.url.match(/^https?:\/\/(?:www\.|tickets\.)?nortic\.se\/ticket\/event\/(\d+)/i);
+    if (!m) return null;
+    const t = new Date(r.time);
+    return isNaN(t.getTime()) ? null : `nortic:${m[1]}|${t.toISOString()}`;
+}
+
+/**
+ * Slå ihop dedup-grupper som delar en biljett-tvilling (ticketTwinKey).
+ * Rader utanför alla grupper (plats-lösa som inte kunde fästas) tas med om de
+ * har en biljettnyckel — biljett-id:t räcker som identitet utan plats.
+ */
+export function mergeTicketTwins(groups: Row[][], rows: Row[]): Row[][] {
+    const all = groups.map((g) => [...g]);
+    const groupOf = new Map<Row, number>();
+    all.forEach((g, i) => g.forEach((r) => groupOf.set(r, i)));
+    for (const r of rows) {
+        if (!groupOf.has(r) && ticketTwinKey(r)) { groupOf.set(r, all.length); all.push([r]); }
+    }
+    const parent = all.map((_, i) => i);
+    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    const firstByKey = new Map<string, number>();
+    for (const [r, gi] of groupOf) {
+        const k = ticketTwinKey(r);
+        if (!k) continue;
+        const first = firstByKey.get(k);
+        if (first === undefined) { firstByKey.set(k, gi); continue; }
+        const a = find(first), b = find(gi);
+        if (a !== b) parent[Math.max(a, b)] = Math.min(a, b);
+    }
+    const merged = new Map<number, Row[]>();
+    all.forEach((g, i) => {
+        const root = find(i);
+        merged.set(root, [...(merged.get(root) ?? []), ...g]);
+    });
+    return [...merged.values()];
+}
+
 export function scoreOf(r: Row): number {
     let s = 0;
     // AFFILIATELÄNKEN VINNER. Utan den här raden avgjordes valet på bild och
@@ -201,9 +248,17 @@ async function main() {
     // Gruppera med tvilling-fästning (se buildDedupGroups). Events utan
     // plats-nyckel som inte kan fästas hoppas över — utan plats kan vi inte
     // skilja "Sommarfest" i Hörby från "Sommarfest" i Tranemo samma dag.
-    const { groups, skippedNoLocation, attached } = buildDedupGroups(rows);
+    const built = buildDedupGroups(rows);
+    const { skippedNoLocation, attached } = built;
     if (skippedNoLocation) console.log(`(${skippedNoLocation} events utan plats-nyckel hoppade — dedupas ej)`);
     if (attached) console.log(`(${attached} plats-lösa tvillingar fästa vid sitt geokodade kluster)`);
+    // Biljett-tvillingar (samma Nortic-id + starttid under två adresser).
+    const groups = mergeTicketTwins(built.groups, rows);
+    const twinGroups = groups.filter((g) => {
+        const keys = g.map(ticketTwinKey).filter(Boolean);
+        return new Set(keys).size < keys.length;
+    }).length;
+    if (twinGroups) console.log(`(${twinGroups} grupper med biljett-tvillingar — samma Nortic-id under två adresser)`);
 
     // Filtrera fram bara grupper med dublett
     const dupGroups = groups.filter((arr) => arr.length > 1);
