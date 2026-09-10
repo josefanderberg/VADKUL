@@ -61,6 +61,10 @@ export type CategoryChip = {
 const BASE = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-colors';
 const IDLE = 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400';
 const ON = 'bg-[#006AA7] border-[#006AA7] text-white';
+// 🔥-chippet sticker ut även avslaget: eldorange kant + text (samma orange som
+// kartans 🔥-knapp), fylld när det är på.
+const POP_IDLE = 'bg-white dark:bg-zinc-900 border-[#E8590C]/60 text-[#E8590C] hover:border-[#E8590C] hover:bg-[#E8590C]/5';
+const POP_ON = 'bg-[#E8590C] border-[#E8590C] text-white shadow-sm shadow-[#E8590C]/30';
 
 export default function CategoryChips({ citySlug, cityName, cityTitle, allCount, categories, sourceCounts, inPlace, popCount = 0 }: {
     citySlug: string;
@@ -129,8 +133,24 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
         setSearch(window.location.search);
     };
 
+    // 🔥 Populära och kategorierna är ANTINGEN–ELLER (Josef 10/9 kväll: "om
+    // jag väljer populära ska väl alla kategorier avmarkeras? så man fattar
+    // att vi kör populära"). En vald kategori — klick, bakåt/framåt, ?kategori=
+    // — släcker 🔥; 🔥 går tillbaka till stadssidan utan kategori.
+    useEffect(() => {
+        if (active) setPopularOnly(false);
+    }, [active, setPopularOnly]);
+
     const hasCategories = categories.length > 0;
     const allHref = `/evenemang/${citySlug}`;
+    const togglePopular = () => {
+        if (!popularOnly && active) {
+            window.history.pushState(null, '', allHref);
+            setSearch(window.location.search);
+        }
+        setPopularOnly(!popularOnly);
+    };
+    const allOn = !active && !popularOnly;
 
     return (
         <div className="mt-8">
@@ -140,16 +160,34 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                 <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-2">Utforska {cityName}</h2>
             )}
             <div className="flex flex-wrap gap-2">
+                {/* 🔥 Populära (Josef 10/9) — ett FILTER, ingen kategorilänk:
+                    ren knapp (ingen undersida att indexera), smalnar listan på
+                    plats via kontexten. Bara på stadssidan (inPlace) — på
+                    kategorisidan navigerar chipsen och filtret saknar yta.
+                    FÖRST i raden och orange (Josef 10/9 kväll: "får gärna vara
+                    den första kategorin, samt utmärka sig lite"). */}
+                {inPlace && popCount > 0 && (
+                    <button
+                        type="button"
+                        onClick={togglePopular}
+                        aria-pressed={popularOnly}
+                        className={`${BASE} ${popularOnly ? POP_ON : POP_IDLE}`}
+                    >
+                        <span aria-hidden>🔥</span>
+                        Populära
+                        <span className={`font-black ${popularOnly ? 'text-white/75' : 'text-[#E8590C]/60'}`}>{popCount}</span>
+                    </button>
+                )}
                 {hasCategories && (
                     <Link
                         href={allHref}
                         prefetch={inPlace ? false : undefined}
-                        onClick={go(allHref)}
-                        aria-current={active ? undefined : 'page'}
-                        className={`${BASE} ${active ? IDLE : ON}`}
+                        onClick={(ev) => { if (inPlace && isPlainClick(ev)) setPopularOnly(false); go(allHref)(ev); }}
+                        aria-current={allOn ? 'page' : undefined}
+                        className={`${BASE} ${allOn ? ON : IDLE}`}
                     >
                         Alla
-                        <span className={`font-black ${active ? 'text-slate-400 dark:text-zinc-500' : 'text-white/70'}`}>{allCount}</span>
+                        <span className={`font-black ${allOn ? 'text-white/70' : 'text-slate-400 dark:text-zinc-500'}`}>{allCount}</span>
                     </Link>
                 )}
                 {categories.map(cat => {
@@ -170,22 +208,6 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                         </Link>
                     );
                 })}
-                {/* 🔥 Populära (Josef 10/9) — ett FILTER, ingen kategorilänk:
-                    ren knapp (ingen undersida att indexera), smalnar listan på
-                    plats via kontexten. Bara på stadssidan (inPlace) — på
-                    kategorisidan navigerar chipsen och filtret saknar yta. */}
-                {inPlace && popCount > 0 && (
-                    <button
-                        type="button"
-                        onClick={() => setPopularOnly(!popularOnly)}
-                        aria-pressed={popularOnly}
-                        className={`${BASE} ${popularOnly ? ON : IDLE}`}
-                    >
-                        <span aria-hidden>🔥</span>
-                        Populära
-                        <span className={`font-black ${popularOnly ? 'text-white/70' : 'text-slate-400 dark:text-zinc-500'}`}>{popCount}</span>
-                    </button>
-                )}
                 <SourceChips citySlug={citySlug} sourceCounts={sourceCounts} />
             </div>
         </div>
