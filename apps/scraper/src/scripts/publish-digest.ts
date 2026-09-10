@@ -7,10 +7,10 @@
  *   2. Ranka: kvällsevent först (kl 20 högst, 18–21 högt) + bildkvalitet
  *      (dimensioner probas över nätet — stora bilder och IG-vänlig aspekt
  *      vinner, oåtkomlig/trasig bild diskvalificerar).
- *   3. Välj OVERPICK_COUNT (14) i rankad ordning med spridningskvot
- *      (max 1/stad, max 2/kategori) — plats 11–14 är reserver så
- *      publiceringen fyller upp till EXAKT 10 slides även om Instagram
- *      avvisar någon bild.
+ *   3. Välj OVERPICK_COUNT i rankad ordning med spridningskvot
+ *      (max 1/stad, max 2/kategori) — platserna efter TARGET_COUNT är
+ *      reserver så publiceringen fyller upp till EXAKT TARGET_COUNT slides
+ *      även om Instagram avvisar någon bild.
  *   4. Räkna totalt antal event idag (för "minst X event"-headern)
  *   5. Skicka utkast till Telegram + approval-loop
  *      • "byt N"       → byt event N (rankat bästa ersättare)
@@ -23,12 +23,12 @@
  * Körning:  npm run digest
  * Daemon:   /list10 spawnar detta script
  *
- * ⚠️ ENBART MANUELLT sedan 2026-08-26. Det schemalagda 07:00-jobbet
- * (se.vadkul.digest-daily → `--auto`) är BORTTAGET på ägarens begäran: de
- * auto-publicerade 10-listorna fick inget engagemang, och Telegram-utkastet
- * varje morgon fyllde ingen funktion. Både launchd-jobbet och `--auto`-läget
- * är borta — listan byggs numera bara när någon skriver /list10, och inget
- * publiceras utan "klar". Återinför inte automatiken utan att fråga ägaren.
+ * HISTORIK AUTOMATIKEN: 07:00-jobbet togs bort 2026-08-26 (10-listorna med
+ * DAGENS event drog inget engagemang) och ÅTERINFÖRDES 2026-09-10 på ägarens
+ * uttryckliga begäran — men i nytt format: `--auto` bygger nu 6 av de BÄSTA
+ * eventen KOMMANDE VECKAN (7 dagar, datum per rad, kronologisk ordning) i
+ * stället för 10 av dagens. Det manuella /list10 är orört (10 av dagens,
+ * approval-gate). Ändra inte antal/fönster utan att fråga ägaren.
  */
 
 import Database from 'better-sqlite3';
@@ -76,10 +76,17 @@ const DB_PATH = process.env.SCRAPER_SQLITE_PATH
     : path.resolve(__dirname, '../../events.db');
 
 const MAX_TITLE_LEN = 40;
-const TARGET_COUNT  = 10;
-// Över-välj: plats 11–14 är reserver som fyller upp karusellen till exakt
-// TARGET_COUNT om Instagram avvisar någon bild (fel aspect ratio o.dyl.).
-const OVERPICK_COUNT = 14;
+
+// Lägena skiljer sig i ANTAL och FÖNSTER (ägarbeslut 2026-09-10):
+//   manuellt /list10 : 10 av DAGENS event (som alltid)
+//   --auto (07:00)   :  6 av de bästa KOMMANDE VECKAN
+const AUTO_MODE = process.argv.includes('--auto');
+const TARGET_COUNT  = AUTO_MODE ? 6 : 10;
+// Över-välj: platserna efter TARGET_COUNT är reserver som fyller upp
+// karusellen till exakt TARGET_COUNT om Instagram avvisar någon bild.
+const OVERPICK_COUNT = AUTO_MODE ? 9 : 14;
+/** Urvalsfönstret i dygn — 1 = bara idag, 7 = kommande veckan. */
+const WINDOW_DAYS = AUTO_MODE ? 7 : 1;
 
 // Bildprobning (dimensioner hämtas över nätet — bara headerbytes läses).
 const PROBE_TIMEOUT_MS     = 8_000;
@@ -181,10 +188,12 @@ function canonicalCity(match: string): string {
 
 // ── Datum-helper ─────────────────────────────────────────────────────────────
 
-function todayBounds(): { start: string; end: string } {
+/** Urvalsfönstret: idag 00:00 t.o.m. sista dygnets 23:59 (WINDOW_DAYS dygn). */
+function windowBounds(): { start: string; end: string } {
     const now = new Date();
     const start = new Date(now); start.setHours(0, 0, 0, 0);
-    const end   = new Date(now); end.setHours(23, 59, 59, 999);
+    const end   = new Date(start.getTime() + (WINDOW_DAYS - 1) * 86_400_000);
+    end.setHours(23, 59, 59, 999);
     return { start: start.toISOString(), end: end.toISOString() };
 }
 
@@ -230,7 +239,7 @@ function cleanTitle(raw: string): string {
 // ── Hämta & filtrera kandidater ──────────────────────────────────────────────
 
 function loadCandidates(db: Database.Database, excludedUrls: Set<string>): DigestEvent[] {
-    const { start, end } = todayBounds();
+    const { start, end } = windowBounds();
     const rows = db.prepare(`
         SELECT url, title, time, locationName, extractedAddress, geocodedQuery,
                category, hostName, lat, lng, coverImage
@@ -263,9 +272,9 @@ function loadCandidates(db: Database.Database, excludedUrls: Set<string>): Diges
     });
 }
 
-/** Total-räknare: alla event idag (vidare än filtret för listan — för "imponerande siffra"). */
+/** Total-räknare: alla event i fönstret (vidare än filtret för listan — för "imponerande siffra"). */
 function countTodayTotal(db: Database.Database): number {
-    const { start, end } = todayBounds();
+    const { start, end } = windowBounds();
     const row = db.prepare(`
         SELECT COUNT(*) AS n
         FROM link_events
@@ -439,11 +448,17 @@ async function selectDigest(
 
 // ── Bygg Telegram-text ───────────────────────────────────────────────────────
 
-/** "kl 20:00" för preview-raden — utelämnas för midnattstider (heldag/utan klockslag). */
+/** "kl 20:00" för preview-raden — utelämnas för midnattstider (heldag/utan
+ *  klockslag). I vecko-läget (WINDOW_DAYS > 1) sätts även veckodag + datum,
+ *  annars säger raden inget om NÄR i veckan eventet är. */
 function previewTime(e: DigestEvent): string {
     const d = new Date(e.time);
-    if (d.getHours() === 0 && d.getMinutes() === 0) return '';
-    return ` · kl ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const kl = d.getHours() === 0 && d.getMinutes() === 0
+        ? ''
+        : ` kl ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    if (WINDOW_DAYS <= 1) return kl ? ` ·${kl}` : '';
+    const dag = d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'numeric' });
+    return ` · ${dag}${kl}`;
 }
 
 function buildDigestText(picks: DigestEvent[], totalToday: number): string {
@@ -451,7 +466,9 @@ function buildDigestText(picks: DigestEvent[], totalToday: number): string {
         weekday: 'long', day: 'numeric', month: 'long',
     });
 
-    const header = `📋 <b>${todayStr}</b>\nIdag händer det minst <b>${totalToday}</b> unika event i Sverige.\n`;
+    const header = WINDOW_DAYS > 1
+        ? `📋 <b>Veckans bästa</b>\nKommande veckan händer minst <b>${totalToday}</b> unika event i Sverige.\n`
+        : `📋 <b>${todayStr}</b>\nIdag händer det minst <b>${totalToday}</b> unika event i Sverige.\n`;
 
     const row = (e: DigestEvent, i: number): string => {
         const num = String(i + 1).padStart(2, ' ');
@@ -493,8 +510,11 @@ function buildCaptionPlain(picks: DigestEvent[], totalToday: number): string {
     const todayStr = new Date().toLocaleDateString('sv-SE', {
         weekday: 'long', day: 'numeric', month: 'long',
     });
-    const header = `📋 ${todayStr}\nIdag händer minst ${totalToday} unika event i Sverige — här är ${picks.length} av dem:`;
-    const lines = picks.map((e, i) => `${i + 1}. ${e.city} — ${e.cleanTitle}`).join('\n');
+    const header = WINDOW_DAYS > 1
+        ? `📋 Veckans bästa\nKommande veckan händer minst ${totalToday} unika event i Sverige — här är ${picks.length} vi gärna hade gått på:`
+        : `📋 ${todayStr}\nIdag händer minst ${totalToday} unika event i Sverige — här är ${picks.length} av dem:`;
+    // Datum per rad bara i vecko-läget — dagens-läget säger redan datumet i headern.
+    const lines = picks.map((e, i) => `${i + 1}. ${e.city} — ${e.cleanTitle}${WINDOW_DAYS > 1 ? previewTime(e) : ''}`).join('\n');
     const footer = 'Vilket hade du helst velat gå på? 👇\n\nFler tips → vadkul.se\n#vadkul #sverige #evenemang #görnågot #helgtips';
     return `${header}\n\n${lines}\n\n${footer}`;
 }
@@ -746,6 +766,41 @@ async function runApprovalLoop(db: Database.Database): Promise<void> {
     await sendMessage('⏰ Timeout — avslutar.');
 }
 
+// ── Auto-läge (schemalagt: bygg → leverera → publicera utan approval) ────────
+
+/**
+ * Icke-interaktivt läge för det dagliga 07:00-jobbet (återinfört 2026-09-10).
+ * Bygger veckans 6-lista (TARGET_COUNT/WINDOW_DAYS styr — se toppen), skickar
+ * den till Telegram som kvitto, och publicerar sedan DIREKT till
+ * Instagram-karusell + Facebook utan att vänta på "klar".
+ */
+async function runAuto(db: Database.Database): Promise<void> {
+    const totalInWindow = countTodayTotal(db);
+    const picks = await selectDigest(db, new Set<string>());
+
+    if (picks.length === 0) {
+        await sendMessage(`🤷 <b>Veckans ${TARGET_COUNT}-lista</b> — inga event kommande ${WINDOW_DAYS} dygn som matchar filtren (fungerande bild, titel ≤ ${MAX_TITLE_LEN} tecken, verifierad plats, en per stad). Inget publiceras.`);
+        return;
+    }
+
+    // Presentera veckan som en AGENDA: de TARGET_COUNT poängbästa sorteras
+    // kronologiskt (läsaren skannar "vad händer när"), reserverna hängs på
+    // efteråt i poängordning så publishDigest fyller upp med bästa ersättare.
+    const main = picks.slice(0, TARGET_COUNT).sort((a, b) => a.time.localeCompare(b.time));
+    const state: DigestState = {
+        picks: [...main, ...picks.slice(TARGET_COUNT)],
+        totalToday: totalInWindow,
+        excludedUrls: new Set<string>(),
+    };
+
+    // Kvitto till Telegram (utan interaktiv HELP-fot — inget att svara på).
+    await sendMessage(`🌅 <b>Veckans ${TARGET_COUNT} bästa</b> — auto-publiceras till Instagram + Facebook nu.`);
+    await sendMessage(buildDigestText(state.picks, state.totalToday));
+
+    // Publicera direkt (samma väg som "klar" i det manuella flödet).
+    await publishDigest(state);
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 /** Smoke-test: bygg listan (inkl. bildprober) och skriv ut den utan att röra Telegram. */
@@ -785,7 +840,11 @@ async function main() {
     if (!acquireLock()) process.exit(0);
     const db = new Database(DB_PATH, { readonly: true });
     try {
-        await runApprovalLoop(db);
+        if (AUTO_MODE) {
+            await runAuto(db);
+        } else {
+            await runApprovalLoop(db);
+        }
     } finally {
         db.close();
     }
