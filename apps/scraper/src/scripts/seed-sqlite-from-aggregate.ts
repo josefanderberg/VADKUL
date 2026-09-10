@@ -1,27 +1,30 @@
-#!/usr/bin/env node
 /**
- * seed-sqlite-from-aggregate.js — bygg en engångs-SQLite (link_events) ur de
+ * seed-sqlite-from-aggregate.ts — bygg en engångs-SQLite (link_events) ur de
  * incheckade aggregat-JSON:erna i apps/web/public/.
  *
  * VARFÖR: skript som läser events.db (t.ex. schedule-city-posts) kan därmed
  * köras i GitHub Actions, där minins riktiga databas inte finns. Aggregatet
  * är nattens publicerade data — exakt det kartan visar — och räcker gott för
- * inläggsurval. Skriver ALDRIG till riktiga events.db: målfilen måste anges
- * via SCRAPER_SQLITE_PATH och får inte redan finnas.
+ * inläggsurval.
  *
- * Kolumnerna är de eventsForTown m.fl. läser: url, title, time, endDate,
- * locationName, category, lat, lng, hidden, isLocationVerified, hostName.
+ * Schemat skapas av sqliteHelper själv (importen kör migrationerna), så
+ * hjälparens förberedda statements alltid matchar — en handrullad tabell
+ * saknade updatedAt m.fl. och kraschade varje skript som råkar dra in
+ * sqliteHelper transitivt (första CI-körningen 10/9).
+ *
+ * Skriver ALDRIG till riktiga events.db: målet måste anges via
+ * SCRAPER_SQLITE_PATH och filen får inte redan finnas.
+ *
  * destinations[i] och cards[i] byggs ur SAMMA rad i aggregate-events.ts
- * (index-linjerade) — det verifieras per rad via id-jämförelse.
+ * (index-linjerade) — verifieras per rad via id-jämförelse.
  *
- * Körning:  SCRAPER_SQLITE_PATH=/tmp/events-aggregat.db node scripts/seed-sqlite-from-aggregate.js
+ * Körning:  SCRAPER_SQLITE_PATH=/tmp/events-aggregat.db npx ts-node src/scripts/seed-sqlite-from-aggregate.ts
  */
-const Database = require('better-sqlite3');
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const OUT = process.env.SCRAPER_SQLITE_PATH;
-if (!OUT) {
+if (!OUT || OUT === ':memory:') {
     console.error('❌ Sätt SCRAPER_SQLITE_PATH till målfilen (skyddar riktiga events.db).');
     process.exit(1);
 }
@@ -30,7 +33,11 @@ if (fs.existsSync(OUT)) {
     process.exit(1);
 }
 
-const webPub = path.resolve(__dirname, '../../web/public');
+// Lazy require EFTER vakterna: sqliteHelper skapar databasfilen vid import.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { sqlite } = require('../utils/sqliteHelper') as { sqlite: import('better-sqlite3').Database };
+
+const webPub = path.resolve(__dirname, '../../../web/public');
 const dest = JSON.parse(fs.readFileSync(path.join(webPub, 'events-destinations.json'), 'utf8'));
 const cards = JSON.parse(fs.readFileSync(path.join(webPub, 'events-cards.json'), 'utf8'));
 
@@ -39,23 +46,14 @@ if (!Array.isArray(dest.events) || !Array.isArray(cards.events) || dest.events.l
     process.exit(1);
 }
 
-const db = new Database(OUT);
-db.exec(`CREATE TABLE link_events (
-    url TEXT PRIMARY KEY,
-    title TEXT, time TEXT, endDate TEXT,
-    locationName TEXT, category TEXT,
-    lat REAL, lng REAL,
-    hidden INTEGER DEFAULT 0,
-    isLocationVerified INTEGER DEFAULT 0,
-    hostName TEXT
-)`);
-
-const ins = db.prepare(`INSERT OR IGNORE INTO link_events
-    (url, title, time, endDate, locationName, category, lat, lng, hidden, isLocationVerified, hostName)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`);
+const now = new Date().toISOString();
+const ins = sqlite.prepare(`INSERT OR IGNORE INTO link_events
+    (url, title, time, endDate, locationName, category, lat, lng,
+     hidden, isLocationVerified, hasSpecificTime, hostName, status, updatedAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'published', ?)`);
 
 let inserted = 0, misaligned = 0;
-db.transaction(() => {
+sqlite.transaction(() => {
     for (let i = 0; i < dest.events.length; i++) {
         const d = dest.events[i], c = cards.events[i];
         // Samma rad i båda lagren har samma id — annars är zipningen fel och
@@ -65,12 +63,12 @@ db.transaction(() => {
             d.id, d.title ?? '', d.time ?? '', d.endDate ?? null,
             d.locationName ?? '', d.category ?? 'other',
             Number(d.lat) || 0, Number(d.lng) || 0,
-            c.isLocationVerified ? 1 : 0, c.hostName ?? '',
+            c.isLocationVerified ? 1 : 0, d.hasSpecificTime ? 1 : 0,
+            c.hostName ?? '', now,
         );
         inserted += r.changes;
     }
 })();
-db.close();
 
 console.log(`✅ ${inserted} event seedade till ${OUT} (aggregat updatedAt ${dest.updatedAt})`
     + (misaligned ? ` — ⚠️ ${misaligned} rader var inte id-linjerade och hoppades` : ''));
