@@ -57,9 +57,12 @@ MEDLEM1/STJARNA1/STJARNA2/ARRANGOR1 (Firestore `users.starGiftCode == 'STJARNA3'
 
 ## Siffrorna i mejlet
 
-- **"Över 45 000 kommande evenemang"** — SQLite-spegeln 10/9: 47 998 framtida
-  synliga rader i `link_events` (var 37 990 den 7/9 → 35 000 i första
-  utkastet). Avrundat nedåt med marginal; kolla igen vid utskick om det dröjer.
+- **"Över 35 000 evenemang den kommande månaden"** — SQLite-spegeln 10/9:
+  38 084 synliga rader inom 30 dagar (47 998 totalt framåt). Ägarbeslut 10/9:
+  räkna MÅNADEN, inte "i höst"/totalen — det låter mer koncentrerat, och
+  utbudet tunnas ut längre fram. Avrundat nedåt med marginal eftersom
+  30-dagarsfönstret glider; räkna om om utskicket dröjer mer än några dagar
+  (`date(substr(time,1,10))` mellan `date('now')` och `date('now','+30 days')`).
 - Boostpriset **99 kr/vecka** = Stripe-livepriset, oförändrat sedan 19/8.
 - **"100 nya besökare på under 30 minuter"** — ägarens milstolpe (10/9),
   ersätter "~500 sidvisningar om dagen". Skrivet som **besökare**, inte
@@ -86,7 +89,7 @@ externa bild-URL:er (se checklistan). Cityslug-kolumnen/-fältet behålls ändå
 
 **ANVÄND DENNA:**
 
-- `Över 45 000 event i höst — och en ny stjärna till dig ⭐`
+- `Över 35 000 event kommande månad — och en ny stjärna till dig ⭐`
 
 Siffran är hooken och står först (mobil kapar vid ~40 tecken), "ny stjärna"
 signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test —
@@ -109,7 +112,7 @@ signalerar till STJARNA2-mottagarna att det inte är en repris. Inget A/B-test �
 > Hej $[FNAME|där]$!
 >
 > Höstsäsongen är här — och kartan på **vadkul.se** är fullare än någonsin:
-> **över 45 000 kommande evenemang**, från arenakonserter till syföreningar
+> **över 35 000 evenemang bara den kommande månaden**, från arenakonserter till syföreningar
 > — och med en mängd nya lokala källor har även mindre orter fått ordentligt
 > med event i höst. Det viktigaste sedan sist:
 >
