@@ -24,6 +24,9 @@
  *   --radie=25       km kring orten som eventen hämtas ur
  *   --golv=8         minsta antal eventrader för att orten ska postas (0 = av)
  *   --kommunfilter=av  ta med grannkommunernas event (bara för regionposter)
+ *   --hoppa-postade  hoppa orter som redan fått ett sidinlägg (outreachLog,
+ *                    kanal fb-sida) — för påfyllnadskörningar till NYA orter.
+ *                    Ignoreras när --orter anges (uttryckligt val vinner).
  *   --commit         schemalägg (utan den: bara utskrift)
  *
  * ⚠️ FÄRSKVARUREGELN — läs innan du höjer --per-dag:
@@ -93,6 +96,7 @@ const arg = (name: string): string | undefined =>
     process.argv.find(a => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=');
 
 const commit = process.argv.includes('--commit');
+const skipPosted = process.argv.includes('--hoppa-postade');
 const onlyCities = arg('orter')?.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 const perDay = Math.max(1, Number(arg('per-dag')) || 2);
 const maxPosts = Number(arg('max')) || 40;
@@ -216,6 +220,19 @@ async function loadTowns(): Promise<Town[]> {
             kept.set(key, { key, name: cp.name, citySlug: citySlugFor(cp.name), lat: cp.lat, lng: cp.lng, groups: [] });
         }
         towns = [...kept.values()];
+    }
+
+    // --hoppa-postade: orter som redan fått ett sidinlägg filtreras bort så
+    // påfyllnadskörningar når NYA orter i stället för att repetera toppen av
+    // grupplistan. "Redan postad" = någon av ortens grupper har en
+    // outreachLog-rad med kanal fb-sida (filtrerad query — inte hela
+    // kollektionen). Gäller inte när --orter angetts: uttryckligt val vinner.
+    if (skipPosted && !onlyCities) {
+        const logSnap = await requireDb().collection('outreachLog').where('channel', '==', 'fb-sida').get();
+        const postedContactIds = new Set(logSnap.docs.map(d => (d.data() as { contactId?: string }).contactId).filter(Boolean));
+        const before = towns.length;
+        towns = towns.filter(t => !t.groups.some(g => postedContactIds.has(g.id)));
+        console.log(`⏭  --hoppa-postade: ${before - towns.length} orter med tidigare sidinlägg hoppas (${towns.length} kvar).`);
     }
 
     // Flest grupper först — den orten ger störst utdelning per schemalagt inlägg.

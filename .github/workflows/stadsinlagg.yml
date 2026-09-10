@@ -1,0 +1,119 @@
+# Stadsinlägg på FB-sidan — körbart från molnet (workflow_dispatch).
+#
+# Gör samma sak som schedule-city-posts.ts på en av maskinerna: schemalägger
+# FB-inlägg hos Meta (Meta publicerar vid utsatt tid, så runnerns livstid
+# spelar ingen roll) och loggar i outreachLog. Eventdatat kommer ur de
+# incheckade aggregat-JSON:erna (seed-sqlite-from-aggregate.js) — minins
+# events.db finns inte här.
+#
+# IG-tvillingarna: runnerns lokala ig-queue.json försvinner med jobbet, men
+# minins timjobb (se.vadkul.ig-queue) importerar Metas FB-schemakö varje
+# timme sedan 2026-09-10 och skapar tvillingarna själv. OBS: importen kräver
+# att minin har den uppdaterade plisten (launchd-synken i nattkedjan) — innan
+# dess behövs `npm run ig-ko -- --importera-fb-schema --commit` för hand.
+#
+# Nycklar: FIREBASE_SERVICE_ACCOUNT (outreachContacts/outreachLog) och
+# FB-sidans id+token. Skriptet läser apps/web/.env (WEB_ENV-secreten) och
+# mappar FB_PAGE_ACCESS_TOKEN → FB_PAGE_TOKEN; alternativt dedikerade
+# secrets FB_PAGE_ID/FB_PAGE_TOKEN. Kontrollsteget failar med tydligt
+# besked om båda saknas.
+name: Stadsinlägg (FB-sidan)
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Schemalägg på riktigt (false = dry-run, bara utskrift)'
+        type: boolean
+        default: false
+      max:
+        description: 'Antal orter'
+        default: '3'
+      orter:
+        description: 'Kommaseparerade orter (tomt = auto: bästa orterna som inte fått inlägg)'
+        default: ''
+      start:
+        description: 'Första publiceringsdag YYYY-MM-DD (tomt = imorgon)'
+        default: ''
+      klockan:
+        description: 'Publiceringstid (kvällar går bäst)'
+        default: '17:00'
+      per_dag:
+        description: 'Orter per dag (sprids en timme isär)'
+        default: '3'
+
+concurrency:
+  group: stadsinlagg
+  cancel-in-progress: false
+
+jobs:
+  posta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TZ: Europe/Stockholm   # slottarna räknas i lokal tid — UTC-runner ger fel klockslag
+      SCRAPER_SQLITE_PATH: /tmp/events-aggregat.db
+      IG_QUEUE_PATH: /tmp/ig-queue-ci.json   # rör aldrig repots filer; minin importerar från Meta
+    defaults:
+      run:
+        working-directory: apps/scraper
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/scraper/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Skriv service-account.json
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # Skriptets secret-fallback läser apps/web/.env — samma fil som deployen
+      # skriver. FB_PAGE_ACCESS_TOKEN där mappas till FB_PAGE_TOKEN.
+      - name: Skriv apps/web/.env
+        run: printf '%s\n' "$WEB_ENV" > ../web/.env
+        env:
+          WEB_ENV: ${{ secrets.WEB_ENV }}
+
+      - name: Kontrollera FB-nycklar
+        run: |
+          node -e "
+          const fs = require('fs');
+          const env = { ...process.env };
+          try {
+            for (const l of fs.readFileSync('../web/.env', 'utf8').split('\n')) {
+              const m = l.match(/^([A-Z_]+)=\"?([^\"]*)\"?\s*\$/);
+              if (m && !env[m[1]]) env[m[1]] = m[2];
+            }
+          } catch {}
+          const tok = env.FB_PAGE_TOKEN || env.FB_PAGE_ACCESS_TOKEN;
+          if (!tok || !env.FB_PAGE_ID) {
+            console.error('❌ FB-sidans nycklar saknas i CI. Lägg till GitHub-secrets FB_PAGE_ID + FB_PAGE_TOKEN (eller FB_PAGE_ID + FB_PAGE_ACCESS_TOKEN i WEB_ENV).');
+            process.exit(1);
+          }
+          console.log('FB-nycklar OK (sida ' + env.FB_PAGE_ID.slice(0, 4) + '…)');
+          "
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+
+      - name: Seed SQLite ur aggregat-JSON
+        run: node scripts/seed-sqlite-from-aggregate.js
+
+      - name: Stadsinlägg
+        run: |
+          ARGS="--max=${{ inputs.max }} --per-dag=${{ inputs.per_dag }} --klockan=${{ inputs.klockan }}"
+          if [ -n "${{ inputs.orter }}" ]; then ARGS="$ARGS --orter=${{ inputs.orter }}"; else ARGS="$ARGS --hoppa-postade"; fi
+          if [ -n "${{ inputs.start }}" ]; then ARGS="$ARGS --start=${{ inputs.start }}"; fi
+          if [ "${{ inputs.commit }}" = "true" ]; then ARGS="$ARGS --commit"; fi
+          echo "→ schedule-city-posts $ARGS"
+          npx ts-node src/scripts/schedule-city-posts.ts $ARGS
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
