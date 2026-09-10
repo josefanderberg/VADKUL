@@ -484,16 +484,23 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     // Urval + timstaplar bor i det DELADE dagfiltret (dayFilter.tsx) så att
     // kart-heron ovanför visar samma dag som listan. Timvalen behålls när man
     // byter dag — "kvällsfiltret" följer med.
-    const { sel, setSel, hours, setHours, category, optInSources, optInDays, popularOnly, setPopularOnly } = useDayFilter();
+    const { sel, setSel, hours, setHours, category, optInSources, optInDays, popularOnly, setPopularOnly, sourceOnly } = useDayFilter();
     // OPT-IN-KÄLLORNA (Josef 2/9): de valda källornas rader ur stadens hämtade
     // opt-in-dagar sys in i serverns lista (samma radform; utils/cityOptIn).
     // Inget valt/ej hämtat → serverns lista orörd, samma referens.
+    // VALD KÄLLA (sourceOnly, Josef 10/9: "ska funka som de andra
+    // kategorierna"): listan är BARA den källans rader — de finns inte i
+    // serverns lista alls, så en påsydd källa under t.ex. Fest syntes aldrig.
     const days = useMemo(
-        () => (optInSources.length > 0 && optInDays
-            ? mergeListedDays(serverDays, filterDaysBySource(optInDays as ListedDay[], optInSources))
-            : serverDays),
-        [serverDays, optInSources, optInDays],
+        () => (sourceOnly
+            ? (optInDays ? filterDaysBySource(optInDays as ListedDay[], [sourceOnly]) : [])
+            : optInSources.length > 0 && optInDays
+                ? mergeListedDays(serverDays, filterDaysBySource(optInDays as ListedDay[], optInSources))
+                : serverDays),
+        [serverDays, optInSources, optInDays, sourceOnly],
     );
+    // Källans lista hämtas vid första valet — tomläget ska inte blinka förbi.
+    const sourceLoading = sourceOnly !== null && optInDays === null;
     // Alla filterbyten (och mount-kollapsen nedan) renderar om stora listor —
     // som transitions är omrenderingen avbrytbar och blockerar aldrig tappen
     // (INP på mobil låg >500 ms när hela dagslistan ritades i klick-handlern).
@@ -633,7 +640,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
 
     // Filterbyte → börja om från första dagen i det nya urvalet, och fäll
     // ihop det öppna eventet (raden kan ha filtrerats bort).
-    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, hours, category]);
+    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, hours, category, sourceOnly]);
 
     // NÄSTA DAG-PILEN i dagrubriken (Josef 31/8): hoppar/scrollar till nästa
     // dags rubrik. Nästa dag kan vara OAVTÄCKT (dag-för-dag-avtäckningen
@@ -909,7 +916,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                 dagar väntar (aldrig i SSR:en, där allt redan är utskrivet). */}
             {hasMoreDays && <div ref={sentinelRef} aria-hidden className="h-px" />}
 
-            {shownDays.length === 0 && (
+            {shownDays.length === 0 && !sourceLoading && (
                 popularOnly ? (
                     // 🔥-läget tömde listan — svaret är "släpp filtret", inte
                     // "gå till kartan" (samma ribba överallt, ägarbeslut 10/9).
@@ -933,7 +940,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
 
             {/* Visas först när alla dagar är avtäckta — annars ser det ut som
                 att listan tar slut fast sentineln fyller på fler dagar. */}
-            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && category === null && !popularOnly && !hasMoreDays && restCount > 0 && (
+            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && category === null && !popularOnly && !sourceOnly && !hasMoreDays && restCount > 0 && (
                 <p className="mt-8 text-sm font-bold text-slate-500 dark:text-zinc-400">
                     …och {restCount} evenemang längre fram.{' '}
                     <Link href="/" className="text-[#006AA7] dark:text-sky-400">Utforska hela utbudet på kartan</Link>

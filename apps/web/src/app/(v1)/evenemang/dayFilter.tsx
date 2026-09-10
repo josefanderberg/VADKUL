@@ -46,6 +46,13 @@ type DayFilterState = {
      *  samma kontrakt som optInSources. */
     popularOnly: boolean;
     setPopularOnly: (v: boolean) => void;
+    /** VALD opt-in-källa (Fler-raden, Josef 10/9): 'pro' | 'svenskakyrkan' |
+     *  'korpen' eller null. Fungerar som en KATEGORI — listan visar BARA den
+     *  källans rader, och kategori/🔥 släcks (CategoryChips håller dem
+     *  antingen–eller). optInSources ovan är något annat: 65+-regelns tyst
+     *  inblandade källor i Alla-listan. Alltid null vid SSR. */
+    sourceOnly: string | null;
+    setSourceOnly: (s: string | null) => void;
 };
 
 /** Samma form som DayFilteredList:s ListedDay — typad löst här för att
@@ -62,12 +69,13 @@ export function DayFilterProvider({ children }: { children: ReactNode }) {
     const [optInDays, setOptInDays] = useState<OptInDay[] | null>(null);
     const [optInTotals, setOptInTotals] = useState<Record<string, number> | null>(null);
     const [popularOnly, setPopularOnly] = useState(false);
+    const [sourceOnly, setSourceOnly] = useState<string | null>(null);
 
     return (
         <DayFilterCtx.Provider value={{
             sel, setSel, hours, setHours, category, setCategory,
             optInSources, setOptInSources, optInDays, setOptInDays, optInTotals, setOptInTotals,
-            popularOnly, setPopularOnly,
+            popularOnly, setPopularOnly, sourceOnly, setSourceOnly,
         }}>
             {children}
         </DayFilterCtx.Provider>

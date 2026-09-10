@@ -9,7 +9,7 @@ import { isPlainClick } from '@/utils/eventExpand';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { SOURCE_DEFS } from '@/utils/sources';
-import { CITY_OPT_IN_STORAGE_KEY, cityOptInDefault, cityOptInJsonHref } from '@/utils/cityOptIn';
+import { cityOptInDefault, cityOptInJsonHref } from '@/utils/cityOptIn';
 import { categoryChipHref, activeCategorySlug } from '@/utils/categoryChips';
 
 /**
@@ -35,10 +35,13 @@ import { categoryChipHref, activeCategorySlug } from '@/utils/categoryChips';
  * de tre upp som alternativ man kan aktivera"): sist i raden ligger en chip
  * som fäller ut Svenska kyrkan / PRO / Korpen som egna chips (SourceChips).
  * Källorna ligger utanför sidornas HTML, siffror och metadata (SEO-beslutet
- * 1/9) — slår man på en hämtas stadens opt-in.json och DayFilteredList syr
- * in just den källans rader. Standard = kartans regel: inget för utloggade
- * och under 65, kyrkan + PRO för inloggade 65+; ett eget val sparas i
- * localStorage och vinner sedan.
+ * 1/9) — väljer man en hämtas stadens opt-in.json. SEDAN 10/9 är de VAL
+ * SOM KATEGORIERNA (Josef: "om man väljer någon av dem ska vi bara se den"):
+ * PRO vald = bara PRO-rader (dayFilter.sourceOnly), och kategori, 🔥 och
+ * källa är antingen–eller. Förr var de "Visa även"-tillägg som syddes in
+ * under vald kategori — med Fest vald syntes då inga PRO-event alls. Bara på
+ * stadssidan (inPlace). Kartans 65+-regel (kyrkan + PRO tyst inblandade i
+ * Alla för inloggade 65+) gäller fortfarande via optInSources.
  */
 export type CategoryChip = {
     slug: string;
@@ -84,7 +87,7 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
     popCount?: number;
 }) {
     const pathname = usePathname();
-    const { setCategory, popularOnly, setPopularOnly } = useDayFilter();
+    const { setCategory, popularOnly, setPopularOnly, sourceOnly, setSourceOnly } = useDayFilter();
     // Frågedelen (?kategori=) läses EFTER mount och hålls i egen state — inte
     // useSearchParams, som kräver en Suspense-gräns på statiska sidor. Vår
     // egen pushState uppdaterar den direkt; bakåt/framåt via popstate.
@@ -137,20 +140,29 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
     // jag väljer populära ska väl alla kategorier avmarkeras? så man fattar
     // att vi kör populära"). En vald kategori — klick, bakåt/framåt, ?kategori=
     // — släcker 🔥; 🔥 går tillbaka till stadssidan utan kategori.
+    // Samma sak för en vald Fler-källa (PRO/kyrkan/Korpen, 10/9).
     useEffect(() => {
-        if (active) setPopularOnly(false);
-    }, [active, setPopularOnly]);
+        if (active) { setPopularOnly(false); setSourceOnly(null); }
+    }, [active, setPopularOnly, setSourceOnly]);
 
     const hasCategories = categories.length > 0;
     const allHref = `/evenemang/${citySlug}`;
+    const clearCategory = () => {
+        if (!active) return;
+        window.history.pushState(null, '', allHref);
+        setSearch(window.location.search);
+    };
     const togglePopular = () => {
-        if (!popularOnly && active) {
-            window.history.pushState(null, '', allHref);
-            setSearch(window.location.search);
-        }
+        if (!popularOnly) { clearCategory(); setSourceOnly(null); }
         setPopularOnly(!popularOnly);
     };
-    const allOn = !active && !popularOnly;
+    const selectSource = (key: string) => {
+        if (sourceOnly === key) { setSourceOnly(null); return; }
+        clearCategory();
+        setPopularOnly(false);
+        setSourceOnly(key);
+    };
+    const allOn = !active && !popularOnly && !sourceOnly;
 
     return (
         <div className="mt-8">
@@ -182,7 +194,7 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                     <Link
                         href={allHref}
                         prefetch={inPlace ? false : undefined}
-                        onClick={(ev) => { if (inPlace && isPlainClick(ev)) setPopularOnly(false); go(allHref)(ev); }}
+                        onClick={(ev) => { if (inPlace && isPlainClick(ev)) { setPopularOnly(false); setSourceOnly(null); } go(allHref)(ev); }}
                         aria-current={allOn ? 'page' : undefined}
                         className={`${BASE} ${allOn ? ON : IDLE}`}
                     >
@@ -208,7 +220,9 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                         </Link>
                     );
                 })}
-                <SourceChips citySlug={citySlug} sourceCounts={sourceCounts} />
+                {inPlace && (
+                    <SourceChips citySlug={citySlug} sourceCounts={sourceCounts} sourceOnly={sourceOnly} onSelect={selectSource} />
+                )}
             </div>
         </div>
     );
@@ -217,43 +231,41 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
 /** FLER-chippen + den utfällda källraden (se filhuvudet). Renderas inuti
  *  chip-radens flex-wrap: chippen ligger sist i raden och källraden bryter
  *  till en egen rad under (basis-full). */
-function SourceChips({ citySlug, sourceCounts }: { citySlug: string; sourceCounts: Record<string, number> }) {
+function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
+    citySlug: string;
+    sourceCounts: Record<string, number>;
+    /** Vald källa (dayFilter.sourceOnly) — chippen är på när den är vald. */
+    sourceOnly: string | null;
+    /** Välj/avvälj en källa — föräldern släcker kategori + 🔥 (antingen–eller). */
+    onSelect: (key: string) => void;
+}) {
     const { optInSources, setOptInSources, optInDays, setOptInDays, optInTotals, setOptInTotals } = useDayFilter();
     const { user } = useAuth();
     const [open, setOpen] = useState(false);
     const [status, setStatus] = useState<'idle' | 'loading' | 'failed'>('idle');
 
-    // Standardläget efter mount (aldrig vid SSR): eget val i localStorage
-    // vinner; annars 65+-regeln, som kräver profilens ålder (Firestore-
-    // läsning — bara för inloggade, precis som kartan gör). Finns förvalda
-    // källor fälls raden ut så man ser vad som är på.
+    // 65+-REGELN efter mount (aldrig vid SSR): inloggade 65+ får kyrkan + PRO
+    // tyst inblandade i Alla-listan, som på kartan (profilens ålder =
+    // Firestore-läsning, bara för inloggade). Det sparade egna valet i
+    // localStorage läses inte längre (10/9) — chipsen är numera val, inte
+    // tillägg, och ett gammalt "visa även" hade annars legat kvar utan väg ut.
     useEffect(() => {
+        if (!user) { setOptInSources([]); return; }
         let cancelled = false;
-        let stored: string | null = null;
-        try { stored = localStorage.getItem(CITY_OPT_IN_STORAGE_KEY); } catch { /* privat läge */ }
-        const apply = (keys: string[]) => {
-            setOptInSources(keys);
-            if (keys.length > 0) setOpen(true);
-        };
-        const own = cityOptInDefault(stored, false, undefined);
-        if (own.length > 0 || stored || !user) {
-            apply(own);
-            return;
-        }
         userService.getUserProfile(user.uid)
             .then(profile => {
                 if (cancelled) return;
                 const age = (profile as { age?: unknown } | null)?.age;
-                apply(cityOptInDefault(null, true, age));
+                setOptInSources(cityOptInDefault(null, true, age));
             })
             .catch(() => { /* ingen profil → förblir tomt */ });
         return () => { cancelled = true; };
     }, [user, setOptInSources]);
 
-    // Hämta stadens opt-in-lista (alla tre källorna) första gången någon
-    // källa är på — sedan filtreras den i klienten.
+    // Hämta stadens opt-in-lista (alla tre källorna) första gången en källa
+    // väljs eller 65+-regeln blandar in någon — sedan filtreras den i klienten.
     useEffect(() => {
-        if (optInSources.length === 0 || optInDays !== null || status === 'loading') return;
+        if ((optInSources.length === 0 && !sourceOnly) || optInDays !== null || status === 'loading') return;
         let cancelled = false;
         setStatus('loading');
         fetch(cityOptInJsonHref(citySlug))
@@ -269,18 +281,14 @@ function SourceChips({ citySlug, sourceCounts }: { citySlug: string; sourceCount
         // status medvetet utanför deps: effekten ska inte köras om av sin egen
         // 'loading'-skrivning, bara av att en källa slås på.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [optInSources, optInDays, citySlug, setOptInDays, setOptInTotals]);
+    }, [optInSources, sourceOnly, optInDays, citySlug, setOptInDays, setOptInTotals]);
 
-    const toggleSource = (key: string) => {
-        const next = optInSources.includes(key)
-            ? optInSources.filter(k => k !== key)
-            : [...optInSources, key].sort();
-        setOptInSources(next);
+    const pick = (key: string) => {
         if (status === 'failed') setStatus('idle'); // nytt försök
-        try { localStorage.setItem(CITY_OPT_IN_STORAGE_KEY, JSON.stringify(next)); } catch { /* privat läge */ }
+        onSelect(key);
     };
 
-    const anyOn = optInSources.length > 0;
+    const anyOn = sourceOnly !== null;
     const counts = optInTotals ?? sourceCounts;
 
     return (
@@ -293,24 +301,21 @@ function SourceChips({ citySlug, sourceCounts }: { citySlug: string; sourceCount
                 className={`${BASE} ${anyOn ? ON : IDLE}`}
             >
                 Fler
-                {anyOn && <span className="font-black text-white/70">{optInSources.length}</span>}
                 <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
             </button>
             {open && (
                 <div className="basis-full flex flex-wrap items-center gap-2 pt-1">
-                    <span className="text-[11px] font-bold text-slate-400 dark:text-zinc-500">Visa även:</span>
                     {SOURCE_DEFS.map(s => {
-                        const on = optInSources.includes(s.key);
+                        const on = sourceOnly === s.key;
                         const n = counts[s.key];
                         return (
                             <button
                                 key={s.key}
                                 type="button"
-                                onClick={() => toggleSource(s.key)}
+                                onClick={() => pick(s.key)}
                                 aria-pressed={on}
-                                className={`${BASE} ${on ? ON : `${IDLE} border-dashed`}`}
+                                className={`${BASE} ${on ? ON : IDLE}`}
                             >
-                                <span aria-hidden>{on ? '✓' : '+'}</span>
                                 {s.label}
                                 {n !== undefined && (
                                     <span className={`font-black ${on ? 'text-white/70' : 'text-slate-400 dark:text-zinc-500'}`}>{n}</span>
