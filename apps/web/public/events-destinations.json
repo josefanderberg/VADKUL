@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-11T08:44:07.852Z",
+  "updatedAt": "2026-09-11T09:32:25.678Z",
   "events": [
     {
       "id": "https://www.facebook.com/events/1403950198234781/",
@@ -261040,7 +261040,8 @@
       "lat": 57.7870281,
       "lng": 12.0990745,
       "locationName": "Angereds Församlingshem, Angereds församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "✂️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=6faa3ba79b4a4508b61d145090c99952",
@@ -261050,7 +261051,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Kalvs församlingshem, Kindaholms församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d340ed089a7142939d60d29e5394ace0",
@@ -261060,7 +261062,8 @@
       "lat": 59.2923836,
       "lng": 18.117674,
       "locationName": "Markuskyrkan i Björkhagen, Skarpnäcks församling",
-      "category": "course"
+      "category": "course",
+      "emoji": "📘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=f122ded98fc64748b03185499751eac8",
@@ -261070,7 +261073,8 @@
       "lat": 59.3673344,
       "lng": 16.5162233,
       "locationName": "Fors kyrka, Tunafors församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d1963a93563f46b3b31403a38678c97a",
@@ -261080,7 +261084,8 @@
       "lat": 56.3979427,
       "lng": 14.3238397,
       "locationName": "Örkeneds kyrka, Örkeneds församling",
-      "category": "family"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=815ddac37b6e4e078308f8249b0fd637",
@@ -261090,7 +261095,8 @@
       "lat": 58.4738904843221,
       "lng": 11.6801362688367,
       "locationName": "Kyrkans Hus i Munkedal, Munkedals församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=f8615f015d0a4088853735aee596ec90",
@@ -261100,7 +261106,8 @@
       "lat": 57.7913848,
       "lng": 13.4130426,
       "locationName": "Församlingsgården Ulricehamn, Ulricehamns församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d461c5b7fa47442fb825486d36883349",
@@ -261110,7 +261117,8 @@
       "lat": 56.887315,
       "lng": 14.8126288,
       "locationName": "Skogslyckans församlingshem, Växjö stads- och domkyrkoförsamling",
-      "category": "course"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=871edcd64f7c4b05879200b4bda2340b",
@@ -261120,7 +261128,8 @@
       "lat": 59.6002484,
       "lng": 16.4732994,
       "locationName": "Bäckbykyrkan, Västerås Lundby församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🌲"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=ff344a0626ae4471bfc3cb812fc0698e",
@@ -261130,7 +261139,8 @@
       "lat": 65.8297016,
       "lng": 21.6870718,
       "locationName": "Församlingsgården, Överluleå församling",
-      "category": "social"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9e54691eab9d45db9da901f1dfa8fde3",
@@ -261140,7 +261150,8 @@
       "lat": 57.1840146,
       "lng": 14.0473498,
       "locationName": "Rättvist Butik o Café, Värnamo församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=0a01fc6f1ee74b9389af2b83982d5dd1",
@@ -261150,7 +261161,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Edefors församlingshem, Edefors församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "✂️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=dfae95ea812641f79f42008ef39c68e9",
@@ -261160,7 +261172,8 @@
       "lat": 59.5469131,
       "lng": 16.5035818,
       "locationName": "Barkarö prästgård, Västerås-Barkarö församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🥾"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=bef470f48956421594611148bff0505e",
@@ -261170,7 +261183,8 @@
       "lat": 64.0358824,
       "lng": 20.0502172,
       "locationName": "Tavelsjö församlingsgård, Tavelsjö församling",
-      "category": "art"
+      "category": "social",
+      "emoji": "✂️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=c217b908524c41dabf099a05c54263d8",
@@ -261180,7 +261194,8 @@
       "lat": 55.85142559021325,
       "lng": 13.663506562282686,
       "locationName": "Hörby Församlingshem, Hörby församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=67449a57c49d4dc4b03aab9036343566",
@@ -261190,7 +261205,8 @@
       "lat": 56.6628826,
       "lng": 16.3662382,
       "locationName": "Kalmar domkyrkoförsamling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=1401bdd2ecd54c74b71715603c7831db",
@@ -261200,7 +261216,8 @@
       "lat": 63.4010888,
       "lng": 13.0822241,
       "locationName": "St Olofsgården, Åre församling",
-      "category": "music"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=020060ce8ce1424abe13bd8c6783d740",
@@ -261210,7 +261227,8 @@
       "lat": 61.0086787,
       "lng": 14.5442519,
       "locationName": "Andreasgårdens kapell, Mora, Mora församling",
-      "category": "sport"
+      "category": "other",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9e687944b9c94a16b029fe33c4bf2b16",
@@ -261220,7 +261238,8 @@
       "lat": 59.2396489,
       "lng": 15.1657736,
       "locationName": "Adolfsbergs kyrka, Adolfsbergs församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🎵"
     },
     {
       "id": "https://korpengoteborg.zoezi.se/schema#pass-67120",
@@ -261266,7 +261285,8 @@
       "lat": 60.669087,
       "lng": 17.1618644,
       "locationName": "Staffans kyrka, Gävle församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4ab4a7f348614324aecc6f3e6625f96e",
@@ -261276,7 +261296,8 @@
       "lat": 57.9139193,
       "lng": 16.405508,
       "locationName": "Valstads kyrka, Valstads församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=904b304d60e64e51894ea9d1a36fc12d",
@@ -261286,7 +261307,8 @@
       "lat": 59.6213594,
       "lng": 16.5898572,
       "locationName": "Tomaskyrkan, Västerås Badelunda församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.naturskyddsforeningen.se/engagera-dig/kalender/grupp-och-ledarskapsutbildning-pa-distans-2026-09-22/",
@@ -262287,7 +262309,8 @@
       "lat": 57.7907757,
       "lng": 13.4129196,
       "locationName": "Ulricehamns kyrka, Ulricehamns församling",
-      "category": "music"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=7cd3ecdaab2e423196a911d1ff78776f",
@@ -262297,7 +262320,8 @@
       "lat": 65.4196199,
       "lng": 21.5006462,
       "locationName": "Församlingsgården, Norrfjärdens församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=25acee68160f4b60a00c07862f2574ce",
@@ -262307,7 +262331,8 @@
       "lat": 58.4072561,
       "lng": 15.6437739,
       "locationName": "Tannefors kyrka, Tannefors församling",
-      "category": "sport"
+      "category": "other",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=70e6144ba5f4429a957e5b7a61befbf8",
@@ -262317,7 +262342,8 @@
       "lat": 64.7520185,
       "lng": 20.959339,
       "locationName": "Anderstorps kyrka, Skellefteå landsförsamling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2465d2fe6b664c109cd16b576b66ae60",
@@ -262327,7 +262353,8 @@
       "lat": 58.712514,
       "lng": 13.8225153,
       "locationName": "Mariestads domkyrka, Mariestads församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=be8a6147ceab4ffcb642ea770f5d23ba",
@@ -262337,7 +262364,8 @@
       "lat": 59.3294558,
       "lng": 18.2573234,
       "locationName": "Kyrkans hus, Orminge C, Boo församling",
-      "category": "family"
+      "category": "other",
+      "emoji": "🎒"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=40069a6fae8e40d89ced7d4c04bcaea3",
@@ -262347,7 +262375,8 @@
       "lat": 57.4821119,
       "lng": 12.6991007,
       "locationName": "Skene kyrka, Örby-Skene församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=56164f1668354802a471bcffba309d58",
@@ -262357,7 +262386,8 @@
       "lat": 63.902176225144494,
       "lng": 20.54981391809256,
       "locationName": "Klockargården, Sävar, Sävar-Holmöns församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=22b647268a8d402bbf6dbcf1144acbf3",
@@ -262367,7 +262397,8 @@
       "lat": 59.2958915,
       "lng": 18.0516181,
       "locationName": "Årsta kyrka, Enskede-Årsta församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=af66d6f75e67418cba1fbc2d873dc2c9",
@@ -262377,7 +262408,8 @@
       "lat": 65.2957744,
       "lng": 21.5005154,
       "locationName": "Furubergskyrkan, Piteå församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "🕯️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9fb8cef23620431399f50790f4677790",
@@ -262387,7 +262419,8 @@
       "lat": 57.4315294,
       "lng": 14.0928443,
       "locationName": "Skillingaryds församlingshem, Skillingaryds församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=6e92114e540248578493173036017cb7",
@@ -262397,7 +262430,8 @@
       "lat": 59.6081707,
       "lng": 16.5353773,
       "locationName": "Kungsholms Ulrika Eleonora kyrka, Västermalms församling",
-      "category": "art"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=1819d4bdc9ce439d94f2dd672ceab455",
@@ -262407,7 +262441,8 @@
       "lat": 57.5557778,
       "lng": 13.3812789,
       "locationName": "Åsarps kyrka, Åsarps församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=44a3930d6cb542d0899ac5d2b21a3aa3",
@@ -262417,7 +262452,8 @@
       "lat": 63.3150695,
       "lng": 13.2386044,
       "locationName": "EFS Nylands Missionshus, Undersåkers församling",
-      "category": "music"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=27042fcc48fa40f58d5680b89cfa21d7",
@@ -262427,7 +262463,8 @@
       "lat": 58.7513579,
       "lng": 17.0162942,
       "locationName": "Alla Helgona kyrka, Nyköpings församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🥾"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=8992c6d42cee45bfbac2408bdb1dcf7f",
@@ -262437,7 +262474,8 @@
       "lat": 58.5014365,
       "lng": 13.1604142,
       "locationName": "S:t Nicolai kyrka, Lidköpings församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=f763c50791314782a2eacf86dd8aeec6",
@@ -262447,7 +262485,8 @@
       "lat": 57.7139951,
       "lng": 12.0469178,
       "locationName": "Björkekärrs kyrka, Björkekärrs församling",
-      "category": "other"
+      "category": "course",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2a1c6f4f8ed146edb7a0e3e16fa711c6",
@@ -262457,7 +262496,8 @@
       "lat": 59.16288279112757,
       "lng": 15.52848996535277,
       "locationName": "Svenska kyrkans hus, Odensbacken, Asker-Lännäs församling",
-      "category": "social"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=c4a0153d62ea49398ab316798bff5716",
@@ -262467,7 +262507,8 @@
       "lat": 56.6628826,
       "lng": 16.3662382,
       "locationName": "Magdalenakyrkan, Kalmar-Yttergrans församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b86200bcd4a04c499f2fafc132808fb8",
@@ -262477,7 +262518,8 @@
       "lat": 59.2987837,
       "lng": 17.9734518,
       "locationName": "S:t Mikaels kyrka, Mikaels församling",
-      "category": "other"
+      "category": "course",
+      "emoji": "📘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=8be38a03ddfa4ab192b4b43e5c80fcc0",
@@ -262487,7 +262529,8 @@
       "lat": 65.3177314,
       "lng": 21.4849971,
       "locationName": "Piteå församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=0bad6592527d40e887cd487fe0f336e7",
@@ -262497,7 +262540,8 @@
       "lat": 57.9160149,
       "lng": 14.0527108,
       "locationName": "Sockenstugan, Habo församling",
-      "category": "other"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=359547faeb11468596123372e09ad482",
@@ -262507,7 +262551,8 @@
       "lat": 59.3088789,
       "lng": 15.1843161,
       "locationName": "Toleredskyrkan, Lundby församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e954fc4f2d024177a40a75c3a3b37de1",
@@ -262517,7 +262562,8 @@
       "lat": 56.0503846,
       "lng": 14.1888685,
       "locationName": "Nosaby församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🚴"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=610d7e5e03bf4984bb480769e27e99ac",
@@ -262527,7 +262573,8 @@
       "lat": 58.9310729,
       "lng": 12.2119944,
       "locationName": "Bäcke församlingshem, Steneby församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e1b771ae8e1d46bf9baaec903e1530d4",
@@ -262537,7 +262584,8 @@
       "lat": 59.2824326,
       "lng": 17.9824914,
       "locationName": "Längbro församlingshem, Längbro församling",
-      "category": "social"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b69b45b8b97e42879b66c693d245e77d",
@@ -262547,7 +262595,8 @@
       "lat": 57.8238811,
       "lng": 13.0100197,
       "locationName": "Prästgården, Fristads församling",
-      "category": "other"
+      "category": "social",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=3a6420c5675c44b0b394ae29f4573e36",
@@ -262557,7 +262606,8 @@
       "lat": 65.3177314,
       "lng": 21.4849971,
       "locationName": "Piteå församling",
-      "category": "other"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b683b853ff224e95a78f523cb268911d",
@@ -262567,7 +262617,8 @@
       "lat": 64.6,
       "lng": 18.166667,
       "locationName": "Forsdalakyrkan, Lycksele församling",
-      "category": "other"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=ae477b59536547a590a93cabd4057f5f",
@@ -262577,7 +262628,8 @@
       "lat": 64.6,
       "lng": 18.166667,
       "locationName": "Lycksele församling",
-      "category": "other"
+      "category": "family",
+      "emoji": "🌲"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=deabf0697f7741038b7eb73453235948",
@@ -262587,7 +262639,8 @@
       "lat": 59.0347334,
       "lng": 17.3495324,
       "locationName": "Postillan, Vårdinge församling",
-      "category": "music"
+      "category": "social",
+      "emoji": "🧠"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=fdec09cb92b24a77bd1348be8901319c",
@@ -262597,7 +262650,8 @@
       "lat": 57.7396649,
       "lng": 13.3856366,
       "locationName": "Marbäcks kyrka, Åsundens församling",
-      "category": "other"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b27c1c8c639a454fba336a31a6bcc8dc",
@@ -262607,7 +262661,8 @@
       "lat": 57.7022714,
       "lng": 12.0047147,
       "locationName": "Örgryte församlingshem, Örgryte församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=934808fb43db4c679fcbcffb18965c2e",
@@ -262617,7 +262672,8 @@
       "lat": 56.8802441,
       "lng": 16.6562447,
       "locationName": "Borgholms kyrka, Borgholms församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=28e9090415004544b94ab8c3c376b593",
@@ -262627,7 +262683,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Döderhults församlingshem, Döderhults församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=821f7a0da7c44e0e8cdbb6c8f9ee4971",
@@ -262637,7 +262694,8 @@
       "lat": 58.6358434,
       "lng": 14.0838182,
       "locationName": "Fägregården, Fägre församling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9e3f0d5ef4e04ae38caf7096e171de49",
@@ -262647,7 +262705,8 @@
       "lat": 60.8064049,
       "lng": 15.7682008,
       "locationName": "Envikens Församlingsgård Sockenstugan, Envikens församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=a30f5867a24f48e28a66345756ee9e1a",
@@ -262657,7 +262716,8 @@
       "lat": 63.5824698,
       "lng": 15.3541733,
       "locationName": "Hammerdals församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=a181a41ade81439699391cd1f4268391",
@@ -262667,7 +262727,8 @@
       "lat": 58.2539218,
       "lng": 11.4040371,
       "locationName": "Kyrkans Hus, Lysekils norra församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=0dd9392a5fa342a985d37732d2e843bb",
@@ -262677,7 +262738,8 @@
       "lat": 56.1078571,
       "lng": 13.9164826,
       "locationName": "Vinslövs kyrka, Vinslövs församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=be4cd62e84ae40b8bd413f14f1b1de29",
@@ -262687,7 +262749,8 @@
       "lat": 59.3334744,
       "lng": 18.0934792,
       "locationName": "Oscarskyrkan, Hedvig Eleonora och Oscars församling",
-      "category": "music"
+      "category": "stage",
+      "emoji": "💃"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=ea1c91436ede4c859cfcd008655f9040",
@@ -262697,7 +262760,8 @@
       "lat": 64.36827,
       "lng": 21.3182292,
       "locationName": "Kottisberget, Lövångers församling",
-      "category": "sport"
+      "category": "family",
+      "emoji": "🌲"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=a02970424bc146c4814cd37a36407a59",
@@ -262707,7 +262771,8 @@
       "lat": 61.6555078,
       "lng": 16.1725631,
       "locationName": "Gullabo kyrka, Torsås pastorat",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🥾"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=0530010437ae4f33b381559fc346fb1d",
@@ -262717,7 +262782,8 @@
       "lat": 59.3286957,
       "lng": 17.915711,
       "locationName": "S:ta Birgitta kyrka, S:ta Birgitta församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=64b1339383304d709d5fc10eadd93492",
@@ -262727,7 +262793,8 @@
       "lat": 65.2801433,
       "lng": 21.403477,
       "locationName": "Tallhedskyrkan, Hortlax församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=0257e35ae54b48c9b44efb95dc5f899d",
@@ -262737,7 +262804,8 @@
       "lat": 64.6179842,
       "lng": 21.200493,
       "locationName": "Sjöbottens bönhus, Bureå församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e4e880f43ced42fb8278b9925c1fd900",
@@ -262747,7 +262815,8 @@
       "lat": 59.3464628,
       "lng": 17.8912116,
       "locationName": "Ängbykyrkan, Bromma församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2a16c6c7a4184f2eb50dd686544b5772",
@@ -262757,7 +262826,8 @@
       "lat": 59.8813945,
       "lng": 17.5548257,
       "locationName": "Hässelby församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=ecf4482511794745b818ca9b9f45aa76",
@@ -262767,7 +262837,8 @@
       "lat": 57.6530377,
       "lng": 14.6981554,
       "locationName": "Församlingshemmet Bringetofta, Nässjö pastorat",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=27274ca0521a41a89eb9bf92eb959252",
@@ -262777,7 +262848,8 @@
       "lat": 57.5818996,
       "lng": 14.8201787,
       "locationName": "Stensjökyrkan, Stensjöns församling",
-      "category": "music"
+      "category": "course",
+      "emoji": "🎸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b3f701279c6c488b9110802b61a981fb",
@@ -262787,7 +262859,8 @@
       "lat": 58.3522202,
       "lng": 14.3486037,
       "locationName": "Grevbäcks församlingshem, Hjo församling",
-      "category": "social"
+      "category": "food",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2c0af755eb654363b10284fc74055387",
@@ -262797,7 +262870,8 @@
       "lat": 57.5406195,
       "lng": 14.141226,
       "locationName": "Svenarums församlingshem, Byarums pastorat",
-      "category": "social"
+      "category": "other",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=75752fc2d0ce42d882de8645d2e26cd1",
@@ -262807,7 +262881,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Norra Unnaryds kyrka, Norra Mo församling",
-      "category": "social"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=fbea53a5e07e4bc78c91f23b731ffcee",
@@ -262817,7 +262892,8 @@
       "lat": 58.5420395,
       "lng": 15.041261,
       "locationName": "Motala församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=adf0197e091d404fb90be4531adcc8f5",
@@ -262827,7 +262903,8 @@
       "lat": 55.5938677,
       "lng": 13.0727155,
       "locationName": "S:t Matteus kyrka, församlingshem, Malmö S:t Johannes församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e4635547c3fa455cbc5155a191c087fa",
@@ -262837,7 +262914,8 @@
       "lat": 59.279574,
       "lng": 18.007,
       "locationName": "Solberga församlingshem, Solberga församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🌲"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=007e09ed693e41e1a8f86bb3b18847d5",
@@ -262847,7 +262925,8 @@
       "lat": 59.9395153,
       "lng": 17.6549867,
       "locationName": "Trekanten, Vattholma, Vattholma pastorat",
-      "category": "art"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=cb0ff83efb4c43d29d26d77085585917",
@@ -262857,7 +262936,8 @@
       "lat": 55.5832831,
       "lng": 12.9357813,
       "locationName": "Tygelsjö prästgård och församlingshem, Limhamns församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d3096b6f5a6243c6aa9c7695cf27c5a3",
@@ -262867,7 +262947,8 @@
       "lat": 56.8280083,
       "lng": 13.7622687,
       "locationName": "Angelstads sockenstuga, Angelstads församling",
-      "category": "course"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=35ec9399ede74cf4ab951986f5a6205f",
@@ -262877,7 +262958,8 @@
       "lat": 58.2817645,
       "lng": 12.2894561,
       "locationName": "Kyrkans hus, Trollhättans församling",
-      "category": "other"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=69ed4e0d58ec4afaa16a4a7829c8505b",
@@ -262887,7 +262969,8 @@
       "lat": 57.4891983,
       "lng": 13.3469177,
       "locationName": "Tranemo församlingshem, Tranemo församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4aefba89539f4ee9aa9ad0a4d1f3db99",
@@ -262897,7 +262980,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Diakonicentrum, Katrineholmsbygdens församling",
-      "category": "course"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=00379b8f46e345edae8d711cc6d32c34",
@@ -262907,7 +262991,8 @@
       "lat": 59.4033983,
       "lng": 18.3474675,
       "locationName": "Vaxholms kyrka, Vaxholms församling",
-      "category": "social"
+      "category": "other",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2c63a6e7040741cba8196649cd07450e",
@@ -262917,7 +263002,8 @@
       "lat": 57.5818996,
       "lng": 14.8201787,
       "locationName": "Stensjökyrkan, Stensjöns församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=45568f1b7de24ec9aaaab9e3def14229",
@@ -262927,7 +263013,8 @@
       "lat": 63.166667,
       "lng": 16.3,
       "locationName": "Hammarstrand Församlingsgård, Ragunda församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=ee4dedf35e2e4ea4adaa839533c01bcb",
@@ -262937,7 +263024,8 @@
       "lat": 55.5995193,
       "lng": 13.3995293,
       "locationName": "Kyrkstugan gamla salen, Genarps församling",
-      "category": "other"
+      "category": "course",
+      "emoji": "🌿"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b19c97e90b44447c9809254f4f12c60c",
@@ -262947,7 +263035,8 @@
       "lat": 60.4635207,
       "lng": 15.5696291,
       "locationName": "Torsångs församlingshem, Torsångs församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2638bfb6bfc549839701fd9c907bfee4",
@@ -262957,7 +263046,8 @@
       "lat": 59.3181241,
       "lng": 15.4005894,
       "locationName": "Glanshammars församlingshem, Glanshammars församling",
-      "category": "other"
+      "category": "food",
+      "emoji": "🍜"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=830c7536161149b79e93c5d73e0b8a02",
@@ -262967,7 +263057,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Svegs församlingshem, Svegsbygdens församling",
-      "category": "course"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=45c104f8302342ba8970ac04979b3aaa",
@@ -262977,7 +263068,8 @@
       "lat": 58.8010324,
       "lng": 14.0565515,
       "locationName": "Lyrestads församlingshem, Lyrestads församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=a4e489b1689040939b1b112e226879d4",
@@ -262987,7 +263079,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Överums församlingshem, Norra Tjusts pastorat",
-      "category": "course"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=7e19cb5214394e82a36370c7aa9b9300",
@@ -262997,7 +263090,8 @@
       "lat": 59.7416839,
       "lng": 17.3292637,
       "locationName": "Mariakyrkan, Lagunda församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "✂️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=39da9317e8464cdd874f1517c9f8325b",
@@ -263007,7 +263101,8 @@
       "lat": 59.3278335,
       "lng": 18.5423661,
       "locationName": "Församlingsgården, Älvsby församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=0ceaafba227444459984c8ebf8898899",
@@ -263017,7 +263112,8 @@
       "lat": 59.522213,
       "lng": 14.1935277,
       "locationName": "Lungsunds församlingshem, Storfors församling",
-      "category": "other"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4ccddaa29a8c4eb4aea54819e3f2bbd7",
@@ -263027,7 +263123,8 @@
       "lat": 57.3955398,
       "lng": 12.2488171,
       "locationName": "Gällinge församlingshem, Gällinge församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=3da57fdb508d463fb83c987287399aea",
@@ -263037,7 +263134,8 @@
       "lat": 63.8568486,
       "lng": 20.3117274,
       "locationName": "Ersbodakyrkan, Umeå stadsförsamling",
-      "category": "other"
+      "category": "sport",
+      "emoji": "🥏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=062132e7a7af4648ac630904dd70b180",
@@ -263047,7 +263145,8 @@
       "lat": 56.1285798,
       "lng": 12.6684276,
       "locationName": "Allerums pastorat",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=30d3987543c14ed183e2eb6ee7abd051",
@@ -263057,7 +263156,8 @@
       "lat": 58.5832519,
       "lng": 13.1482197,
       "locationName": "Otterstads församlingshem, Sunnersbergs församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=8e2c312c16504d79ab3007fd7cda7441",
@@ -263067,7 +263167,8 @@
       "lat": 63.074682,
       "lng": 17.7174093,
       "locationName": "Torsåkers kyrka - Uppsala stift, Torsåkers församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=ee889f96e6b54e35b232ced82862a92b",
@@ -263088,7 +263189,8 @@
       "lat": 58.0540692,
       "lng": 11.64028,
       "locationName": "Kyrkans hus i Henån, Röra församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=012a6e562b2f48d580b9dcef8e478b80",
@@ -263098,7 +263200,8 @@
       "lat": 58.0686718,
       "lng": 13.5143367,
       "locationName": "Kinneveds församlingshem, Kinneveds församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=17d84789435a4f458222b3980142e46a",
@@ -263108,7 +263211,8 @@
       "lat": 59.7770099,
       "lng": 17.5409925,
       "locationName": "Tunabergs församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=28c9b2130f7f4d869e415b0d7f24fcc2",
@@ -263118,7 +263222,8 @@
       "lat": 57.9160149,
       "lng": 14.0527108,
       "locationName": "Kyrkans hus, Habo församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=7300e7460044471084245c18a6126985",
@@ -263128,7 +263233,8 @@
       "lat": 63.8125,
       "lng": 20.303938,
       "locationName": "Ålidhemskyrkan, Ålidhems församling",
-      "category": "social"
+      "category": "stage",
+      "emoji": "🎬"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=c9e5fa812bb64790b8077567cef068ec",
@@ -263138,7 +263244,8 @@
       "lat": 58.5790094,
       "lng": 15.8121086,
       "locationName": "Vånga kyrka, Norrköpings Borgs församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=bfe98ae6b6a64e678f5fb78543ca2471",
@@ -263148,7 +263255,8 @@
       "lat": 57.716667,
       "lng": 11.633333,
       "locationName": "Öckerö församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "✂️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4a0bbb0f35df40fcad9b393a18073ad2",
@@ -263158,7 +263266,8 @@
       "lat": 57.106857,
       "lng": 12.412817,
       "locationName": "Fässbergs församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=ef7fb22fefde4c5f81b843313b238653",
@@ -263168,7 +263277,8 @@
       "lat": 63.8107785,
       "lng": 20.3163712,
       "locationName": "Kyrkstugan, Nydalasjön, Ålidhems församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=6de0bb8e8ccd4f7d8c3d07316dba4efe",
@@ -263178,7 +263288,8 @@
       "lat": 56.2827878,
       "lng": 13.2828212,
       "locationName": "Åsljunga småkyrka Barnlokal, Örkelljunga församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=6d1ffc9e5752474fa2790d03289c150c",
@@ -263188,7 +263299,8 @@
       "lat": 57.106857,
       "lng": 12.412817,
       "locationName": "Fässbergs Mariagård, Fässbergs församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=07553f0234f442629eda104fa7f6ac81",
@@ -263198,7 +263310,8 @@
       "lat": 56.0674514,
       "lng": 12.7508385,
       "locationName": "Dalhem, Dalhems församling",
-      "category": "social"
+      "category": "other",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=a1fddb287c494dc6ad9354e6f5ec46cd",
@@ -263208,7 +263321,8 @@
       "lat": 58.4251301,
       "lng": 15.5787492,
       "locationName": "Skäggetorps kyrka, Linköpings Skäggetorps församling",
-      "category": "family"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=0cb144fb5a184fe2be886703baf5f2e2",
@@ -263218,7 +263332,8 @@
       "lat": 55.992771,
       "lng": 14.1525784,
       "locationName": "Vilans församlingshem, Norra Åsums församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=ad944ddc2c114954a3994bd2e3f425a6",
@@ -263228,7 +263343,8 @@
       "lat": 59.533333,
       "lng": 15.016667,
       "locationName": "Nora bergslagsförsamling",
-      "category": "social"
+      "category": "social",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=16409a8013714c7c9d50624c3d0c8be9",
@@ -263238,7 +263354,8 @@
       "lat": 64.5181957,
       "lng": 20.664847,
       "locationName": "Burträsks församlingshem, Burträsks församling",
-      "category": "music"
+      "category": "social",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9b5ddf947a3a48a188bb9c7b64056420",
@@ -263248,7 +263365,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Landsbro församlingshem, Lannaskede församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=da7520c0e1fb4207964554287883ecbc",
@@ -263258,7 +263376,8 @@
       "lat": 65.8560881,
       "lng": 22.2899971,
       "locationName": "Församlingsgården, Råneå, Råneå församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=8e6c280948834342aaa2d644e12e195a",
@@ -263268,7 +263387,8 @@
       "lat": 60.7422977,
       "lng": 15.9038464,
       "locationName": "Svärdsjö församlingsgård, Svärdsjö församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=66b7d820d1ce43b9bcd83783e2713ddd",
@@ -263278,7 +263398,8 @@
       "lat": 62.6414083,
       "lng": 17.8516697,
       "locationName": "Säbrå församlingsgård, Säbrå församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=819a6553321d46b184276eac0b6f2081",
@@ -263288,7 +263409,8 @@
       "lat": 67.8588396,
       "lng": 20.2383184,
       "locationName": "S:t Ansgarskapellet, Högalidskyrkan, Högalids församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=bf6b05fa1323401da28876a222467be5",
@@ -263298,7 +263420,8 @@
       "lat": 60.0681858,
       "lng": 12.5344797,
       "locationName": "Klockargården, Kungsängen-Västra Ryds församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=5ddb714b8ba94cda80fa6ce21ba1fe2f",
@@ -263308,7 +263431,8 @@
       "lat": 59.6213594,
       "lng": 16.5898572,
       "locationName": "Tomaskyrkan, Västerås Badelunda församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e8713af2a975423d9eb7044ca084e664",
@@ -263318,7 +263442,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "S:t Olovsgården Köping, Köpingsbygdens församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🌲"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b6f177300e404ec69f4c59046769da24",
@@ -263328,7 +263453,8 @@
       "lat": 63.902176225144494,
       "lng": 20.54981391809256,
       "locationName": "Klockargården, Sävar, Sävar-Holmöns församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=07da085136c34f7bb3286423156036ff",
@@ -263338,7 +263464,8 @@
       "lat": 60.3447781,
       "lng": 15.7462634,
       "locationName": "Coriandergården, Säterbygdens församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=7895d880a71f4e96864399b7099c448e",
@@ -263348,7 +263475,8 @@
       "lat": 59.95674341196326,
       "lng": 17.70354503466947,
       "locationName": "Storvreta församlingsgård, Vattholma pastorat",
-      "category": "family"
+      "category": "other",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=23bbb509dbfc4a6aba260990050cc152",
@@ -263358,7 +263486,8 @@
       "lat": 59.47981083352482,
       "lng": 18.326481509680583,
       "locationName": "Åkersberga kyrkliga centrum, Österåker-Östra Ryds församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9e365f74636646f19588133b208d48c6",
@@ -263368,7 +263497,8 @@
       "lat": 57.7924476,
       "lng": 18.5316379,
       "locationName": "Kyrkans hus, Stenkyrka församling",
-      "category": "art"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=7a189f51db8547698bddaf6f69b0c98d",
@@ -263378,7 +263508,8 @@
       "lat": 56.889547,
       "lng": 14.8130615,
       "locationName": "Skogslyckans kyrka, Växjö stads- och domkyrkoförsamling",
-      "category": "family"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e1c1c21070854fff8089e91c9c18c9e9",
@@ -263388,7 +263519,8 @@
       "lat": 59.1784444,
       "lng": 17.5969112,
       "locationName": "Hovsjö kyrka, Södertälje församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=886a5a73b8534a7ca9950c556ecda9b1",
@@ -263398,7 +263530,8 @@
       "lat": 59.2722661,
       "lng": 15.2111631,
       "locationName": "Nikolai prästgård, Örebro Nikolai församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=bcc57f5e58024c21b5cc2dc4a7c98170",
@@ -263408,7 +263541,8 @@
       "lat": 58.2286415,
       "lng": 11.3826097,
       "locationName": "Utsikten Kabyssen, Lysekils södra församling",
-      "category": "other"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=cffc6f1396504f73ae2be14a9d1c8723",
@@ -263418,7 +263552,8 @@
       "lat": 55.5627474,
       "lng": 12.9758659,
       "locationName": "S:t Mikaels kyrka, Hyllie församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=8f00b19cc0e447968749fd70866db9e4",
@@ -263428,7 +263563,8 @@
       "lat": 59.1018383,
       "lng": 15.0070039,
       "locationName": "Hardemo sockenstuga, Hardemo församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2ba7ac747acf4c229246142ff5c05d83",
@@ -263438,7 +263574,8 @@
       "lat": 57.03577364614921,
       "lng": 16.444724329285386,
       "locationName": "Mönsterås församlingshem, Mönsterås församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=188d5b6c0af84866969ceee2f07333e3",
@@ -263448,7 +263585,8 @@
       "lat": 59.8135289,
       "lng": 12.5723322,
       "locationName": "Gunnarskogs Sockenstuga, Gunnarskogs församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=01facdb3d8a241b18583168e6729bba9",
@@ -263458,7 +263596,8 @@
       "lat": 59.2923836,
       "lng": 18.117674,
       "locationName": "Markuskyrkan i Björkhagen, Skarpnäcks församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=42edabb0c1134eceb113d96c73331a52",
@@ -263468,7 +263607,8 @@
       "lat": 58.9377567,
       "lng": 11.1736096,
       "locationName": "Strömstads pastorat",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4d79fcf7b3434b29a08e51761d4fcb95",
@@ -263478,7 +263618,8 @@
       "lat": 63.8247596,
       "lng": 20.2751442,
       "locationName": "Församlingsgården Öst på stan, Umeå stadsförsamling",
-      "category": "social"
+      "category": "social",
+      "emoji": "🧸"
     },
     {
       "id": "https://www.facebook.com/events/2166390200888266/",
@@ -263499,7 +263640,8 @@
       "lat": 59.36416,
       "lng": 17.9726279,
       "locationName": "Sundbybergs kyrka, Sundbybergs församling",
-      "category": "family"
+      "category": "family",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=672c7be43030415fa67a35cc5af6d270",
@@ -263509,7 +263651,8 @@
       "lat": 63.8307355,
       "lng": 20.1698966,
       "locationName": "Backens kyrka, Umeå landsförsamling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d8b402368760487dbd6805e4b0249a6f",
@@ -263519,7 +263662,8 @@
       "lat": 57.6620952,
       "lng": 14.0774617,
       "locationName": "Månsarps Församlingsgård, Månsarps församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=8dfa33e2205349b6b3a99322ead2d2f4",
@@ -263529,7 +263673,8 @@
       "lat": 57.7025277,
       "lng": 14.1189881,
       "locationName": "Kyrkvillan, Norrahammars församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.tickster.com/se/sv/events/8afzl6ghzxvzx3w/2026-09-22/travtavlingar",
@@ -263973,7 +264118,8 @@
       "lat": 59.4015521,
       "lng": 17.9426225,
       "locationName": "Kista kyrka, Spånga-Kista församling",
-      "category": "food"
+      "category": "food",
+      "emoji": "🍽️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=c4d39d1dc9af438384b8b39eac0e1e93",
@@ -263983,7 +264129,8 @@
       "lat": 58.4112339,
       "lng": 15.6175019,
       "locationName": "Linköpings domkyrka, Linköpings domkyrkoförsamling",
-      "category": "course"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=a9265019cc72421f830a396a9182c689",
@@ -263993,7 +264140,8 @@
       "lat": 56.74280921586428,
       "lng": 12.730669338122519,
       "locationName": "Steninge Sockenstuga, Harplinge-Steninge församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=370dbae2a4d442f599a1df2513201e7a",
@@ -264003,7 +264151,8 @@
       "lat": 58.6719402,
       "lng": 17.1024036,
       "locationName": "S:t Botvids kyrka, Oxelösunds församling",
-      "category": "music"
+      "category": "social",
+      "emoji": "🕯️"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=1d53046f3dc440a0b84d35c8fa12b501",
@@ -264013,7 +264162,8 @@
       "lat": 58.5766466,
       "lng": 16.1972848,
       "locationName": "S:t Johannes kyrka, Norrköpings S:t Johannes församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎻"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=5424bb971a14471ca2028db0c347d9b8",
@@ -264023,7 +264173,8 @@
       "lat": 57.716667,
       "lng": 11.633333,
       "locationName": "Öckerö församling",
-      "category": "art"
+      "category": "art",
+      "emoji": "🎨"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9ba1e25d2b5a4f8c805f57390cac98a3",
@@ -264033,7 +264184,8 @@
       "lat": 57.6370034,
       "lng": 11.9397119,
       "locationName": "Mikaelskyrkan, Askims församling",
-      "category": "sport"
+      "category": "other",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4a9d263169a94b8a81abd0c39c9f0175",
@@ -264043,7 +264195,8 @@
       "lat": 56.8771396,
       "lng": 14.8406563,
       "locationName": "Högstorps kyrka, Växjö stads- och domkyrkoförsamling",
-      "category": "other"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=aa72ba402c1c416a9903d27c086e7c86",
@@ -264053,7 +264206,8 @@
       "lat": 63.0813104,
       "lng": 14.8265904,
       "locationName": "Brunflo församling, Brunflo församling",
-      "category": "social"
+      "category": "sport",
+      "emoji": "🥾"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=6e1ff9388947430da65026ff4edaa0e8",
@@ -264063,7 +264217,8 @@
       "lat": 59.3809146,
       "lng": 13.5027631,
       "locationName": "Domkyrkan, Karlstads domkyrkoförsamling",
-      "category": "sport"
+      "category": "sport",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=bf6a35fd62ac4b19867df718ded0f28d",
@@ -264073,7 +264228,8 @@
       "lat": 56.4530774,
       "lng": 12.8995214,
       "locationName": "Skummeslövs församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=3d2e58b2482d401fbf9773cb7d04a39f",
@@ -264083,7 +264239,8 @@
       "lat": 57.6813495,
       "lng": 11.989208,
       "locationName": "Buråskyrkan, Göteborgs Johannebergs församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4cd4df631cfc4ad7989a51ebfaeb5741",
@@ -264093,7 +264250,8 @@
       "lat": 58.3897551,
       "lng": 16.9512922,
       "locationName": "Lovö Klockargården, Lovö församling",
-      "category": "other"
+      "category": "course",
+      "emoji": "📚"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=f698b795309440fc9d2d8c90ed88f3e3",
@@ -264103,7 +264261,8 @@
       "lat": 59.3088789,
       "lng": 15.1843161,
       "locationName": "Lundby nya kyrka, Lundby församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=173470231da24125a3eccebec2d5cd47",
@@ -264113,7 +264272,8 @@
       "lat": 65.6457155,
       "lng": 22.0282357,
       "locationName": "Sörbyakyrkan, Nederluleå församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=17a6dceb22254285be91469ae227e296",
@@ -264123,7 +264283,8 @@
       "lat": 59.8459714,
       "lng": 17.6165174,
       "locationName": "Eriksbergskyrkan, Helga Trefaldighets församling",
-      "category": "social"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=8961e4a32765478ab64c1a5cb6b69152",
@@ -264133,7 +264294,8 @@
       "lat": 65.84120167525722,
       "lng": 24.1189525341741,
       "locationName": "Haparanda församlingshem, Haparanda församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=29af0bb1d34f43fb9241d622dfcfe8ff",
@@ -264143,7 +264305,8 @@
       "lat": 58.9310729,
       "lng": 12.2119944,
       "locationName": "Vaktmästeribyggnaden, Steneby församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=a9663e611c5a407a92eb94b93f785c2f",
@@ -264153,7 +264316,8 @@
       "lat": 57.7846329,
       "lng": 11.9335733,
       "locationName": "Kärra församlingshem, Tuve-Säve församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "🫂"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=5e4fbb1fd2b94bc9a033d1460e6485c6",
@@ -264163,7 +264327,8 @@
       "lat": 60.28031846816222,
       "lng": 15.980307514970121,
       "locationName": "S:t Paulusgården, Hedemora, Husby och Garpenbergs församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=db6fd615b5fb42ea827dd5bd4cd0b5b2",
@@ -264173,7 +264338,8 @@
       "lat": 59.2824326,
       "lng": 17.9824914,
       "locationName": "Längbro församlingshem, Längbro församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=355a1f52c01045388015aab28ce095ff",
@@ -264183,7 +264349,8 @@
       "lat": 58.3781678,
       "lng": 15.6522438,
       "locationName": "Vidingsjö kyrkby, Linköpings Berga församling",
-      "category": "social"
+      "category": "other",
+      "emoji": "🙏"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=17459b7038b7426b8e02eb4e5c3cd663",
@@ -264193,7 +264360,8 @@
       "lat": 58.3756896,
       "lng": 12.2927348,
       "locationName": "Blåsutkyrkan, Vänersborg och Väne-Ryrs församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=1e28459bbf44412396c9afcb8a000d1f",
@@ -264203,7 +264371,8 @@
       "lat": 57.6488578,
       "lng": 11.9216402,
       "locationName": "Västra Frölunda kyrka, Västra Frölunda församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=6698f591ecbe452ea10ace3f172f7745",
@@ -264213,7 +264382,8 @@
       "lat": 57.9873545,
       "lng": 13.7706075,
       "locationName": "Kyrkans Hus, Mullsjö-Sandhems församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=0386b3279f754205afc9894aa00c7c84",
@@ -264223,7 +264393,8 @@
       "lat": 58.3960072,
       "lng": 15.6634417,
       "locationName": "Sankta Maria i Johannelund, Linköpings Johannelunds församling",
-      "category": "sport"
+      "category": "social",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9eaa97ed88e7496a9a2470cc83bf547b",
@@ -264233,7 +264404,8 @@
       "lat": 55.8698007,
       "lng": 12.8296734,
       "locationName": "Härslövs församlingshem, Landskrona församling",
-      "category": "course"
+      "category": "social",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=82350689edb84cbf98a37b22af0b7e0d",
@@ -264243,7 +264415,8 @@
       "lat": 63.8568486,
       "lng": 20.3117274,
       "locationName": "Ersbodakyrkan, Umeå stadsförsamling",
-      "category": "course"
+      "category": "course",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=89a3909d7c7445ad8730b136aa6dd543",
@@ -264253,7 +264426,8 @@
       "lat": 65.3134652,
       "lng": 21.4900252,
       "locationName": "Solandergården, Piteå församling",
-      "category": "social"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4551d5b284a347aeb4bf92f16b71acd6",
@@ -264263,7 +264437,8 @@
       "lat": 63.0388377,
       "lng": 14.8765421,
       "locationName": "Sockenstugan, Ångsta, Lockne församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=fb834c305e864c9784a7b227e6726a2e",
@@ -264273,7 +264448,8 @@
       "lat": 56.8781345,
       "lng": 14.8121469,
       "locationName": "Växjö domkyrkocentrum, Växjö stads- och domkyrkoförsamling",
-      "category": "social"
+      "category": "social",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e17cce2cdffa43be9f60994030f04c9a",
@@ -264283,7 +264459,8 @@
       "lat": 57.8325735,
       "lng": 12.014742,
       "locationName": "Nödinge församlingshem, Nödinge församling",
-      "category": "other"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=84f7e2cb5fee498eb014a94d172de668",
@@ -264293,7 +264470,8 @@
       "lat": 59.6081707,
       "lng": 16.5353773,
       "locationName": "S:t Göransvåningen, Arbetargatan 21, Västermalms församling",
-      "category": "course"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=5a87c5fbefb745d29d2383a492814363",
@@ -264303,7 +264481,8 @@
       "lat": 59.82693438192644,
       "lng": 15.694208751339056,
       "locationName": "Hedgården, Hed, Skinnskatteberg med Hed och Gunnilbo församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=44520231bd2241a9b40c8ca14c72e789",
@@ -264313,7 +264492,8 @@
       "lat": 58.7981804,
       "lng": 12.5191695,
       "locationName": "Ransbergs församlingshem, Ransbergs församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=f34e6ab2111849b0b444f55886058c9e",
@@ -264323,7 +264503,8 @@
       "lat": 65.9478453,
       "lng": 22.1165495,
       "locationName": "Västra Ed, Västra Eds församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9d1abcd801164ddaa8c385579b40fcf4",
@@ -264333,7 +264514,8 @@
       "lat": 55.46026546783812,
       "lng": 14.264700204044601,
       "locationName": "Skillinge kapell, Gärsnäs församling",
-      "category": "other"
+      "category": "social",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=520f97b955d94715a443c819543763a3",
@@ -264343,7 +264525,8 @@
       "lat": 56.7524011,
       "lng": 15.2719798,
       "locationName": "Lessebo kyrka, Lessebo församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=02057e7d46504c48a723bb009e5d2e23",
@@ -264353,7 +264536,8 @@
       "lat": 56.2412875,
       "lng": 14.5319796,
       "locationName": "Olofströms församlingsgård, Jämshögs församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=6246a6383a6c4525ab469d9da33b5a2d",
@@ -264363,7 +264547,8 @@
       "lat": 57.6162625,
       "lng": 11.9412471,
       "locationName": "Askims kyrka, Askims församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2e95939830b04c8fa5fb2dac6467b4b3",
@@ -264373,7 +264558,8 @@
       "lat": 60.2094198,
       "lng": 13.0055161,
       "locationName": "Altahrsalen, Fryksände församlingshem, Fryksände församling",
-      "category": "other"
+      "category": "social",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d49fdde0d1af4a79a11b835243b972b1",
@@ -264383,7 +264569,8 @@
       "lat": 55.6936402,
       "lng": 13.1794793,
       "locationName": "Helgeandskyrkan, Helgeands församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=12a3948354314bbe8513c60813d202b4",
@@ -264393,7 +264580,8 @@
       "lat": 56.2612021,
       "lng": 15.6171754,
       "locationName": "Senapskornet, Rödeby församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9280ebaa5262406881d8cc8e4f1a26e0",
@@ -264403,7 +264591,8 @@
       "lat": 63.95,
       "lng": 19.666667,
       "locationName": "Församlingsgården Vännäsby, Vännäs församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=c5801a806e94439a9c85c6d74b6b8d28",
@@ -264413,7 +264602,8 @@
       "lat": 59.3088789,
       "lng": 15.1843161,
       "locationName": "Biskopsgårdens kyrka, Lundby församling",
-      "category": "course"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=fb005c23874e4abfb57428a1d3e82cff",
@@ -264423,7 +264613,8 @@
       "lat": 58.352089,
       "lng": 12.3280239,
       "locationName": "Onsjökyrkan, Vänersborg och Väne-Ryrs församling",
-      "category": "music"
+      "category": "course",
+      "emoji": "🧑‍🏫"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=2df4daf5e15246889f735233e384be47",
@@ -264433,7 +264624,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Enånger-Njutångers församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "📖"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=871db5bf23e14aa9a93f6ab1208efae2",
@@ -264443,7 +264635,8 @@
       "lat": 60.0297519,
       "lng": 13.6518574,
       "locationName": "Hagfors pastorat",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9c1bcab61f22454596de5441ea0fe772",
@@ -264453,7 +264646,8 @@
       "lat": 63.1776162,
       "lng": 18.4352211,
       "locationName": "Norums församlingshem, Norums församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9d14318fbae44acfa94aad035b841ef1",
@@ -264463,7 +264657,8 @@
       "lat": 57.0560815,
       "lng": 12.4412012,
       "locationName": "Tvååkers församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=76c2a5312f4047b386486393de0f1e3f",
@@ -264473,7 +264668,8 @@
       "lat": 55.4378697,
       "lng": 13.3156849,
       "locationName": "Anderslövs församlingshem, Anderslövs församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=4dbcf35ef05b40bfa53fa2db9ccc374b",
@@ -264483,7 +264679,8 @@
       "lat": 56.5132738,
       "lng": 13.043458,
       "locationName": "Laholms församlingshem Stora salen, Laholms församling",
-      "category": "social"
+      "category": "course",
+      "emoji": "🎓"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=222b9e57a4c640579ea1906b8cf6f3a9",
@@ -264493,7 +264690,8 @@
       "lat": 55.54687359874327,
       "lng": 13.94749972074997,
       "locationName": "Tomelilla församlingshem, Tomelillabygdens församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=270e274670d247f0b40c261ebbf5fe9f",
@@ -264503,7 +264701,8 @@
       "lat": 55.9327703,
       "lng": 13.9699417,
       "locationName": "Tollarps församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "🧘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=83b15c79d40f4ee192731a4abe392a18",
@@ -264513,7 +264712,8 @@
       "lat": 57.7394578,
       "lng": 12.1033837,
       "locationName": "Partille församlingshem, Partille församling",
-      "category": "family"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=1970c26c56cd489da90590ed8f6676f6",
@@ -264523,7 +264723,8 @@
       "lat": 59.8766393,
       "lng": 17.6856578,
       "locationName": "Salabackekyrkan, Vaksala församling",
-      "category": "other"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9053d4333867466d9a5177b519a71254",
@@ -264533,7 +264734,8 @@
       "lat": 65.3134652,
       "lng": 21.4900252,
       "locationName": "Kyrkcenter, Piteå församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=f74a405b9d8e4b7d88919167949f325e",
@@ -264543,7 +264745,8 @@
       "lat": 59.3541468,
       "lng": 15.6677162,
       "locationName": "Tidans församlingshem, Götlunda församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=1069cfd72df04ffdb19ce70eee9ae77e",
@@ -264553,7 +264756,8 @@
       "lat": 57.873090420311094,
       "lng": 11.943908916533875,
       "locationName": "Kungälv-Ytterby församling",
-      "category": "other"
+      "category": "course",
+      "emoji": "📘"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e39544a28a9642d8b4d0b1e1c2b69867",
@@ -264563,7 +264767,8 @@
       "lat": 55.76248016590278,
       "lng": 13.00480432594323,
       "locationName": "Löddeköpinge församlingshem, Löddebygdens församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e17693d630b54a229204203664f1b7ab",
@@ -264573,7 +264778,8 @@
       "lat": 58.1815476,
       "lng": 12.1101728,
       "locationName": "Hjärtums församlingshem, Hjärtums församling",
-      "category": "music"
+      "category": "other",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=9189bfb9a0894ec8a6248c35397cd1eb",
@@ -264583,7 +264789,8 @@
       "lat": 57.2632811,
       "lng": 16.4443478,
       "locationName": "Kyrkans hus stora salen, Oskarshamns församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d394d7c8eef34556b8fc37a9ddcf97df",
@@ -264593,7 +264800,8 @@
       "lat": 59.4708694,
       "lng": 6.5161362,
       "locationName": "Värings församlingshem, Norra Billings pastorat",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=f4df784779534b669e3f35f3dd5e24f6",
@@ -264603,7 +264811,8 @@
       "lat": 58.1014937,
       "lng": 11.8520584,
       "locationName": "Ödsmåls församlingshem, Ödsmåls församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=d8159e877e044bab95e9ddbed34f1494",
@@ -264613,7 +264822,8 @@
       "lat": 57.8665681,
       "lng": 13.4217959,
       "locationName": "Lena församlingshem - Stora salen, Lena församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=e36c7abc6565481c97c95616fc95ff8b",
@@ -264623,7 +264833,8 @@
       "lat": 57.9930595,
       "lng": 12.2174068,
       "locationName": "Hålanda församlingshem, Skepplanda-Hålanda församling",
-      "category": "other"
+      "category": "other",
+      "emoji": "⛪"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=b508d2d924414702937ecfa1454a1043",
@@ -264633,7 +264844,8 @@
       "lat": 0,
       "lng": 0,
       "locationName": "Ervalla församlingshem, Axbergs församling",
-      "category": "other"
+      "category": "social",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=85c28a89987845eb9a8020d423227511",
@@ -264643,7 +264855,8 @@
       "lat": 57.106857,
       "lng": 12.412817,
       "locationName": "Fässbergs kyrka, Fässbergs församling",
-      "category": "music"
+      "category": "music",
+      "emoji": "🎵"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=83fefa89072d4ecf8800b024199de081",
@@ -264653,7 +264866,8 @@
       "lat": 63.29102,
       "lng": 18.294791,
       "locationName": "Sidensjö kyrka, Sidensjö församling",
-      "category": "music"
+      "category": "social",
+      "emoji": "☕"
     },
     {
       "id": "https://www.svenskakyrkan.se/kalender?event=907ef332df6b4008a2a8b5be064831ee",
