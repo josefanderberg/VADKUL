@@ -19,6 +19,7 @@
 
 import crypto from 'crypto';
 import { bucket, STORAGE_BUCKET } from '../config/firebase';
+import { optimizeImageBuffer } from './imageOptimize';
 
 const STORAGE_FOLDER = 'scraped-events';
 const SHARED_FOLDER = 'scraped-events/shared';
@@ -117,13 +118,18 @@ export async function uploadEventImage(
         clearTimeout(t);
     }
 
-    // 3. Upload till Storage + gör public
+    // 3. Optimera (resampling till 900 px + jpeg q75 via sips — se
+    // utils/imageOptimize; no-op utanför macOS och vid för liten vinst) och
+    // ladda upp. Originalen låg på i snitt ~400 kB — korten visar aldrig
+    // bredare än ~900 px.
     const ext = detectExt(contentType, remoteUrl);
     const path = `${base}.${ext}`;
+    const opt = optimizeImageBuffer(buf, contentType || `image/${ext === 'jpg' ? 'jpeg' : ext}`);
+    buf = opt.buf;
     try {
         const file = bucket.file(path);
         await file.save(buf, {
-            contentType: contentType || `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+            contentType: opt.contentType,
             metadata: {
                 metadata: {
                     sourceUrl: remoteUrl.slice(0, 500),
