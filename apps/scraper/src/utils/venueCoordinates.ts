@@ -301,6 +301,18 @@ export function isForeignAddress(address: string): boolean {
         'australia', 'canada', 'germany', 'deutschland', 'france', 'spain', 'italy',
         'new york', 'london', 'auckland', 'california', 'florida', 'texas',
         'switzerland', 'belgium', 'austria', 'netherlands',
+        // FB skriver landet på SVENSKA i adressraden (svensk locale) — 2026-09-11:
+        // "Salem, Amerikas förenta stater" och "West Salem, Amerikas förenta
+        // stater" geokodades till Salems mittpunkt via stadssöket.
+        'amerikas förenta stater', 'förenta staterna', 'förenade kungariket', 'nordirland',
+        'rumänien', 'ungern', 'slovakien', 'slovenien', 'kroatien', 'serbien', 'bosnien',
+        'bulgarien', 'moldavien', 'vitryssland', 'albanien', 'nordmakedonien', 'luxemburg',
+        'colombia', 'venezuela', 'filippinerna', 'indonesien', 'saudiarabien',
+        // Inhemska landsnamn som skrivs in för hand ("Liège, Belgique"). Bara
+        // namn som inte förekommer som lokalnamn i Sverige — INTE italia/españa/
+        // polska/eesti (Pizzeria Italia, Eesti Maja m.fl. finns här).
+        'belgique', 'belgië', 'nederland', 'österreich', 'magyarország', 'românia',
+        'lietuva', 'latvija', 'česká republika', 'slovensko', 'slovenija',
         // OBS 2026-07-02: danska/norska städer BORTTAGNA — grannländerna ingår
         // nu "på ytan" (NORDIC_BOUNDS + countrycodes=se,dk,no fanns redan;
         // tickster-sitemap-no m.fl. behöver kunna geokoda "venue, Drammen").
@@ -313,8 +325,10 @@ export function isForeignAddress(address: string): boolean {
         // Bangladesh/Indien (latin-varianter)
         'dhaka', 'nakhalpara', 'shaheen bagh',
     ];
+    // Unicode-medveten ordgräns: `\b` är ASCII-bara och matchade aldrig ord som
+    // börjar på å/ä/ö ("österrike", "österreich" träffade inte före 2026-09-11).
     return foreignIndicators.some(indicator => {
-        const regex = new RegExp(`\\b${indicator}\\b`, 'i');
+        const regex = new RegExp(`(?<![\\p{L}\\p{N}])${indicator}(?![\\p{L}\\p{N}])`, 'iu');
         return regex.test(lower);
     });
 }

@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import { addEventToDb, eventExistsInDb, getEventFromDb, refreshEventHost } from '../../utils/dbHelper';
 import { uploadEventImage, isOurStorageUrl } from '../../utils/storageHelper';
 import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
+import { FB_SEARCH_CITIES } from '../../utils/swedishPlaces';
+import { centroidFallbackRejection } from './centroidGuard';
 import { classifyEvent } from '../../utils/classify';
 import { normalizeDescription } from '../../utils/normalizeEvent';
 import { extractPriceFromText } from '../../utils/priceFromText';
@@ -157,135 +159,8 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
     try {
         // === SÖKKONFIGURATION ===
-        // Svenska städer — täcker 260+ orter för bred lokal spridning
-        const SWEDISH_CITIES = [
-            // Topp 30 städer
-            'Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Linköping',
-            'Örebro', 'Helsingborg', 'Norrköping', 'Jönköping', 'Umeå',
-            'Lund', 'Västerås', 'Sundsvall', 'Karlstad', 'Växjö', 'Gävle',
-            'Borås', 'Eskilstuna', 'Halmstad', 'Östersund', 'Kalmar',
-            'Trollhättan', 'Luleå', 'Skellefteå', 'Kristianstad', 'Falun',
-            'Karlskrona', 'Skövde', 'Motala', 'Nyköping',
-            // Nästa våg av städer
-            'Örnsköldsvik', 'Varberg', 'Visby', 'Lidköping', 'Alingsås',
-            'Borlänge', 'Trelleborg', 'Ystad', 'Västervik', 'Katrineholm',
-            'Norrtälje', 'Enköping', 'Hässleholm', 'Piteå', 'Karlskoga',
-            'Värnamo', 'Uddevalla', 'Kungsbacka', 'Falkenberg', 'Ängelholm',
-            'Landskrona', 'Karlshamn', 'Ronneby', 'Oskarshamn', 'Vetlanda',
-            'Nässjö', 'Tranås', 'Ljungby', 'Arvika', 'Kristinehamn',
-            // Fler expansiva orter
-            'Mariestad', 'Kumla', 'Hallsberg', 'Köping', 'Sala',
-            'Fagersta', 'Ludvika', 'Mora', 'Sandviken', 'Bollnäs',
-            'Söderhamn', 'Hudiksvall', 'Härnösand', 'Sollefteå', 'Kramfors',
-            'Boden', 'Kiruna', 'Gällivare', 'Lycksele', 'Åre',
-            // Skåne & Halland orter
-            'Eslöv', 'Staffanstorp', 'Kävlinge', 'Vellinge', 'Höganäs',
-            'Bromölla', 'Skanör', 'Falsterbo', 'Sjöbo', 'Simrishamn',
-            'Laholm', 'Onsala', 'Åsa', 'Båstad',
-            // Småland & Blekinge orter
-            'Eksjö', 'Vimmerby', 'Hultsfred', 'Nybro', 'Sölvesborg',
-            'Olofström', 'Lessebo', 'Alvesta', 'Tingsryd', 'Älmhult',
-            // Mellansverige orter
-            'Finspång', 'Mjölby', 'Söderköping', 'Åtvidaberg', 'Trosa',
-            'Strängnäs', 'Flen', 'Nora', 'Lindesberg',
-
-            // === UTÖKNING: ~150 nya orter för lokal täckning ===
-
-            // Stockholmsregionen (förorter med stor befolkning)
-            'Södertälje', 'Nacka', 'Huddinge', 'Järfälla', 'Botkyrka',
-            'Haninge', 'Tyresö', 'Täby', 'Solna', 'Sundbyberg',
-            'Upplands-Väsby', 'Lidingö', 'Sollentuna', 'Vallentuna',
-            'Ekerö', 'Österåker', 'Salem', 'Sigtuna', 'Vaxholm', 'Nynäshamn',
-            'Knivsta', 'Håbo', 'Upplands-Bro', 'Nykvarn',
-
-            // Västra Götaland (kompletterande orter)
-            'Mölndal', 'Lerum', 'Kungälv', 'Stenungsund', 'Vänersborg',
-            'Ulricehamn', 'Falköping', 'Tidaholm', 'Kinna', 'Åmål',
-            'Lysekil', 'Kungshamn', 'Munkedal', 'Skara', 'Tibro',
-            'Hjo', 'Töreboda', 'Karlsborg', 'Tranemo', 'Bollebygd',
-            'Nödinge', 'Herrljunga', 'Svenljunga', 'Vara', 'Grästorp',
-
-            // Skåne (kompletterande orter)
-            'Tomelilla', 'Skurup', 'Svedala', 'Höör', 'Hörby',
-            'Örkelljunga', 'Osby', 'Perstorp', 'Klippan', 'Bjuv',
-            'Burlöv', 'Åstorp',
-
-            // Dalarna
-            'Avesta', 'Hedemora', 'Rättvik', 'Leksand', 'Malung',
-            'Säter', 'Orsa', 'Smedjebacken', 'Vansbro', 'Älvdalen',
-
-            // Gästrikland & Hälsingland
-            'Ockelbo', 'Hofors', 'Ljusdal', 'Ovanåker',
-
-            // Västernorrland tillägg
-            'Ånge', 'Timrå',
-
-            // Jämtland tillägg
-            'Strömsund', 'Krokom', 'Bräcke',
-
-            // Norrbotten tillägg
-            'Haparanda', 'Kalix', 'Arvidsjaur', 'Arjeplog', 'Jokkmokk',
-            'Pajala', 'Överkalix', 'Övertorneå',
-
-            // Västerbotten tillägg
-            'Vilhelmina', 'Storuman', 'Vindeln', 'Robertsfors', 'Nordmaling',
-
-            // Värmland tillägg
-            'Sunne', 'Torsby', 'Säffle', 'Hagfors', 'Filipstad',
-            'Hammarö', 'Kil', 'Munkfors',
-
-            // Örebro tillägg
-            'Askersund', 'Laxå', 'Degerfors',
-
-            // Halland tillägg
-            'Hyltebruk',
-
-            // Småland tillägg
-            'Vaggeryd', 'Gislaved', 'Gnosjö', 'Mullsjö', 'Aneby',
-            'Markaryd', 'Emmaboda', 'Borgholm', 'Mönsterås', 'Torsås',
-
-            // Östergötland tillägg
-            'Vadstena', 'Valdemarsvik', 'Boxholm',
-
-            // Södermanland tillägg
-            'Gnesta', 'Oxelösund', 'Vingåker',
-
-            // Uppland tillägg
-            'Tierp', 'Rimbo',
-
-            // Västra Götaland (kustorter & inland)
-            'Strömstad', 'Tanum', 'Bengtsfors', 'Färgelanda', 'Dals-Ed',
-            'Essunga', 'Götene', 'Mellerud',
-
-            // Skåne (kranskommun Malmö)
-            'Lomma',
-
-            // Östergötland
-            'Kinda', 'Ydre',
-
-            // Västmanland tillägg
-            'Norberg', 'Surahammar', 'Arboga',
-
-            // Värmland tillägg
-            'Storfors', 'Grums',
-
-            // Jämtland / Västernorrland tillägg
-            'Berg', 'Dorotea',
-
-            // Västerbotten tillägg
-            'Bjurholm', 'Malå',
-
-            // Norrbotten: ytterligare orter
-            'Älvsbyn',
-
-            // Gotland-maxning 2026-07-27: hela ön, inte bara Visby.
-            // 'Gotland' fångar öbrett taggade event; orterna fångar landsbygden.
-            // OBS: Roma medvetet utelämnad som sökord (FB-brus från Rom/AS Roma) —
-            // Romakloster täcker samma geografi.
-            'Gotland', 'Hemse', 'Slite', 'Klintehamn', 'Fårösund',
-            'Ljugarn', 'Burgsvik', 'Katthammarsvik', 'Lärbro', 'Stånga',
-            'Havdhem', 'Tingstäde', 'Romakloster', 'Fårö',
-        ];
+        // Orterna bor i utils/swedishPlaces (delas med nattvakten hide-foreign).
+        const SWEDISH_CITIES = FB_SEARCH_CITIES;
 
         // Breda sökord – event-typer, aktiviteter, tider
         // Uppdaterade baserat på keyword-test (2026-05-31): tog bort döda (0 träffar),
@@ -367,7 +242,9 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         // requiresParsedDate: sid-/seed-event saknar sökets datumfilter — utan
         // ett datum parsat från själva eventsidan vore fallbacken "idag" ren
         // gissning → skippa hellre än att spara fel dag.
-        const allEventUrls = new Map<string, { expectedDay: string; city?: string; requiresParsedDate?: boolean }>();
+        // fromSearch: orten kom från stadssökets sökord — FB-söket är fuzzy, så den
+        // räknas bara som gissning (se centroidGuard).
+        const allEventUrls = new Map<string, { expectedDay: string; city?: string; requiresParsedDate?: boolean; fromSearch?: boolean }>();
 
         // Statistik per (keyword, filter)-kombination
         type SourceStat = { keyword: string; filter: string; found: number; unique: number; duplicates: number };
@@ -413,6 +290,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                             expectedDay: item.day,
                             city: source.city,
                             requiresParsedDate: source.label?.startsWith('page:') || undefined,
+                            fromSearch: (isSearchSource && !!source.city) || undefined,
                         });
                         uniqueThisSource++;
                     } else {
@@ -541,7 +419,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         let extractFailed = 0;
         let extractNewlySaved = 0;
         for (const [url, itemData] of allEventUrls.entries()) {
-            const { expectedDay, city, requiresParsedDate } = itemData;
+            const { expectedDay, city, requiresParsedDate, fromSearch } = itemData;
             processed++;
             console.log(`\n📊 [${processed}/${totalToProcess}] Behandlar event (sparade hittills: ${scrapedEventsLog.length})`);
             try {
@@ -780,6 +658,22 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     if (!coords) {
                         const fallbackCity = city
                             || SWEDISH_GEO_CITIES.find(c => new RegExp(`\\b${c}\\b`, 'i').test(extractedAddress));
+                        // Vakt (Sala 2026-09-11): stadssöket ger världen över-träffar
+                        // när ortnamnet också är ett ord/en ort utomlands — de hamnade
+                        // på ortens mittpunkt. Utländsk text, norsk/dansk text utan
+                        // svensk ort eller en sökträff som inte nämner orten → skippa.
+                        const rejection = fallbackCity && centroidFallbackRejection({
+                            city: fallbackCity,
+                            fromSearch: !!fromSearch && fallbackCity === city,
+                            title: details.title,
+                            address: extractedAddress,
+                            description: details.description || details.ogDescription || '',
+                        });
+                        if (rejection) {
+                            console.log(`    ⏩ Skippar event (ortsgissning ${fallbackCity} avvisad: ${rejection}): "${details.title}" (addr: "${extractedAddress}")`);
+                            extractSkippedForeign++;
+                            continue;
+                        }
                         if (fallbackCity) {
                             coords = await geocodeVenueSweden(`${fallbackCity}, Sverige`);
                             cityFallbackUsed = !!coords;

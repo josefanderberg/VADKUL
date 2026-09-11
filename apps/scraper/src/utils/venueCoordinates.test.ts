@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-    stripParishSegments, suffixQueries, firstWordPlaceQuery, classifyQueryPrecision,
+    stripParishSegments, suffixQueries, firstWordPlaceQuery, classifyQueryPrecision, isForeignAddress,
 } from './venueCoordinates';
 import { isGenericLookupName, lookupVenueSmart, upsertKnownVenue } from './sqliteHelper';
 
@@ -119,5 +119,26 @@ describe('classifyQueryPrecision', () => {
     it('platsnamn utan husnummer klassas som poi', () => {
         expect(classifyQueryPrecision('Tallgårdens bibliotek, Växjö')).toBe('poi');
         expect(classifyQueryPrecision('Vida Arena')).toBe('poi');
+    });
+});
+
+describe('isForeignAddress', () => {
+    it('känner igen FB:s svenska landsnamn (Salem 2026-09-11)', () => {
+        expect(isForeignAddress('Salem, Amerikas förenta stater')).toBe(true);
+        expect(isForeignAddress('West Salem, Amerikas förenta stater')).toBe(true);
+        expect(isForeignAddress('Calea Giulesti 16, București, Rumänien')).toBe(true);
+    });
+
+    it('känner igen inhemska landsnamn, även med å/ä/ö först (Unicode-gräns)', () => {
+        expect(isForeignAddress('Liège, Belgique')).toBe(true);
+        expect(isForeignAddress('Dornbacherstraße 85, 1170 Wien, Österreich')).toBe(true);
+        expect(isForeignAddress('Salzburg, österrike')).toBe(true);
+    });
+
+    it('rör inte svenska adresser eller grannländer', () => {
+        expect(isForeignAddress('Pizzeria Italia, Storgatan 5, Sala')).toBe(false);
+        expect(isForeignAddress('Eesti Maja, Wallingatan 32, Stockholm')).toBe(false);
+        expect(isForeignAddress('Folkets Hus, Sala')).toBe(false);
+        expect(isForeignAddress('Savoy Terrasse, Fredrikstad, Norge')).toBe(false);
     });
 });

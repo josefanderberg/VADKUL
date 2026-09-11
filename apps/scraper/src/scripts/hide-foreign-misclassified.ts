@@ -8,6 +8,12 @@
  *   - title innehåller utländsk stad/region (utan svensk motpart)
  *   - description innehåller utländsk plats
  *
+ * Sedan 2026-09-11 (Sala-incidenten) även för FB-event:
+ *   - adressen bär ett land enligt isForeignAddress (FB skriver "Amerikas
+ *     förenta stater" på svenska), och
+ *   - texten är på främmande språk medan positionen är en gissning
+ *     (stads-/ortscentroid eller 0,0) — se storedForeignFbReason.
+ *
  * Strategi:
  *   - För varje misstänkt event: hide=1 (raderar inte, kan revert)
  *   - Logga reason så vi kan revidera regler
@@ -21,6 +27,8 @@ import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { setHidden } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
+import { isForeignAddress } from '../utils/venueCoordinates';
+import { storedForeignFbReason } from '../scrapers/facebook/centroidGuard';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -85,7 +93,7 @@ async function main() {
     console.log(APPLY ? '🔧 APPLY' : '🔍 DRY-RUN');
 
     const rows = sqliteDb.prepare(`
-        SELECT firestoreId, url, title, locationName, extractedAddress, description, lat, lng
+        SELECT firestoreId, url, title, locationName, extractedAddress, description, lat, lng, geoPrecision
         FROM link_events
         WHERE hidden = 0 AND time >= datetime('now')
         AND firestoreId IS NOT NULL
@@ -100,17 +108,24 @@ async function main() {
             ['locationName', r.locationName],
             ['extractedAddress', r.extractedAddress],
         ];
+        let reason: string | null = null;
         for (const [field, value] of checks) {
             const hit = isForeignText(value);
-            if (hit) {
-                matches.push({
-                    id: r.firestoreId,
-                    title: (r.title || '').slice(0, 50),
-                    reason: `${field}: ${hit.source}`,
-                    url: r.url,
-                });
-                break;
+            if (hit) { reason = `${field}: ${hit.source}`; break; }
+        }
+        // FB-stadssöket (Sala 2026-09-11): FB skriver landet på svenska i
+        // adressen ("Amerikas förenta stater") — samma utlandslista som skrapan.
+        // Bara FB: den listan är skriven för FB-adresser (Thailand/Kina m.fl.
+        // skulle kunna vara lokalnamn hos andra källor).
+        if (!reason && /facebook\.com\/events\//.test(r.url)) {
+            for (const [field, value] of checks) {
+                if (value && isForeignAddress(value)) { reason = `${field}: utländsk adress (FB)`; break; }
             }
+        }
+        // Utländsk text på gissad position — se storedForeignFbReason.
+        if (!reason) reason = storedForeignFbReason(r);
+        if (reason) {
+            matches.push({ id: r.firestoreId, title: (r.title || '').slice(0, 50), reason, url: r.url });
         }
     }
 
@@ -123,7 +138,7 @@ async function main() {
     for (const [r, n] of sorted.slice(0, 15)) console.log(`  ${String(n).padStart(3)}x  ${r}`);
 
     console.log('\nSamples:');
-    for (const m of matches.slice(0, 15)) {
+    for (const m of matches.slice(0, APPLY ? 15 : 400)) {
         console.log(`  ${m.title.padEnd(50)} | ${m.reason}`);
     }
 
