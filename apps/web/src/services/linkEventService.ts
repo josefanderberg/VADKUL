@@ -3,6 +3,7 @@ import { db } from '../lib/firebase';
 import { doc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getAuthHeaders } from '../lib/authHeaders';
 import { applyVenueFixInPlace } from '../data/venueFixes';
+import { buildCardIndex } from '../utils/eventKey';
 
 /**
  * Är eventet boostat just nu? Sant om featuredUntil finns och ligger i framtiden.
@@ -379,21 +380,29 @@ function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
     });
 }
 
+/**
+ * Slår ihop kortlagret med destinations. Klarar BÅDA aggregatformaten — se
+ * buildCardIndex: det slanka kortet bär `h` (hash av url), det gamla `id`.
+ *
+ * Defaultarna nedan (`?? ''`, `?? 0`, `!!`) återställer exakt de värden det
+ * gamla lagret skickade explicit. Det slanka lagret utelämnar tomma fält för
+ * att spara bytes, så utan dem skulle `''` tyst bli `undefined` för
+ * konsumenter som skiljer på de två.
+ */
 function mergeCardsWithDestinations(destEvents: LinkEvent[], cards: any[]): LinkEvent[] {
-    const cardMap = new Map<string, any>();
-    cards.forEach(c => cardMap.set(c.id, c));
+    const lookup = buildCardIndex(cards);
 
     return destEvents.map(evt => {
-        const card = cardMap.get(evt.id);
+        const card = lookup(evt.id);
         if (!card) return evt;
         return {
             ...evt,
-            coverImage: card.coverImage,
-            hostName: card.hostName,
-            attendees: card.attendees,
+            coverImage: card.coverImage ?? '',
+            hostName: card.hostName ?? '',
+            attendees: card.attendees ?? 0,
             price: card.price ?? '',
-            isLocationVerified: card.isLocationVerified,
-            isHostVerified: card.isHostVerified,
+            isLocationVerified: !!card.isLocationVerified,
+            isHostVerified: !!card.isHostVerified,
             url: card.url || evt.url
         };
     });

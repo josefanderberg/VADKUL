@@ -6,6 +6,7 @@ import { planCategoryChips, CATEGORY_PAGE_MIN_BIG } from '@/utils/categoryChips'
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { isAffiliateUrl } from '@/utils/ticketmasterEvent';
 import { applyVenueFixInPlace } from '@/data/venueFixes';
+import { buildCardIndex } from '@/utils/eventKey';
 
 // Stadssidornas dataunderlag. Läser samma events-JSON som kartan använder som
 // fallback (public/events-*.json) — vid BUILD, så sidorna är helt statiska.
@@ -75,7 +76,8 @@ type RawDest = {
      *  emojin härleds ur category vid mappningen nedan. */
     emoji?: string;
 };
-type RawCard = { id: string; hostName?: string; coverImage?: string; price?: string; attendees?: number; url?: string };
+/** Kortlagret i något av sina två format: `h` = slankt (hash), `id` = gammalt. */
+type RawCard = { id?: string; h?: string; hostName?: string; coverImage?: string; price?: string; attendees?: number; url?: string };
 
 // Speglas av normTitlePop i apps/scraper/src/utils/popularEvent.ts (🔥-
 // klassningens repeatCount) — ändras den ena måste den andra med.
@@ -87,7 +89,7 @@ const normTitle = (t: string) => t.toLowerCase().replace(/[^a-z0-9åäö]+/g, ' 
 
 // Modulnivå-cache: JSON-filerna (~21k event) läses en gång per build-process,
 // inte en gång per stad.
-let dataPromise: Promise<{ dests: RawDest[]; cards: Map<string, RawCard>; descs: Map<string, string>; titleFreq: Map<string, number>; updatedAt: string }> | null = null;
+let dataPromise: Promise<{ dests: RawDest[]; card: (destId: string) => RawCard | undefined; descs: Map<string, string>; titleFreq: Map<string, number>; updatedAt: string }> | null = null;
 
 function loadData() {
     if (!dataPromise) {
@@ -105,8 +107,9 @@ function loadData() {
             // 5/9): deploy-snapshoten kan vara dragen mitt i ett fel-aggregat.
             for (const e of destJson.events) applyVenueFixInPlace(e);
             const cardJson = JSON.parse(cardRaw) as { events: RawCard[] };
-            const cards = new Map<string, RawCard>();
-            for (const c of cardJson.events) cards.set(c.id, c);
+            // Tolerant uppslag: aggregatet kan vara i gammalt eller slankt format
+            // beroende på när minin senast byggde om det (se utils/eventKey).
+            const card = buildCardIndex(cardJson.events);
             // Beskrivningslagret är { data: { [id]: text } }. Trimmas hårt här
             // (en gång per build) — schemat behöver en aptitretare, inte hela
             // programtexten i varje sidas JSON-LD.
@@ -126,7 +129,7 @@ function loadData() {
                 const k = normTitle(e.title);
                 titleFreq.set(k, (titleFreq.get(k) ?? 0) + 1);
             }
-            return { dests: destJson.events, cards, descs, titleFreq, updatedAt: destJson.updatedAt ?? new Date().toISOString() };
+            return { dests: destJson.events, card, descs, titleFreq, updatedAt: destJson.updatedAt ?? new Date().toISOString() };
         })();
     }
     return dataPromise;
@@ -215,13 +218,13 @@ export function countBySource(events: CityEvent[]): Record<string, number> {
 }
 
 async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>): Promise<{ events: CityEvent[]; updatedAt: string }> {
-    const { cards, descs, titleFreq, updatedAt } = await loadData();
+    const { card: lookupCard, descs, titleFreq, updatedAt } = await loadData();
     const todayK = dayKey(new Date().toISOString());
     const events = (assigned.get(city.slug) ?? [])
         .filter(e => dayKey(e.time) >= todayK)
         .sort((a, b) => Date.parse(a.time) - Date.parse(b.time))
         .map(e => {
-            const card = cards.get(e.id);
+            const card = lookupCard(e.id);
             return {
                 id: e.id,
                 title: e.title,

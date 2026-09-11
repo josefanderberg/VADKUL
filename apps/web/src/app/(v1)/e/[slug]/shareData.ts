@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { eventShareSlug } from '@/utils/eventShareSlug';
+import { buildCardIndex } from '@/utils/eventKey';
 
 // Uppslag slug → event för delningssidorna (/e/[slug]). Läser samma
 // events-JSON som stadssidorna, men vid RUNTIME (delningssidor renderas på
@@ -31,12 +32,14 @@ function loadIndex(): Promise<Map<string, ShareEvent>> {
                 pub('events-cards.json'),
             ]);
             const dests = (JSON.parse(destRaw) as { events: any[] }).events;
-            const cards = new Map<string, any>();
-            for (const c of (JSON.parse(cardRaw) as { events: any[] }).events) cards.set(c.id, c);
+            // Tolerant uppslag: klarar både gammalt och slankt kortformat
+            // (se utils/eventKey) — aggregatet och webben byter format vid
+            // olika tidpunkter.
+            const lookupCard = buildCardIndex((JSON.parse(cardRaw) as { events: any[] }).events);
 
             const index = new Map<string, ShareEvent>();
             for (const e of dests) {
-                const card = cards.get(e.id);
+                const card = lookupCard(e.id);
                 index.set(eventShareSlug(e.id), {
                     id: e.id,
                     title: e.title,
