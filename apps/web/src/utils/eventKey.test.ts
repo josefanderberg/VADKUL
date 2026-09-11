@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eventKey, buildCardIndex } from './eventKey';
+import { eventKey, eventKeyNum, buildCardIndex } from './eventKey';
 
 /**
  * FACIT-VÄRDEN — tvillinglåset.
@@ -38,6 +38,23 @@ describe('eventKey', () => {
             keys.add(eventKey(`https://bibliotek.example.se/evenemang#${i}-${i * 7919}`));
         }
         expect(keys.size).toBe(20000);
+    });
+});
+
+describe('eventKeyNum', () => {
+    // buildCardIndex nycklar på talet i stället för strängen (prestanda) —
+    // det håller bara om base36-strängen parsas tillbaka UTAN förlust.
+    it('är exakt samma hash som eventKey, och parseInt(h, 36) går tillbaka utan förlust', () => {
+        const urls = [
+            ...FIXTURES.map(([u]) => u),
+            ...Array.from({ length: 5000 }, (_, i) => `https://example.se/e/${i}?q=${i * 31}`),
+        ];
+        for (const u of urls) {
+            const n = eventKeyNum(u);
+            expect(Number.isSafeInteger(n)).toBe(true);
+            expect(n.toString(36)).toBe(eventKey(u));
+            expect(parseInt(eventKey(u), 36)).toBe(n);
+        }
     });
 });
 
