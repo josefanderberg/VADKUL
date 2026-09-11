@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { isVadkulHostedEvent, LinkEvent } from '@/types';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { formatEventDate } from '@/utils/dateUtils';
+import { highlightSegments } from '@/utils/eventSearch';
 import { Clock, MapPin } from 'lucide-react';
 
 /** Samma emoji-logik som kartnålarna: AI:ns per-event-emoji, annars kategorins. */
@@ -18,10 +19,14 @@ interface EventListRowProps {
     /** Extra innehåll till höger om raden — t.ex. ta bort-knapp i sparat-listan. */
     right?: ReactNode;
     dimmed?: boolean;
+    /** Söktexten (normaliserad) — bara i sökträffarna. Titeln sätts då i
+     *  normal vikt och det som matchar i fetstil, så man ser VARFÖR raden
+     *  kom med (FB-klagomålet 11/9). */
+    highlight?: string;
 }
 
 /** Kompakt eventrad för panellistor (sökträffar, sparade event). */
-export default function EventListRow({ evt, onPick, right, dimmed = false }: EventListRowProps) {
+export default function EventListRow({ evt, onPick, right, dimmed = false, highlight }: EventListRowProps) {
     return (
         <li className={`flex items-center ${dimmed ? 'opacity-60' : ''}`}>
             <button
@@ -41,7 +46,16 @@ export default function EventListRow({ evt, onPick, right, dimmed = false }: Eve
                 </span>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                        <h4 className="font-black text-sm text-black dark:text-white truncate min-w-0">{evt.title}</h4>
+                        {highlight ? (
+                            <h4 className="font-medium text-sm text-black dark:text-white truncate min-w-0">
+                                {highlightSegments(evt.title, highlight).map((seg, i) =>
+                                    seg.hit
+                                        ? <strong key={i} className="font-black">{seg.text}</strong>
+                                        : <span key={i}>{seg.text}</span>)}
+                            </h4>
+                        ) : (
+                            <h4 className="font-black text-sm text-black dark:text-white truncate min-w-0">{evt.title}</h4>
+                        )}
                         {isVadkulHostedEvent(evt) && (
                             <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                 VADKUL

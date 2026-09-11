@@ -26,6 +26,7 @@ import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDe
 import { toggleCategory } from '@/utils/categoryToggle';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
+import { normalizeSearchQuery, eventSearchTier, rankSearchResults } from '@/utils/eventSearch';
 import { WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
 import { readStartCity, writeStartCity } from '@/utils/startCity';
@@ -1821,16 +1822,12 @@ export default function HomePage() {
     // plats, arrangör (hostName) samt eventets URL/källa, så att en sökning på
     // t.ex. "tickster" får fram alla event från den plattformen (domänen ligger
     // i url). Utan sökterm gäller dag-/intervallfiltret som vanligt.
+    // Matchning + rankning bor i utils/eventSearch (FB-klagomålet 11/9).
+    const searchQ = normalizeSearchQuery(searchQuery);
     const searchFilteredEvents = useMemo(() => {
-        if (!searchQuery.trim()) return filteredEvents;
-        const q = searchQuery.toLowerCase();
-        return events.filter(evt =>
-            evt.title.toLowerCase().includes(q) ||
-            (evt.locationName?.toLowerCase().includes(q) ?? false) ||
-            (evt.hostName?.toLowerCase().includes(q) ?? false) ||
-            (evt.url?.toLowerCase().includes(q) ?? false)
-        );
-    }, [events, filteredEvents, searchQuery]);
+        if (!searchQ) return filteredEvents;
+        return events.filter(evt => eventSearchTier(evt, searchQ) >= 0);
+    }, [events, filteredEvents, searchQ]);
 
     // Opt-in-källor (Svenska kyrkan/PRO) har väldigt många event och är
     // avstängda som default: deras event GÖMS tills användaren själv kryssar i
@@ -1873,6 +1870,14 @@ export default function HomePage() {
     const visibleEvents = useMemo(
         () => searchFilteredEvents.filter(matchesFilter),
         [searchFilteredEvents, matchesFilter],
+    );
+
+    // Träfflistans ordning: titelns början → ord i titeln → mitt i titeln →
+    // plats → arrangör → bara URL, tid inom varje nivå. Egen lista — kartan
+    // och eventkortet får visibleEvents i tidsordning som förut.
+    const searchResults = useMemo(
+        () => (searchQ ? rankSearchResults(visibleEvents, searchQ) : []),
+        [visibleEvents, searchQ],
     );
 
     // Antal synliga event för dagen (efter kategori-/källfilter). Speglar kartan.
@@ -3548,7 +3553,7 @@ export default function HomePage() {
                 event ur alla kommande dagar (klick hoppar till eventets dag). */}
             <SearchResults
                 query={searchQuery}
-                results={visibleEvents}
+                results={searchResults}
                 onPick={jumpToEvent}
                 cities={cityHits}
                 onPickCity={handlePickSearchCity}

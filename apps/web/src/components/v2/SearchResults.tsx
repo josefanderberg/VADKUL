@@ -5,6 +5,7 @@ import { LinkEvent } from '@/types';
 import EventListRow from './EventListRow';
 import { SearchX, MapPin, ArrowRight } from 'lucide-react';
 import type { CityPoint } from '@/utils/cityPoints';
+import { normalizeSearchQuery } from '@/utils/eventSearch';
 
 const PAGE_SIZE = 25;
 
@@ -16,7 +17,8 @@ export interface CityHit {
 
 interface SearchResultsProps {
     query: string;
-    /** Träffar över ALLA kommande dagar, tidssorterade. */
+    /** Träffar över ALLA kommande dagar, rankade (utils/eventSearch):
+     *  titelträffar först, tid inom varje nivå. */
     results: LinkEvent[];
     onPick: (evt: LinkEvent) => void;
     /** Städer som matchar söktexten. Ligger ÖVERST — söker man "Hudiksvall"
@@ -38,7 +40,8 @@ export default function SearchResults({ query, results, onPick, cities = [], onP
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     useEffect(() => { setVisibleCount(PAGE_SIZE); }, [query]);
 
-    if (!query.trim()) return null;
+    const q = normalizeSearchQuery(query);
+    if (!q) return null;
 
     const hasCities = cities.length > 0 && !!onPickCity;
 
@@ -124,7 +127,7 @@ export default function SearchResults({ query, results, onPick, cities = [], onP
                 ) : (
                     <ul className="overflow-y-auto divide-y divide-white/10 custom-scrollbar">
                         {results.slice(0, visibleCount).map(evt => (
-                            <EventListRow key={evt.id} evt={evt} onPick={onPick} />
+                            <EventListRow key={evt.id} evt={evt} onPick={onPick} highlight={q} />
                         ))}
                         {visibleCount < results.length && (
                             <li className="flex justify-center">
