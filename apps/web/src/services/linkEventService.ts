@@ -170,6 +170,10 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
                         ? Math.floor(v.repeatWeeks) : undefined,
                     hostUid: v.hostUid || undefined,
                     featuredUntil,
+                    // Utan den här raden är hidden-filtret nedan verkningslöst:
+                    // fältet mappades aldrig in, så ett gömt userCreated-event
+                    // visades ändå (upptäckt vid Hemse Torgdag-dubbletten 11/9).
+                    hidden: !!v.hidden,
                 } as LinkEvent;
             })
             // Serier filtreras INTE på cutoff här: en veckoserie som startade
