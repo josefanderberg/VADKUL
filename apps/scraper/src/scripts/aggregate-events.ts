@@ -3,6 +3,7 @@ import { publicUrl } from '../utils/affiliateUrl';
 import { sqlite } from '../utils/sqliteHelper';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildTitleFreq, isPopularEvent, normTitlePop } from '../utils/popularEvent';
+import { eventKey } from '../utils/eventKey';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -24,29 +25,40 @@ interface DestinationLayer {
     pop?: true;
 }
 
+/**
+ * SLANKT kortlager (2026-09-11). Bar tidigare hela url:en två gånger (`id` +
+ * `url`) plus sju fält som destinations redan levererar — webbens
+ * mergeCardsWithDestinations läste aldrig något av det. Mätt på skarpa datat
+ * (44k event): 2,76 → 1,16 MB brotli, −58 %, utan att en enda besökare ser
+ * någon skillnad.
+ *
+ * Regeln för vad som får bo här: bara fält som INTE finns i destinations och
+ * som någon faktiskt läser. Tomma värden utelämnas (bytes × 44k event).
+ *
+ * ⚠️ Formatet har fler läsare än kartan — alla slår upp kortet via `h`
+ * (eller via gamla `id`) och måste hållas toleranta: linkEventService,
+ * cityData, shareData, lib/deepLinkEventIndex (/api/event), scraperns
+ * seed-sqlite-from-aggregate (Stadsinlägg-workflowen) och
+ * docs/outreach/generate-arrangorer.mjs.
+ */
 interface CardLayer {
-    id: string;
-    title: string;
-    time: string;
-    /** Validerat slutdatum (ISO) — bara med när det finns (flerdagarsevent). */
-    endDate?: string;
-    /** false = källan gav bara datum — webben visar då ingen klocktid. */
-    hasSpecificTime: boolean;
-    locationName: string;
-    category: string;
-    coverImage: string;
-    hostName: string;
-    attendees: number;
-    price: string;
-    isLocationVerified: boolean;
-    isHostVerified: boolean;
-    url: string;
-    /** Per-event-emoji från AI-audit. */
-    emoji?: string;
+    /** Join-nyckel mot destinations `id` — se utils/eventKey. Ersätter hela url:en. */
+    h: string;
+    coverImage?: string;
+    hostName?: string;
+    attendees?: number;
+    price?: string;
+    isLocationVerified?: true;
+    isHostVerified?: true;
+    /**
+     * Bara när publicUrl() faktiskt skrivit om länken (affiliate-wrap,
+     * param-städning, värd-reparation) — ~2 % av eventen. Är den lika med
+     * destinations `id` utelämnas den och ALLA läsare faller tillbaka dit
+     * (även stadssidornas BOKA-knapp: isAffiliateUrl(card.url ?? id)).
+     */
+    url?: string;
     /** true = koordinaten är stadens mittpunkt (geoPrecision='stad-centroid'). */
-    approxGeo?: boolean;
-    /** true = 🔥 Populär (utils/popularEvent). Utelämnas annars (bytes × 30k event i aggregatet). */
-    pop?: true;
+    approxGeo?: true;
 }
 
 export async function runAggregation(opts: { includeUnpublished?: boolean } = {}) {
@@ -151,27 +163,23 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             pop
         });
 
+        // Bara det destinations INTE redan bär. Tomma värden utelämnas — webben
+        // sätter tillbaka samma default ('' / 0 / false) vid sammanslagningen.
+        const publicHref = publicUrl(row.url);
         cards.push({
-            id,
-            title: row.title || '',
-            time: row.time,
-            endDate: row.endDate || undefined,
-            hasSpecificTime,
-            locationName: row.locationName || '',
-            category: row.category || 'other',
-            coverImage: row.coverImage || '',
-            hostName: row.hostName || '',
-            attendees: Number(row.attendees) || 0,
-            price: row.price || '',
-            isLocationVerified: row.isLocationVerified === 1,
-            isHostVerified: row.isHostVerified === 1,
-            url: publicUrl(row.url),
-            emoji: row.emoji || undefined,
+            h: eventKey(id),
+            coverImage: row.coverImage || undefined,
+            hostName: row.hostName || undefined,
+            attendees: Number(row.attendees) || undefined,
+            price: row.price || undefined,
+            isLocationVerified: row.isLocationVerified === 1 ? true : undefined,
+            isHostVerified: row.isHostVerified === 1 ? true : undefined,
+            // Lika med id för 98,3 % av eventen → skicka bara skillnaden.
+            url: publicHref !== id ? publicHref : undefined,
             // Positionen är stadens mittpunkt, inte platsen — låter webben visa
             // "ungefär i {stad}" i stället för att låtsas vara en exakt nål.
-            // Utelämnas helt annars (bytes × 30k event i aggregatet).
+            // Utelämnas helt annars (bytes × 47k event i aggregatet).
             approxGeo: row.geoPrecision === 'stad-centroid' ? true : undefined,
-            pop
         });
 
         descriptions[id] = row.description || '';
@@ -199,6 +207,12 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         console.log(`   🏝️  ${nullIslandCount} av ${destinations.length} event ligger på null island (0,0) — döljs från kartan, kvar i list-/sökvy`);
     }
 
+    // Lagren ligger kvar i TIDSORDNING (SQL:ens ORDER BY time). Platssortering
+    // prövades 2026-09-11 och ströks: bara −4 % i brotli (2,89 mot 3,02 MB per
+    // besökare), men kartans tidssortering i (v2)/page.tsx — som körs vid
+    // varje callback — gick från 0,4 till 6,8 ms på 44k event eftersom indatan
+    // inte längre var försorterad. Tidsordningen är dessutom grunden för
+    // tidsfönster-steget i docs/egress-optimering.md.
     const destinationsPayload = { updatedAt, events: destinations };
     const cardsPayload = { updatedAt, events: cards };
     const descriptionsPayload = { updatedAt, data: descriptions };
