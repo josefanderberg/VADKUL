@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { Firestore } from 'firebase-admin/firestore';
 import { gzipSync, gunzipSync, brotliCompressSync, constants as zlibConstants } from 'zlib';
 import { readFile, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -106,6 +107,61 @@ async function readDiskCache(layer: string, updatedAt: string): Promise<Record<E
     }
 }
 
+/**
+ * Färdigpackad blob från scrapern (utils/aggregateBlobs): brotli q11 + gzip 9,
+ * packade en gång per natt i stället för q6 per kallstartande instans. −12 till
+ * −16 % över tråden, och kallstarten läser ~5 MB bytes i stället för ~35 MB
+ * JSON-shards + packning (~35 s → sekunder).
+ *
+ * Blobben används BARA när dess updatedAt är EXAKT lagrets — allt annat
+ * (saknad blob, äldre aggregat, hotfix-aggregate-venue som stämplat nytt
+ * updatedAt på JSON-lagret) → null och q6-vägen tar över. Trasig blob får
+ * aldrig ge 503: varje avvikelse → null.
+ *
+ * OBS: venue-läsvakten (applyVenueFixInPlace i bygg-vägen nedan) kan inte
+ * patcha färdigpackade bytes. Blobben bär scraperns venue-fixar från
+ * aggregeringstillfället; en fix som bara hunnit deployas till webben når
+ * blob-svaret först när minin pullat + aggregerat (≤1 dygn). Brådskande fix →
+ * data-hotfix-workflown, som stämplar nytt updatedAt → blobben missmatchar
+ * och bygg-vägen (med webbens färska fixar) tar över.
+ */
+async function readPrepackedBlobs(
+    db: Firestore,
+    layer: string,
+    updatedAt: string,
+): Promise<Record<Enc, Uint8Array> | null> {
+    try {
+        const idxSnap = await db.collection('aggregatedEvents').doc(`blob_${layer}`).get();
+        const idx: any = idxSnap.exists ? idxSnap.data() : null;
+        if (!idx || !updatedAt || idx.updatedAt !== updatedAt) return null;
+        const out: Partial<Record<Enc, Uint8Array>> = {};
+        for (const e of ['br', 'gzip'] as Enc[]) {
+            const meta = idx.encodings?.[e];
+            if (!meta || typeof meta.shardCount !== 'number' || meta.shardCount < 1) return null;
+            const refs = Array.from({ length: meta.shardCount }, (_, i) =>
+                db.collection('aggregatedEvents').doc(`blob_${layer}_${e}_${i}`));
+            const snaps = await db.getAll(...refs);
+            const parts: Buffer[] = [];
+            for (const s of snaps) {
+                const d: any = s.exists ? s.data() : null;
+                // Shard från fel generation (städning mitt i läsningen) → hela
+                // blobben underkänns hellre än att servera ihopklippt data.
+                if (!d?.data || d.updatedAt !== updatedAt) return null;
+                parts.push(Buffer.from(d.data));
+            }
+            const buf = Buffer.concat(parts);
+            if (typeof meta.bytes === 'number' && buf.length !== meta.bytes) return null;
+            out[e] = new Uint8Array(buf);
+        }
+        // Sista äkthetskontroll: gzip-blobben måste gå att packa upp — slice-
+        // vägen gunzippar den, och ett korrupt svar där vore ett 503 för kartan.
+        gunzipSync(out.gzip!);
+        return out as Record<Enc, Uint8Array>;
+    } catch {
+        return null;
+    }
+}
+
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ layer: string }> },
@@ -157,6 +213,19 @@ export async function GET(
             if (enc) {
                 entry = { updatedAt, enc };
                 memo.set(layer, entry);
+            }
+        }
+
+        // Scraperns förpackade blob (q11) — bättre komprimerad än något vi
+        // hinner packa här, och långt billigare än att bygga från JSON-shards.
+        if (!entry && updatedAt) {
+            const enc = await readPrepackedBlobs(db, layer, updatedAt);
+            if (enc) {
+                entry = { updatedAt, enc };
+                memo.set(layer, entry);
+                for (const e of ['gzip', 'br'] as Enc[]) {
+                    writeFile(diskPath(layer, updatedAt, e), enc[e]).catch(() => { /* cache är bara en genväg */ });
+                }
             }
         }
 

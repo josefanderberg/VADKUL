@@ -4,6 +4,7 @@ import { sqlite } from '../utils/sqliteHelper';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildTitleFreq, isPopularEvent, normTitlePop } from '../utils/popularEvent';
 import { eventKey } from '../utils/eventKey';
+import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -241,6 +242,22 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     }
 
     console.log('   📤 Uploading aggregated layers to Firestore collection "aggregatedEvents"...');
+
+    // Förpackade blobbar (brotli q11 + gzip 9) FÖRE JSON-lagren: routen matchar
+    // blobben på exakt updatedAt, så när lagrets nya updatedAt blir synligt ska
+    // blobben redan ligga där (miss → routens q6-väg, bara långsammare). Ett
+    // blob-fel får aldrig stoppa JSON-uppladdningen — den är sanningskällan.
+    for (const [layer, payload] of [
+        ['destinations', destinationsPayload],
+        ['cards', cardsPayload],
+        ['descriptions', descriptionsPayload],
+    ] as const) {
+        try {
+            await uploadPrepackedBlobs(db, layer, updatedAt, Buffer.from(JSON.stringify(payload)));
+        } catch (e) {
+            console.error(`      ⚠️ Blob "${layer}" misslyckades (routen packar q6 själv):`, (e as Error).message);
+        }
+    }
 
     // Varje upload försöker separat — en stor doc ska inte stoppa de andra.
     // Destinations: shardas likt cards om för stort (passerade 1 MB-gränsen
