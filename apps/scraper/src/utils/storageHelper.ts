@@ -130,7 +130,13 @@ export async function uploadEventImage(
                     eventUrl: eventUrl.slice(0, 500),
                     uploadedAt: new Date().toISOString(),
                 },
-                cacheControl: 'public, max-age=86400',
+                // Sökvägen är innehållsadresserad (sha1 av käll-URL:en) — ett
+                // objekt byter aldrig innehåll under samma namn. Immutable +
+                // 1 år låter webbläsare återanvända bilden mellan besök:
+                // med gamla max-age=86400 laddades varje omslag om varje dygn
+                // (bucketen låg på 1–3,7 GB egress/dygn, mätt 11/9 — den går
+                // INTE genom nån CDN, varje visning är full Storage-egress).
+                cacheControl: 'public, max-age=31536000, immutable',
             },
             resumable: false,
         });

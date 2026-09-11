@@ -24,6 +24,15 @@ const nextConfig = {
         ignoreBuildErrors: true,
     },
     outputFileTracingRoot: path.join(__dirname, '../../'),
+    // Egress-trappan steg 5 (11/9): webpack-byggcachen (~278 MB rått,
+    // .next/cache/webpack) följde med i frameworks-deployens function-source.zip
+    // (528 MB, uppmätt i gcf-v2-sources-bucketen) och laddas upp+ner vid VARJE
+    // deploy. I CI är runnern färsk varje gång — cachen återanvänds aldrig och
+    // är ren barlast. Lokalt behålls den (snabbare rebuilds).
+    webpack: (config) => {
+        if (process.env.CI) config.cache = false;
+        return config;
+    },
     // Gamla sidor (/shop, /login) är skrotade — inloggning + funktioner bor på
     // kartan. Mjuk redirect på routing-nivå så gamla länkar/bokmärken landar på
     // kartan i stället för 404. (Ersätter redirect-only page-stubbar som kraschade

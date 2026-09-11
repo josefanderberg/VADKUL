@@ -233,23 +233,54 @@ brotli-packning. Då exploderar funktionstid och latens även om läsningarna
 förblir billiga. Kvantisera nyckeln: fasta tidsfönster, och om geografi — fasta
 rutor (län eller grov geohash), aldrig besökarens faktiska bbox.
 
-### 4. Bilderna i egen bucket (separat faktura-rad)
+### ✅ 4. Bilderna i egen bucket (byggt 2026-09-11, etapp 3)
 
-Inte utrett. 23 475 omslag på råa `storage.googleapis.com`-URL:er utan CDN →
-full egress per visning. Två vägar: lägg dem bakom Hosting-CDN:en, eller sätt
-`Cache-Control` på bucket-objekten. **Kolla Cloud Storage-raden på fakturan
-först** — omfattningen är okänd.
+**Uppmätt via Cloud Monitoring** (`storage.googleapis.com/network/sent_bytes_count`,
+frågas med scraperns service-account): bucketen `vadkul-f2cb2.firebasestorage.app`
+skickade **1,0–3,7 GB/DYGN** senaste veckan — omslagen går som råa
+storage-länkar utanför all CDN, och gamla `max-age=86400` lät webbläsarna
+ladda om samma bilder varje dygn.
 
-### 5. Deploy-hygien
+Gjort: (a) `storageHelper` sätter numera `public, max-age=31536000, immutable`
+på nya uppladdningar — säkert eftersom sökvägen är innehållsadresserad (sha1
+av käll-URL:en); (b) `oneoff-storage-cache-backfill` satte samma på alla
+36 432 befintliga objekt; (c) `oneoff-clear-broken-images` raderade 345
+felsidor-som-bild (content-type text/html bakom .jpg — trasig bild på korten)
+och nollade coverImage på 175 rader. OBS: HTTP-headern kan visa gamla värdet
+upp till ett dygn efter backfillen (Googles edge cachar svaret under gamla
+max-age) — verifiera via `file.getMetadata()`, inte curl.
 
-35 commits/deployer den 10/9 mot 6–9 andra dagar. Varje deploy nollar
-CDN-cachen för både statikfiler och funktionssvar. Squasha småfixar eller strypa
-auto-deploy per push.
+Kvar på bildspåret (ej byggt): omkomprimering. Uppladdningen sparar
+ORIGINALBYTES (upp till 8 MB-taket, typiskt 30–140 kB). In-place-recompress
+(samma sökväg/ext, mindre bytes) + resize till ~800 px skulle halvera
+unika-besökare-egressen; sharp är tillåtet i scrapern (förbudet gäller
+apps/web).
 
-### 6. Död vikt
+### ✅ 5. Deploy-vikten (byggt 2026-09-11, etapp 3) + deploy-hygien
 
-`apps/web/public/assets/about/` — 3,8 MB PNG:er som inte refereras från någon
-`.tsx`. Deployas varje gång.
+**Uppmätt:** `gcf-v2-sources`-bucketen (frameworks-deployens funktionskälla)
+skickade **0,5–5,3 GB/DYGN** — `function-source.zip` är **528 MB** och laddas
+upp + ner vid varje deploy. Obduktion av zipen (978 MB rått):
+
+| | |
+|---|---|
+| `.next/server/app/evenemang` | **639,5 MB** — statiskt bakade stadssidor, ~4,8 MB HTML/stad |
+| `.next/cache` (webpack-packs) | **277,8 MB** — byggcache, ren barlast i CI |
+| `public/events-*.json` | 38,2 MB — data-snapshoten |
+
+Gjort: `next.config.mjs` stänger av webpack-cachen när `CI` är satt (runnern
+är färsk varje gång — cachen återanvänds aldrig; lokala byggen behåller den).
+Dör vikten (3,8 MB about-PNG:er, punkt 6) borttagen samtidigt. Väntad effekt:
+zip ~528 → ~330 MB. **Verifiera efter nästa deploy** genom att lista
+`gcf-v2-sources-888495806926-europe-north1`-bucketens objektstorlek.
+
+Kvar (ej byggt): stadssidornas 639 MB är nästa stora bit — 4,8 MB HTML per
+stad drabbar också VARJE sidvisning. Naturlig lösning = kapa SSR-listan till
+tidsfönster (steg 3) — men det är ett SEO-/ägarbeslut (body-HTML:en är
+SEO-grunden, se seo-foundation). Deploy-FREKVENSEN kvarstår också som
+beteendefråga: squasha småfixar (35 deployer 10/9).
+
+### ✅ 6. Död vikt — borttagen 11/9 (ingick i etapp 3)
 
 ---
 
