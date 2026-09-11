@@ -77,6 +77,14 @@ export interface SiteVisionConfig {
      */
     fetchDetailDesc?: boolean;
     /**
+     * Som fetchDetailDesc men läs beskrivningen ur detaljsidans BRÖDTEXT
+     * (sv-text-portlet-content-blocken) i stället för meta-taggen. För
+     * RESTApp-källorna vars API har content="" och vars meta-description är
+     * tom eller falsk (arrangörsnamn/eventtitel) — se varningen vid
+     * backfillDescriptions. Tar över helt när båda flaggorna är satta.
+     */
+    detailBodyDesc?: boolean;
+    /**
      * Soleil eventListingLocal:s JSON-API (upptäckt på malmo.se 2026-07-09):
      *   GET <origin>/appresource/<pageId>/<portletId>/items?start=0&num=100
      *   → { count, items: [{ title, url, desc, image, place[], dates:{date,time} }] }
@@ -1102,6 +1110,60 @@ export function fullTitleFromHtml(html: string): string {
 }
 
 /**
+ * Sidkrom som ligger i egna text-portlets på SiteVision-sajterna och som
+ * ALDRIG är en eventbeskrivning: translate-rutan, lyssna-funktionen och
+ * cookie-texten. Frasnivå med flit — "servering av kaffe och kakor" i en
+ * riktig beskrivning ska inte fastna.
+ */
+const BODY_BOILERPLATE_RE =
+    /^translate\b|lyssna på innehållet|(vi använder|webbplats(en)? använder)[^.]{0,60}(kakor|cookies)/i;
+
+/**
+ * Brödtext-beskrivning ur en SiteVision-detaljsida: plocka alla
+ * `sv-text-portlet-content`-block och ta det längsta som varken är en
+ * rubrik-portlet (= eventtiteln), för kort eller sidkrom. Blocken avgränsas
+ * djup-räknat — regex till första </div> tappar allt efter en nästlad div.
+ * <br>/<p> blir radbrytningar så vägbeskrivningar m.m. behåller sin form.
+ * Exporterad för test.
+ */
+export function bodyDescFromHtml(html: string, title: string): string {
+    const blocks: string[] = [];
+    const open = /<div[^>]*class="[^"]*sv-text-portlet-content[^"]*"[^>]*>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = open.exec(html))) {
+        const start = open.lastIndex;
+        const tag = /<\/?div\b[^>]*>/gi;
+        tag.lastIndex = start;
+        let depth = 1;
+        let t: RegExpExecArray | null;
+        while ((t = tag.exec(html))) {
+            depth += t[0].startsWith('</') ? -1 : 1;
+            if (depth === 0) { blocks.push(html.slice(start, t.index)); break; }
+        }
+    }
+
+    const titleNorm = title.replace(/\s+/g, ' ').trim().toLowerCase();
+    let best = '';
+    for (const raw of blocks) {
+        const text = decodeHtmlEntities(
+            raw
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/(?:p|h[1-6]|li|div)>/gi, '\n')
+                .replace(/<[^>]+>/g, ' '),
+        )
+            .replace(/[ \t]+/g, ' ')
+            .replace(/ ?\n ?/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+        if (text.length < 30) continue;
+        if (text.replace(/\s+/g, ' ').toLowerCase() === titleNorm) continue;
+        if (BODY_BOILERPLATE_RE.test(text)) continue;
+        if (text.length > best.length) best = text;
+    }
+    return best;
+}
+
+/**
  * Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter
  * (Strömsund 106/111 utan desc, Svenljunga 30/30) är text-tomma medan
  * detaljsidan har meta/og-description. Throttlat via domainLimiter; bara
@@ -1118,15 +1180,16 @@ export function fullTitleFromHtml(html: string): string {
  * ger arrangörsnamnet ("Surahammars Hembygdsförening") och
  * visithallstahammar eventtiteln ("IT-hjälp på biblioteket"). Båda passerar
  * 20-teckensgränsen och hade lagt sig som falsk beskrivning — sämre än tom.
- * Flaggan är därför medvetet AV på alla fyra. Deras text finns bara i
- * brödtexten, bakom cookie-/translate-boilerplate.
+ * För dem finns i stället `detailBodyDesc` (Arboga-klagomålet 11/9: 320
+ * event utan beskrivning): läser brödtexten ur sv-text-portlet-content via
+ * bodyDescFromHtml i stället för meta-taggen.
  */
 async function backfillDescriptions(
     events: RawEvent[],
     config: SiteVisionConfig,
     ctx: EngineContext,
 ): Promise<void> {
-    if (!config.fetchDetailDesc) return;
+    if (!config.fetchDetailDesc && !config.detailBodyDesc) return;
     let filled = 0;
     let retitled = 0;
     for (const ev of events) {
@@ -1137,11 +1200,16 @@ async function backfillDescriptions(
         if (!html) continue;
 
         if (needsDesc) {
-            const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
-                || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
-            const desc = m?.[1]
-                ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
-                : undefined;
+            let desc: string | undefined;
+            if (config.detailBodyDesc) {
+                desc = bodyDescFromHtml(html, ev.title) || undefined;
+            } else {
+                const m = html.match(/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i)
+                    || html.match(/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i);
+                desc = m?.[1]
+                    ? decodeHtmlEntities(m[1]).replace(/\s+/g, ' ').trim()
+                    : undefined;
+            }
             if (desc && desc.length >= 20) { ev.description = truncateAtBoundary(desc, DEFAULT_DESCRIPTION_MAX); filled++; }
         }
 
@@ -1153,7 +1221,7 @@ async function backfillDescriptions(
             }
         }
     }
-    if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur meta-taggar`);
+    if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur ${config.detailBodyDesc ? 'brödtexten' : 'meta-taggar'}`);
     if (retitled) ctx.log(`  detalj-titel: ${retitled} kapade titlar lagade ur og:title`);
 }
 

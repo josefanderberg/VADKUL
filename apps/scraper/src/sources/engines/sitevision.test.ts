@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem, mapEventServiceItem, isMunicipalMeeting,
-    parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail,
+    parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail, bodyDescFromHtml,
 } from './sitevision';
 
 describe('parseSoleilDate', () => {
@@ -516,5 +516,55 @@ describe('isMunicipalMeeting', () => {
     it('klarar både a och ä i stavningarna', () => {
         expect(isMunicipalMeeting('Barn- och utbildningsnamnden')).toBe(true);
         expect(isMunicipalMeeting('Barn- och utbildningsnämnden')).toBe(true);
+    });
+});
+
+describe('bodyDescFromHtml', () => {
+    const portlet = (inner: string) =>
+        `<div class="sv-text-portlet-content">${inner}</div>`;
+
+    it('tar längsta brödtext-blocket, inte rubrik-portleten', () => {
+        const html =
+            portlet('<h1>Naturpasset skog</h1>') +
+            portlet('<p>Orientering i Kvarnskogen. Leta kontroller med hjälp av karta</p>');
+        expect(bodyDescFromHtml(html, 'Naturpasset skog'))
+            .toBe('Orientering i Kvarnskogen. Leta kontroller med hjälp av karta');
+    });
+
+    it('hoppar över translate-/lyssna-/cookie-krom', () => {
+        const html =
+            portlet('<p>Translate Use Google to translate the web site. We take no responsibility.</p>') +
+            portlet('<p>Vill du lyssna på innehållet på webben? Tryck på knappen nedan.</p>') +
+            portlet('<p>På denna webbplats använder vi cookies för att webbplatsen ska fungera bra.</p>') +
+            portlet('<p>Krånglar din hörapparat? Vi hjälper dig direkt på plats med byte av slang.</p>');
+        expect(bodyDescFromHtml(html, 'Drop-in hos hörselombuden'))
+            .toBe('Krånglar din hörapparat? Vi hjälper dig direkt på plats med byte av slang.');
+    });
+
+    it('krom-frasen fäller inte riktiga beskrivningar med ordet kakor', () => {
+        const html = portlet('<p>Vi bjuder på kaffe och kakor i bygdegården efter promenaden.</p>');
+        expect(bodyDescFromHtml(html, 'Höstpromenad')).toContain('kaffe och kakor');
+    });
+
+    it('nästlade divar kapar inte blocket (djup-räknad avgränsning)', () => {
+        const html = portlet(
+            '<div id="Ingress"><!-- Ingress --></div>' +
+            '<p class="vmkf-p">Hitta härliga fynd hos 20 säljare på 13 säljställen.<br><br>' +
+            'Karta finns på www.bygdegardarna.se/tyringe</p>',
+        );
+        const desc = bodyDescFromHtml(html, 'Höstloppis i Arbogas södra trakter');
+        expect(desc).toContain('Hitta härliga fynd');
+        expect(desc).toContain('Karta finns på www.bygdegardarna.se/tyringe');
+    });
+
+    it('<br> blir radbrytning så vägbeskrivningar behåller sin form', () => {
+        const html = portlet('<p>Vägbeskrivning från Arboga: åk mot Säterbo kyrka.<br>Vägbeskrivning från Eskilstuna: åk mot Västermo.</p>');
+        expect(bodyDescFromHtml(html, 'x'))
+            .toBe('Vägbeskrivning från Arboga: åk mot Säterbo kyrka.\nVägbeskrivning från Eskilstuna: åk mot Västermo.');
+    });
+
+    it('inget dugligt block → tom sträng', () => {
+        expect(bodyDescFromHtml(portlet('<p>Kontakt</p>'), 'Event')).toBe('');
+        expect(bodyDescFromHtml('<div class="annat">Lång text som inte ligger i en text-portlet alls, trettio+ tecken.</div>', 'Event')).toBe('');
     });
 });

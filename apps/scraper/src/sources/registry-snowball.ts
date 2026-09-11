@@ -145,7 +145,7 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Surahammar Kommun',
         region: 'surahammar',
         engine: 'sitevision' as const,
-        config: { urls: ["https://www.surahammar.se/download/18.11ab9bc018b6ab78ed33df3"], defaultCity: 'Surahammar', restApi: {"url":"https://www.surahammar.se/rest-api/Evenemang"} },
+        config: { urls: ["https://www.surahammar.se/download/18.11ab9bc018b6ab78ed33df3"], defaultCity: 'Surahammar', restApi: {"url":"https://www.surahammar.se/rest-api/Evenemang"}, detailBodyDesc: true },
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {

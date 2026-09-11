@@ -6388,6 +6388,9 @@ export const SOURCES: Source[] = [
         config: {
             urls: ['https://visitvastramalardalen.se/evenemang'],
             restApi: { url: 'https://visitvastramalardalen.se/rest-api/evenemang' },
+            // API:ts content="" och meta-desc är tom — brödtexten är enda
+            // beskrivningskällan (Arboga-klagomålet 11/9: 275 event utan text).
+            detailBodyDesc: true,
             cities: ['Köping', 'Arboga', 'Kungsör'],
             // ~24 % av korten saknar venue helt — de ankras på regionens största
             // ort hellre än att bli koordinatlösa (och därmed osynliga på kartan).
@@ -6413,6 +6416,8 @@ export const SOURCES: Source[] = [
         config: {
             urls: ['https://visithallstahammar.se/evenemang'],
             restApi: { url: 'https://visithallstahammar.se/rest-api/events-rest' },
+            // Meta-desc = eventtiteln (falsk) — brödtexten är beskrivningen.
+            detailBodyDesc: true,
             defaultCity: 'Hallstahammar',
         },
         updateFrequency: 'every-3d',
