@@ -60,6 +60,7 @@ export const CITIES: City[] = [
     { slug: 'alingsas',      name: 'Alingsås',      lat: 57.9295, lng: 12.5333, region: 'vastra-gotaland', population: 43000 },
     { slug: 'pitea',         name: 'Piteå',         lat: 65.3170, lng: 21.4795, region: 'norrbotten', population: 43000 },
     { slug: 'katrineholm',   name: 'Katrineholm',   lat: 58.9967, lng: 16.2089, region: 'sodermanland', population: 35000 },
+    { slug: 'karlshamn',     name: 'Karlshamn',     lat: 56.1706, lng: 14.8630, region: 'blekinge', population: 32000 },
     { slug: 'monsteras',     name: 'Mönsterås',     lat: 57.0394, lng: 16.4421, region: 'kalmar', population: 13000 },
 ];
 
