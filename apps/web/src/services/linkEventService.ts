@@ -278,6 +278,18 @@ function awaitHeavyLayersGate(): Promise<void> {
 let descriptionsRequested = false;
 let releaseDescriptionsGate: (() => void) | null = null;
 const descriptionsGate = new Promise<void>((res) => { releaseDescriptionsGate = res; });
+
+// ── Kortlagret hämtas först när det BEHÖVS ─────────────────────────────────
+// cards (~1 MB brotli) bär bara kortfälten: bild, värd, pris, anmälda och
+// affiliate-länken. Markörer, räknare, dagslistor och kategorifilter bygger
+// helt på destinations — så lagret laddas inte alls vid start utan begärs av
+// (1) LinkEventCard vid mount (samma krok som descriptions) och (2) sökningen
+// (eventSearch matchar hostName + kortets url) vid första söktermen. Besökare
+// som bara tittar på kartan laddar aldrig lagret. Gaten är engångs; pollarna
+// tar med lagret först efter begäran, precis som descriptions.
+let cardsRequested = false;
+let releaseCardsGate: (() => void) | null = null;
+const cardsGate = new Promise<void>((res) => { releaseCardsGate = res; });
 let signalDescriptionsSettled: (() => void) | null = null;
 // Löser ut när ett descriptions-svar behandlats (även tomt/misslyckat —
 // kortet ska visa "Ingen beskrivning tillgänglig", inte vänta för evigt).
@@ -424,6 +436,13 @@ export const linkEventService = {
      *  (se awaitHeavyLayersGate). Idempotent; säkerhetsnätet släpper ändå. */
     releaseHeavyLayers() { releaseHeavyGate?.(); },
 
+    /** Kortfälten behövs (kort öppnat, eller sökning — den matchar värd +
+     *  kortets url). Idempotent; pollarna tar med lagret efter begäran. */
+    requestCards() {
+        cardsRequested = true;
+        releaseCardsGate?.();
+    },
+
     /** Ett eventkort har öppnats → descriptions-lagret behövs. Idempotent.
      *  Löftet löser ut när första svaret behandlats (även tomt), så kortet
      *  kan skilja "hämtas fortfarande" från "har ingen beskrivning". */
@@ -440,7 +459,7 @@ export const linkEventService = {
             // bara om något eventkort redan bett om det (se descriptions-gaten).
             const [destData, cardsData, descData] = await Promise.all([
                 fetchLayer('destinations'),
-                fetchLayer('cards'),
+                cardsRequested ? fetchLayer('cards') : Promise.resolve(null),
                 descriptionsRequested ? fetchLayer('descriptions') : Promise.resolve(null),
             ]);
 
@@ -740,6 +759,7 @@ export const linkEventService = {
         // per prenumeration (varje 5-min-poll går annars in här på nytt och
         // staplar identiska hämtningar som alla fyrar när gaten släpps).
         let descriptionsWaiterAttached = false;
+        let cardsWaiterAttached = false;
         let initialLoadSignaled = false;
         const signalInitialLoad = () => {
             if (initialLoadSignaled || !active) return;
@@ -846,20 +866,30 @@ export const linkEventService = {
                 // moment 22 och allt väntade ut säkerhetsnätet.
                 signalInitialLoad();
 
-                // 2. Cards — men först när kartan målat klart (eller säkerhets-
-                // nätet gått): ska inte konkurrera med tiles + prickar om
-                // bandbredden. Descriptions (största lagret) hämtas INTE här om
-                // inget eventkort bett om det — se descriptions-gaten.
+                // 2. Cards + descriptions — men först när kartan målat klart
+                // (eller säkerhetsnätet gått): ska inte konkurrera med tiles +
+                // prickar om bandbredden. INGET av lagren hämtas här om det inte
+                // begärts — se cards- respektive descriptions-gaten ovan.
                 await awaitHeavyLayersGate();
                 if (!active) return;
                 const [cardsData, descData] = await Promise.all([
-                    fetchLayer('cards'),
+                    cardsRequested ? fetchLayer('cards') : Promise.resolve(null),
                     descriptionsRequested ? fetchLayer('descriptions') : Promise.resolve(null),
                 ]);
                 if (!active) return;
                 if (cardsData) {
                     baseEvents = mergeCardsWithDestinations(baseEvents, cardsData.events || []);
                     emit();
+                } else if (!cardsRequested && !cardsWaiterAttached) {
+                    cardsWaiterAttached = true;
+                    cardsGate.then(async () => {
+                        if (!active) return;
+                        const cd = await fetchLayer('cards');
+                        if (active && cd) {
+                            baseEvents = mergeCardsWithDestinations(baseEvents, cd.events || []);
+                            emit();
+                        }
+                    });
                 }
                 if (descriptionsRequested) {
                     if (descData && descData.data) {

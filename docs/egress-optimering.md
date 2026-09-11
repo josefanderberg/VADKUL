@@ -192,32 +192,30 @@ const br = (o, q = 6) => zlib.brotliCompressSync(
 
 ---
 
-## Kvar att göra — i ordning
+## Trappan — status och kvarvarande steg
 
-### 1. Brotli q11 förpackat i scrapern (~15 % på destinations)
+### ✅ 1. Brotli q11 förpackat i scrapern (byggt 2026-09-11, etapp 2)
 
-`/api/events/[layer]` packar med `BROTLI_QUALITY = 6` och kommentaren motiverar
-det med att q11 tar 29 s. Det stämmer (uppmätt 30,7 s) — **men premissen gäller
-bara i request-vägen.** Aggregatet byggs en gång per natt på minin, där 30 s är
-gratis. Mätt på destinations (47k event, 10/9):
+`utils/aggregateBlobs.ts` packar q11 + gzip 9 vid aggregeringen (~40 s totalt,
+gratis på minin) och laddar upp som `blob_<layer>`(+`_<enc>_<N>`-shards, Bytes,
+index sist). Routen använder blobben BARA vid exakt updatedAt-match — annars
+q6-vägen som förut. Uppmätt på skarpa slanka datat: destinations 1,96 → 1,66,
+cards 1,19 → 1,04, descriptions 3,80 → 3,19 MB (−12 till −16 %). Bonus:
+kallstarten läser ~5 MB färdiga bytes i stället för ~35 MB JSON + ompackning.
+Vaktposter: hotfix-aggregate-venue stämplar nytt updatedAt → blobben
+missmatchar av sig själv; venue-läsvakten gäller bara bygg-vägen (blobben bär
+scraperns fixar från aggregeringen — brådskande fix går via data-hotfix).
+**Audit-daemonen måste startas om** efter pull, som vid varje aggregatorändring.
 
-| | storlek | packtid |
-|---|---|---|
-| brotli q6 | 1,91 MB | 0,4 s |
-| brotli q9 | 1,86 MB | 1,2 s |
-| **brotli q11** | **1,62 MB** | 30,7 s |
+### ✅ 2. Lazy cards (byggt 2026-09-11, etapp 2)
 
-Förslag: låt `aggregate-events.ts` lägga den färdigpackade blobben i
-Firestore/Storage och låt routen strömma den i stället för att packa om.
-Behåll q6-vägen som fallback när förpackad blob saknas. Kom ihåg
-audit-daemon-omstarten ovan.
-
-### 2. Lazy cards
-
-Kortlagret hämtas av **varje** besökare — för att kanske öppna tre kort.
-`descriptionsRequested`-mönstret i `linkEventService` finns redan att kopiera
-rakt av. Kolla först vilka vyer som visar kortfälten (bild/värd/pris) utan att
-ett kort är öppet — listor, sök, pinnar — innan lagret görs lazy.
+Kortlagret (~1 MB brotli) hämtas nu först vid begäran, samma gate-mönster som
+descriptions: `requestCards()` triggas av (1) LinkEventCard vid mount och
+(2) första söktermen i (v2)/page.tsx — sökningen matchar hostName + kortets
+url, som bor i lagret. Markörer/räknare/dagslistor/filter bygger helt på
+destinations och påverkas inte. Besökare som bara tittar på kartan laddar
+aldrig lagret: **grundkostnaden är nu 1,66 MB per besökare** (destinations
+q11), 2,70 MB för den som öppnar kort.
 
 ### 3. Tidsfönster
 

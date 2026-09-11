@@ -1824,6 +1824,12 @@ export default function HomePage() {
     // i url). Utan sökterm gäller dag-/intervallfiltret som vanligt.
     // Matchning + rankning bor i utils/eventSearch (FB-klagomålet 11/9).
     const searchQ = normalizeSearchQuery(searchQuery);
+    // Sökningen matchar arrangör (hostName) och kortets url — fält som bor i
+    // det lazy-laddade kortlagret. Första söktermen hämtar in det (idempotent),
+    // så en sökning på "Håkan Hellström"/arrangör inte missar oladdade fält.
+    useEffect(() => {
+        if (searchQ) linkEventService.requestCards();
+    }, [searchQ]);
     const searchFilteredEvents = useMemo(() => {
         if (!searchQ) return filteredEvents;
         return events.filter(evt => eventSearchTier(evt, searchQ) >= 0);

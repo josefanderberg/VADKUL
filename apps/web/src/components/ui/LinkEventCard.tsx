@@ -115,6 +115,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     );
     useEffect(() => {
         let mounted = true;
+        // Kortlagret (bild/värd/pris/affiliate-länk) är också lazy — ett öppnat
+        // kort är signalen att hämta det; mergen pekar om selectedEvent per id.
+        linkEventService.requestCards();
         linkEventService.requestDescriptions().then(() => {
             if (mounted) setDescriptionsPending(false);
         });
