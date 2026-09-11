@@ -109,8 +109,14 @@ export function mapSportalityGame(
 
     const venue = game.venue?.trim() || undefined;
     const series = game.seriesCode?.trim();
-    const parts = [series && series !== cfg.leagueName ? series : cfg.leagueName, game.roundLabel?.trim()]
-        .filter(Boolean);
+    // Serie-koden är bara intressant när matchen spelas i en ANNAN turnering
+    // än ligans egen (CHL-matcher i SHL-flödet). Ligans egen kod ("HA" =
+    // versalerna i "HockeyAllsvenskan") är obegriplig som beskrivning —
+    // skriv hela liganamnet, och alltid lagen/arenan i en hel mening
+    // (Arboga-svepet 11/9: rader med bara "HA" som beskrivning).
+    const initials = cfg.leagueName.replace(/[^A-ZÅÄÖ]/g, '');
+    const comp = series && series !== cfg.leagueName && series !== initials ? series : cfg.leagueName;
+    const round = game.roundLabel?.trim();
 
     return {
         externalId: game.uuid,
@@ -120,7 +126,10 @@ export function mapSportalityGame(
         venueName: venue,
         // Ingen ort i datan — arenanamnet ensamt är den bästa geokodningsfrågan.
         geocodeCandidates: venue ? [venue] : undefined,
-        description: parts.length ? parts.join(' · ') : undefined,
+        description: `${comp}: ${home} möter ${away}`
+            + (venue ? ` i ${venue}` : '')
+            + (round ? ` (${round.charAt(0).toLowerCase()}${round.slice(1)})` : '')
+            + '.',
         organizer: cfg.leagueName,
         hostName: cfg.leagueName,
         category: 'sport',

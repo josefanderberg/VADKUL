@@ -14,6 +14,18 @@ describe('cleanDescription', () => {
         expect(cleanDescription('a<br/>b<br />c')).toBe('a\nb\nc');
     });
 
+    it('strippar taggar som kom HTML-escapade — de blir taggar först efter avkodningen', () => {
+        // Stockholmsmässan 11/9: källan skickar "&lt;p&gt;…&lt;/p&gt;".
+        expect(cleanDescription('&lt;p&gt;Mässan för dig som odlar.&lt;/p&gt;&lt;p&gt;Välkommen!&lt;/p&gt;'))
+            .toBe('Mässan för dig som odlar.\nVälkommen!');
+    });
+
+    it('gör bokstavliga \\n-sekvenser (JSON-strängrester) till radbrytningar', () => {
+        expect(cleanDescription('<p>Föreläsning och samtal.</p>\\nTa med fika.'))
+            .toBe('Föreläsning och samtal.\n\nTa med fika.');
+        expect(cleanDescription('rad1\\r\\nrad2\\tflik')).toBe('rad1\nrad2 flik');
+    });
+
     it('tar bort "Läs mer"-svansar ur utdrag', () => {
         expect(cleanDescription('Bra konsert i kyrkan. Läs mer »')).toBe('Bra konsert i kyrkan.');
         expect(cleanDescription('Great show.\nRead more')).toBe('Great show.');

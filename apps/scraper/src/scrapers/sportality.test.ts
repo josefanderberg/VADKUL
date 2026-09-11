@@ -70,11 +70,20 @@ describe('mapSportalityGame', () => {
         const chl = { ...GAME, seriesCode: 'CHL', homeTeam: { name: 'Rögle BK', code: 'RBK' } };
         const e = mapSportalityGame(chl, CFG, SWE)!;
         expect(e.title).toBe('Rögle BK – Djurgårdens IF Hockey');
-        expect(e.description).toContain('CHL');
+        expect(e.description).toBe('CHL: Rögle BK möter Djurgårdens IF Hockey i Monitor ERP Arena (omgång 3).');
     });
 
-    it('nämner inte serien dubbelt när den är samma som ligan', () => {
-        expect(mapSportalityGame(GAME, CFG, SWE)!.description).toBe('SHL · Omgång 3');
+    it('beskrivningen är en hel mening — aldrig bara serie-koden', () => {
+        expect(mapSportalityGame(GAME, CFG, SWE)!.description)
+            .toBe('SHL: Brynäs möter Djurgårdens IF Hockey i Monitor ERP Arena (omgång 3).');
+        // HockeyAllsvenskans feed har seriesCode "HA" (namnets versaler) —
+        // det ska bli hela liganamnet, inte koden.
+        const ha = mapSportalityGame(
+            { ...GAME, seriesCode: 'HA', roundLabel: undefined, venue: undefined },
+            { baseUrl: 'https://www.hockeyallsvenskan.se', leagueName: 'HockeyAllsvenskan' },
+            SWE,
+        )!;
+        expect(ha.description).toBe('HockeyAllsvenskan: Brynäs möter Djurgårdens IF Hockey.');
     });
 
     it('hoppar över spelade matcher', () => {

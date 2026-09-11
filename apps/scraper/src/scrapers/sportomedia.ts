@@ -90,7 +90,12 @@ export function mapSportomediaMatch(
         venueName: venue,
         // Ingen ort i datan — arenanamnet ensamt är bästa geokodningsfrågan.
         geocodeCandidates: venue ? [venue] : undefined,
-        description: m.round != null ? `${cfg.leagueName} · Omgång ${m.round}` : cfg.leagueName,
+        // Hel svensk mening, inte "Allsvenskan · Omgång 21" (Arboga-svepet
+        // 11/9) — samma format som swehockey/sportality.
+        description: `${cfg.leagueName}: ${home} möter ${away}`
+            + (venue ? ` i ${venue}` : '')
+            + (m.round != null ? ` (omgång ${m.round})` : '')
+            + '.',
         organizer: cfg.leagueName,
         hostName: cfg.leagueName,
         category: 'sport',

@@ -48,13 +48,16 @@ describe('mapSportomediaMatch', () => {
         expect(e.geocodeCandidates).toEqual(['Nordic Wellness Arena']);
     });
 
-    it('skriver omgång i beskrivningen när den finns', () => {
-        expect(mapSportomediaMatch(M, CFG)!.description).toBe('Allsvenskan · Omgång 21');
-        expect(mapSportomediaMatch({ ...M, round: undefined }, CFG)!.description).toBe('Allsvenskan');
+    it('beskrivningen är en hel mening med lag, arena och omgång', () => {
+        expect(mapSportomediaMatch(M, CFG)!.description)
+            .toBe('Allsvenskan: BK Häcken möter Västerås SK i Nordic Wellness Arena (omgång 21).');
+        expect(mapSportomediaMatch({ ...M, round: undefined }, CFG)!.description)
+            .toBe('Allsvenskan: BK Häcken möter Västerås SK i Nordic Wellness Arena.');
     });
 
     it('hanterar omgång 0 utan att tappa den', () => {
-        expect(mapSportomediaMatch({ ...M, round: 0 }, CFG)!.description).toBe('Allsvenskan · Omgång 0');
+        expect(mapSportomediaMatch({ ...M, round: 0 }, CFG)!.description)
+            .toBe('Allsvenskan: BK Häcken möter Västerås SK i Nordic Wellness Arena (omgång 0).');
     });
 
     it('tål avslutande slash i siteBase', () => {

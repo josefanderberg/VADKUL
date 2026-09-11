@@ -109,13 +109,24 @@ export function truncateAtBoundary(s: string, max: number): string {
  * sist, vid ordgräns (truncateAtBoundary), aldrig mitt i ett ord.
  */
 export function cleanDescription(raw: unknown, maxLen = DEFAULT_DESCRIPTION_MAX): string {
-    const text = decodeHtmlEntities(
-        (raw ?? '')
-            .toString()
-            // Radbrytande taggar → \n så styckena överlever tag-strippen.
-            .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6])[^>]*>/gi, '\n')
-            .replace(/<[^>]+>/g, ' '),
-    )
+    // Radbrytande taggar → \n så styckena överlever tag-strippen.
+    const stripTags = (s: string) => s
+        .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6])[^>]*>/gi, '\n')
+        .replace(/<[^>]+>/g, ' ');
+    const text = stripTags(decodeHtmlEntities(
+        stripTags(
+            (raw ?? '')
+                .toString()
+                // JSON-strängrester ur vissa källor: bokstavliga \n/\t/\r-sekvenser
+                // (Stockholmsmässan/Huddinge 11/9 hade "</p>\n" i klartext).
+                .replace(/\\r\\n|\\n/g, '\n')
+                .replace(/\\[rt]/g, ' '),
+        ),
+        // Tag-strippen körs IGEN efter avkodningen: källor som skickar
+        // beskrivningen HTML-ESCAPAD ("&lt;p&gt;…") blir taggar först när
+        // entiteterna avkodats — en enda stripp före avkodningen släppte
+        // igenom dem som synlig "<p>"-text (Stockholmsmässan 11/9).
+    ))
         .replace(/\[…\]|\[\.\.\.\]/g, '')
         // Länktext som följt med ur listkort/utdrag: "… Läs mer »", "Read more".
         .replace(/\s*(?:läs mer|read more|visa mer|see more)(?:\s+här)?\s*[»›→…]*\s*$/i, '')
