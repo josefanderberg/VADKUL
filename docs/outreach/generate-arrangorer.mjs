@@ -48,12 +48,33 @@ const nearestCity = (lat, lng) => {
 };
 const originOf = (id) => { try { return new URL(id).hostname.replace(/^www\./, ''); } catch { return null; } };
 
+// Kortlagret bär `id` (gammalt aggregat) eller `h` = eventKey(url) (slankt
+// kortlager sedan 2026-09-11) — slå upp på båda. Kopia av
+// apps/web/src/utils/eventKey.ts; facit-kollen nedan fäller skriptet om
+// kopian glidit isär (samma värde som i eventKey.test.ts).
+function eventKey(url) {
+    let h1 = 0xdeadbeef;
+    let h2 = 0x41c6ce57;
+    for (let i = 0; i < url.length; i++) {
+        const ch = url.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+if (eventKey('https://www.facebook.com/events/1822828132503034/') !== '1jv0q4ni584') {
+    throw new Error('eventKey-kopian matchar inte facit — synka med apps/web/src/utils/eventKey.ts');
+}
+
 const [destRaw, cardRaw] = await Promise.all([
     readFile(pub('events-destinations.json'), 'utf8'),
     readFile(pub('events-cards.json'), 'utf8'),
 ]);
 const dests = JSON.parse(destRaw).events;
-const cards = new Map(JSON.parse(cardRaw).events.map((c) => [c.id, c]));
+const cardMap = new Map(JSON.parse(cardRaw).events.map((c) => [c.h ?? c.id, c]));
+const cards = { get: (id) => cardMap.get(id) ?? cardMap.get(eventKey(id)) };
 
 const now = Date.now();
 const groups = new Map(); // hostName → { count, domains: Map, cities: Map, examples: [] }

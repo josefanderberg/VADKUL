@@ -16,12 +16,16 @@
  * SCRAPER_SQLITE_PATH och filen får inte redan finnas.
  *
  * destinations[i] och cards[i] byggs ur SAMMA rad i aggregate-events.ts
- * (index-linjerade) — verifieras per rad via id-jämförelse.
+ * (index-linjerade) — verifieras per rad: kortet bär `id` (gammalt aggregat)
+ * eller `h` = eventKey(url) (slankt kortlager sedan 2026-09-11). Seedern
+ * måste klara båda — Stadsinlägg-workflowen läser de incheckade filerna, och
+ * de byter format när minin byggt om aggregatet.
  *
  * Körning:  SCRAPER_SQLITE_PATH=/tmp/events-aggregat.db npx ts-node src/scripts/seed-sqlite-from-aggregate.ts
  */
 import fs from 'fs';
 import path from 'path';
+import { eventKey } from '../utils/eventKey';
 
 const OUT = process.env.SCRAPER_SQLITE_PATH;
 if (!OUT || OUT === ':memory:') {
@@ -46,6 +50,10 @@ if (!Array.isArray(dest.events) || !Array.isArray(cards.events) || dest.events.l
     process.exit(1);
 }
 
+// Samma event i båda lagren? Slankt kort: h = eventKey(dest-id). Gammalt: id.
+const sameEvent = (d: { id: string }, c: { id?: string; h?: string }) =>
+    typeof c.h === 'string' ? c.h === eventKey(d.id) : c.id === d.id;
+
 const now = new Date().toISOString();
 const ins = sqlite.prepare(`INSERT OR IGNORE INTO link_events
     (url, title, time, endDate, locationName, category, lat, lng,
@@ -56,9 +64,9 @@ let inserted = 0, misaligned = 0;
 sqlite.transaction(() => {
     for (let i = 0; i < dest.events.length; i++) {
         const d = dest.events[i], c = cards.events[i];
-        // Samma rad i båda lagren har samma id — annars är zipningen fel och
-        // raden hoppas hellre än att få fel isLocationVerified/hostName.
-        if (d.id !== c.id) { misaligned++; continue; }
+        // Samma rad i båda lagren ska vara samma event — annars är zipningen
+        // fel och raden hoppas hellre än att få fel isLocationVerified/hostName.
+        if (!sameEvent(d, c)) { misaligned++; continue; }
         const r = ins.run(
             d.id, d.title ?? '', d.time ?? '', d.endDate ?? null,
             d.locationName ?? '', d.category ?? 'other',

@@ -2,6 +2,7 @@
 // ETT uppslag per event-id med precis de fält eventkortet behöver. Ingen
 // Firestore här (testbart); routen läser lagren och cachar det färdiga
 // indexet per updatedAt.
+import { buildCardIndex, type CardLike } from '@/utils/eventKey';
 
 export type DeepLinkEvent = {
     id: string;
@@ -55,12 +56,11 @@ export function buildDeepLinkEventIndex(
     cardEvents: unknown[],
     descriptions: Record<string, string>,
 ): Map<string, DeepLinkEvent> {
-    const cards = new Map<string, Record<string, unknown>>();
-    for (const c of cardEvents) {
-        if (c && typeof c === 'object' && typeof (c as any).id === 'string') {
-            cards.set((c as any).id, c as Record<string, unknown>);
-        }
-    }
+    // Tolerant uppslag: kortet bär `id` (gammalt aggregat) eller `h` (slankt,
+    // se utils/eventKey) — minin och webben byter format vid olika tidpunkter.
+    const lookupCard = buildCardIndex(
+        cardEvents.filter((c): c is CardLike & Record<string, unknown> => !!c && typeof c === 'object'),
+    );
     const index = new Map<string, DeepLinkEvent>();
     for (const raw of destEvents) {
         if (!raw || typeof raw !== 'object') continue;
@@ -68,7 +68,7 @@ export function buildDeepLinkEventIndex(
         if (typeof e.id !== 'string' || !e.id) continue;
         if (typeof e.title !== 'string' || !e.title) continue;
         if (typeof e.time !== 'string' || !e.time) continue;
-        const card = cards.get(e.id);
+        const card = lookupCard(e.id);
         const desc = descriptions[e.id];
         const coverImage = usableImageUrl(card?.coverImage);
         const event: DeepLinkEvent = {

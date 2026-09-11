@@ -225,6 +225,10 @@ async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>):
         .sort((a, b) => Date.parse(a.time) - Date.parse(b.time))
         .map(e => {
             const card = lookupCard(e.id);
+            // Slanka kortlagret skickar url bara när publicUrl() skrivit om den;
+            // annars ÄR destinations-id:t länken. Utan fallbacken skulle ett
+            // event vars råa url redan är en affiliate-länk tappa BOKA-knappen.
+            const href = card?.url ?? e.id;
             return {
                 id: e.id,
                 title: e.title,
@@ -244,7 +248,7 @@ async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>):
                 description: descs.get(e.id),
                 repeatCount: titleFreq.get(normTitle(e.title)) ?? 1,
                 pop: e.pop || undefined,
-                bookUrl: isAffiliateUrl(card?.url) ? card!.url : undefined,
+                bookUrl: isAffiliateUrl(href) ? href : undefined,
             };
         });
     return { events, updatedAt };

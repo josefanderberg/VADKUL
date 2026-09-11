@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildDeepLinkEventIndex, usableImageUrl } from './deepLinkEventIndex';
+import { eventKey } from '@/utils/eventKey';
 
 const dest = (over: Record<string, unknown> = {}) => ({
     id: 'https://example.se/event/1',
@@ -72,6 +73,32 @@ describe('buildDeepLinkEventIndex', () => {
         const ev = index.get('https://example.se/event/1')!;
         expect('price' in ev).toBe(false);
         expect('attendees' in ev).toBe(false);
+    });
+
+    // Slanka kortlagret (2026-09-11): kortet bär h = eventKey(url) i stället
+    // för id, och utelämnar tomma fält + url som är lika med id:t. Djuplänks-
+    // kortet ska se EXAKT likadant ut oavsett vilket format minin byggt.
+    it('slankt kort (h) ger samma djuplänks-event som gammalt kort (id)', () => {
+        const id = 'https://www.ticketmaster.se/event/1';
+        const affiliate = 'https://ticketmaster.evyy.net/c/7528311/2038747/23885?u=x';
+        const fields = { hostName: 'Arenan', coverImage: 'https://example.se/b.jpg', price: '450 kr', attendees: 7, isLocationVerified: true, isHostVerified: true };
+        const fromOld = buildDeepLinkEventIndex([dest({ id })], [{ id, url: affiliate, ...fields }], {}).get(id);
+        const fromSlim = buildDeepLinkEventIndex([dest({ id })], [{ h: eventKey(id), url: affiliate, ...fields }], {}).get(id);
+        expect(fromSlim).toEqual(fromOld);
+        expect(fromSlim!.url).toBe(affiliate);
+    });
+
+    it('slankt kort utan url → ingen url i svaret (klienten faller tillbaka på id:t)', () => {
+        const id = 'https://example.se/event/1';
+        const ev = buildDeepLinkEventIndex([dest({ id })], [{ h: eventKey(id), hostName: 'Parkscenen' }], {}).get(id)!;
+        expect(ev.hostName).toBe('Parkscenen');
+        expect('url' in ev).toBe(false);
+    });
+
+    it('tål skräp i kortlagret (null, strängar) utan att fälla bygget', () => {
+        const id = 'https://example.se/event/1';
+        const index = buildDeepLinkEventIndex([dest({ id })], [null, 'x', 42, { h: eventKey(id), hostName: 'Parkscenen' }], {});
+        expect(index.get(id)!.hostName).toBe('Parkscenen');
     });
 });
 
