@@ -1,3 +1,4 @@
+import { safeJsonLd } from '@/utils/jsonLd';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -163,9 +164,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 besök-kolumn på /evenemang. Sidan är statisk, så räknandet
                 måste ske klient-side. */}
             <CityVisitBeacon stad={city.slug} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
             <TopNav backHref="/evenemang" backLabel="Evenemang i Sverige" ctaLabel="Se allt på kartan" ctaHref={cityMapHref(city)} />
             <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
                 <h1 className="text-3xl font-black text-[#006AA7] dark:text-sky-400 tracking-tight">

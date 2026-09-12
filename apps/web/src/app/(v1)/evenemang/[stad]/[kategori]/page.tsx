@@ -1,3 +1,4 @@
+import { safeJsonLd } from '@/utils/jsonLd';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -141,9 +142,9 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                 besök-kolumn (beaconen dedupar per dag, så stad+kategori
                 samma dag blir ändå ett besök). */}
             <CityVisitBeacon stad={city.slug} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
             <TopNav
                 backHref={`/evenemang/${city.slug}`}
                 backLabel={`Alla evenemang i ${city.name}`}

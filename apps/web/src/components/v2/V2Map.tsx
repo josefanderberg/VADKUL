@@ -3591,17 +3591,25 @@ export default function V2Map({
                     ? `--pop-scale: ${baseScale}; animation: none !important; opacity: 1 !important; transform: ${scaleStyle} !important;`
                     : `--pop-scale: ${baseScale}; transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
 
+                // OBS: emojin sätts med textContent NEDANFÖR — aldrig i mallen.
+                // Fältet kommer från användare (tips) och AI-audit av skrapat
+                // innehåll; interpolerad i innerHTML var det en lagrad XSS
+                // (OWASP-svepet 12/9). Övriga interpolationer är interna
+                // (tal/stilsträngar). Samma textContent-mönster som gruppens
+                // bläddring redan använder längre ner.
                 markerData.element.innerHTML = `
                     <div class="custom-marker-wrapper" style="${opacityStyle}; ${wrapperStyle}">
                         <div class="pin-element" style="${pinAnimationStyle}">
                             <div class="pin-bubble" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
-                                <div class="pin-emoji">${emoji}</div>
+                                <div class="pin-emoji"></div>
                             </div>
                             ${countBadge}
                             ${boostBadge}
                         </div>
                     </div>
                 `;
+                const emojiTarget = markerData.element.querySelector('.pin-emoji');
+                if (emojiTarget) emojiTarget.textContent = emoji;
             }
 
             // Vald grupp med flera event: byt symbol till det event man tittar på,

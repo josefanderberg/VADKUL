@@ -1,3 +1,5 @@
+import { usableImageUrl } from '@/lib/deepLinkEventIndex';
+import { eventOutlink } from '@/utils/eventExpand';
 import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil } from 'lucide-react';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
@@ -268,7 +270,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             title: linkEvent.title,
             hostName: linkEvent.hostName,
         });
-        window.open(linkEvent.url, '_blank', 'noopener,noreferrer');
+        // Schema-vakt (OWASP-svepet 12/9): url:en kan vara fritext från ett
+        // användartips — bara http(s) får öppnas (javascript:/data: stoppas).
+        // Samma vakt som stadssidornas eventOutlink.
+        const safeUrl = eventOutlink(linkEvent.id, linkEvent.url);
+        if (safeUrl) window.open(safeUrl, '_blank', 'noopener,noreferrer');
     };
 
     const handleToggleSave = (e: React.MouseEvent) => {
@@ -648,7 +654,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         >
                             <img
                                 data-cover-img
-                                src={linkEvent.coverImage as string}
+                                src={usableImageUrl(linkEvent.coverImage)}
                                 alt={linkEvent.title}
                                 onError={() => setCoverFailed(true)}
                                 className="w-full h-56 object-cover"
@@ -718,7 +724,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                                         >
                                                             {a.photoURL ? (
                                                                 // eslint-disable-next-line @next/next/no-img-element
-                                                                <img src={a.photoURL} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                                                <img src={usableImageUrl(a.photoURL)} alt="" className="w-6 h-6 rounded-full object-cover" />
                                                             ) : (
                                                                 <span className="w-6 h-6 rounded-full bg-[#006AA7] text-white text-[11px] font-black flex items-center justify-center">
                                                                     {a.name.charAt(0).toUpperCase()}

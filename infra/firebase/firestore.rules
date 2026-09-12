@@ -189,6 +189,49 @@ service cloud.firestore {
       // bygdegårdsfester) har ingen sida att peka på. Med länk presenteras
       // tipset som ett vanligt länk-event. Valideringen stoppar
       // javascript:-/data:-URL:er.
+      // Fältvalidering för HELA dokumentet efter skrivningen — delas av
+      // create och update (OWASP-svepet 12/9: update saknade all validering,
+      // så en ägare kunde efterhandsändra url till javascript:, sätta HTML i
+      // emoji, skriva om hostUid eller lägga in obegränsade fält).
+      function validLinkEventDoc(d) {
+        return d.title is string
+          && d.title.size() >= 3
+          && d.title.size() <= 120
+          && d.lat is number
+          && d.lng is number
+          && d.status == 'published'
+          && (!d.keys().hasAny(['url'])
+              || (d.url is string
+                  && (d.url == ''
+                      || (d.url.size() <= 500 && d.url.matches('https?://.*')))))
+          && (!d.keys().hasAny(['price'])
+              || (d.price is string && d.price.size() <= 40))
+          // emoji ritas på kartmarkören: kort sträng, aldrig taggtecken.
+          && (!d.keys().hasAny(['emoji'])
+              || (d.emoji is string && d.emoji.size() <= 16
+                  && !d.emoji.matches('.*[<>].*')))
+          && (!d.keys().hasAny(['description'])
+              || (d.description is string && d.description.size() <= 5000))
+          && (!d.keys().hasAny(['hostName'])
+              || (d.hostName is string && d.hostName.size() <= 80))
+          && (!d.keys().hasAny(['locationName'])
+              || (d.locationName is string && d.locationName.size() <= 200))
+          && (!d.keys().hasAny(['category'])
+              || (d.category is string && d.category.size() <= 40))
+          // Bildkällan får bara vara https (visas i <img> hos andra besökare;
+          // '' = ingen bild, som klienten skickar).
+          && (!d.keys().hasAny(['coverImage'])
+              || (d.coverImage is string
+                  && (d.coverImage == ''
+                      || (d.coverImage.size() <= 500
+                          && d.coverImage.matches('https://.*')))))
+          // Klienten skriver hidden: 0/1, andra vägar bool — båda är ok.
+          && (!d.keys().hasAny(['hidden']) || d.hidden is bool || d.hidden is int)
+          && (!d.keys().hasAny(['repeatWeekly']) || d.repeatWeekly is bool)
+          && (!d.keys().hasAny(['repeatWeeks'])
+              || (d.repeatWeeks is int && d.repeatWeeks >= 1 && d.repeatWeeks <= 52));
+      }
+
       allow create: if isAuthenticated()
         && request.resource.data.userCreated == true
         && request.resource.data.hostUid == request.auth.uid
@@ -206,24 +249,8 @@ service cloud.firestore {
         // ägaren raderar); nya klienter märker alltid. När den gamla bundlen är
         // ute ur omlopp kan villkoret skärpas till == isAnonymous().
         && (isAnonymous() || request.resource.data.get('anonTip', false) == false)
-        && request.resource.data.title is string
-        && request.resource.data.title.size() >= 3
-        && request.resource.data.title.size() <= 120
-        && request.resource.data.lat is number
-        && request.resource.data.lng is number
-        && request.resource.data.status == 'published'
-        && (!request.resource.data.keys().hasAny(['url'])
-            || (request.resource.data.url is string
-                && (request.resource.data.url == ''
-                    || (request.resource.data.url.size() <= 500
-                        && request.resource.data.url.matches('https?://.*')))))
-        // Pris/entré är fritext ("120 kr", "Gratis", "Medlemmar halva priset")
-        // — samma brokiga fält som scrapern levererar. Bara längden begränsas;
-        // fältet visas som en etikett och kan aldrig bli en länk eller ett tal
-        // vi räknar på.
-        && (!request.resource.data.keys().hasAny(['price'])
-            || (request.resource.data.price is string
-                && request.resource.data.price.size() <= 40))
+        // Pris/entré-kommentaren och alla fältkrav bor i validLinkEventDoc.
+        && validLinkEventDoc(request.resource.data)
         && request.resource.data.keys().hasOnly([
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
@@ -239,7 +266,24 @@ service cloud.firestore {
         && resource.data.userCreated == true
         && resource.data.hostUid == request.auth.uid
         && !request.resource.data.diff(resource.data).affectedKeys()
-             .hasAny(['featuredUntil', 'featuredPaymentId']);
+             .hasAny(['featuredUntil', 'featuredPaymentId'])
+        // Samma fältkrav som vid skapandet — en uppdatering är inte ett
+        // frikort (12/9). Whitelistan har dessutom boost-fälten: ett REDAN
+        // boostat dokument bär dem, och diff-vakten ovan ser till att ägaren
+        // inte rör dem.
+        && validLinkEventDoc(request.resource.data)
+        && request.resource.data.keys().hasOnly([
+            'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
+            'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
+            'description', 'createdAt', 'isLocationVerified', 'coverImage',
+            'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks', 'price',
+            'featuredUntil', 'featuredPaymentId'
+        ])
+        // Identitets- och härkomstfälten är oföränderliga: ägarskap ska inte
+        // kunna flyttas och ett tips inte tvättas till "arrangerat av mig".
+        && request.resource.data.userCreated == resource.data.userCreated
+        && request.resource.data.hostUid == resource.data.hostUid
+        && request.resource.data.get('anonTip', false) == resource.data.get('anonTip', false);
 
       // Radera: sitt eget användarskapade event — ELLER vilket tips som helst
       // som lämnats UTAN konto. Ett anonymt tips har ingen ägare som kan städa
@@ -268,6 +312,12 @@ service cloud.firestore {
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.name is string
           && request.resource.data.name.size() <= 80
+          // Profilbilden visas i <img> för alla som öppnar kortet — bara https.
+          && (!request.resource.data.keys().hasAny(['photoURL'])
+              || request.resource.data.photoURL == null
+              || (request.resource.data.photoURL is string
+                  && request.resource.data.photoURL.size() <= 500
+                  && request.resource.data.photoURL.matches('https://.*')))
           && request.resource.data.keys().hasOnly(['uid', 'name', 'photoURL', 'createdAt']);
         allow delete: if isAuthenticated() && attendeeId == request.auth.uid;
       }

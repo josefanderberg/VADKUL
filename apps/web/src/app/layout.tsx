@@ -1,3 +1,4 @@
+import { safeJsonLd } from '@/utils/jsonLd';
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { Fredoka } from 'next/font/google';
@@ -142,7 +143,7 @@ export default async function RootLayout({
             <body>
                 <script
                     type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                    dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
                 />
                 <Providers>
                     {children}
