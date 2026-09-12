@@ -3389,18 +3389,31 @@ export default function V2Map({
             // cyklar genom flera event och behåller därför standardutseendet.
             const isUserCreated = count === 1 && isVadkulHostedEvent(rep);
 
-            // Boostat ("featured") event: betald framlyftning. Bara enskilda
-            // markörer (grupper cyklar och behåller standardutseende). Sedan
-            // 18/8 kan även SKRAPADE event vara featured (eventBoosts-
-            // overlayn) — de hålls tända via sticky-setet och lyfts i
-            // staplingen via sortKey, precis som userCreated.
-            const isFeatured = count === 1 && isEventFeatured(rep);
+            // Boostat ("featured") event: betald framlyftning. Sedan 18/8 kan
+            // även SKRAPADE event vara featured (eventBoosts-overlayn) — de
+            // hålls tända via sticky-setet och lyfts i staplingen via sortKey,
+            // precis som userCreated. GRUPPNIVÅ med samma villkor som GL-
+            // lagrets boostedRep: förr krävdes count === 1, så guldet + ⭐:n
+            // försvann vid KLICK på en boostad bricka i en multi-grupp (t.ex.
+            // en boostad serie med flera tillfällen på samma plats) — GL-
+            // brickan bär gruppens guld men byts mot DOM-markören vid val.
+            // Passerad boost = förbrukad, samma isEventPast som GL.
+            const isFeatured = group.some(e => isEventFeatured(e) && !isEventPast(e, Date.now()));
 
-            // Ticketmaster: guldbricka som boosten (ägarbeslut 1/9) — bara
-            // enskilda markörer, precis som featured. Guldet gäller kropp/kant/
-            // gloria; ⭐-badgen förblir boostens kvitto. Passerat TM-event =
-            // vanlig bricka (samma isEventPast som all dämpning).
-            const isTicketmasterGold = count === 1 && !isFeatured && isTicketmasterEvent(rep) && !isEventPast(rep, Date.now());
+            // Stjärn-gåvan lyser med SAMMA guld + ⭐ som boosten i GL-lagret
+            // (drawStar) — speglas här, annars tappar en stjärnmärkt bricka
+            // guldet vid klick precis som boost-buggen ovan.
+            const isStarredGold = group.some(e => starredEventIds.has(e.id) && !isEventPast(e, Date.now()));
+
+            // Guld-kropp MED ⭐-badge (boost/stjärna). TM-guldet nedan är utan ⭐.
+            const isGoldStar = isFeatured || isStarredGold;
+
+            // Ticketmaster: guldbricka som boosten (ägarbeslut 1/9). Guldet
+            // gäller kropp/kant/gloria; ⭐-badgen förblir boostens/stjärnans
+            // kvitto. GRUPPNIVÅ som GL-lagrets drawGold (group.some), samma
+            // klick-skäl som ovan. Passerat TM-event = vanlig bricka (samma
+            // isEventPast som all dämpning).
+            const isTicketmasterGold = !isGoldStar && group.some(e => isTicketmasterEvent(e) && !isEventPast(e, Date.now()));
 
             // Skapa en stateKey för att undvika att bygga om DOM i onödan.
             // För multi-event-grupper använder vi ett stabilt 'multi'-värde så
@@ -3408,7 +3421,7 @@ export default function V2Map({
             // ner och byggs upp igen + pop-in-animationen återstartas). Själva
             // emoji-bytet sker kirurgiskt längre ner.
             const stateKeyCategory = count > 1 ? 'multi' : (rep.category ?? 'other');
-            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isUserCreated}:${isFeatured}:${isTicketmasterGold}`;
+            const stateKey = `${isSelected}:${isRevealed}:${isSaved}:${isDiscarded}:${count}:${stateKeyCategory}:${startsWithinHour}:${isUserCreated}:${isFeatured}:${isStarredGold}:${isTicketmasterGold}`;
 
             let markerData = markersRef.current.get(key);
 
@@ -3497,7 +3510,7 @@ export default function V2Map({
                 // bricka (samma gröna som skapa-flödet); guld = rätt svar i spelet.
                 // Prioritet: vald (blå) > guld > inom 1 timme (orange) > VADKUL-
                 // skapad (grön) > sparad (ljusblå) > kategori-färg > standard (mörk).
-                const pinBg = isFeatured || isTicketmasterGold
+                const pinBg = isGoldStar || isTicketmasterGold
                     ? 'linear-gradient(145deg, #fde68a 0%, #f59e0b 52%, #b45309 100%)'
                     : isUserCreated
                     ? 'linear-gradient(145deg, #34d399 0%, #059669 55%, #047857 100%)'
@@ -3508,7 +3521,7 @@ export default function V2Map({
                     : BRICKA_DARK_BG;
                 const pinBorder = isSelected
                     ? '3px solid #ffffff'
-                    : isFeatured || isTicketmasterGold
+                    : isGoldStar || isTicketmasterGold
                     ? '3px solid #fbbf24'
                     : isSaved
                     ? '2px solid #5BA3CC'
@@ -3524,7 +3537,7 @@ export default function V2Map({
                 // gloria och VADKUL-skapade en mjuk grön — båda ska synas på avstånd.
                 const pinShadow = isSelected
                     ? '0 6px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2)'
-                    : isFeatured || isTicketmasterGold
+                    : isGoldStar || isTicketmasterGold
                     ? '0 0 0 4px rgba(245,158,11,0.30), 0 6px 20px rgba(180,83,9,0.50)'
                     : startsWithinHour
                     ? '0 0 0 3px rgba(249,115,22,0.28), 0 6px 18px rgba(249,115,22,0.40)'
@@ -3565,9 +3578,11 @@ export default function V2Map({
                     ? `<div class="badge-count">${count > 99 ? '99+' : count}</div>`
                     : (isSaved ? '<div class="badge-saved"></div>' : '');
 
-                // Boostat event: liten stjärn-badge i övre vänstra hörnet (undviker
-                // sparad-pricken uppe till höger). Markerar betald framlyftning.
-                const boostBadge = isFeatured
+                // Boostat/stjärnmärkt event: liten stjärn-badge i övre vänstra
+                // hörnet (undviker sparad-pricken uppe till höger). Markerar
+                // betald framlyftning/stjärn-gåvan — samma ⭐ som GL bakar för
+                // drawStar. TM-guld får INGEN ⭐ (stjärnan är boostens kvitto).
+                const boostBadge = isGoldStar
                     ? '<div style="position:absolute;top:-5px;left:-5px;width:18px;height:18px;border-radius:50%;background:linear-gradient(145deg,#fde68a,#f59e0b);box-shadow:0 1px 4px rgba(180,83,9,0.6);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;z-index:2;">⭐</div>'
                     : '';
 
@@ -3620,8 +3635,10 @@ export default function V2Map({
                 const emojiEl = markerData.element.querySelector('.pin-emoji');
                 if (emojiEl && emojiEl.textContent !== selEmoji) emojiEl.textContent = selEmoji;
                 // Brickans kropp följer det bläddrade eventet (samma skäl som i
-                // cyclern). Fast tillstånd (sparad) äger färgen och rörs ej.
-                if (!isSaved) {
+                // cyclern). Fasta tillstånd (sparad, guld) äger färgen och rörs
+                // ej — guldet sitter på GRUPPEN (som GL:s drawGold) och ska inte
+                // blinka bort när man bläddrar till ett oboostat event i högen.
+                if (!isSaved && !isGoldStar && !isTicketmasterGold) {
                     const bubble = markerData.element.querySelector('.pin-bubble') as HTMLElement | null;
                     if (bubble) bubble.style.background = brickaBodyBg(inGroupSelected);
                 }
@@ -3649,8 +3666,9 @@ export default function V2Map({
         });
     // minuteTick håller "börjar inom 1 timme"-orangen i takt med klockan även
     // när kartan står helt stilla (stateKey ser till att DOM bara byggs om när
-    // statusen faktiskt ändrats).
-    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, minuteTick]);
+    // statusen faktiskt ändrats). starredEventIds: guld-brickan speglar GL:s
+    // drawStar och måste byggas om när en stjärna tänds/släcks.
+    }, [visibleGroups, selectedEvent, savedEventIds, discardedEventIds, starredEventIds, minuteTick]);
 
     // Bakgrunden bakom kartan syns vid snabb panorering (innan tiles laddat)
     // och som "rymd" bakom klotet — nöjesfältets landfärg, så det aldrig
