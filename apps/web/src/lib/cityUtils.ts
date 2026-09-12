@@ -62,6 +62,9 @@ export const CITIES: City[] = [
     { slug: 'katrineholm',   name: 'Katrineholm',   lat: 58.9967, lng: 16.2089, region: 'sodermanland', population: 35000 },
     { slug: 'karlshamn',     name: 'Karlshamn',     lat: 56.1706, lng: 14.8630, region: 'blekinge', population: 32000 },
     { slug: 'monsteras',     name: 'Mönsterås',     lat: 57.0394, lng: 16.4421, region: 'kalmar', population: 13000 },
+    // Efterfrågad av medlem vid registrering (12/9) — listan är också konto-
+    // väljarens städer (AuthModal/ProfilePanel), inte bara segmentering.
+    { slug: 'leksand',       name: 'Leksand',       lat: 60.7305, lng: 14.9970, region: 'dalarna', population: 16000 },
 ];
 
 const BY_SLUG = new Map(CITIES.map(c => [c.slug, c]));
