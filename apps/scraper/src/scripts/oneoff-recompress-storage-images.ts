@@ -16,7 +16,7 @@
  * cache. Vinstvakten i optimeraren (≥15 % mindre + avkodbart) gör att
  * tveksamma objekt lämnas orörda. sourceUrl-metadatan bevaras.
  *
- * Kör:  npx ts-node src/scripts/oneoff-recompress-storage-images.ts [--apply] [--limit=N] [--min-bytes=150000]
+ * Kör:  npx ts-node src/scripts/oneoff-recompress-storage-images.ts [--apply] [--limit=N] [--min-bytes=150000] [--concurrency=N]
  */
 
 import { bucket } from '../config/firebase';
@@ -29,7 +29,7 @@ const arg = (n: string, d: number) => {
 };
 const LIMIT = arg('limit', Infinity);
 const MIN_BYTES = arg('min-bytes', 150_000);
-const CONCURRENCY = 6;
+const CONCURRENCY = arg('concurrency', 6);
 const CACHE = 'public, max-age=31536000, immutable';
 
 async function main() {
