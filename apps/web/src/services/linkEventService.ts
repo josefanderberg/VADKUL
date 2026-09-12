@@ -4,6 +4,7 @@ import { doc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, upda
 import { getAuthHeaders } from '../lib/authHeaders';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildCardIndex } from '../utils/eventKey';
+import { timelineWindowRange, type TimelineWindowRange } from '../utils/timelineWindow';
 
 /**
  * Är eventet boostat just nu? Sant om featuredUntil finns och ligger i framtiden.
@@ -294,6 +295,22 @@ const descriptionsGate = new Promise<void>((res) => { releaseDescriptionsGate = 
 let cardsRequested = false;
 let releaseCardsGate: (() => void) | null = null;
 const cardsGate = new Promise<void>((res) => { releaseCardsGate = res; });
+// ── Tidsfönstret: hela tidslinjen hämtas först när den BEHÖVS ──────────────
+// Standardlasten är de närmaste TIMELINE_WINDOW_DAYS dagarna (58 % av eventen,
+// 1,21 mot 1,66 MB — och framför allt: säsongsscheman som skrapas in månader i
+// förväg landar i en svans som aldrig laddas). Fulla lagret begärs av sidan
+// via requestFullTimeline()/ensureTimelineCovers(): sökning (går över alla
+// dagar), datumbläddring nära fönsterkanten, djuplänk bortom fönstret — samt
+// härifrån när en aktiv boost ligger utanför fönstret (boost-löftet "syns
+// varje dag" får aldrig bero på fönstret). Gaten är engångs, som de andra.
+let fullTimelineRequested = false;
+let releaseTimelineGate: (() => void) | null = null;
+const timelineGate = new Promise<void>((res) => { releaseTimelineGate = res; });
+// Epoch-ms för slutet på den data som faktiskt är laddad — null = hela
+// tidslinjen. UI:t läser den via timelineHorizonMs() (varje full-landning
+// följs av emit → re-render, så en getter räcker).
+let loadedHorizonMs: number | null = null;
+
 let signalDescriptionsSettled: (() => void) | null = null;
 // Löser ut när ett descriptions-svar behandlats (även tomt/misslyckat —
 // kortet ska visa "Ingen beskrivning tillgänglig", inte vänta för evigt).
@@ -338,6 +355,26 @@ async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'):
         console.error(`Static JSON fetch failed for layer "${layerName}":`, e);
     }
 
+    return null;
+}
+
+/**
+ * Fönster-slicen av destinations (?from/to ur timelineWindowRange — samma
+ * kvantiserade form som dagsslicen, så CDN:en cachar EN per dygn). Samma
+ * tvåförsöks-mönster som fetchLayer; null → anroparen tar fulla lagret
+ * (som också är fallbacken när routen saknar slice-stödets nya spann).
+ */
+async function fetchTimelineWindow(range: TimelineWindowRange): Promise<any> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const res = await fetch(`/api/events/destinations?from=${encodeURIComponent(range.fromIso)}&to=${encodeURIComponent(range.toIso)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.events?.length) return data;
+            }
+        } catch { /* omtag nedan */ }
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+    }
     return null;
 }
 
@@ -439,6 +476,28 @@ export const linkEventService = {
     /** Kartan har målat första prick-rundan → cards/descriptions får hämtas
      *  (se awaitHeavyLayersGate). Idempotent; säkerhetsnätet släpper ändå. */
     releaseHeavyLayers() { releaseHeavyGate?.(); },
+
+    /** Hela tidslinjen behövs (sökning, bläddring bortom fönstret, boost/
+     *  djuplänk utanför). Idempotent; pollarna går över till fulla lagret. */
+    requestFullTimeline() {
+        fullTimelineRequested = true;
+        releaseTimelineGate?.();
+    },
+
+    /** Slutet (epoch-ms) på laddad tidslinje — null när allt är inne. UI:t
+     *  behandlar dagar bortom horisonten som "laddar", inte som tomma. */
+    timelineHorizonMs(): number | null {
+        return loadedHorizonMs;
+    },
+
+    /** Begär fulla tidslinjen om `date` ligger bortom (eller inom 3 dygns
+     *  marginal från) den laddade horisonten — förhämtningen ska vara klar
+     *  innan användaren hinner fram till kanten. */
+    ensureTimelineCovers(date: Date) {
+        if (loadedHorizonMs !== null && date.getTime() > loadedHorizonMs - 3 * 86_400_000) {
+            linkEventService.requestFullTimeline();
+        }
+    },
 
     /** Kortfälten behövs (kort öppnat, eller sökning — den matchar värd +
      *  kortets url). Idempotent; pollarna tar med lagret efter begäran. */
@@ -764,6 +823,18 @@ export const linkEventService = {
         // staplar identiska hämtningar som alla fyrar när gaten släpps).
         let descriptionsWaiterAttached = false;
         let cardsWaiterAttached = false;
+        let timelineWaiterAttached = false;
+        // Senast hämtade kort-/beskrivningslager: när destinations BYTS UT
+        // (fönster → full tidslinje) måste mergen göras om — annars tappade
+        // alla event sina bilder/beskrivningar i bytet.
+        let latestCards: any[] | null = null;
+        let latestDescs: Record<string, string> | null = null;
+        const withMerges = (evts: LinkEvent[]): LinkEvent[] => {
+            let out = evts;
+            if (latestCards) out = mergeCardsWithDestinations(out, latestCards);
+            if (latestDescs) out = mergeDescriptionsWithEvents(out, latestDescs);
+            return out;
+        };
         let initialLoadSignaled = false;
         const signalInitialLoad = () => {
             if (initialLoadSignaled || !active) return;
@@ -855,15 +926,45 @@ export const linkEventService = {
                 // 1. Destinations FÖRST och ENSAMT — markörerna behöver bara det
                 // här lagret, och på smala mobilnät ska det inte konkurrera om
                 // bandbredd med de två större lagren. Ritas direkt när det landat.
-                const destData = await fetchLayer('destinations');
+                // TIDSFÖNSTRET: standard är de närmaste dagarnas slice; fulla
+                // lagret bara när det begärts (eller slicen felar — hellre
+                // allt än inget). Pollarna går samma väg, så en redan begärd
+                // full tidslinje förblir full.
+                const range = timelineWindowRange();
+                let destData: any = null;
+                if (!fullTimelineRequested) {
+                    destData = await fetchTimelineWindow(range);
+                    if (destData) loadedHorizonMs = range.toMs;
+                }
+                if (!destData) {
+                    destData = await fetchLayer('destinations');
+                    if (destData) loadedHorizonMs = null;
+                }
                 cancelStaticFirst();
                 if (!active || !destData) return;
 
-                baseEvents = mapDestinationsToLinkEvents(destData.events || []);
+                baseEvents = withMerges(mapDestinationsToLinkEvents(destData.events || []));
                 emit();
 
-                // Definitivt "laddat" REDAN HÄR — destinations innehåller alla
-                // event med tider, så dagens lista är komplett. Måste dessutom
+                // Full tidslinje på begäran: engångs-waiter (som cards/desc).
+                // Landningen ERSÄTTER destinations och gör om lagermergen.
+                if (loadedHorizonMs !== null && !timelineWaiterAttached) {
+                    timelineWaiterAttached = true;
+                    timelineGate.then(async () => {
+                        if (!active) return;
+                        const full = await fetchLayer('destinations');
+                        if (active && full?.events?.length) {
+                            loadedHorizonMs = null;
+                            baseEvents = withMerges(mapDestinationsToLinkEvents(full.events));
+                            emit();
+                        }
+                    });
+                }
+
+                // Definitivt "laddat" REDAN HÄR — dagens lista är komplett
+                // (fönstret börjar alltid på dagens midnatt, så "idag" finns
+                // fullt ut även i fönsterläget; dagar bortom horisonten
+                // hanteras av sidans eventsSettledForView-vakt). Måste dessutom
                 // ligga FÖRE gaten nedan: pill-latchen i V2Map kräver settled,
                 // och gaten släpps av kartans första målning — signalerades
                 // settled först i finally (efter cards/descriptions) vore det
@@ -882,7 +983,9 @@ export const linkEventService = {
                 ]);
                 if (!active) return;
                 if (cardsData) {
-                    baseEvents = mergeCardsWithDestinations(baseEvents, cardsData.events || []);
+                    const cardEvents = cardsData.events || [];
+                    latestCards = cardEvents;
+                    baseEvents = mergeCardsWithDestinations(baseEvents, cardEvents);
                     emit();
                 } else if (!cardsRequested && !cardsWaiterAttached) {
                     cardsWaiterAttached = true;
@@ -890,13 +993,16 @@ export const linkEventService = {
                         if (!active) return;
                         const cd = await fetchLayer('cards');
                         if (active && cd) {
-                            baseEvents = mergeCardsWithDestinations(baseEvents, cd.events || []);
+                            const cardEvents = cd.events || [];
+                            latestCards = cardEvents;
+                            baseEvents = mergeCardsWithDestinations(baseEvents, cardEvents);
                             emit();
                         }
                     });
                 }
                 if (descriptionsRequested) {
                     if (descData && descData.data) {
+                        latestDescs = descData.data;
                         baseEvents = mergeDescriptionsWithEvents(baseEvents, descData.data);
                         emit();
                     }
@@ -910,6 +1016,7 @@ export const linkEventService = {
                         try {
                             const dd = await fetchLayer('descriptions');
                             if (active && dd && dd.data) {
+                                latestDescs = dd.data;
                                 baseEvents = mergeDescriptionsWithEvents(baseEvents, dd.data);
                                 emit();
                             }
@@ -952,6 +1059,16 @@ export const linkEventService = {
             if (!active) return;
             userEvents = u;
             boostOverlay = boosts;
+            // Boost-löftet ("syns varje dag t.o.m. featuredUntil") får inte
+            // klippas av fönstret: en betald boost på ett event bortom
+            // horisonten tvingar fram hela tidslinjen. Boostarna är en
+            // handfull — kollen är O(events) och körs per 30 s-poll.
+            if (loadedHorizonMs !== null && boosts.size) {
+                const known = new Set(baseEvents.map((e) => e.id));
+                for (const id of boosts.keys()) {
+                    if (!known.has(id)) { linkEventService.requestFullTimeline(); break; }
+                }
+            }
             emit();
         }
 

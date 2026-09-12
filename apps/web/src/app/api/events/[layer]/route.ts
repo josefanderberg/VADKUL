@@ -75,7 +75,9 @@ const memo = new Map<string, { updatedAt: string; enc: Record<Enc, Uint8Array> }
 // tidszon bygger IDENTISKA from/to-strängar (lokal midnatt→midnatt som UTC-ISO)
 // → en cache-post per dag, inte per besökare.
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
-const SLICE_MAX_SPAN_MS = 8 * 24 * 60 * 60 * 1000; // vakt: max 8 dygn per slice
+// Vakt: rymmer dagsslicen OCH 14-dagarsfönstret (utils/timelineWindow) med
+// marginal — men inget godtyckligt spann; kvantiserade nycklar är CDN-skyddet.
+const SLICE_MAX_SPAN_MS = 16 * 24 * 60 * 60 * 1000;
 
 // Färdig-gzippade slices per (updatedAt|from|to). Litet tak — i praktiken lever
 // bara "idag" (+ ev. gårdag runt midnatt) här; äldsta åker ut först.

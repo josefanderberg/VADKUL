@@ -217,7 +217,24 @@ destinations och påverkas inte. Besökare som bara tittar på kartan laddar
 aldrig lagret: **grundkostnaden är nu 1,66 MB per besökare** (destinations
 q11), 2,70 MB för den som öppnar kort.
 
-### 3. Tidsfönster
+### ✅ 3. Tidsfönster (byggt 2026-09-12)
+
+Kartans standardlast är nu ett kvantiserat 14-dagarsfönster
+(`utils/timelineWindow`, samma lokal-midnatt-formel som dagsslicen → CDN:en
+cachar EN fönster-slice per dygn) i stället för hela lagret: 1,21 mot 1,66 MB
+(−27 %) — och framför allt blir tillväxten gratis: säsongsscheman landar i en
+svans som bara hämtas på begäran. Full tidslinje triggas av: sökning (går över
+alla dagar), datumbläddring inom 3 dygn från fönsterkanten (förhämtning),
+djuplänk bortom fönstret, och en aktiv boost utanför fönstret (boost-löftet).
+Dagar bortom laddad horisont visar kartans "Laddar fler event…"-chip via
+`eventsSettledForView` — aldrig ett falskt "Inga event". Fönstrets bakkant
+kräver inget: destinations innehåller aldrig passerade dagar.
+
+Kvar i spåret: fönster-blob i q11 från scrapern (1,21 → 1,04, kräver
+tvilling av midnattsformeln — fönstrets from/to måste byggas EXAKT lika),
+och stadssidornas koppling (639 MB i deploy-zipen, se etapp 3-obduktionen).
+
+### ~~3. Tidsfönster~~ (ursprunglig analys, kvar som referens)
 
 Kvantiserat, aldrig rå viewport-bbox. Routen har redan slice-stödet
 (`?from=&to=`) och gör redan rätt sak för dagsslicen: *"alla besökare i samma

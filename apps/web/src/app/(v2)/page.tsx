@@ -375,6 +375,22 @@ export default function HomePage() {
     // starta om intervallet varje gång fasen växlar (den skriver ju själv fasen).
     const dayRangeDaysRef = useRef(dayRangeDays);
     dayRangeDaysRef.current = dayRangeDays;
+    // Tidsfönstret: slutet på laddad tidslinje (null = allt). Läses per
+    // render — varje förändring (fönster → full) följs av en emit →
+    // re-render, så värdet är färskt både här och i settled-vakten nedan.
+    const timelineHorizonMs = linkEventService.timelineHorizonMs();
+    // Bläddras/väljs en dag nära eller bortom horisonten hämtas hela
+    // tidslinjen — marginalen (3 dygn, i ensureTimelineCovers) gör att
+    // dag-för-dag-bläddring förhämtar innan kanten någonsin syns. Kalender-
+    // hopp längre bort täcks av settled-vakten nedan ("Laddar fler event…").
+    // Horisont-värdet i deps: effekten körs om ifall fönstret ersatt en
+    // större snapshot, så vyn själv begär fullt lager igen.
+    useEffect(() => {
+        const end = new Date();
+        end.setHours(0, 0, 0, 0);
+        end.setDate(end.getDate() + dayOffset + dayRangeDays);
+        linkEventService.ensureTimelineCovers(end);
+    }, [dayOffset, dayRangeDays, timelineHorizonMs]);
     const [cardExpanded, setCardExpanded] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     // Bumpas när sökrutan ska fällas ihop utifrån (man valde en stad ur
@@ -1828,7 +1844,12 @@ export default function HomePage() {
     // det lazy-laddade kortlagret. Första söktermen hämtar in det (idempotent),
     // så en sökning på "Håkan Hellström"/arrangör inte missar oladdade fält.
     useEffect(() => {
-        if (searchQ) linkEventService.requestCards();
+        if (searchQ) {
+            linkEventService.requestCards();
+            // Sökningen går över ALLA dagar ("Håkan Hellström om tre veckor")
+            // — fönsterdatat räcker inte, hämta hela tidslinjen.
+            linkEventService.requestFullTimeline();
+        }
     }, [searchQ]);
     const searchFilteredEvents = useMemo(() => {
         if (!searchQ) return filteredEvents;
@@ -1919,6 +1940,20 @@ export default function HomePage() {
                 : null,
         }));
     }, [searchQuery, events, eventsSettled, matchesFilter]);
+
+    // Tidsfönstret: visas en dag bortom den laddade horisonten är datat inte
+    // "settled" för den vyn — kartan visar sin vanliga "Laddar fler event…"-
+    // chip (och "Inga event"-popupen hålls tillbaka) tills fulla tidslinjen
+    // landat. ensureTimelineCovers-effekten uppe vid dagvalet har redan
+    // begärt den (timelineHorizonMs deklareras där).
+    const eventsSettledForView = useMemo(() => {
+        if (!eventsSettled) return false;
+        if (timelineHorizonMs == null) return true;
+        const end = new Date();
+        end.setHours(0, 0, 0, 0);
+        end.setDate(end.getDate() + dayOffset + dayRangeDays);
+        return end.getTime() <= timelineHorizonMs;
+    }, [eventsSettled, timelineHorizonMs, dayOffset, dayRangeDays]);
 
     // Veckoalternativet (dagväljaren, veckogenvägen i navbaren och erbjudandet
     // i tom-läget) låses upp först när man zoomat in till stadsnivå — se
@@ -2857,6 +2892,9 @@ export default function HomePage() {
         // StrictModes mount-unmount-mount skulle annars kasta bort svaret.)
         fetchDeepLinkEvent(eventId).then((full) => {
             if (!full) return;
+            // Ett djuplänkat event bortom tidsfönstret: kortet lever på API-
+            // svaret, men dagens räknare/grannlista behöver riktiga lagret.
+            if (full.time) linkEventService.ensureTimelineCovers(full.time);
             deepLinkDataRef.current = mergeDeepLinkEvent(full, deepLinkDataRef.current);
             const current = selectedEventRef.current;
             if (deepLinkAppliedRef.current === eventId || current?.id === eventId) {
@@ -3597,7 +3635,7 @@ export default function HomePage() {
                 cardExpanded={cardExpanded}
                 onCenterChange={handleMapCenterChange}
                 eventsLoaded={eventsLoaded}
-                eventsSettled={eventsSettled}
+                eventsSettled={eventsSettledForView}
                 // Första prick-rundan målad → släpp cards/descriptions-hämtningen
                 // (de ska inte konkurrera med tiles + prickar om bandbredden).
                 onFirstPaint={linkEventService.releaseHeavyLayers}
@@ -4344,7 +4382,7 @@ export default function HomePage() {
                 events={visibleEvents}
                 dayCount={dayEventCount}
                 eventsLoaded={eventsLoaded}
-                eventsSettled={eventsSettled}
+                eventsSettled={eventsSettledForView}
                 selectedEvent={selectedEvent}
                 onSelectEvent={selectEventSmooth}
                 groupChoice={groupChoice}
