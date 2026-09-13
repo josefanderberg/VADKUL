@@ -39,26 +39,18 @@ launchctl kickstart gui/$(id -u)/se.vadkul.scraper.nightly   # kör nu
 tail -f ~/Library/Logs/vadkul-scraper/nightly.log            # kedjans logg
 ```
 
-## se.vadkul.digest-daily — morgoninlägget (ÅTERINFÖRT 2026-09-10)
+## se.vadkul.digest-daily — morgoninlägget (AVVECKLAT 2026-09-13)
 
-07:00 varje morgon: `publish-digest.ts --auto` bygger **6 av de bästa eventen
-kommande veckan** (kvällstid + bildkvalitet rankar; en per stad,
-kategori-spridning; kronologisk ordning med veckodag/datum per rad) och
-publicerar direkt till Instagram-karusell + Facebook, med ett kvitto till
-Telegram. Ingen approval-loop.
+Det automatiska morgoninlägget (07:00, `publish-digest.ts --auto`, 6 av
+veckans bästa event → Instagram-karusell + Facebook) är borttaget på ägarens
+begäran 2026-09-13: plisten är raderad ur repot, jobbet urlyft ur
+launchd-synkens whitelist i `run-daily.sh` och utbootat på minin.
+**Återinför inte utan att fråga ägaren.**
 
-Historik: den gamla varianten (10 av DAGENS event) avvecklades 2026-08-26 —
-listorna drog inget engagemang. Ägaren återinförde automatiken 2026-09-10 i
-6/vecka-formatet. Ändra inte antal/fönster utan att fråga ägaren.
-
-**Installeras automatiskt**: nattkedjans launchd-synk (`run-daily.sh`)
-kopierar plisten från repot och bootar om jobbet när filen ändrats — en
-`git pull` räcker. Manuell install vid behov:
-
-```sh
-cp infra/launchd/se.vadkul.digest-daily.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/se.vadkul.digest-daily.plist
-```
+Historik: 10-av-dagens-varianten avvecklades 2026-08-26 (inget engagemang),
+återinfördes 2026-09-10 som 6/vecka-format, och avvecklades igen 2026-09-13
+("vill inte ha den sortens inlägg längre"). Skriptet `publish-digest.ts`
+finns kvar för det manuella flödet.
 
 Det manuella `/list10` (bot-daemon → `npm run digest`) är orört: 10 av dagens
 event med `byt`/`bild`/`klar`-gaten. Torrkörning utan Telegram/IG/FB:

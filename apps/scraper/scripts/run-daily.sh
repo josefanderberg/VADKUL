@@ -93,10 +93,12 @@ fi
 # döda kedjan som kör just nu. Avinstallera genom att ta bort plisten ur
 # repot OCH köra `launchctl bootout` för hand (synken rör aldrig jobb vars
 # repofil saknas). Fel får aldrig stoppa kedjan.
-# Historik: digest-daily (morgoninlägget 07:00) återinfört 2026-09-10 på
-# ägarens begäran; ig-queue fick FB-schema-importen samma dag.
+# Historik: digest-daily (morgoninlägget 07:00) återinfört 2026-09-10 men
+# AVVECKLAT PÅ NYTT 2026-09-13 på ägarens begäran (plist borttagen ur repot
+# + bootout på minin — återinför inte utan att fråga); ig-queue fick
+# FB-schema-importen 2026-09-10.
 if [ "$JOB_NAME" = "nightly" ]; then
-    for PLIST_NAME in se.vadkul.digest-daily se.vadkul.ig-queue; do
+    for PLIST_NAME in se.vadkul.ig-queue; do
         PLIST_SRC="$REPO_ROOT/infra/launchd/$PLIST_NAME.plist"
         PLIST_DST="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
         if [ -f "$PLIST_SRC" ] && ! cmp -s "$PLIST_SRC" "$PLIST_DST" 2>/dev/null; then
