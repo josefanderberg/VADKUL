@@ -142,6 +142,15 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                 setError('Google-inloggning är inte påslagen ännu — logga in med e-post så länge.');
                 return;
             }
+            // Domänen saknas i Firebase Auths tillåtlista (Authentication →
+            // Settings → Authorized domains) — drabbade vadkul.se vid
+            // lanseringen 13/9. Nämn koden så felet går att känna igen.
+            if (code.includes('unauthorized-domain')) {
+                setError('Inloggning är inte tillåten från den här adressen ännu (unauthorized-domain) — logga in med e-post så länge.');
+                return;
+            }
+            // Okänd kod → logga den; utan detta är felet ogissbart i efterhand.
+            console.warn('[auth] Google-inloggningen föll:', code);
             setError('Google-inloggningen gick inte att slutföra. Försök igen.');
         } finally {
             setBusy(false);
