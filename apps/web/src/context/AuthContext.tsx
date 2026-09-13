@@ -55,8 +55,12 @@ interface AuthContextType {
    * Google-inloggning (popup). Ett konto skapas automatiskt första gången —
    * ingen registreringsblankett. En pågående anonym tips-session LÄNKAS till
    * Google-kontot (samma räddning som register), så tipsen följer med.
+   *
+   * `needsProfile: true` = kontot är nyskapat (eller nylänkat) och saknar det
+   * registreringsblanketten annars samlar in (ålder/kön/stad/barn) — modalen
+   * visar då kompletteringssteget innan den stänger.
    */
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<{ needsProfile: boolean }>;
   /** Skapa konto + sätt visningsnamn (används i chatt och som event-värd).
    *  Ålder + kön (statistikunderlag) speglas till users/{uid} i Firestore.
    *  hasChildren = "Jag har barn"-kryssrutan — åldrarna kompletteras i
@@ -111,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (): Promise<{ needsProfile: boolean }> => {
     const provider = new GoogleAuthProvider();
     // Har personen tipsat anonymt sitter hen på en anonym session vars uid
     // står som hostUid på tipsen — LÄNKA Google-kontot till det uid:t så
@@ -159,7 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // finns; ålder/kön samlas INTE in här — Google-flödet ska vara ett
     // klick, profilpanelen kompletterar. Best-effort precis som register:
     // kontot ÄR skapat, ett Firestore-hicka får inte fälla inloggningen.
-    if (getAdditionalUserInfo(cred)?.isNewUser || linkedAnon) {
+    const isNew = getAdditionalUserInfo(cred)?.isNewUser === true;
+    if (isNew || linkedAnon) {
       try {
         const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
         const { db } = await import('../lib/firebase');
@@ -186,6 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn('Kunde inte spara profildata efter Google-inloggning:', e);
       }
     }
+    // Nytt/nylänkat konto saknar blankettfälten (ålder/kön/barn) → modalen
+    // visar kompletteringssteget.
+    return { needsProfile: isNew || linkedAnon };
   };
 
   const register = async (name: string, email: string, password: string, stats?: { age?: number; gender?: string; city?: string; citySlug?: string; citySource?: 'gps' | 'manual'; hasChildren?: boolean }) => {

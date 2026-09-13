@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, LogIn, UserPlus } from 'lucide-react';
+import { X, LogIn, UserPlus, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { CITIES, getCity } from '@/lib/cityUtils';
 import { DERIVED_CITY_KEY } from '@/hooks/useSaveUserCity';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 import toast from 'react-hot-toast';
 
 interface AuthModalProps {
@@ -37,7 +39,11 @@ function authErrorText(code: string): string {
  */
 export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     const { signIn, signInWithGoogle, register, resetPassword } = useAuth();
-    const [mode, setMode] = useState<'login' | 'register'>('login');
+    // 'complete' = kompletteringssteget efter första Google-inloggningen:
+    // registreringsblankettens statistik-/segmenteringsfält (ålder, kön,
+    // stad, barn) som Google-flödet annars hoppar över. Man ÄR redan
+    // inloggad där — kryss/Hoppa över stänger utan krav.
+    const [mode, setMode] = useState<'login' | 'register' | 'complete'>('login');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -72,6 +78,10 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
     // — så att ett gammalt fel aldrig hänger kvar.
     useEffect(() => { setError(null); }, [email, password, name, age, gender, mode, open]);
 
+    // Stängd modal → tillbaka till login-läget, så en senare öppning aldrig
+    // landar i ett kvarglömt kompletteringssteg.
+    useEffect(() => { if (!open) setMode('login'); }, [open]);
+
     // Escape stänger modalen — standardbeteende för dialoger (tangentbord/SR).
     useEffect(() => {
         if (!open) return;
@@ -101,12 +111,19 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
 
     // Google — ETT klick, inget formulär (kontot skapas automatiskt första
     // gången; stad förifylls från GPS-härledningen i AuthContext). Anonyma
-    // tips-sessioner länkas så tipsen följer med.
+    // tips-sessioner länkas så tipsen följer med. Nya konton skickas vidare
+    // till kompletteringssteget — där fångas ålder/kön/stad/barn som
+    // registreringsblanketten annars samlar in.
     const google = async () => {
         setBusy(true);
         setError(null);
         try {
-            await signInWithGoogle();
+            const { needsProfile } = await signInWithGoogle();
+            if (needsProfile) {
+                toast.success('Välkommen till VADKUL!');
+                setMode('complete');
+                return;
+            }
             toast.success('Inloggad!');
             onClose();
         } catch (err: any) {
@@ -126,6 +143,39 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                 return;
             }
             setError('Google-inloggningen gick inte att slutföra. Försök igen.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    // Kompletteringsstegets spara: skriv statistik-/segmenteringsfälten till
+    // users/{uid} (merge — grundprofil + ev. GPS-stad är redan speglade av
+    // signInWithGoogle). Samma fältsemantik som register: okryssad barnruta
+    // är "inget svar", manuellt vald stad vinner över GPS.
+    const saveProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const uid = auth.currentUser?.uid;
+        if (!uid) { onClose(); return; } // borde inte hända — men lås aldrig fast någon
+        setBusy(true);
+        setError(null);
+        try {
+            const city = citySlug ? getCity(citySlug) : null;
+            await setDoc(doc(db, 'users', uid), {
+                ...(age.trim() && Number.isFinite(Number(age)) ? { age: Number(age) } : {}),
+                ...(gender ? { gender } : {}),
+                ...(hasChildren ? { hasChildren: true } : {}),
+                ...(city ? {
+                    city: city.name,
+                    citySlug: city.slug,
+                    citySource: (cityTouched ? 'manual' : 'gps') as 'gps' | 'manual',
+                    cityUpdatedAt: serverTimestamp(),
+                } : {}),
+            }, { merge: true });
+            toast.success('Klart — profilen är sparad!');
+            onClose();
+        } catch (err) {
+            console.error(err);
+            setError('Kunde inte spara. Försök igen — eller hoppa över så länge.');
         } finally {
             setBusy(false);
         }
@@ -175,15 +225,97 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 id="auth-modal-title" className="text-xl font-black text-white">
-                            {mode === 'login' ? 'Logga in' : 'Skapa konto'}
+                            {mode === 'login' ? 'Logga in' : mode === 'register' ? 'Skapa konto' : 'Nästan klart!'}
                         </h2>
-                        {reason && <p className="text-xs font-semibold text-white/60 mt-0.5">{reason}</p>}
+                        {mode === 'complete'
+                            ? <p className="text-xs font-semibold text-white/60 mt-0.5">Berätta lite om dig så visar vi rätt event — det tar fem sekunder.</p>
+                            : reason && <p className="text-xs font-semibold text-white/60 mt-0.5">{reason}</p>}
                     </div>
                     <button type="button" onClick={onClose} aria-label="Stäng" className="text-white/50 hover:text-white p-1 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
 
+                {/* Kompletteringssteget efter första Google-inloggningen:
+                    samma fält som registreringsblanketten samlar in (ålder/
+                    kön/stad/barn — utskicks- och filterunderlaget). Man ÄR
+                    redan inloggad: Hoppa över/krysset stänger utan krav. */}
+                {mode === 'complete' ? (
+                    <form onSubmit={saveProfile} className="flex flex-col gap-3">
+                        <div className="flex gap-3">
+                            <input
+                                type="number"
+                                inputMode="numeric"
+                                value={age}
+                                onChange={(e) => setAge(e.target.value)}
+                                placeholder="Ålder"
+                                aria-label="Ålder"
+                                required
+                                min={13}
+                                max={120}
+                                autoFocus
+                                className="w-28 px-4 py-3 rounded-xl border border-white/10 bg-white/10 text-white placeholder:text-white/40 focus:border-[#FECC02]/70 focus:outline-none"
+                            />
+                            <select
+                                value={gender}
+                                onChange={(e) => setGender(e.target.value)}
+                                aria-label="Kön"
+                                required
+                                className={`flex-1 px-4 py-3 rounded-xl border border-white/10 bg-white/10 focus:border-[#FECC02]/70 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white ${gender ? 'text-white' : 'text-white/40'}`}
+                            >
+                                <option value="" disabled>Kön</option>
+                                <option value="kvinna">Kvinna</option>
+                                <option value="man">Man</option>
+                                <option value="annat">Annat</option>
+                                <option value="vill_ej_ange">Vill inte ange</option>
+                            </select>
+                        </div>
+                        <select
+                            value={citySlug}
+                            onChange={(e) => { setCitySlug(e.target.value); setCityTouched(true); }}
+                            aria-label="Stad"
+                            className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 focus:border-[#FECC02]/70 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white ${citySlug ? 'text-white' : 'text-white/40'}`}
+                        >
+                            <option value="">Stad (valfritt)</option>
+                            {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
+                                <option key={c.slug} value={c.slug}>{c.name}</option>
+                            ))}
+                        </select>
+                        <label className="flex items-center gap-2.5 px-1 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={hasChildren}
+                                onChange={(e) => setHasChildren(e.target.checked)}
+                                className="w-4 h-4 accent-[#FECC02] shrink-0"
+                            />
+                            <span className="text-sm font-semibold text-white/80">
+                                Jag har barn (0–13 år)
+                            </span>
+                        </label>
+                        {error && (
+                            <p role="alert" className="rounded-xl bg-red-500/15 border border-red-400/30 px-4 py-2.5 text-sm font-semibold text-red-200">
+                                {error}
+                            </p>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={busy}
+                            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FECC02] text-slate-900 font-black disabled:opacity-50 hover:bg-[#ffd633] transition-colors"
+                        >
+                            <Check size={16} />
+                            {busy ? 'Vänta…' : 'Spara'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={busy}
+                            className="text-xs font-semibold text-white/50 hover:text-white transition-colors self-center disabled:opacity-50"
+                        >
+                            Hoppa över
+                        </button>
+                    </form>
+                ) : (
+                <>
                 {/* Google överst — lägsta tröskeln in, särskilt i det ögonblick
                     någon just försökt gilla/chatta/önska. E-postformuläret
                     ligger kvar under en "eller"-linje. */}
@@ -343,6 +475,8 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                             integritetspolicy
                         </a>.
                     </p>
+                )}
+                </>
                 )}
             </div>
         </div>
