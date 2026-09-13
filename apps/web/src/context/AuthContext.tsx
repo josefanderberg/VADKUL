@@ -9,13 +9,21 @@ import {
     createUserWithEmailAndPassword,
     signInAnonymously,
     linkWithCredential,
+    linkWithPopup,
+    signInWithPopup,
+    getAdditionalUserInfo,
+    GoogleAuthProvider,
     EmailAuthProvider,
     updateProfile,
     sendPasswordResetEmail,
     deleteUser,
 } from 'firebase/auth';
+import type { UserCredential } from 'firebase/auth';
+import { signInWithCredential } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { DERIVED_CITY_KEY } from '../hooks/useSaveUserCity';
+import { getCity } from '../lib/cityUtils';
 
 interface AuthContextType {
   /**
@@ -43,6 +51,12 @@ interface AuthContextType {
   logout: () => Promise<void>;
   /** E-post + lösenord — samma flöde som gamla login-sidan, fast i modal. */
   signIn: (email: string, password: string) => Promise<void>;
+  /**
+   * Google-inloggning (popup). Ett konto skapas automatiskt första gången —
+   * ingen registreringsblankett. En pågående anonym tips-session LÄNKAS till
+   * Google-kontot (samma räddning som register), så tipsen följer med.
+   */
+  signInWithGoogle: () => Promise<void>;
   /** Skapa konto + sätt visningsnamn (används i chatt och som event-värd).
    *  Ålder + kön (statistikunderlag) speglas till users/{uid} i Firestore.
    *  hasChildren = "Jag har barn"-kryssrutan — åldrarna kompletteras i
@@ -95,6 +109,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    // Har personen tipsat anonymt sitter hen på en anonym session vars uid
+    // står som hostUid på tipsen — LÄNKA Google-kontot till det uid:t så
+    // tipsen följer med (samma räddning som register gör för e-post).
+    const anon = auth.currentUser?.isAnonymous ? auth.currentUser : null;
+    let cred: UserCredential;
+    if (anon) {
+      try {
+        cred = await linkWithPopup(anon, provider);
+      } catch (e: any) {
+        const code = String(e?.code ?? '');
+        // Google-kontot ÄR redan ett VADKUL-konto → logga in på det med
+        // credentialen popupen redan gav. INGEN andra popup — utan ny tap
+        // blockerar webbläsaren den. Tipsen blir kvar hos sitt anonyma uid,
+        // samma avvägning som register-fallbacken.
+        if (code.includes('credential-already-in-use')) {
+          const oauthCred = GoogleAuthProvider.credentialFromError(e);
+          if (!oauthCred) throw e;
+          console.warn('Anonym session kunde inte länkas (kontot finns) — loggar in på det befintliga kontot.');
+          cred = await signInWithCredential(auth, oauthCred);
+        } else {
+          throw e;
+        }
+      }
+    } else {
+      cred = await signInWithPopup(auth, provider);
+    }
+    // En LÄNKAD anonym session räknas inte som ny av Firebase (uid:t fanns) —
+    // och får varken visningsnamn eller users-dokument automatiskt. Hämta
+    // namnet ur Google-providerns data så chatt/värdskap inte blir namnlösa,
+    // och kör profilspeglingen även för den vägen.
+    const linkedAnon = !!anon && cred.user.uid === anon.uid;
+    const googleName = cred.user.providerData.find(p => p.providerId === 'google.com')?.displayName ?? null;
+    if (linkedAnon && !cred.user.displayName && googleName) {
+      try {
+        await updateProfile(cred.user, { displayName: googleName });
+        setUser({ ...cred.user, displayName: googleName } as User);
+      } catch (e) {
+        console.warn('Kunde inte sätta visningsnamn efter Google-länkning:', e);
+      }
+    }
+    // Första Google-inloggningen = registrering utan blankett: spegla
+    // grundprofilen till users/{uid} (utskicks-/statistikunderlaget).
+    // Staden förifylls från kartans GPS-härledning (localStorage) när den
+    // finns; ålder/kön samlas INTE in här — Google-flödet ska vara ett
+    // klick, profilpanelen kompletterar. Best-effort precis som register:
+    // kontot ÄR skapat, ett Firestore-hicka får inte fälla inloggningen.
+    if (getAdditionalUserInfo(cred)?.isNewUser || linkedAnon) {
+      try {
+        const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+        let city: { name: string; slug: string } | null = null;
+        try {
+          const raw = localStorage.getItem(DERIVED_CITY_KEY);
+          const derived = raw ? JSON.parse(raw) : null;
+          city = derived?.slug ? getCity(derived.slug) : null;
+        } catch { /* ingen stads-prefill */ }
+        const displayName = cred.user.displayName || googleName;
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          uid: cred.user.uid,
+          ...(cred.user.email ? { email: cred.user.email } : {}),
+          ...(displayName ? { displayName } : {}),
+          ...(city ? {
+            city: city.name,
+            citySlug: city.slug,
+            citySource: 'gps',
+            cityUpdatedAt: serverTimestamp(),
+          } : {}),
+          createdAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Kunde inte spara profildata efter Google-inloggning:', e);
+      }
+    }
   };
 
   const register = async (name: string, email: string, password: string, stats?: { age?: number; gender?: string; city?: string; citySlug?: string; citySource?: 'gps' | 'manual'; hasChildren?: boolean }) => {
@@ -172,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAnonymousSession, ensureTipIdentity, logout, signIn, register, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount }}>
+    <AuthContext.Provider value={{ user, loading, isAnonymousSession, ensureTipIdentity, logout, signIn, signInWithGoogle, register, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount }}>
       {/* Rendera ALLTID children. `!loading && children` dolde hela appen under
           SSR (loading är alltid true på servern) → varje sida serverades som
           TOMT HTML-skal, osynligt för Google. Konsumenter som behöver vänta på

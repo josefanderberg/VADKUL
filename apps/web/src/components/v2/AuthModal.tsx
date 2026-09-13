@@ -36,7 +36,7 @@ function authErrorText(code: string): string {
  * Samma e-post+lösenord-flöde som gamla /login-sidan.
  */
 export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
-    const { signIn, register, resetPassword } = useAuth();
+    const { signIn, signInWithGoogle, register, resetPassword } = useAuth();
     const [mode, setMode] = useState<'login' | 'register'>('login');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -99,6 +99,38 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
         }
     };
 
+    // Google — ETT klick, inget formulär (kontot skapas automatiskt första
+    // gången; stad förifylls från GPS-härledningen i AuthContext). Anonyma
+    // tips-sessioner länkas så tipsen följer med.
+    const google = async () => {
+        setBusy(true);
+        setError(null);
+        try {
+            await signInWithGoogle();
+            toast.success('Inloggad!');
+            onClose();
+        } catch (err: any) {
+            const code = String(err?.code ?? err);
+            // En stängd popup är ett val, inte ett fel — visa ingenting.
+            if (code.includes('popup-closed-by-user') || code.includes('cancelled-popup-request')) return;
+            if (code.includes('popup-blocked')) {
+                setError('Webbläsaren blockerade Google-rutan — tillåt popup-fönster för vadkul.se och försök igen.');
+                return;
+            }
+            if (code.includes('account-exists-with-different-credential')) {
+                setError('E-postadressen har redan ett konto med lösenord — logga in med det nedan.');
+                return;
+            }
+            if (code.includes('operation-not-allowed')) {
+                setError('Google-inloggning är inte påslagen ännu — logga in med e-post så länge.');
+                return;
+            }
+            setError('Google-inloggningen gick inte att slutföra. Försök igen.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
         setBusy(true);
@@ -150,6 +182,29 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                     <button type="button" onClick={onClose} aria-label="Stäng" className="text-white/50 hover:text-white p-1 transition-colors">
                         <X size={20} />
                     </button>
+                </div>
+
+                {/* Google överst — lägsta tröskeln in, särskilt i det ögonblick
+                    någon just försökt gilla/chatta/önska. E-postformuläret
+                    ligger kvar under en "eller"-linje. */}
+                <button
+                    type="button"
+                    onClick={google}
+                    disabled={busy}
+                    className="w-full flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-white text-slate-800 font-black disabled:opacity-50 hover:bg-slate-100 transition-colors"
+                >
+                    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                    </svg>
+                    {busy ? 'Vänta…' : 'Fortsätt med Google'}
+                </button>
+                <div className="flex items-center gap-3" aria-hidden>
+                    <span className="flex-1 h-px bg-white/10" />
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-white/40">eller</span>
+                    <span className="flex-1 h-px bg-white/10" />
                 </div>
 
                 <form onSubmit={submit} className="flex flex-col gap-3">
