@@ -7199,6 +7199,36 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-09-07',
         discovery: { method: 'manual', probeUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}`, date: '2026-09-07' },
     })),
+    // ─── TICKSTER UPPSALA — hela stadens säsong via skip/take ────────────────
+    // Uppsala nådde bara tickster-sitemapens datumfönster (~28 event, horisont
+    // ~2 veckor) medan ortssidan bär HELA inventariet: 341 event t.o.m. okt
+    // 2027 vid proben 13/9 (UKK:s säsong, Katalin/Bakfickan, Klubb Uffe,
+    // Vasaborgen, Flustret …). Sidan är SERVER-renderad — ingen Puppeteer,
+    // till skillnad från småorterna ovan — och paginerar med ?skip/take där
+    // take accepterar max 100, så fyra källor täcker upp till 400 event.
+    // urlDateRegex förfiltrerar mot fönstret (datumet ligger i URL:en) så
+    // 2027-svansen aldrig detalj-hämtas. Skip-fönstren glider när event
+    // passerar — överlapp är ofarligt (url-dedupen i runnern).
+    ...[0, 100, 200, 300].map((skip): Source => ({
+        id: `tickster-ort-uppsala-${skip / 100 + 1}`,
+        hostName: 'Tickster',
+        region: 'uppsala-tickster',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: `https://www.tickster.com/se/sv/events/in/uppsala?skip=${skip}&take=100&sort=eventstart`,
+            isHtmlCatalog: true,
+            urlPatterns: [/\/se\/sv\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
+            urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
+            defaultCity: 'Uppsala',
+            maxUrls: 100,
+        },
+        updateFrequency: 'weekly',
+        status: 'experimental',
+        windowDays: 180,
+        notes: `Sida ${skip / 100 + 1} (skip=${skip}) av Ticksters Uppsala-inventarie. Växer staden förbi ~400 event tappas svansen tills en femte sida läggs till (probe: 341 event 13/9).`,
+        lastVerified: '2026-09-13',
+        discovery: { method: 'manual', probeUrl: `https://www.tickster.com/se/sv/events/in/uppsala?skip=${skip}&take=100&sort=eventstart`, date: '2026-09-13', rawEventCount: skip === 300 ? 41 : 100 },
+    })),
     {
         id: 'visittorsas',
         hostName: 'Visit Torsås',
