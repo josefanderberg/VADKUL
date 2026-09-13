@@ -7231,6 +7231,24 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-09-13',
         discovery: { method: 'manual', probeUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}`, date: '2026-09-07' },
     })),
+    {
+        id: 'svenskjazz',
+        hostName: 'Svensk Jazz',
+        region: 'national',
+        engine: 'svenskjazz',
+        config: {},
+        updateFrequency: 'weekly',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Svensk Jazz riksförbunds spelningskalender (~239 gig nationellt vid bygget 13/9). '
+            + 'wp-json ger bara länk+titel — datum/ort/scen skrapas ur detaljsidans sjz_event_post_*-spans '
+            + '(datum UTAN år → nästa förekomst antas; klockslag ur locationraden). '
+            + 'Gig som länkar till Nortic HOPPAS ÖVER — de ingestas redan via nortic-källans API '
+            + '(Fasching-gig låg trippelt redan: nortic + tickets.nortic + Facebook). '
+            + 'Unika värdet = jazzklubbar som säljer i dörren, ofta i de tunna städerna.',
+        lastVerified: '2026-09-13',
+        discovery: { method: 'probe-wp', probeUrl: 'https://svenskjazz.se/wp-json/wp/v2/event', date: '2026-09-04', rawEventCount: 239, notes: 'Receptet från källsvepet 4/9 (docs/scrapers/runs/2026-09-04.md).' },
+    },
     // ─── TICKSTER STÄDER — hela säsongen via skip/take, flera sidor ──────────
     // Städerna nådde bara tickster-sitemapens datumfönster (~2 veckors
     // horisont) medan ortssidan bär HELA inventariet — Uppsala-proben 13/9

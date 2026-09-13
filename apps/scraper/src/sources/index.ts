@@ -48,6 +48,7 @@ import { turidEngine } from '../scrapers/turid';
 import { hbgEventEngine } from '../scrapers/hbgevent';
 import { bestEventEngine } from '../scrapers/bestevent';
 import { accentFeedEngine } from '../scrapers/accentfeed';
+import { svenskJazzEngine } from '../scrapers/svenskjazz';
 import { optimizelyEventsEngine } from '../scrapers/optimizely-events';
 import { sportalityEngine } from '../scrapers/sportality';
 import { sweHockeyEngine } from '../scrapers/swehockey';
@@ -124,6 +125,7 @@ export const ENGINES: Record<string, Engine> = {
     'hbgevent': hbgEventEngine,
     'bestevent': bestEventEngine,
     'accentfeed': accentFeedEngine,
+    'svenskjazz': svenskJazzEngine,
     'optimizely-events': optimizelyEventsEngine,
     'sportality': sportalityEngine,
     'swehockey': sweHockeyEngine,
