@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { EventWish, LinkEvent } from '@/types';
 import { linkEventService, isBoostShownEveryDay, expandWeekly } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
-import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
+import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, BOOST_TIERS, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
@@ -1673,6 +1673,51 @@ export default function HomePage() {
                 : isTip
                 ? 'Tack för tipset — eventet syns nu på kartan! 💡'
                 : 'Eventet är skapat och syns på kartan! 🎉');
+            // BOOST-UPSELLEN: den som just skapat ett event är den mest köp-
+            // benägna personen på sajten — visa erbjudandet EN gång, strax
+            // efter kvittot (fördröjt så succé-toasten hinner landa). Bara
+            // riktiga konton: tips-flödet är anonymt och backend avvisar
+            // anonyma köp ändå. Checkouten startas direkt (enda nivån är
+            // veckan) — priset visas på knappen så ingen klickar i blindo.
+            if (!isTip && user) {
+                const boostDocId = docId;
+                setTimeout(() => {
+                    toast((t) => (
+                        <div className="flex flex-col gap-2">
+                            <span className="text-sm font-bold">
+                                Vill du att fler ser ditt event? Boosta det — guldbricka med ⭐ som lyser på kartan i 7 dagar.
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        toast.dismiss(t.id);
+                                        try {
+                                            const load = toast.loading('Öppnar betalning…');
+                                            await startEventBoostCheckout(boostDocId, 'week');
+                                            toast.dismiss(load);
+                                        } catch (err) {
+                                            console.error(err);
+                                            toast.error(err instanceof Error ? err.message : 'Kunde inte starta boost.');
+                                        }
+                                    }}
+                                    className="px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-black transition-colors"
+                                >
+                                    {/* Priset ur BOOST_TIERS — EN källa, samma som väljaren. */}
+                                    ⭐ Boosta — {BOOST_TIERS.find(bt => bt.tier === 'week')?.priceLabel ?? '99 kr'}/vecka
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => toast.dismiss(t.id)}
+                                    className="px-3.5 py-1.5 rounded-full text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors"
+                                >
+                                    Nej tack
+                                </button>
+                            </div>
+                        </div>
+                    ), { duration: 15000, icon: '🚀' });
+                }, 1500);
+            }
             resetCreateFlow();
         } catch (err) {
             // Bara koden till konsollen — inte hela felobjektet (se helpern).

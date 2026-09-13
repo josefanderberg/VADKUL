@@ -89,9 +89,13 @@ export default function CityCreatePitch({ cityName, createHref, collapsible }: P
                     <p className="mt-1 text-xs font-medium leading-snug text-sky-100">Skapat på VADKUL — egen eventbricka som ligger UPPE på kartan hela tiden, och överst på den här sidan.</p>
                 </div>
                 <div className="w-full rounded-2xl bg-gradient-to-br from-[#FECC02]/25 to-[#FECC02]/10 border-2 border-[#FECC02] px-4 py-5 sm:min-h-[216px] shadow-xl shadow-[#FECC02]/20">
-                    <p className="text-[11px] font-black uppercase tracking-wider text-[#FECC02]">Nivå 3 · Boost</p>
+                    {/* Priset MED i trappan (tidigare stod nivån utan pris —
+                        den som inte vet vad det kostar klickar inte). Beloppet
+                        speglar BOOST_TIERS i services/boostService: ändras
+                        priset i Stripe måste siffran här följa med. */}
+                    <p className="text-[11px] font-black uppercase tracking-wider text-[#FECC02]">Nivå 3 · Boost · 99 kr/vecka</p>
                     <p className="mt-1 text-xl font-black text-[#FECC02]">⭐ Syns mest</p>
-                    <p className="mt-2 text-sm font-medium leading-snug text-sky-50">Guldbricka med stjärna som lyser på kartan en hel vecka före eventet — och första plats här.</p>
+                    <p className="mt-2 text-sm font-medium leading-snug text-sky-50">Guldbricka med stjärna som lyser på kartan en hel vecka före eventet — och första plats här. 99 kr per vecka, direkt på eventet.</p>
                 </div>
             </div>
             <Link
