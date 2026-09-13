@@ -16,6 +16,15 @@ import * as admin from "firebase-admin";
 export async function sendPushToUser(
     uid: string,
     payload: { title: string; body: string; url: string; type: string; eventId?: string },
+    opts?: {
+        /**
+         * Hur länge FCM får hålla på meddelandet innan det slängs. Default 1 h
+         * (en påminnelse som kommer fram efter eventstart är meningslös) —
+         * helgtipset sätter ett dygn: det är lika relevant på fredagsmorgonen
+         * som på torsdagskvällen.
+         */
+        ttlSeconds?: number;
+    },
 ): Promise<number> {
     const db = admin.firestore();
     const tokensSnapshot = await db
@@ -40,8 +49,9 @@ export async function sendPushToUser(
         webpush: {
             // En påminnelse som inte hunnit fram innan eventet börjat är
             // meningslös → låt den dö efter en timme i stället för att
-            // levereras när mobilen vaknar dagen efter.
-            headers: { TTL: '3600', Urgency: 'high' },
+            // levereras när mobilen vaknar dagen efter. (Utskick med längre
+            // hållbarhet, t.ex. helgtipset, skickar med egen ttlSeconds.)
+            headers: { TTL: String(opts?.ttlSeconds ?? 3600), Urgency: 'high' },
         },
     });
 

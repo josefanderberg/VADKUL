@@ -73,6 +73,11 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
     const photoInputRef = useRef<HTMLInputElement>(null);
     const [notisStatus, setNotisStatus] = useState<NotisStatus>('unsupported');
     const [notisBusy, setNotisBusy] = useState(false);
+    // Veckans helgtips (torsdagspushen). default PÅ — users.weeklyDigest är
+    // bara satt när någon aktivt stängt av (=== false), samma tolkning som
+    // Cloud-funktionen weeklyWeekendDigest gör.
+    const [weeklyDigest, setWeeklyDigest] = useState(true);
+    const [digestBusy, setDigestBusy] = useState(false);
     // Min stad (stadssegmenterade utskick). '' = ingen stad vald/sparad.
     const [citySlug, setCitySlug] = useState('');
     const [cityBusy, setCityBusy] = useState(false);
@@ -106,6 +111,7 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                 if (stale) return;
                 const data = snap.exists() ? snap.data() : null;
                 setCitySlug(data?.citySlug ?? '');
+                setWeeklyDigest(data?.weeklyDigest !== false);
                 setHasChildren(data?.hasChildren === true);
                 setChildAges(Array.isArray(data?.childAges)
                     ? data.childAges.filter((a: unknown): a is number => typeof a === 'number')
@@ -289,6 +295,29 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                 : 'Notiserna kunde inte kopplas — ladda om sidan och försök igen.');
         } else {
             toast.error('Kunde inte aktivera notiser. Försök igen.');
+        }
+    };
+
+    // Helgtipset på/av — kontonivå (till skillnad från notistoggeln som är
+    // per enhet): valet skrivs till users.weeklyDigest och läses av
+    // torsdagsfunktionen. Optimistiskt med återställning vid fel, samma
+    // mönster som barn-åldrarna ovan.
+    const handleToggleWeeklyDigest = async () => {
+        if (!user || digestBusy) return;
+        const next = !weeklyDigest;
+        setWeeklyDigest(next);
+        setDigestBusy(true);
+        try {
+            await setDoc(doc(db, 'users', user.uid), { weeklyDigest: next }, { merge: true });
+            toast.success(next
+                ? 'Helgtips på — en push varje torsdag med helgens event i din stad.'
+                : 'Helgtips av.');
+        } catch (err) {
+            console.error(err);
+            setWeeklyDigest(!next);
+            toast.error('Kunde inte spara. Försök igen.');
+        } finally {
+            setDigestBusy(false);
         }
     };
 
@@ -535,26 +564,51 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                         {notisStatus !== 'unsupported' && (
                             <div className="border-t border-slate-100 dark:border-slate-800">
                                 {notisStatus === 'granted' || notisStatus === 'off' ? (
-                                    <button
-                                        type="button"
-                                        onClick={notisStatus === 'granted' ? handleDisableNotiser : handleEnableNotiser}
-                                        disabled={notisBusy}
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors disabled:opacity-60"
-                                    >
-                                        {notisStatus === 'granted'
-                                            ? <Bell size={16} className="text-emerald-600 shrink-0" />
-                                            : <BellOff size={16} className="text-slate-400 shrink-0" />}
-                                        <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Notiser</span>
-                                        <span className="text-[10px] font-bold text-slate-400">
-                                            {notisBusy ? '…' : notisStatus === 'granted' ? 'påminnelse 1 h innan' : 'av på den här enheten'}
-                                        </span>
-                                        <span
-                                            aria-hidden
-                                            className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${notisStatus === 'granted' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={notisStatus === 'granted' ? handleDisableNotiser : handleEnableNotiser}
+                                            disabled={notisBusy}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors disabled:opacity-60"
                                         >
-                                            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${notisStatus === 'granted' ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-                                        </span>
-                                    </button>
+                                            {notisStatus === 'granted'
+                                                ? <Bell size={16} className="text-emerald-600 shrink-0" />
+                                                : <BellOff size={16} className="text-slate-400 shrink-0" />}
+                                            <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Notiser</span>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {notisBusy ? '…' : notisStatus === 'granted' ? 'påminnelse 1 h innan' : 'av på den här enheten'}
+                                            </span>
+                                            <span
+                                                aria-hidden
+                                                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${notisStatus === 'granted' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                            >
+                                                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${notisStatus === 'granted' ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                                            </span>
+                                        </button>
+                                        {/* Veckans helgtips — kontonivå (torsdagspushen läser
+                                            users.weeklyDigest), medan huvudtoggeln ovan är per
+                                            enhet. Visas bara när notiserna är PÅ: utan token
+                                            når pushen ändå inte fram. */}
+                                        {notisStatus === 'granted' && (
+                                            <button
+                                                type="button"
+                                                onClick={handleToggleWeeklyDigest}
+                                                disabled={digestBusy}
+                                                className="w-full flex items-center gap-3 pl-11 pr-4 py-2.5 text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors disabled:opacity-60"
+                                            >
+                                                <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Veckans helgtips</span>
+                                                <span className="text-[10px] font-bold text-slate-400">
+                                                    {digestBusy ? '…' : citySlug ? 'torsdagar · din stad' : 'välj din stad nedan'}
+                                                </span>
+                                                <span
+                                                    aria-hidden
+                                                    className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${weeklyDigest ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                                >
+                                                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${weeklyDigest ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                                                </span>
+                                            </button>
+                                        )}
+                                    </>
                                 ) : notisStatus === 'default' ? (
                                     <button type="button" onClick={handleEnableNotiser} disabled={notisBusy} className={actionRow}>
                                         <Bell size={16} className="text-[#006AA7] shrink-0" />
