@@ -9,6 +9,7 @@ import type { LinkEvent } from '@/types';
 import { fetchDeepLinkEvent } from '@/utils/eventSeed';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { isTicketmasterEvent } from '@/utils/ticketmasterEvent';
+import { isAffiliateUrl, AFFILIATE_DISCLOSURE } from '@/utils/affiliateLink';
 import { descriptionText, eventOutlink, hostFaviconUrl, pickDescription } from '@/utils/eventExpand';
 import { recordEventClick } from '@/services/eventStatsService';
 import { linkEventService, type RsvpAttendee } from '@/services/linkEventService';
@@ -270,16 +271,27 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
             {/* Stora CTA:n under texten — samma som kortets, i CTA-storlek:
                 den som läst klart ska inte behöva leta upp lilla pillret igen. */}
             {outlink && (
-                <a
-                    href={outlink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={trackOutlink}
-                    className={`group/anmalcta mt-4 flex items-center justify-center gap-2.5 w-full py-3 rounded-full text-base font-black uppercase tracking-widest shadow-lg ring-1 ring-inset hover:shadow-xl transition-all active:scale-[0.97] ${ctaGradient}`}
-                >
-                    <span>{tm ? 'Boka biljetter' : 'Anmäl dig här'}</span>
-                    <ArrowRight size={18} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
-                </a>
+                <>
+                    <a
+                        href={outlink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={trackOutlink}
+                        className={`group/anmalcta mt-4 flex items-center justify-center gap-2.5 w-full py-3 rounded-full text-base font-black uppercase tracking-widest shadow-lg ring-1 ring-inset hover:shadow-xl transition-all active:scale-[0.97] ${ctaGradient}`}
+                    >
+                        <span>{tm ? 'Boka biljetter' : 'Anmäl dig här'}</span>
+                        <ArrowRight size={18} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
+                    </a>
+                    {/* Provisionslänkar MÅSTE märkas "Annons" (marknadsförings-
+                        lagen + Impact-villkoren, docs/affiliate.md). Gäller även
+                        lilla BOKA-pillret överst — märkningen står i samma
+                        utfällda block. */}
+                    {isAffiliateUrl(outlink) && (
+                        <p className="mt-1.5 text-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500">
+                            {AFFILIATE_DISCLOSURE}
+                        </p>
+                    )}
+                </>
             )}
 
             {/* VADKUL-värdade event: anmälan sker HÄR på sidan (ingen extern

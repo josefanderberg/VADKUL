@@ -9,6 +9,7 @@ import { boostedUntilLabel } from '../../utils/boostLabel';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { eventShareSlug } from '../../utils/eventShareSlug';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
+import { isAffiliateUrl, AFFILIATE_DISCLOSURE } from '../../utils/affiliateLink';
 // Radbrytnings-återställningen + värd-faviconen delas med stadssidornas utfällda event (2/9).
 import { hostFaviconUrl, withRecoveredLineBreaks } from '../../utils/eventExpand';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
@@ -678,15 +679,25 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     (helrundad gradient, inre ljuskant, pil som glider
                                     vid hover) — fast i CTA-storlek. */}
                                 {linkEvent.url && (
-                                    <button
-                                        onClick={handleVisitSite}
-                                        className={`group/anmalcta flex items-center justify-center gap-3 w-full py-4 rounded-full text-lg md:text-xl font-black uppercase tracking-widest shadow-lg ring-1 ring-inset hover:shadow-xl transition-all active:scale-[0.97] ${tmEvent
-                                            ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 shadow-amber-900/30 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
-                                            : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-sky-900/30 ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'}`}
-                                    >
-                                        <span>{tmEvent ? 'Boka biljetter' : 'Anmäl dig här'}</span>
-                                        <ArrowRight size={22} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={handleVisitSite}
+                                            className={`group/anmalcta flex items-center justify-center gap-3 w-full py-4 rounded-full text-lg md:text-xl font-black uppercase tracking-widest shadow-lg ring-1 ring-inset hover:shadow-xl transition-all active:scale-[0.97] ${tmEvent
+                                                ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 shadow-amber-900/30 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
+                                                : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-sky-900/30 ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'}`}
+                                        >
+                                            <span>{tmEvent ? 'Boka biljetter' : 'Anmäl dig här'}</span>
+                                            <ArrowRight size={22} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
+                                        </button>
+                                        {/* Provisionslänkar MÅSTE märkas "Annons"
+                                            (marknadsföringslagen + Impact-villkoren,
+                                            docs/affiliate.md). */}
+                                        {isAffiliateUrl(linkEvent.url) && (
+                                            <p className="-mt-1 text-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500">
+                                                {AFFILIATE_DISCLOSURE}
+                                            </p>
+                                        )}
+                                    </>
                                 )}
 
                                 {/* VADKUL-värdade event: anmälan sker HÄR på sidan, ingen
