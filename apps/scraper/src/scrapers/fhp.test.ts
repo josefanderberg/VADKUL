@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFhpCards, parseFhpOccasions, normalizeCaps } from './fhp';
+import { parseFhpCards, parseFhpOccasions, parseFhpDescription, normalizeCaps } from './fhp';
 
 // Nedskalade utsnitt ur riktiga API-svar (probade 2026-07-04).
 const CARDS_HTML = `
@@ -67,6 +67,27 @@ describe('parseFhpOccasions', () => {
     it('URL:en får datum-fragment (unik per tillfälle)', () => {
         const occ = parseFhpOccasions(OCCASIONS_HTML);
         expect(occ[0].url).toContain('?evenemang=41726#15-6');
+    });
+});
+
+describe('parseFhpDescription', () => {
+    it('tar entry-contents stycken i första hand', () => {
+        const html = `<div class="col-sm-12 entry-content"><img src="x.jpg">
+<p>Denna vepautställning är en mindre version av utställningen För en rimligare värld.</p>
+<p>Den visas på folkets hus runt om i landet.</p></div>`;
+        const d = parseFhpDescription(html)!;
+        expect(d).toContain('vepautställning');
+        expect(d).toContain('runt om i landet');
+    });
+
+    it('faller tillbaka på og:description när brödtexten är för tunn', () => {
+        const html = `<meta property="og:description" content="En musikalisk resa genom Sveriges folkparker med stora artister." />
+<div class="entry-content"><p>Kort.</p></div>`;
+        expect(parseFhpDescription(html)).toContain('musikalisk resa');
+    });
+
+    it('sida utan text ger undefined', () => {
+        expect(parseFhpDescription('<div class="entry-content"><img src="x.jpg"></div>')).toBeUndefined();
     });
 });
 

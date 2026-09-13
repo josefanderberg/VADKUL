@@ -118,9 +118,14 @@ export const abfEngine: Engine = async (_config, ctx) => {
     // Riktig beskrivning för NYA event (kända hoppas — deras text refreshas
     // av runnern vid full-refresh). Tak per körning så en tom DB inte ger
     // 700 detaljhämtningar på en natt.
+    // Refresh-körningar får ta HELA katalogen — vid vanliga körningar räcker
+    // taket gott för nattens nya. Med 80 även på refresh fastnade samma
+    // första 80 varje varv och platshållarna bakom dem läktes aldrig
+    // (264 "ABF-evenemang i X."-rader 13/9).
+    const cap = ctx.refreshKnown ? 800 : MAX_DETAIL_FETCH;
     const nya: RawEvent[] = [];
     for (const e of all) {
-        if (nya.length >= MAX_DETAIL_FETCH) break;
+        if (nya.length >= cap) break;
         if (ctx.refreshKnown || !ctx.isKnownUrl || !(await ctx.isKnownUrl(e.url))) nya.push(e);
     }
     if (nya.length) {

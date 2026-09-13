@@ -31,6 +31,10 @@ import { cleanDescription } from '../utils/text';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const MAX_DAYS = 60;
+// Detaljhämtningar per körning (beskrivnings-berikningen) — en kommun-
+// kalender har sällan fler än så i fönstret, och refresh-körningar tar
+// resten nästa varv.
+const MAX_DETAIL_FETCH = 200;
 
 export interface BestEventConfig {
     /** Kalenderns bas, t.ex. https://kalender.lerum.se */
@@ -124,6 +128,33 @@ export const bestEventEngine: Engine = async (config: BestEventConfig, ctx) => {
             events.push(ev);
         }
     }
+
+    // Beskrivning finns BARA i detaljendpointen (/api/events/<slug>) — listan
+    // bär den inte alls (Lerum 13/9: 115/115 kommande utan text). Berika nya
+    // event (alla vid full-refresh) upp till ett tak; kända hoppar vi som
+    // vanligt — deras text läks vid refresh-körningarna.
+    const needy: RawEvent[] = [];
+    for (const e of events) {
+        if (e.description) continue;
+        if (needy.length >= MAX_DETAIL_FETCH) break;
+        if (ctx.refreshKnown || !ctx.isKnownUrl || !(await ctx.isKnownUrl(e.url))) needy.push(e);
+    }
+    let enriched = 0;
+    for (const e of needy) {
+        const slug = e.url.match(/\/events\/([^/?#]+)/)?.[1];
+        if (!slug) continue;
+        try {
+            const res = await fetch(`${base}/api/events/${slug}`, {
+                headers: { 'User-Agent': UA, Accept: 'application/json' },
+                signal: ctx.signal ?? AbortSignal.timeout(20_000),
+            });
+            if (!res.ok) continue;
+            const d: { description?: string; event?: { description?: string } } = await res.json();
+            const desc = cleanDescription((d.event?.description ?? d.description) || '');
+            if (desc) { e.description = desc; enriched++; }
+        } catch { /* hellre utan text än fälld körning */ }
+    }
+    if (needy.length) ctx.log(`BestEvent: ${enriched}/${needy.length} event fick beskrivning från detaljendpointen`);
 
     ctx.log(`BestEvent: ${events.length} event över ${days} dagar (${emptyDays} tomma)`);
     return events;

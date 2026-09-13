@@ -24,6 +24,7 @@
 import * as cheerio from 'cheerio';
 import { Engine, RawEvent } from '../sources/types';
 import { domainLimiter } from '../sources/rateLimiter';
+import { cleanDescription, decodeHtmlEntities } from '../utils/text';
 
 const AJAX_URL = 'https://www.folketshusochparker.se/wp-content/themes/fhp/inc/ajax.php';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -70,6 +71,30 @@ export function parseFhpCards(html: string): FhpCard[] {
         if (id && url && title) out.push({ id, title, url, imageUrl: img });
     });
     return out;
+}
+
+/**
+ * Beskrivning ur PRODUKTIONSSIDAN (card.url): entry-contents stycken i första
+ * hand (riktig brödtext), og:description som fallback. Alla tillfällen av
+ * samma produktion delar texten — 69 sidor per körning täcker hela katalogen
+ * (137/137 tillfällen saknade beskrivning före 13/9). Exporterad för test.
+ */
+export function parseFhpDescription(html: string): string | undefined {
+    const $ = cheerio.load(html);
+    const paras: string[] = [];
+    $('.entry-content p').each((_i, el) => {
+        const t = $(el).text().replace(/\s+/g, ' ').trim();
+        if (t) paras.push(t);
+    });
+    const body = cleanDescription(paras.join('\n\n'));
+    if (body && body.length >= 60) return body;
+    const og = html.match(/property=["']og:description["'][^>]+content=["']([^"']{20,})["']/i)
+        || html.match(/content=["']([^"']{20,})["'][^>]+property=["']og:description["']/i);
+    if (og) {
+        const d = cleanDescription(decodeHtmlEntities(og[1]));
+        if (d) return d;
+    }
+    return body || undefined;
 }
 
 /** Normalisera VERSAL stad → "Grängesberg" (behåll bindestreck/mellanslag). */
@@ -129,6 +154,23 @@ export const fhpEngine: Engine = async (_config, ctx) => {
     }
     ctx.log(`fhp: ${cards.length} produktioner`);
 
+    // 1b. Beskrivning per produktion (~69 sidor, throttlas av domainLimiter) —
+    // alla tillfällen ärver produktionens text.
+    const descByCard = new Map<string, string>();
+    for (const card of cards) {
+        try {
+            await domainLimiter.wait(card.url);
+            const res = await fetch(card.url, {
+                headers: { 'User-Agent': UA, Accept: 'text/html,*/*;q=0.1' },
+                signal: ctx.signal ?? AbortSignal.timeout(20_000),
+            });
+            if (!res.ok) continue;
+            const desc = parseFhpDescription(await res.text());
+            if (desc) descByCard.set(card.id, desc);
+        } catch { /* utan beskrivning hellre än att fälla körningen */ }
+    }
+    ctx.log(`fhp: beskrivning för ${descByCard.size}/${cards.length} produktioner`);
+
     // 2. Speltillfällen per produktion (throttlas av domainLimiter i postAjax)
     const events: RawEvent[] = [];
     let occasions = 0;
@@ -148,6 +190,7 @@ export const fhpEngine: Engine = async (_config, ctx) => {
                 venueName: o.venue,
                 city: o.city,
                 imageUrl: card.imageUrl,
+                description: descByCard.get(card.id),
                 hostName: o.venue,
                 // datum utan klockslag → runnerns midnatts-heuristik (heldag)
             });
