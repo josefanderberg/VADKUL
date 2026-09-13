@@ -33,6 +33,8 @@ import { readStartCity, writeStartCity } from '@/utils/startCity';
 import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
+import { shouldLandOnTomorrow } from '@/utils/eveningLanding';
+import { eventShareSlug } from '@/utils/eventShareSlug';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -1221,6 +1223,33 @@ export default function HomePage() {
         return () => { unsubscribe(); clearTimeout(hangGuard); };
     }, []);
 
+    // KVÄLLSLANDNINGEN (13/9): landar man sent på kvällen när dagens ALLA
+    // event har varit öppnar kartan på IMORGON — förstaintrycket ska aldrig
+    // vara en död dag (samma princip som stadssidornas gårdagsfix). Prövas
+    // EXAKT EN gång, vid första definitiva laddningen (eventsSettled), och
+    // avstår om användaren/djuplänken redan valt dag eller period:
+    //   • ?event= sätter sin egen dag (djuplänks-snabbstarten), ?skapa=1 är
+    //     ett skapa-ärende — båda lämnas ifred;
+    //   • dayOffset ≠ 0 eller veckovy = någon har redan bestämt sig.
+    // Helt tomma dagar byter INTE dag (tom-promptens jobb), och gränsen är
+    // den delade isEventPast — se utils/eveningLanding. Bara dayOffset sätts:
+    // kameran, väljaren och dagblinken (kortets egen) rörs ALDRIG härifrån.
+    const eveningSwitchTriedRef = useRef(false);
+    useEffect(() => {
+        if (!eventsSettled || eveningSwitchTriedRef.current) return;
+        eveningSwitchTriedRef.current = true; // en chans — aldrig igen
+        if (dayOffset !== 0 || dayRangeDays !== 1) return;
+        try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('event') || params.has('skapa')) return;
+        } catch { /* ingen söksträng — kör vidare */ }
+        if (!shouldLandOnTomorrow(events, new Date())) return;
+        setDayOffset(1);
+        // Kvittot är för återvändaren (välkomstrutans förstagångare ser
+        // plattans IMORGON när rutan stängts — det räcker där).
+        toast('Kvällens event har varit — kartan visar imorgon. ↺ tar dig tillbaka.', { icon: '🌙', duration: 6000 });
+    }, [eventsSettled, dayOffset, dayRangeDays, events]);
+
     // Önskningarna: EGEN poll (samma mönster som användarevent-hämtningen i
     // linkEventService — de bor bara i Firestore). Servicen filtrerar redan
     // bort uppfyllda + utgångna; här slås sessionens egna nyskapade in (syns
@@ -1673,21 +1702,42 @@ export default function HomePage() {
                 : isTip
                 ? 'Tack för tipset — eventet syns nu på kartan! 💡'
                 : 'Eventet är skapat och syns på kartan! 🎉');
-            // BOOST-UPSELLEN: den som just skapat ett event är den mest köp-
-            // benägna personen på sajten — visa erbjudandet EN gång, strax
-            // efter kvittot (fördröjt så succé-toasten hinner landa). Bara
+            // SPRIDNINGS-NUDGEN: den som just skapat ett event är sajtens
+            // bästa distributionskanal OCH mest köpbenägna person — visa EN
+            // toast strax efter kvittot (fördröjd så succé-toasten hinner
+            // landa) med två vägar: DELA (gratis — /e/-länken via native
+            // share, precis som kortets dela-knapp) och BOOSTA (checkouten
+            // direkt; enda nivån är veckan, priset står på knappen). Bara
             // riktiga konton: tips-flödet är anonymt och backend avvisar
-            // anonyma köp ändå. Checkouten startas direkt (enda nivån är
-            // veckan) — priset visas på knappen så ingen klickar i blindo.
+            // anonyma köp ändå.
             if (!isTip && user) {
                 const boostDocId = docId;
+                const createdTitle = newEventTitle.trim();
                 setTimeout(() => {
                     toast((t) => (
                         <div className="flex flex-col gap-2">
                             <span className="text-sm font-bold">
-                                Vill du att fler ser ditt event? Boosta det — guldbricka med ⭐ som lyser på kartan i 7 dagar.
+                                Vill du att fler ser ditt event? Dela det i din stads grupper — eller boosta med guld-⭐ på kartan i 7 dagar.
                             </span>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        toast.dismiss(t.id);
+                                        const url = `${window.location.origin}/e/${eventShareSlug(boostDocId)}`;
+                                        try {
+                                            if (navigator.share) {
+                                                await navigator.share({ title: createdTitle, url });
+                                                return;
+                                            }
+                                            await navigator.clipboard.writeText(url);
+                                            toast.success('Länk kopierad — klistra in i din stads Facebookgrupp!');
+                                        } catch { /* avbruten delning är inget fel */ }
+                                    }}
+                                    className="px-3.5 py-1.5 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white text-xs font-black transition-colors"
+                                >
+                                    📣 Dela eventet
+                                </button>
                                 <button
                                     type="button"
                                     onClick={async () => {
@@ -1715,7 +1765,7 @@ export default function HomePage() {
                                 </button>
                             </div>
                         </div>
-                    ), { duration: 15000, icon: '🚀' });
+                    ), { duration: 20000, icon: '🚀' });
                 }, 1500);
             }
             resetCreateFlow();
