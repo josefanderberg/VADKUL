@@ -6517,6 +6517,10 @@ export const SOURCES: Source[] = [
             defaultCity: 'Köping',
         },
         updateFrequency: 'every-3d',
+        // 30-dagarsdefaulten nådde aldrig de lagrade eventen 1–3 månader fram —
+        // beskrivnings-refreshen 13/9 läkte 1 av 152 tomma tills fönstret
+        // vidgades (146 av dem låg bortom 30 dagar).
+        windowDays: 120,
         status: 'experimental',
         notes: 'Gemensam eventguide för Köping, Arboga och Kungsör (två av tre saknade egen källa). Samma SiteVision-RESTApp som visiteskilstuna — 204 event i ETT anrop, 198 framtida, venue-namn med ortsuffix (därför cities-listan). Pagineringen är KUMULATIV: page=2 returnerar alla 204.',
         lastVerified: '2026-08-26',
