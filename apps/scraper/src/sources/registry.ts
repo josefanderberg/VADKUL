@@ -42,6 +42,41 @@ const TICKSTER_TOWNS: Array<{ city: string; region: string; slug?: string }> = [
     { city: 'Höör', region: 'hoor-tickster' },
 ];
 
+/**
+ * STÄDER vars Tickster-inventarie kräver flera sidor (?skip/take, take max
+ * 100 — verifierat 13/9). `base` = ASCII-bas för käll-id/region (Uppsala
+ * behåller sina redan körda id:n tickster-ort-uppsala-1..4); URL-sluggen
+ * bildas ur stadsnamnet med åäö (encodeURIComponent), precis som småorterna.
+ * Volymer vid proben 13/9: Lund 370, Uppsala 341, Örebro 337, Jönköping 263,
+ * Umeå 210, Gävle 188, Karlstad 188, Västerås 180, Luleå 175, Norrköping 174,
+ * Linköping 106, Eskilstuna 105, Östersund 99, Borås 63, Helsingborg 57,
+ * Kristianstad 55, Växjö 42, Halmstad 29, Sundsvall 21, Kalmar 17,
+ * Karlskrona 6. `pages` har marginal för växande säsong.
+ */
+const TICKSTER_CITIES: Array<{ city: string; base: string; slug?: string; pages: number }> = [
+    { city: 'Uppsala',      base: 'uppsala',      pages: 4 },
+    { city: 'Lund',         base: 'lund',         pages: 4 },
+    { city: 'Örebro',       base: 'orebro',       pages: 4 },
+    { city: 'Jönköping',    base: 'jonkoping',    pages: 3 },
+    { city: 'Umeå',         base: 'umea',         pages: 3 },
+    { city: 'Västerås',     base: 'vasteras',     pages: 2 },
+    { city: 'Gävle',        base: 'gavle',        pages: 2 },
+    { city: 'Karlstad',     base: 'karlstad',     pages: 2 },
+    { city: 'Norrköping',   base: 'norrkoping',   pages: 2 },
+    { city: 'Luleå',        base: 'lulea',        pages: 2 },
+    { city: 'Linköping',    base: 'linkoping',    pages: 2 },
+    { city: 'Eskilstuna',   base: 'eskilstuna',   pages: 2 },
+    { city: 'Östersund',    base: 'ostersund',    pages: 2 },
+    { city: 'Helsingborg',  base: 'helsingborg',  pages: 1 },
+    { city: 'Borås',        base: 'boras',        pages: 1 },
+    { city: 'Kristianstad', base: 'kristianstad', pages: 1 },
+    { city: 'Växjö',        base: 'vaxjo',        pages: 1 },
+    { city: 'Halmstad',     base: 'halmstad',     pages: 1 },
+    { city: 'Sundsvall',    base: 'sundsvall',    pages: 1 },
+    { city: 'Kalmar',       base: 'kalmar',       pages: 1 },
+    { city: 'Karlskrona',   base: 'karlskrona',   pages: 1 },
+];
+
 export const SOURCES: Source[] = [
     // ─── BILJETTPLATTFORMAR (sitemap → detaljsidans JSON-LD Event) ───────────
     {
@@ -7169,66 +7204,66 @@ export const SOURCES: Source[] = [
     // hämtas: att bredda 30 → 180 dagar hade tagit körningen från ~1 000 till
     // ~5 000 detaljsidor (~1 h → ~5 h i nattkedjan, varje vecka).
     //
-    // Ticksters ORTSSIDA listar samma säsong för en ort i taget. 14 orter
-    // probade 7/9 gav ~50 event bortom 30-dagarsfönstret — Säffle 12 (t.o.m.
-    // april -27), Tranås 11, Stenungsund 11, Enköping 5, Älmhult/Karlshamn 4 —
-    // i månader där sidorna i dag är tomma. Kostnad: en renderad listsida per
-    // ort + ~100 detaljsidor, en gång i veckan.
-    //
-    // Sidan byggs i JS → isHtmlCatalog + useBrowser. INGEN urlDateRegex här:
-    // poängen är just de långt framåt liggande. Dubbletter mot tickster-sitemap
-    // faller på url-dedupen i runnern.
+    // 13/9: sidan visade sig vara SERVERRENDERAD (Uppsala-proben) och paginera
+    // med ?skip/take (take max 100) — useBrowser + 4 s settle är borttaget och
+    // en sida täcker numera hela ortens inventarie (3–34 event/ort vid ompro-
+    // ben, ASCII- och åäö-slugs verifierade). urlDateRegex förfiltrerar mot
+    // fönstret (datumet ligger i URL:en). Dubbletter mot tickster-sitemap
+    // faller på url-dedupen i runnern. Städer med >100 event bor i
+    // TICKSTER_CITIES nedan (flera skip-sidor per stad).
     ...TICKSTER_TOWNS.map(({ city, region, slug }): Source => ({
         id: `tickster-ort-${region}`,
         hostName: 'Tickster',
         region,
         engine: 'sitemap',
         config: {
-            sitemapUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}`,
-            isHtmlCatalog: true,
-            useBrowser: true,
-            browserSettleMs: 4000,
-            urlPatterns: [/\/se\/sv\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
-            defaultCity: city,
-            maxUrls: 40,
-        },
-        updateFrequency: 'weekly',
-        status: 'experimental',
-        windowDays: 180,
-        notes: `Ticksters ortssida för ${city}. Listsidan visar ~16 åt gången — finns mer bakom paginering, hämta fler sidor om orten går tom.`,
-        lastVerified: '2026-09-07',
-        discovery: { method: 'manual', probeUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}`, date: '2026-09-07' },
-    })),
-    // ─── TICKSTER UPPSALA — hela stadens säsong via skip/take ────────────────
-    // Uppsala nådde bara tickster-sitemapens datumfönster (~28 event, horisont
-    // ~2 veckor) medan ortssidan bär HELA inventariet: 341 event t.o.m. okt
-    // 2027 vid proben 13/9 (UKK:s säsong, Katalin/Bakfickan, Klubb Uffe,
-    // Vasaborgen, Flustret …). Sidan är SERVER-renderad — ingen Puppeteer,
-    // till skillnad från småorterna ovan — och paginerar med ?skip/take där
-    // take accepterar max 100, så fyra källor täcker upp till 400 event.
-    // urlDateRegex förfiltrerar mot fönstret (datumet ligger i URL:en) så
-    // 2027-svansen aldrig detalj-hämtas. Skip-fönstren glider när event
-    // passerar — överlapp är ofarligt (url-dedupen i runnern).
-    ...[0, 100, 200, 300].map((skip): Source => ({
-        id: `tickster-ort-uppsala-${skip / 100 + 1}`,
-        hostName: 'Tickster',
-        region: 'uppsala-tickster',
-        engine: 'sitemap',
-        config: {
-            sitemapUrl: `https://www.tickster.com/se/sv/events/in/uppsala?skip=${skip}&take=100&sort=eventstart`,
+            sitemapUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}?skip=0&take=100&sort=eventstart`,
             isHtmlCatalog: true,
             urlPatterns: [/\/se\/sv\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
             urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
-            defaultCity: 'Uppsala',
+            defaultCity: city,
             maxUrls: 100,
         },
         updateFrequency: 'weekly',
         status: 'experimental',
         windowDays: 180,
-        notes: `Sida ${skip / 100 + 1} (skip=${skip}) av Ticksters Uppsala-inventarie. Växer staden förbi ~400 event tappas svansen tills en femte sida läggs till (probe: 341 event 13/9).`,
+        notes: `Ticksters ortssida för ${city} — hela inventariet på en sida via ?take=100 (serverrenderad, ingen Puppeteer sedan 13/9). Går orten förbi 100 event: flytta till TICKSTER_CITIES med fler sidor.`,
         lastVerified: '2026-09-13',
-        discovery: { method: 'manual', probeUrl: `https://www.tickster.com/se/sv/events/in/uppsala?skip=${skip}&take=100&sort=eventstart`, date: '2026-09-13', rawEventCount: skip === 300 ? 41 : 100 },
+        discovery: { method: 'manual', probeUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}`, date: '2026-09-07' },
     })),
+    // ─── TICKSTER STÄDER — hela säsongen via skip/take, flera sidor ──────────
+    // Städerna nådde bara tickster-sitemapens datumfönster (~2 veckors
+    // horisont) medan ortssidan bär HELA inventariet — Uppsala-proben 13/9
+    // visade 341 event t.o.m. okt 2027 mot sitemapfönstrets 28 (UKK:s säsong,
+    // Katalin/Bakfickan, Klubb Uffe, Vasaborgen, Flustret …). Sidan är
+    // serverrenderad och paginerar med ?skip/take där take accepterar max
+    // 100 → `pages` källor per stad täcker inventariet med marginal.
+    // urlDateRegex förfiltrerar mot fönstret (datumet ligger i URL:en) så
+    // långsvansen aldrig detalj-hämtas. Skip-fönstren glider när event
+    // passerar — överlapp är ofarligt (url-dedupen i runnern). Skarp körning
+    // Uppsala 13/9: 262 nya event, music ≤10 km 82→228.
+    ...TICKSTER_CITIES.flatMap(({ city, base, slug, pages }) =>
+        Array.from({ length: pages }, (_, i): Source => ({
+            id: `tickster-ort-${base}-${i + 1}`,
+            hostName: 'Tickster',
+            region: `${base}-tickster`,
+            engine: 'sitemap',
+            config: {
+                sitemapUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}?skip=${i * 100}&take=100&sort=eventstart`,
+                isHtmlCatalog: true,
+                urlPatterns: [/\/se\/sv\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
+                urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
+                defaultCity: city,
+                maxUrls: 100,
+            },
+            updateFrequency: 'weekly',
+            status: 'experimental',
+            windowDays: 180,
+            notes: `Sida ${i + 1} av ${pages} (skip=${i * 100}) av Ticksters ${city}-inventarie. Växer staden förbi ~${pages * 100} event tappas svansen tills en sida till läggs till i TICKSTER_CITIES.`,
+            lastVerified: '2026-09-13',
+            discovery: { method: 'manual', probeUrl: `https://www.tickster.com/se/sv/events/in/${encodeURIComponent(slug ?? city.toLowerCase())}?skip=${i * 100}&take=100&sort=eventstart`, date: '2026-09-13' },
+        })),
+    ),
     {
         id: 'visittorsas',
         hostName: 'Visit Torsås',
