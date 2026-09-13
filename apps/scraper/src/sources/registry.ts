@@ -1034,18 +1034,25 @@ export const SOURCES: Source[] = [
         id: 'louisdegeer',
         hostName: 'Louis De Geer Konsert & Kongress',
         region: 'norrkoping',
-        engine: 'sitemap',
+        // OMBYGGD 13/9 efter karantän 30/8: sajten gjordes om och
+        // evenemang-sitemap.xml försvann (404, ingen robots.txt) — men wp-json
+        // lever med posttypen `evenemang`. API-contentet saknar eventdatum;
+        // det står på detaljsidan efter kalenderikonen
+        // (<i class="… fa-calendar-days"></i>5 mars 2027) → detailDateRegex.
+        engine: 'wp-rest',
         config: {
-            sitemapUrl: 'https://louisdegeer.se/evenemang-sitemap.xml',
-            urlPatterns: [/\/evenemang\/[^/]+\/?$/i],
+            baseUrl: 'https://louisdegeer.se',
+            variant: 'wp-v2',
+            endpoint: '/wp-json/wp/v2/evenemang',
             defaultCity: 'Norrköping',
+            detailDateRegex: /fa-calendar-days"><\/i>([^<]+)</,
         },
         // Fokusstad 2026-08-09: 208 av 214 hittade event låg utanför 30d-fönstret
         // — konserthuset släpper hela säsongen på en gång.
         windowDays: 180,
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06-08: evenemang-sitemap.xml (konserthus Norrköping).',
-        lastVerified: '2026-06-08',
+        notes: 'Probe 2026-06-08: evenemang-sitemap.xml (konserthus Norrköping). 13/9: sitemap borta → wp-v2/evenemang + detailDateRegex på kalenderikonen.',
+        lastVerified: '2026-09-13',
     },
     {
         id: 'nbv',
