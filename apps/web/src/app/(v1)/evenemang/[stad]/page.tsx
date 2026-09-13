@@ -13,6 +13,7 @@ import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
 import CityVadkulSpotlight from '../CityVadkulSpotlight';
 import CityCreatePitch from '../CityCreatePitch';
+import CityWishes from '../CityWishes';
 import { DayFilterProvider } from '../dayFilter';
 import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
 // Chipsen visar KARTANS ettords-etiketter (samma källa som kategorifiltret på
@@ -268,8 +269,24 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
 
                 <FaqSection faqs={faqs} />
 
+                {/* Önskningarna som AVSLUT (Josef 14/9: "ingen vill byta till
+                    en annan stad — bättre att ha önskningar där"): synlig
+                    efterfrågan + skapa-vägen. Klientkomponent utanför server-
+                    HTML:n (SEO-beslutet 1/9), samma Firestore-mönster som
+                    spotlighten. Stadslistan under är NEDTONAD till fotnot —
+                    de interna länkarna bär SEO:n mellan stadssidorna och ska
+                    vara kvar, men de är inte längre sidans slutpoäng. */}
+                <CityWishes
+                    cityName={city.name}
+                    cityLat={city.lat}
+                    cityLng={city.lng}
+                    radiusKm={city.small ? 20 : 35}
+                    createHref={`${cityMapHref(city)}&skapa=1`}
+                    mapHref={cityMapHref(city)}
+                />
+
                 <div className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">
-                    <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-3">Evenemang i fler städer</h2>
+                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-3">Evenemang i fler städer</h2>
                     <div className="flex flex-wrap gap-2">
                         {otherCities.map(c => (
                             <Link
