@@ -8,7 +8,18 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "demo-key",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  // authDomain styr VAR popup-inloggningen (Google) slutförs och vilken domän
+  // Google visar i "Fortsätt till …"-raden. vadkul.se serverar samma hostings
+  // /__/auth/handler, så vi använder vår egen domän i stället för firebaseapp-
+  // defaulten (kräver vadkul.se som origin + redirect URI i OAuth-klienten,
+  // tillagt 13/9). Remappningen är medveten: prod-env:en (WEB_ENV-secreten på
+  // GitHub) bär fortfarande firebaseapp-domänen och en secret kan inte läsas
+  // och patchas säkert härifrån — ett env-värde ANNAT än defaulten vinner
+  // dock, så specialfall går fortfarande att styra via .env.
+  authDomain: (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+      && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN !== 'vadkul-f2cb2.firebaseapp.com')
+      ? process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+      : 'vadkul.se',
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-vadkul-local",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
