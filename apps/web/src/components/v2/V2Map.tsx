@@ -99,6 +99,153 @@ function shownCycleEvent(rot: CycleRotation | undefined, frameIdx: Map<string, n
     return fr ? group.find(ev => ev.id === fr.eventId) : undefined;
 }
 
+// Info-posten en brick-bild bakas ur (argumenten till makeBrickaImageData).
+type BrickIconInfo = { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; pop?: boolean; count?: number };
+
+// ── EN grupps brick-utseende ──────────────────────────────────────────────────
+// Härleder representant, flaggor (sav/star/guld/pop), bild-id:n och ev. cykel-
+// rotation för EN koordinatgrupp, och registrerar bilderna i `icons` (+
+// rotationen i `rotations` när den skickas med). ENDA stället för den här
+// logiken: plainData-memot bygger features/etiketter på svaret, och
+// förbakningen av intilliggande dagar (prebakeEvents-effekten) använder bara
+// icons-registreringen. Ändrar du representant-/flagg-/id-reglerna är det HÄR —
+// glider memot och förbakningen isär bakas fel bilder i förväg (ofarligt men
+// poänglöst: bytet får baka om som förr).
+// Returnerar null när representanten saknar giltiga koordinater (gruppen ritas
+// inte alls).
+function deriveGroupBrick(
+    group: LinkEvent[],
+    key: string,
+    nowMs: number,
+    isSel: boolean,
+    savedEventIds: ReadonlySet<string>,
+    starredEventIds: ReadonlySet<string>,
+    discardedEventIds: ReadonlySet<string>,
+    highlightEmoji: string | null,
+    icons: Map<string, BrickIconInfo>,
+    rotations: Map<string, CycleRotation> | null,
+): { rep: LinkEvent; emoji: string; color?: string; drawStar: boolean; badgeCount: number; finalIcon: string } | null {
+    // Stjärn-gåvan ⭐: ett (ännu inte passerat) stjärnmärkt event blir
+    // gruppens REPRESENTANT — dess emoji/färg visas på brickan, även i
+    // multi-event-grupper. Passerad stjärna = förbrukad → vanlig rep.
+    // Annars: första ÄNNU INTE passerade eventet — en grupp där några
+    // (men inte alla) varit ska visa ett kommande event, inte ett gammalt.
+    // Alla passerade → group[0] (brickan är ändå släckt via groupIsPast).
+    const starredRep = group.find(e => starredEventIds.has(e.id) && !isEventPast(e, nowMs));
+    // Boostat (featured) event får SAMMA guld-bricka med ⭐ som stjärn-
+    // gåvan — betald framlyftning ska synas direkt på kartan, inte
+    // först vid klick (DOM-markören med guldet ritas bara för det
+    // VALDA eventet). Passerad boost = förbrukad, precis som stjärnan.
+    const boostedRep = group.find(e => isEventFeatured(e) && !isEventPast(e, nowMs));
+    // FRAMKLICKAD SORT VINNER REPRESENTANTEN (Josef 10/8). Har man
+    // klickat 🎪 i emoji-raden ska varje bricka som HAR en 🎪 visa den —
+    // annars "dök vissa inte upp": en multibricka cyklar mellan sina
+    // emojis, så en ensam 🎪 bland fyra 🎸 syntes bara en femtedel av
+    // tiden och gruppen såg ut att sakna sorten helt. Vinner även över
+    // stjärnan: valet är tillfälligt (klicka igen så är den tillbaka),
+    // och gruppen läses fortfarande som stjärnmärkt — guldet och ⭐-
+    // badgen sitter på gruppen (drawStar), inte på representanten.
+    const pickedRep = highlightEmoji == null ? undefined : group.find(
+        e => !isEventPast(e, nowMs) && eventEmoji(e) === highlightEmoji && isValidLatLng(e.lat, e.lng),
+    );
+    const rep = pickedRep ?? starredRep ?? boostedRep ?? group.find(e => !isEventPast(e, nowMs)) ?? group[0];
+    if (!isValidLatLng(rep.lat, rep.lng)) return null;
+    const emoji = eventEmoji(rep);
+    // Stor källa (PRO/Svenska kyrkan) → ingen färg (mörk standard);
+    // övriga → sin kategori-färg. Samma helper som DOM-brickan, så GL- och
+    // DOM-färgen aldrig glider isär.
+    const color = brickaBodyHex(rep) ?? undefined;
+    // Vald bricka (isSel) → vit ram. ALLA gillade (framtida) event → vit kropp,
+    // oavsett om de är valda — så de FÖRBLIR vita när man bläddrar vidare. Övriga
+    // (reveal-brickorna) = normal look.
+    const drawSel = isSel;
+    // "Ännu inte passerat" = samma isEventPast som dämpningen (start + 1 h,
+    // kl 20 för event utan klockslag) — inte en rå 1 h-cutoff som släppte
+    // heldagsevent redan kl 01.
+    const drawSav = group.some(e => savedEventIds.has(e.id) && !isEventPast(e, nowMs));
+    // Stjärnmärkt ELLER boostad (ej passerad) → guld-bricka med ⭐-badge.
+    // (Guldet gäller gruppen: cyklingen stängs av nedan så brickan står
+    // still på det stjärnmärkta/boostade eventet, samma beslut som för
+    // stjärnan.)
+    const drawStar = starredRep != null || boostedRep != null;
+    // Ticketmaster-grupp (minst ett ej passerat TM-event) → samma GULD-
+    // kropp som boost/stjärna (ägarbeslut 1/9: "ska se ut som boost-
+    // eventen") men UTAN ⭐-badge — stjärnan förblir boostens kvitto.
+    // Ingen sortKey-/staplingslyftning: TM-event trängs inte före
+    // andra i en multi-grupp och blir inte representant. STICKY-
+    // lyftningen är däremot PÅ sedan 31/8 (se sticky-effekten) — utan
+    // den syntes guldkroppen bara när reveal-systemet råkade tända
+    // just den brickan.
+    const drawGold = drawStar || group.some(e => isTicketmasterEvent(e) && !isEventPast(e, nowMs));
+    // 🔥 Populär (pipeline-flaggan) → något tjockare vit kant (Josef
+    // 10/9) så de sticker ut även med filtret AV. Guld/vald/sparad
+    // vinner ram-striden i bakningen — pop ändrar bara default-kanten.
+    const drawPop = group.some(e => e.pop && !isEventPast(e, nowMs));
+    const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
+    // count i bild-id:t: "+N"-siffran bakas IN i bilden (se v2MapBricka),
+    // så två grupper med samma emoji men olika antal får OLIKA bilder —
+    // och ett ändrat antal ger ett nytt id (gamla bilden återanvänds
+    // aldrig med fel siffra).
+    const badgeCount = group.length > 1 ? group.length : 0;
+    const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
+    if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, gold: drawGold, pop: drawPop, count: badgeCount });
+    // Bygg gruppens rotation (ej för den valda — den sköts av DOM-synken).
+    // Blir den ≥2 frames pekar brickan på gruppens EGEN cykel-bild i
+    // stället för rep-ikonen.
+    let finalIcon = iconId;
+    // Stjärnmärkta grupper cyklar INTE — det stjärnmärkta eventet ÄR
+    // det som visas (beslutet för multi-event-brickor), så emoji-
+    // växlingen stängs av så länge stjärnan lyser. Samma sak när en sort
+    // är framklickad (pickedRep): brickan ska STÅ STILL på den sorten,
+    // annars hade den cyklat bort från det man just bad om att få se.
+    if (group.length > 1 && !drawSel && !drawStar && !pickedRep) {
+        // EN frame per KATEGORI (Josef 26/8): fem musikevent i högen ska
+        // inte ge fem varv i bildspelet — de räknas som en. Nyckeln är
+        // kategori + brickfärg (färgen skiljer opt-in-källorna, som
+        // saknar färg, från vanliga kategorier med samma LLM-kategori).
+        // Custom-emojis inom samma kategori kollapsar till första
+        // eventets utseende — det är kategorin som är bildspelets steg.
+        const seenCat = new Set<string>();
+        const frames: CycleRotation['frames'] = [];
+        const frameIds: string[] = [];
+        for (const ev of group) {
+            if (discardedEventIds.has(ev.id)) continue;
+            // Passerade event deltar INTE i emoji-växlingen: har 2 av 3
+            // i gruppen redan varit ska brickan stå still på det som
+            // återstår (frames < 2 → ingen rotation alls). minuteTick i
+            // deps håller filtret i takt med klockan under sessionen.
+            if (isEventPast(ev, nowMs)) continue;
+            const em = eventEmoji(ev);
+            const col = brickaBodyHex(ev) ?? undefined;
+            const catKey = `${ev.category && ev.category in EVENT_CATEGORIES ? ev.category : 'other'}|${col ?? ''}`;
+            if (seenCat.has(catKey)) continue;
+            seenCat.add(catKey);
+            // drawGold följer med varje frame: en TM-grupp cyklar vidare
+            // (till skillnad från stjärnmärkta) men får inte blinka
+            // mellan guld och kategori-färg när pumpen byter pixlar.
+            // drawPop följer gruppen (som guldet): kanten ska inte
+            // blinka av/på när cykeln byter frame.
+            frames.push({ emoji: em, color: col, saved: drawSav, gold: drawGold, pop: drawPop, eventId: ev.id });
+            frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}${drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}`);
+        }
+        if (frames.length > 1) {
+            // Gruppnyckeln i bild-id:t → aldrig delat mellan grupper.
+            // (Identiska rotationer delade förr EN bild och bytte i
+            // perfekt synk — nu ska EN bricka i taget byta, staggrat.)
+            // Antalet ingår också: ändras gruppens count (nytt/borttaget
+            // event) ska ett NYTT bild-id bakas — den inbakade siffran
+            // kan inte uppdateras i en befintlig bild.
+            const cycleId = `cycle:${key}:c${badgeCount}:${frameIds.join('|')}`;
+            // Registrera cykel-bilden med frame 0 som utgångsutseende så
+            // syncPlainLayer bakar + addImage:ar den som alla andra.
+            if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, gold: frames[0].gold, pop: frames[0].pop, count: badgeCount });
+            if (rotations) rotations.set(key, { icon: cycleId, count: badgeCount, frames });
+            finalIcon = cycleId;
+        }
+    }
+    return { rep, emoji, color, drawStar, badgeCount, finalIcon };
+}
+
 // Opacity-faktor för "har varit"-grupper: 0.5 när properties.past är satt,
 // annars 1. Används i zoom-lägets prick-uttryck (alla prickar synliga, passerade
 // dämpade).
@@ -331,6 +478,17 @@ interface V2MapProps {
     /** Bumpas vid dagbyte. Då väljer sidan eventet närmast kartans mitt OCH vi
      *  låter bli att flytta kameran till det — vyn ska stå still vid dagbyte. */
     daySwitchNonce?: number;
+    /** Intilliggande perioders event (nästa/föregående dag eller vecka),
+     *  framräknade av sidan med samma period-/kategorifilter som `events`.
+     *  EN LISTA PER PERIOD — perioderna får ALDRIG slås ihop till en platt
+     *  lista: grupperingen är per koordinat, och en scen med 5 event imorgon
+     *  + 5 idag hade blivit en c10-grupp → fel count-badge/cykel-id:n bakade
+     *  (hänt: c40-bilder som aldrig efterfrågas). Kartan bakar varje periods
+     *  brick-bilder i förväg i idle-tid så ett dagsteg möter en varm
+     *  bildcache och setData kan gå direkt (~0,2 s i stället för att första
+     *  besöket bakar ~150 bilder efter klicket — Josef 13/9).
+     *  null/tom = ingen förbakning. */
+    prebakeEvents?: LinkEvent[][] | null;
     /** Bumpas vid intern kort-navigering (Nästa/Föregående/svep). Då står kameran
      *  kvar — vi panorerar/flyger INTE till eventet man bläddrar fram till. */
     navSelectNonce?: number;
@@ -446,6 +604,7 @@ export default function V2Map({
     zoomOutTrigger = 0,
     weekZoomInTrigger = 0,
     daySwitchNonce = 0,
+    prebakeEvents = null,
     navSelectNonce = 0,
     onFeatureFlagsChange,
     onActivateMultiplayer,
@@ -857,7 +1016,7 @@ export default function V2Map({
     const plainData = useMemo(() => {
         const nowMs = Date.now();
         const features: PlainFeature[] = [];
-        const icons = new Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; pop?: boolean; count?: number }>();
+        const icons = new Map<string, BrickIconInfo>();
         // Rotation för multi-grupper med ≥2 OLIKA emojis: gruppens bricka pekar på
         // en EGEN cykel-bild (`cycle:<gruppnyckel>:<frame-ids>`) vars PIXLAR
         // cykelpumpen byter på plats via map.updateImage — ingen setData, ingen
@@ -878,124 +1037,13 @@ export default function V2Map({
             const isSel = selId != null && group.some(e => e.id === selId);
             const special = isSpecialGroup(group, key, nowMs);
             if (!isSel && special) continue;
-            // Stjärn-gåvan ⭐: ett (ännu inte passerat) stjärnmärkt event blir
-            // gruppens REPRESENTANT — dess emoji/färg visas på brickan, även i
-            // multi-event-grupper. Passerad stjärna = förbrukad → vanlig rep.
-            // Annars: första ÄNNU INTE passerade eventet — en grupp där några
-            // (men inte alla) varit ska visa ett kommande event, inte ett gammalt.
-            // Alla passerade → group[0] (brickan är ändå släckt via groupIsPast).
-            const starredRep = group.find(e => starredEventIds.has(e.id) && !isEventPast(e, nowMs));
-            // Boostat (featured) event får SAMMA guld-bricka med ⭐ som stjärn-
-            // gåvan — betald framlyftning ska synas direkt på kartan, inte
-            // först vid klick (DOM-markören med guldet ritas bara för det
-            // VALDA eventet). Passerad boost = förbrukad, precis som stjärnan.
-            const boostedRep = group.find(e => isEventFeatured(e) && !isEventPast(e, nowMs));
-            // FRAMKLICKAD SORT VINNER REPRESENTANTEN (Josef 10/8). Har man
-            // klickat 🎪 i emoji-raden ska varje bricka som HAR en 🎪 visa den —
-            // annars "dök vissa inte upp": en multibricka cyklar mellan sina
-            // emojis, så en ensam 🎪 bland fyra 🎸 syntes bara en femtedel av
-            // tiden och gruppen såg ut att sakna sorten helt. Vinner även över
-            // stjärnan: valet är tillfälligt (klicka igen så är den tillbaka),
-            // och gruppen läses fortfarande som stjärnmärkt — guldet och ⭐-
-            // badgen sitter på gruppen (drawStar), inte på representanten.
-            const pickedRep = highlightEmoji == null ? undefined : group.find(
-                e => !isEventPast(e, nowMs) && eventEmoji(e) === highlightEmoji && isValidLatLng(e.lat, e.lng),
-            );
-            const rep = pickedRep ?? starredRep ?? boostedRep ?? group.find(e => !isEventPast(e, nowMs)) ?? group[0];
-            if (!isValidLatLng(rep.lat, rep.lng)) continue;
-            const emoji = eventEmoji(rep);
-            // Stor källa (PRO/Svenska kyrkan) → ingen färg (mörk standard);
-            // övriga → sin kategori-färg. Samma helper som DOM-brickan, så GL- och
-            // DOM-färgen aldrig glider isär.
-            const color = brickaBodyHex(rep) ?? undefined;
-            // Vald bricka (isSel) → vit ram. ALLA gillade (framtida) event → vit kropp,
-            // oavsett om de är valda — så de FÖRBLIR vita när man bläddrar vidare. Övriga
-            // (reveal-brickorna) = normal look.
-            const drawSel = isSel;
-            // "Ännu inte passerat" = samma isEventPast som dämpningen (start + 1 h,
-            // kl 20 för event utan klockslag) — inte en rå 1 h-cutoff som släppte
-            // heldagsevent redan kl 01.
-            const drawSav = group.some(e => savedEventIds.has(e.id) && !isEventPast(e, nowMs));
-            // Stjärnmärkt ELLER boostad (ej passerad) → guld-bricka med ⭐-badge.
-            // (Guldet gäller gruppen: cyklingen stängs av nedan så brickan står
-            // still på det stjärnmärkta/boostade eventet, samma beslut som för
-            // stjärnan.)
-            const drawStar = starredRep != null || boostedRep != null;
-            // Ticketmaster-grupp (minst ett ej passerat TM-event) → samma GULD-
-            // kropp som boost/stjärna (ägarbeslut 1/9: "ska se ut som boost-
-            // eventen") men UTAN ⭐-badge — stjärnan förblir boostens kvitto.
-            // Ingen sortKey-/staplingslyftning: TM-event trängs inte före
-            // andra i en multi-grupp och blir inte representant. STICKY-
-            // lyftningen är däremot PÅ sedan 31/8 (se sticky-effekten) — utan
-            // den syntes guldkroppen bara när reveal-systemet råkade tända
-            // just den brickan.
-            const drawGold = drawStar || group.some(e => isTicketmasterEvent(e) && !isEventPast(e, nowMs));
-            // 🔥 Populär (pipeline-flaggan) → något tjockare vit kant (Josef
-            // 10/9) så de sticker ut även med filtret AV. Guld/vald/sparad
-            // vinner ram-striden i bakningen — pop ändrar bara default-kanten.
-            const drawPop = group.some(e => e.pop && !isEventPast(e, nowMs));
-            const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
-            // count i bild-id:t: "+N"-siffran bakas IN i bilden (se v2MapBricka),
-            // så två grupper med samma emoji men olika antal får OLIKA bilder —
-            // och ett ändrat antal ger ett nytt id (gamla bilden återanvänds
-            // aldrig med fel siffra).
-            const badgeCount = group.length > 1 ? group.length : 0;
-            const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
-            if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, gold: drawGold, pop: drawPop, count: badgeCount });
-            // Bygg gruppens rotation (ej för den valda — den sköts av DOM-synken).
-            // Blir den ≥2 frames pekar brickan på gruppens EGEN cykel-bild i
-            // stället för rep-ikonen.
-            let finalIcon = iconId;
-            // Stjärnmärkta grupper cyklar INTE — det stjärnmärkta eventet ÄR
-            // det som visas (beslutet för multi-event-brickor), så emoji-
-            // växlingen stängs av så länge stjärnan lyser. Samma sak när en sort
-            // är framklickad (pickedRep): brickan ska STÅ STILL på den sorten,
-            // annars hade den cyklat bort från det man just bad om att få se.
-            if (group.length > 1 && !drawSel && !drawStar && !pickedRep) {
-                // EN frame per KATEGORI (Josef 26/8): fem musikevent i högen ska
-                // inte ge fem varv i bildspelet — de räknas som en. Nyckeln är
-                // kategori + brickfärg (färgen skiljer opt-in-källorna, som
-                // saknar färg, från vanliga kategorier med samma LLM-kategori).
-                // Custom-emojis inom samma kategori kollapsar till första
-                // eventets utseende — det är kategorin som är bildspelets steg.
-                const seenCat = new Set<string>();
-                const frames: CycleRotation['frames'] = [];
-                const frameIds: string[] = [];
-                for (const ev of group) {
-                    if (discardedEventIds.has(ev.id)) continue;
-                    // Passerade event deltar INTE i emoji-växlingen: har 2 av 3
-                    // i gruppen redan varit ska brickan stå still på det som
-                    // återstår (frames < 2 → ingen rotation alls). minuteTick i
-                    // deps håller filtret i takt med klockan under sessionen.
-                    if (isEventPast(ev, nowMs)) continue;
-                    const em = eventEmoji(ev);
-                    const col = brickaBodyHex(ev) ?? undefined;
-                    const catKey = `${ev.category && ev.category in EVENT_CATEGORIES ? ev.category : 'other'}|${col ?? ''}`;
-                    if (seenCat.has(catKey)) continue;
-                    seenCat.add(catKey);
-                    // drawGold följer med varje frame: en TM-grupp cyklar vidare
-                    // (till skillnad från stjärnmärkta) men får inte blinka
-                    // mellan guld och kategori-färg när pumpen byter pixlar.
-                    // drawPop följer gruppen (som guldet): kanten ska inte
-                    // blinka av/på när cykeln byter frame.
-                    frames.push({ emoji: em, color: col, saved: drawSav, gold: drawGold, pop: drawPop, eventId: ev.id });
-                    frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}${drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}`);
-                }
-                if (frames.length > 1) {
-                    // Gruppnyckeln i bild-id:t → aldrig delat mellan grupper.
-                    // (Identiska rotationer delade förr EN bild och bytte i
-                    // perfekt synk — nu ska EN bricka i taget byta, staggrat.)
-                    // Antalet ingår också: ändras gruppens count (nytt/borttaget
-                    // event) ska ett NYTT bild-id bakas — den inbakade siffran
-                    // kan inte uppdateras i en befintlig bild.
-                    const cycleId = `cycle:${key}:c${badgeCount}:${frameIds.join('|')}`;
-                    // Registrera cykel-bilden med frame 0 som utgångsutseende så
-                    // syncPlainLayer bakar + addImage:ar den som alla andra.
-                    if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, gold: frames[0].gold, pop: frames[0].pop, count: badgeCount });
-                    rotations.set(key, { icon: cycleId, count: badgeCount, frames });
-                    finalIcon = cycleId;
-                }
-            }
+            // Representant, flaggor, bild-id:n + cykelrotation — hela härled-
+            // ningen bor i deriveGroupBrick (modulnivå) så förbakningen av
+            // intilliggande dagar använder EXAKT samma logik. Kommentarerna om
+            // stjärn-representant, guld, cykling m.m. bor där numera.
+            const brick = deriveGroupBrick(group, key, nowMs, isSel, savedEventIds, starredEventIds, discardedEventIds, highlightEmoji, icons, rotations);
+            if (!brick) continue;
+            const { rep, color, drawStar, finalIcon } = brick;
             // Emoji-raden under stadsrutan: matchar gruppen den framklickade
             // sorten? Vi frågar hela gruppen, inte bara brickans visade emoji —
             // en multibricka cyklar mellan sina emojis, och den ska räknas som
@@ -1071,7 +1119,7 @@ export default function V2Map({
     // gång per databygge så träffbedömningen kan gå via de ~50 tända nycklarna
     // i stället för att loopa alla tiotusentals features per klick/mousemove.
     const plainFeatureByKeyRef = useRef<Map<string, PlainFeature>>(new Map());
-    const usedIconsRef = useRef<Map<string, { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; pop?: boolean; count?: number }>>(new Map());
+    const usedIconsRef = useRef<Map<string, BrickIconInfo>>(new Map());
     // "Ritar ut eventen"-fasen: efter att aggregat-datan hämtats dröjer det innan
     // symbolerna faktiskt SYNS (baka ikoner, tila GeoJSON i workern, rendera) —
     // utan spårning släcktes ladda-pillen vid hämtat-klart och kartan såg tom ut.
@@ -1107,6 +1155,15 @@ export default function V2Map({
     // döda fönstret vid dag/vecka-byten, 31/8).
     const reconcileRevealRef = useRef<() => void>(() => {});
     const reconcileAfterPaintRef = useRef(false);
+    // Stil-OBJEKTET är färdigladdat (addSource/addLayer/setData går bra). Sätts
+    // av 'style.load' (fyrar för init-stilen OCH efter varje setStyle), nollas
+    // när stilbytes-effekten kallar setStyle. Detta är GRINDEN för push/synk —
+    // INTE map.isStyleLoaded(): den är false även varje gång någon KÄLLA tilar
+    // (t.ex. förra dagbytets setData eller baskartans tiles), och då fyrar
+    // 'style.load' aldrig → en plainData-commit i ett sånt fönster tappade sin
+    // push helt. Källan stod kvar på gamla dagen (rester + kategorietiketter
+    // utan brickor) tills 30 s-pollen råkade knuffa. (Josefs dagbytesbugg 13/9.)
+    const styleLoadedRef = useRef(false);
     // Antal features som FAKTISKT pushats till källan (nollställs när källan
     // återskapas, t.ex. vid stilbyte) — skiljer "initial stor påfyllnad" (streamas
     // pö om pö) från små uppdateringar (en enda setData).
@@ -1234,24 +1291,35 @@ export default function V2Map({
         });
     };
 
-    // Baka (eller återanvänd) brick-bilderna som en uppsättning features faktiskt
-    // pekar på (properties.icon). Under den streamade påfyllnaden kallas den per
+    // Baka (eller återanvänd) EN brick-bild. `icons` = ikon-kartan bilden slås
+    // upp i — pushar skickar sin SNAPSHOT (se pushPlainEvents), annars den
+    // levande refen. Utan snapshotten läste en pågående uppdelad bakning
+    // usedIconsRef.current mitt i: landade en NY dags plainData under bakningen
+    // missade resterande chunkar sina uppslag (info === undefined) och setData:n
+    // landade med brickor vars bilder aldrig lagts till — osynlig bricka med
+    // synlig etikett + "Image could not be loaded"-varningar (13/9).
+    const bakeSingleIcon = useCallback((map: maplibregl.Map, id: string | undefined, icons?: typeof usedIconsRef.current) => {
+        if (!id || map.hasImage(id)) return;
+        const info = (icons ?? usedIconsRef.current).get(id);
+        if (!info) return;
+        let baked = bakedIconsRef.current.get(id);
+        if (!baked) {
+            const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0, info.gold, info.pop);
+            if (b) { bakedIconsRef.current.set(id, b); baked = b; }
+        }
+        if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
+    }, []);
+    // Ref-spegel så init-effektens styleimagemissing-nät (nedan) når den utan
+    // att få callbacken som dep.
+    const bakeSingleIconRef = useRef(bakeSingleIcon);
+    bakeSingleIconRef.current = bakeSingleIcon;
+    // Baka bilderna som en uppsättning features faktiskt pekar på
+    // (properties.icon). Under den streamade påfyllnaden kallas den per
     // delmängd, så bakningen sprids ut i stället för att blockera huvudtråden i
     // en enda lång svit innan första pricken ens kan synas.
-    const bakeIconsFor = useCallback((map: maplibregl.Map, feats: PlainFeature[]) => {
-        for (const f of feats) {
-            const id = f.properties.icon as string | undefined;
-            if (!id || map.hasImage(id)) continue;
-            const info = usedIconsRef.current.get(id);
-            if (!info) continue;
-            let baked = bakedIconsRef.current.get(id);
-            if (!baked) {
-                const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0, info.gold, info.pop);
-                if (b) { bakedIconsRef.current.set(id, b); baked = b; }
-            }
-            if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
-        }
-    }, []);
+    const bakeIconsFor = useCallback((map: maplibregl.Map, feats: PlainFeature[], icons?: typeof usedIconsRef.current) => {
+        for (const f of feats) bakeSingleIcon(map, f.properties.icon as string | undefined, icons);
+    }, [bakeSingleIcon]);
 
     // Starta en målnings-runda (pillen "Ritar ut eventen…" lever tills den är klar).
     // Returnerar arm(): koppla klart-lyssnarna — direkt för en enkel push, efter
@@ -1314,6 +1382,10 @@ export default function V2Map({
         const src = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
         if (!src) return;
         const target = plainFeaturesRef.current;
+        // Ikon-SNAPSHOT för hela den här pushen: bakningen är uppdelad över
+        // flera task-varv, och usedIconsRef kan hinna bytas av en nyare
+        // plainData innan sista chunken bakat — se bakeSingleIcon.
+        const iconsAtPush = usedIconsRef.current;
         // IDENTISKT innehåll → rör ingenting. Cards-/descriptions-mergarna (och
         // pollen var 30 s) bygger nya arrayer med samma GL-innehåll; utan denna
         // koll avbröt de den initiala våg-streamen (källan hade > STREAM_PREV_MAX
@@ -1371,7 +1443,7 @@ export default function V2Map({
         if (opts?.instant || prevCount > STREAM_PREV_MAX || target.length - prevCount < STREAM_MIN_GROWTH) {
             if (opts?.instant) {
                 // Stilbyte: användaren har redan sett markörerna — återställ direkt.
-                bakeIconsFor(map, target);
+                bakeIconsFor(map, target, iconsAtPush);
                 setData(target);
                 arm();
                 return;
@@ -1379,12 +1451,44 @@ export default function V2Map({
             // Dagbyte/poll/merge: brick-bakningen för en hel NY dags ikoner är
             // sidans tyngsta huvudtrådsjobb (sekunder i en enda task = INP >500 ms
             // på mobil — tappen som utlöste dagbytet satt fast bakom den). Baka i
-            // tidsbudgeterade bitar med yields emellan och skicka setData:n när
-            // allt är klart; redan bakade ikoner (poll/merge) passerar på en runda.
+            // tidsbudgeterade bitar med yields emellan.
+            // NÄRA FÖRST + TIDIG setData (Josef 13/9, "borde gå supersnabbt när
+            // datan redan är laddad"): setData:n väntade förut på att HELA landets
+            // nya ikoner bakats klart (~150 nya bilder ≈ 2,6 s per dagbyte — mätt).
+            // Nu bakas featuresen i och strax utanför VYN först och setData:n
+            // skickas så snart de är klara — dagbytet syns där man tittar på
+            // ~0,2–0,5 s. Resten bakar vidare i bakgrunden; en symbol utanför
+            // vyn har inga tiles än, och panorerar man dit innan bakgrunds-
+            // bakningen hunnit ikapp fångas den av styleimagemissing-nätet
+            // (init-effekten) som bakar den på begäran.
             // Avbryts via streamCleanupRef precis som våg-streamen (ny push/stilbyte).
             const BAKE_BUDGET_MS = 10;
-            const BAKE_SLICE = 25;
+            // Budgeten prövas mellan slicarna — 25 ikoner/slice gav 170–350 ms-
+            // tasks (en obakad bricka kostar ~7–17 ms: canvas + getImageData).
+            // Små slices håller varje task nära budgeten; MessageChannel-yielden
+            // är gratis, så totaltiden påverkas inte.
+            const BAKE_SLICE = 3;
+            // Vyns features först: bounds + 50 % marginal (täcker tile-bufferten
+            // runt vyn). Utanför-vyn-ordningen spelar ingen roll.
+            let ordered = target;
+            let nearCount = target.length;
+            try {
+                const b = map.getBounds();
+                const cx = (b.getWest() + b.getEast()) / 2;
+                const cy = (b.getSouth() + b.getNorth()) / 2;
+                const halfLng = (b.getEast() - b.getWest()) * 0.75;
+                const halfLat = (b.getNorth() - b.getSouth()) * 0.75;
+                const near: PlainFeature[] = [];
+                const far: PlainFeature[] = [];
+                for (const f of target) {
+                    const [lng, lat] = f.geometry.coordinates;
+                    (Math.abs(lng - cx) <= halfLng && Math.abs(lat - cy) <= halfLat ? near : far).push(f);
+                }
+                ordered = near.length === target.length ? target : [...near, ...far];
+                nearCount = near.length; // 0 = inget i bild → setData direkt
+            } catch { /* getBounds mitt i teardown — baka i target-ordning */ }
             let i = 0;
+            let sent = false;
             let canceled = false;
             // Yield via MessageChannel — setTimeout stryps i dolda flikar (≥1 s
             // per hopp) och nästlade timeouts klampas till 4 ms; en message-post
@@ -1394,26 +1498,35 @@ export default function V2Map({
                 ch.port1.onmessage = () => fn();
                 ch.port2.postMessage(null);
             };
+            // HELA target skickas (inte bara nära-delen) — källinnehållet är
+            // alltid komplett, så reconcile-/skip-/pushedCount-logiken ser
+            // exakt samma värld som före uppdelningen.
+            const send = (): boolean => {
+                // Källan kan ha återskapats under bakningen (stilbyte avbryter via
+                // cleanup, men hängslen ändå) — hämta den levande källan.
+                const liveSrc = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
+                if (!liveSrc) return false;
+                liveSrc.setData({ type: 'FeatureCollection', features: target as unknown as GeoJSON.Feature[] });
+                pushedCountRef.current = target.length;
+                arm();
+                return true;
+            };
             const bakeStep = () => {
                 streamCleanupRef.current = null;
                 if (canceled || mapRef.current !== map) return;
                 const deadline = performance.now() + BAKE_BUDGET_MS;
-                while (i < target.length && performance.now() < deadline) {
-                    bakeIconsFor(map, target.slice(i, i + BAKE_SLICE));
+                while (i < ordered.length && performance.now() < deadline) {
+                    bakeIconsFor(map, ordered.slice(i, i + BAKE_SLICE), iconsAtPush);
                     i += BAKE_SLICE;
                 }
-                if (i < target.length) {
+                if (!sent && i >= nearCount) {
+                    if (!send()) return; // källan borta (stilbyte) — afterLoad tar över
+                    sent = true;
+                }
+                if (i < ordered.length) {
                     streamCleanupRef.current = () => { canceled = true; };
                     yieldThen(bakeStep);
-                    return;
                 }
-                // Källan kan ha återskapats under bakningen (stilbyte avbryter via
-                // cleanup, men hängslen ändå) — hämta den levande källan.
-                const liveSrc = map.getSource('plain-events') as maplibregl.GeoJSONSource | undefined;
-                if (!liveSrc) return;
-                liveSrc.setData({ type: 'FeatureCollection', features: target as unknown as GeoJSON.Feature[] });
-                pushedCountRef.current = target.length;
-                arm();
             };
             bakeStep();
             return;
@@ -1438,7 +1551,7 @@ export default function V2Map({
             if (!liveSrc) return; // stilbyte mitt i — afterLoad gör en instant-push
             const next = Math.min(sent + waveSize, ordered.length);
             const slice = ordered.slice(sent, next);
-            bakeIconsFor(map, slice);
+            bakeIconsFor(map, slice, iconsAtPush);
             if (sent === 0) {
                 // Våg 1 ERSÄTTER (setData) — den lilla förra pushen (user-event)
                 // ligger redan först i ordered, så inget synligt försvinner.
@@ -1510,7 +1623,10 @@ export default function V2Map({
     const syncLabelSource = useCallback(() => {
         labelSyncTimerRef.current = null;
         const map = mapRef.current;
-        if (!map || !styleReady(map)) return;
+        // styleLoadedRef, inte styleReady/isStyleLoaded: den senare är false så
+        // fort någon källa tilar, och då TAPPADES den schemalagda syncen
+        // (timern är redan nollad) — spegeln stod stale tills nästa skrivning.
+        if (!map || !styleLoadedRef.current) return;
         try {
             const src = map.getSource('plain-events-labels') as maplibregl.GeoJSONSource | undefined;
             if (!src) return;
@@ -1559,7 +1675,10 @@ export default function V2Map({
 
     const syncPlainLayer = useCallback((opts?: { instant?: boolean }) => {
         const map = mapRef.current;
-        if (!map || !styleReady(map)) return;
+        // styleLoadedRef (stil-objektet laddat), inte styleReady/isStyleLoaded
+        // (false även under tile-laddning) — annars svaldes hela pushar, se
+        // ref-deklarationen.
+        if (!map || !styleLoadedRef.current) return;
         try {
             if (!map.getSource('plain-events')) {
                 // promoteId: 'key' → feature-state kan adresseras via gruppnyckeln
@@ -1830,7 +1949,9 @@ export default function V2Map({
     // i vila).
     const pumpReveal = useCallback(() => {
         const map = mapRef.current;
-        if (!map || !styleReady(map) || !layerExists(map, 'plain-events')) { revealRafRef.current = null; return; }
+        // layerExists räcker (try/catch:ad mot kontextförlust) — styleReady-
+        // kravet fick pumpen att hoppa över släckningsvarv under tile-laddning.
+        if (!map || !layerExists(map, 'plain-events')) { revealRafRef.current = null; return; }
         const seed = revealSeedRef.current;
         const sticky = revealStickyRef.current;
         // Tänd vilo-uppsättningen + klickade (sticky) brickor, släck allt annat.
@@ -2066,7 +2187,15 @@ export default function V2Map({
         }));
         const map = mapRef.current;
         if (!map) return;
-        if (map.isStyleLoaded()) {
+        // GRINDEN FÅR INTE VARA isStyleLoaded() (Josefs dagbytesbugg 13/9):
+        // den är false varje gång någon källa tilar — t.ex. medan FÖRRA dag-
+        // bytets setData byggde tiles — och 'style.load'-fallbacken fyrar
+        // aldrig igen efter initial laddning. En commit i ett sånt fönster
+        // tappade alltså sin push: källan stod kvar på gamla dagen (rester,
+        // kategorietiketter utan brickor) tills 30 s-pollen knuffade nästa.
+        // styleLoadedRef är false BARA medan en stil faktiskt laddar — och då
+        // kommer 'style.load' garanterat.
+        if (styleLoadedRef.current) {
             syncPlainLayerRef.current();
         } else {
             const h = () => syncPlainLayerRef.current();
@@ -2074,6 +2203,92 @@ export default function V2Map({
             return () => { map.off('style.load', h); };
         }
     }, [plainData, multiEventDotData]);
+
+    // ── FÖRBAKNING av intilliggande perioder (Josef 13/9: "gör det också") ────
+    // Bakar nästa/föregående periods brick-bilder i FÖRVÄG, i idle-tid, så ett
+    // dagsteg möter en varm bildcache: push-vägen hittar 0 obakade bilder och
+    // setData går direkt (~0,2 s — samma som ett återbesök). Ikonerna härleds
+    // med deriveGroupBrick — EXAKT samma logik som plainData — utan valt event
+    // (valet överlever ändå inte ett dagbyte) och utan framklickad sort
+    // (missar bakas som förr vid själva bytet; ofarligt).
+    // Hänsyn: startar aldrig medan den egna vyns push/bakning pågår, kör i
+    // requestIdleCallback-bitar (setTimeout-fallback) och avbryts när
+    // prebakeEvents byts (nytt byte = nya grannar).
+    useEffect(() => {
+        const slices = prebakeEvents;
+        if (!slices || slices.every(s => s.length === 0)) return;
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        let idleId: number | null = null;
+        // rIC-timeouten måste vara KORT: kartan målar (nästan) varje frame så
+        // äkta idle-tid är sällsynt — med 2000 ms väntade varje varv upp till
+        // 2 s och en dags ~380 bilder tog över en halv minut (mätt 13/9).
+        // 150 ms + 8 ms-budgeten nedan ger ~20 % duty ≈ en dag på ~4–5 s,
+        // fortfarande utan att knuffa interaktioner.
+        const schedule = (wait: number) => {
+            timer = setTimeout(() => {
+                timer = null;
+                if (typeof window.requestIdleCallback === 'function') {
+                    idleId = window.requestIdleCallback(step, { timeout: 60 });
+                } else {
+                    step();
+                }
+            }, wait);
+        };
+        let ids: string[] | null = null;
+        let icons: Map<string, BrickIconInfo> | null = null;
+        let i = 0;
+        const step = (deadline?: IdleDeadline) => {
+            idleId = null;
+            if (cancelled) return;
+            const map = mapRef.current;
+            if (!map || !styleLoadedRef.current) { schedule(1000); return; }
+            // Den egna vyns push/bakning har alltid företräde om huvudtråden.
+            if (streamCleanupRef.current != null || pushedCountRef.current !== plainFeaturesRef.current.length) { schedule(500); return; }
+            if (!ids) {
+                // Första biten: gruppera + härled bild-id:na (samma gruppering
+                // som groups-memot, ~11 m-precision) — VARJE period för sig,
+                // annars blir counts/cykler summor över perioderna (se propen).
+                const nowMs = Date.now();
+                icons = new Map<string, BrickIconInfo>();
+                for (const slice of slices) {
+                    const gmap = new Map<string, LinkEvent[]>();
+                    for (const evt of slice) {
+                        if (!evt.lat || !evt.lng) continue;
+                        const key = groupKeyOf(evt.lat, evt.lng);
+                        const bucket = gmap.get(key);
+                        if (bucket) bucket.push(evt); else gmap.set(key, [evt]);
+                    }
+                    for (const [key, group] of gmap) {
+                        deriveGroupBrick(group, key, nowMs, false, savedEventIds, starredEventIds, discardedEventIds, null, icons, null);
+                    }
+                }
+                ids = [...icons.keys()];
+                i = 0;
+            }
+            // OBS: kartan målar (nästan) varje frame, så webbläsaren ger sällan
+            // äkta idle-tid — requestIdleCallback fyrar då via sin timeout med
+            // didTimeout=true och timeRemaining()=0. Utan den grenen bakade
+            // loopen NOLL ikoner per varv och omschemalade i all evighet
+            // (verifierat live 13/9). Vid timeout tar vi en liten fast budget
+            // i stället — förbakningen är ändå bara ~3–4 ms per bild.
+            const hasBudget = (deadline && !deadline.didTimeout)
+                ? () => deadline.timeRemaining() > 2
+                : (() => { const end = performance.now() + 8; return () => performance.now() < end; })();
+            while (i < ids.length && hasBudget()) {
+                bakeSingleIcon(map, ids[i], icons!);
+                i++;
+            }
+            if (i < ids.length) schedule(16);
+        };
+        // Låt bytet/målningen som utlöste den nya grannlistan landa först.
+        schedule(800);
+        return () => {
+            cancelled = true;
+            if (timer) clearTimeout(timer);
+            if (idleId != null && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
+        };
+    }, [prebakeEvents, savedEventIds, starredEventIds, discardedEventIds, bakeSingleIcon]);
 
     // Släck ladda-pillen för gott (latch) först när ALLT landat OCH kartan
     // faktiskt målat symbolerna: inga omgångar i kön + minst en genomförd
@@ -2523,6 +2738,17 @@ export default function V2Map({
         }
 
         mapRef.current = map;
+        // Grind-trackern: stil-objektet laddat = pushar/synkar får köra. Fyrar
+        // för bootstrap-stilen och efter varje setStyle (stilbytes-effekten
+        // stänger grinden när den kallar setStyle). Se styleLoadedRef.
+        map.on('style.load', () => { styleLoadedRef.current = true; });
+        // Skyddsnät: pekar en feature i källan på en bild som aldrig bakats
+        // (t.ex. en push vars bakning avbröts i skarven) bakar vi den på
+        // begäran i stället för att brickan blir osynlig med etiketten kvar.
+        map.on('styleimagemissing', (e) => {
+            const m = mapRef.current;
+            if (m) bakeSingleIconRef.current(m, e.id);
+        });
         // Dev-handtag för felsökning i konsolen (aldrig i produktion).
         if (process.env.NODE_ENV === 'development') {
             (window as unknown as { __vadkulMap?: maplibregl.Map }).__vadkulMap = map;
@@ -3028,10 +3254,12 @@ export default function V2Map({
     }, []);
 
     // Kör fn så snart kartans stil är redo (annars går addSource/setTerrain fel).
+    // styleLoadedRef, inte isStyleLoaded(): den senare är false under all
+    // tile-laddning och då fyrar style.load aldrig → anropet tappades tyst.
     const runWhenStyleReady = (fn: (map: maplibregl.Map) => void) => {
         const map = mapRef.current;
         if (!map) return;
-        if (map.isStyleLoaded()) fn(map);
+        if (styleLoadedRef.current) fn(map);
         else map.once('style.load', () => fn(map));
     };
 
@@ -3053,6 +3281,9 @@ export default function V2Map({
             syncPlainLayerRef.current({ instant: true });
         };
         const applyStyle = (style: string | maplibregl.StyleSpecification) => {
+            // Ny stil på väg in → grinden stängs tills dess 'style.load' fyrar
+            // (init-effektens lyssnare öppnar den igen, före afterLoad).
+            styleLoadedRef.current = false;
             map.setStyle(style);
             map.once('style.load', afterLoad);
         };

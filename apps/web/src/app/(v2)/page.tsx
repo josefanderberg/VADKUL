@@ -1404,9 +1404,12 @@ export default function HomePage() {
             Math.max(WEEK_AREA_MIN_RADIUS_KM, Math.ceil(viewRadiusKm / 5) * 5)
         }`
         : null;
-    const filteredEvents = useMemo(() => {
+    // Perioden som URVAL, med startdag som argument: används av filteredEvents
+    // (aktuell period) OCH av förbakningen (nästa/föregående period — se
+    // prebakeEvents nedan). Samma regler oavsett vilken period som skivas.
+    const periodSlice = useCallback((startOffset: number) => {
         const targetDate = new Date();
-        targetDate.setDate(targetDate.getDate() + dayOffset);
+        targetDate.setDate(targetDate.getDate() + startOffset);
 
         const startOfDay = new Date(targetDate);
         startOfDay.setHours(0, 0, 0, 0);
@@ -1430,7 +1433,8 @@ export default function HomePage() {
         return inRange.filter(evt =>
             !hasValidCoords(evt) || haversineKm(cLat, cLng, evt.lat, evt.lng) <= radiusKm
         );
-    }, [events, dayOffset, effectiveRangeDays, weekAreaKey]);
+    }, [events, effectiveRangeDays, weekAreaKey]);
+    const filteredEvents = useMemo(() => periodSlice(dayOffset), [periodSlice, dayOffset]);
 
     // Zoomar man ut ur områdesvyn medan veckoläget är på → tillbaka till en
     // dag (offset behålls). 0.5 zoomstegs hysteres mot upplåsningsgränsen så
@@ -1954,6 +1958,23 @@ export default function HomePage() {
         end.setDate(end.getDate() + dayOffset + dayRangeDays);
         return end.getTime() <= timelineHorizonMs;
     }, [eventsSettled, timelineHorizonMs, dayOffset, dayRangeDays]);
+
+    // FÖRBAKNINGS-underlag till kartan (Josef 13/9 "gör det också"): nästa och
+    // föregående periods event genom SAMMA kedja som kartans events-prop
+    // (periodSlice → matchesFilter; söket hoppas över — det bara smalnar, och
+    // ett överskott av förbakade bilder är ofarligt). V2Map bakar bildernas i
+    // idle-tid (prebakeEvents-effekten) så ett dagsteg möter en varm bildcache.
+    // Väntar tills vyns data satt sig — förbaka inte halvlandade listor.
+    const prebakeEvents = useMemo(() => {
+        if (!eventsSettledForView) return null;
+        // EN lista PER PERIOD — slås de ihop grupperar kartan tvärs över
+        // perioderna och bakar fel count-badgar/cykler (se prop-kommentaren).
+        const slices = [periodSlice(dayOffset + effectiveRangeDays).filter(matchesFilter)];
+        if (dayOffset > 0) {
+            slices.push(periodSlice(Math.max(0, dayOffset - effectiveRangeDays)).filter(matchesFilter));
+        }
+        return slices;
+    }, [eventsSettledForView, periodSlice, dayOffset, effectiveRangeDays, matchesFilter]);
 
     // Veckoalternativet (dagväljaren, veckogenvägen i navbaren och erbjudandet
     // i tom-läget) låses upp först när man zoomat in till stadsnivå — se
@@ -3651,6 +3672,9 @@ export default function HomePage() {
                 // weekUnlocked-effekten när zoomen är framme.
                 weekZoomInTrigger={weekZoomInTrigger}
                 daySwitchNonce={daySwitchNonce}
+                // Grannperiodernas event → kartan förbakar deras brick-bilder
+                // i idle-tid så dagstegen går på varm cache (13/9).
+                prebakeEvents={prebakeEvents}
                 navSelectNonce={navSelectNonce}
                 onFeatureFlagsChange={handleFeatureFlagsChange}
                 onActivateMultiplayer={handleActivateMultiplayer}

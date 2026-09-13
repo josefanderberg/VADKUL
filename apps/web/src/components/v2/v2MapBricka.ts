@@ -282,7 +282,10 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(W * DPR);
     canvas.height = Math.round(H * DPR);
-    const ctx = canvas.getContext('2d');
+    // willReadFrequently: bilden läses ALLTID tillbaka med getImageData sist —
+    // hinten håller canvasen i CPU-minne så readbacken slipper GPU-synken
+    // (utan den kostade en bricka ~7–17 ms; ett dagbyte bakar ~150 nya).
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return null;
     ctx.scale(DPR, DPR);
     const cx = W / 2;
