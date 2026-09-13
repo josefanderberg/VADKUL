@@ -1,12 +1,6 @@
 {
   "version": 1,
   "sources": {
-    "cirkus": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-06",
-      "emptyRetries": 2
-    },
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",

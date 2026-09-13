@@ -143,6 +143,12 @@ export interface SitemapConfig {
     /** Vänta så här länge efter networkidle2 innan vi läser DOM (default 2000ms) */
     browserSettleMs?: number;
     /**
+     * Scrolla sidan så här många skärmar efter settle (600 ms paus per steg)
+     * innan DOM läses — för lazy-loadade kataloger (Cirkus 13/9: korten
+     * dyker upp först när de rullas in i bild). 0/utelämnad = ingen scroll.
+     */
+    browserScrolls?: number;
+    /**
      * Detaljsidans EGET datumfält (ex '.calendar-date'). Satt → datumet tas
      * BARA därifrån (dateFromDetailSelector); ger fältet inget datum hoppas
      * sidan över i stället för att falla tillbaka på andra datum på sidan.
@@ -339,6 +345,11 @@ async function fetchRenderedHtml(url: string, cfg: SitemapConfig): Promise<strin
         });
         await page.goto(url, { waitUntil: 'networkidle2', timeout: cfg.timeoutMs ?? 30000 });
         await new Promise((r) => setTimeout(r, cfg.browserSettleMs ?? 2000));
+        // Lazy-load-kataloger: rulla fram korten innan DOM läses.
+        for (let i = 0; i < (cfg.browserScrolls ?? 0); i++) {
+            await page.evaluate(() => window.scrollBy(0, 2500));
+            await new Promise((r) => setTimeout(r, 600));
+        }
         return await page.content();
     } catch {
         return null;

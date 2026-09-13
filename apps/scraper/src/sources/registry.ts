@@ -866,25 +866,39 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-07-02',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.jamtli.com/ajde_events-sitemap.xml', date: '2026-06-24' },
     },
-    {
-        id: 'cirkus',
+    // ─── CIRKUS STOCKHOLM — Puppeteer hela vägen (WAF blockerar vanlig fetch) ─
+    // Gamla `cirkus`-källan (sitemap-events.xml) somnade 27/7: Vercel-WAF:en
+    // svarar 429 "blocked" på ALLT som inte är en riktig browser — men den
+    // SLÄPPER headless Chrome (reprobat 13/9). Sajten är dessutom ombyggd
+    // (Next.js/Payload, Payload-API:t är låst med 403): kalendern bor på
+    // /sv/evenemang/<kategori>/ med lazy-loadade kort (browserScrolls) och
+    // detaljsidor på /sv/evenemang/<slug>/ med full JSON-LD @type=Event.
+    // useBrowser täcker BÅDE katalog och detaljsidor i sitemap-motorn, så
+    // ingen egen motor behövs. ~21 aktiva föreställningar vid bygget.
+    ...['konsert', 'musikal', 'humor', 'dans'].map((cat): Source => ({
+        id: `cirkus-${cat}`,
         hostName: 'Cirkus Stockholm',
         region: 'stockholm',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://cirkus.se/sitemap-events.xml',
-            // Bara svenska event-URLs (/sv/evenemang/...), inte /en/shows/-dubbletter.
-            urlPatterns: [/\/sv\/evenemang\/[^/]+\/?$/i],
+            sitemapUrl: `https://cirkus.se/sv/evenemang/${cat}/`,
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 3000,
+            browserScrolls: 8,
+            // Detaljsidor direkt under /sv/evenemang/ — kategorisidorna själva
+            // exkluderas (annars skrapas landningssidor som "event").
+            urlPatterns: [/\/sv\/evenemang\/(?!(?:konsert|musikal|humor|dans|show|familj|teater)\/?$)[^/#?]+\/?$/i],
             defaultCity: 'Stockholm',
+            maxUrls: 40,
         },
-        updateFrequency: 'every-3d',
+        updateFrequency: 'weekly',
         status: 'experimental',
-        notes: 'Probe 2026-06-08: 1424 event-URLs i sitemap-events.xml, JSON-LD @type=Event + startDate per sida. SOMNAD 2026-07-27: HTTP 429 + Vercel Security Checkpoint (botskydd) — 0 event i DB. '
-            + 'REPROBAT 13/9 med Puppeteer: WAF:en SLÄPPER headless Chrome (200)! Sajten är ombyggd (Next.js/Payload): gamla sitemap-events.xml är borta, kalendern bor på /sv/evenemang/ med kategorisidor '
-            + '(konsert/musikal/humor/dans) och detaljsidor direkt på /sv/evenemang/<slug>/. MEN sitemap-motorn kör detaljsidor med vanlig fetch → 429 — källan kräver en egen Puppeteer-motor (browser på VARJE sida). '
-            + 'Recept: rendera kategorisidorna, samla /sv/evenemang/<slug>/-länkar (exkl. kategori-slugs), rendera detaljsidor och läs JSON-LD/DOM.',
-        lastVerified: '2026-06-08',
-    },
+        windowDays: 180,
+        notes: `Cirkus kategorisida ${cat} — Puppeteer för katalog OCH detalj (WAF:en 429:ar vanlig fetch). Detaljsidorna bär JSON-LD Event.`,
+        lastVerified: '2026-09-13',
+        discovery: { method: 'manual', probeUrl: `https://cirkus.se/sv/evenemang/${cat}/`, date: '2026-09-13' },
+    })),
     {
         id: 'dansenshus',
         hostName: 'Dansens Hus',
@@ -2665,6 +2679,38 @@ export const SOURCES: Source[] = [
         windowDays: 180,
         notes: 'Probe-sitemap 2026-06-04: 107 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
+    },
+    {
+        id: 'visitystadosterlen',
+        hostName: 'Visit Ystad & Österlen',
+        region: 'ystad',
+        engine: 'sitemap',
+        config: {
+            // Sitemap-INDEX → två dynamic-evenemang-delar (~4 980 URLs).
+            sitemapUrl: 'https://www.visitystadosterlen.se/sitemap.xml',
+            urlPatterns: [/\/evenemang-1\/[^/]+\/\d+\/?$/i],
+            // Wix-sidan är enorm (~500 KB) och FULL av datum (relaterade
+            // event, brödtext) — datumet tas BARA ur "När:"-fältet: rubriken
+            // <h2>När:</h2> följs av värde-diven ("tisdag 29 september",
+            // "från fredag 3 juli till fredag 31 juli" — utan år). Vecko-
+            // dagen valideras av shiftYearToWeekday (11/9-bygget): spökdatum
+            // som inte går ihop med något närliggande år KASTAS.
+            detailDateSelector: 'div:has(> h2:contains("När")) + div',
+            defaultCity: 'Ystad',
+            // SPÖK-URL-FARAN (probe 13/9): Wix återanvänder/behåller gamla
+            // item-URL:er som svarar 200 med ETT ANNAT events innehåll
+            // (medeltidsläger-slug visade Late Night Comedy). lastmod-desc-
+            // sorteringen + måttligt cap håller körningen på färska items;
+            // veckodagsvakten kastar de flesta spökdatumen. Höj inte capet
+            // oprövat — då börjar svansen av döda URLs skrapas.
+            maxUrls: 120,
+        },
+        updateFrequency: 'weekly',
+        status: 'experimental',
+        windowDays: 120,
+        notes: 'Receptet från källsvepet 4/9 — byggbart först när veckodagsvaliderad årsinferens fanns (Norrköping 11/9). Regionen spänner Ystad/Simrishamn/Tomelilla — defaultCity Ystad är fallback, pipelinens platsextraktion får göra resten.',
+        lastVerified: '2026-09-13',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.visitystadosterlen.se/sitemap.xml', date: '2026-09-04', rawEventCount: 4982 },
     },
     {
         id: 'karlstad',
