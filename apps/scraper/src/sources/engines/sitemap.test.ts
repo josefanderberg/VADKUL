@@ -358,4 +358,21 @@ describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
     it('fältet saknas → null', () => {
         expect(dateFromDetailSelector('<html><body><h1>X</h1><p>26 september</p></body></html>', '.calendar-date', NOW)).toBeNull();
     });
+
+    // Malmö Arena 13/9: datumet ligger månad-FÖRST i tre divar
+    // (januari / 30 / Kl 14:30) — texten blir "januari 30 Kl 14:30".
+    it('månad-först ("januari 30 Kl 14:30") vänds och parsas', () => {
+        const html = `<div class="event-single-view__datecost-container"><div><div>januari</div>
+<div class="event-single-view__datecost-big">30</div><div>Kl 14:30</div></div></div>`;
+        const r = dateFromDetailSelector(html, '.event-single-view__datecost-container', NOW)!;
+        expect([r.date.getFullYear(), r.date.getMonth(), r.date.getDate(), r.date.getHours(), r.date.getMinutes()]).toEqual([2027, 0, 30, 14, 30]);
+        expect(r.hasTime).toBe(true);
+    });
+
+    it('månad-först med flera föreställningar — första vinner', () => {
+        const html = `<div class="dc"><div><div>oktober</div><div>30</div><div>Kl 19:30</div></div>
+<div><div>oktober</div><div>31</div><div>Kl 15:00</div></div></div>`;
+        const r = dateFromDetailSelector(html, '.dc', NOW)!;
+        expect([r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([9, 30, 19]);
+    });
 });

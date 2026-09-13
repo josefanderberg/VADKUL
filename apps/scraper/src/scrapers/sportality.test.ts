@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { swedishTeamCodes, mapSportalityGame } from './sportality';
+import { swedishTeamCodes, swedishInstanceIds, logoInstanceId, mapSportalityGame } from './sportality';
 
 const CFG = { baseUrl: 'https://www.shl.se', leagueName: 'SHL' };
 const SWE = new Set(['BIF', 'DIF', 'RBK']);
@@ -14,6 +14,45 @@ const GAME = {
     homeTeam: { name: 'Brynäs', code: 'BIF' },
     awayTeam: { name: 'Djurgårdens IF Hockey', code: 'DIF' },
 };
+
+describe('swedishInstanceIds + logoInstanceId (SDHL-fallet 13/9)', () => {
+    it('plockar ownerInstanceId för svenska lag', () => {
+        const s = swedishInstanceIds({
+            allTeamsInSite: [
+                { ownerInstanceId: 'fhc1_fhc', nationality: 'sv' },
+                { ownerInstanceId: 'plz1_plz', nationality: 'SE' },
+            ],
+        });
+        expect([...s]).toEqual(['fhc1_fhc']);
+    });
+
+    it('läser instans-id ur logo-URL:en', () => {
+        expect(logoInstanceId('https://sportality.cdn.s8y.se/team-logos/fhc1_fhc.svg')).toBe('fhc1_fhc');
+        expect(logoInstanceId('https://example.com/nagot-annat.svg')).toBeNull();
+        expect(logoInstanceId(undefined)).toBeNull();
+    });
+
+    it('SDHL: teamCode "DAM" på alla lag → matchen släpps in via logo-instansen', () => {
+        // Kodmängden matchar inte (settings säger DAM, matchen säger FHC) men
+        // instans-id:t i loggan gör det — matchen ska INTE klassas som utomlands.
+        const game = {
+            ...GAME,
+            homeTeam: { name: 'Frölunda HC', code: 'FHC', logo: 'https://sportality.cdn.s8y.se/team-logos/fhc1_fhc.svg' },
+            awayTeam: { name: 'Brynäs IF', code: 'BIF' },
+        };
+        const ev = mapSportalityGame(game, { baseUrl: 'https://www.sdhl.se', leagueName: 'SDHL' }, new Set(['DAM']), new Set(['fhc1_fhc']));
+        expect(ev).not.toBeNull();
+        expect(ev!.title).toBe('Frölunda HC – Brynäs IF');
+    });
+
+    it('utländskt hemmalag släpps fortfarande inte in (varken kod eller instans)', () => {
+        const game = {
+            ...GAME,
+            homeTeam: { name: 'EV Zug', code: 'ZUG', logo: 'https://sportality.cdn.s8y.se/team-logos/zug1_zug.svg' },
+        };
+        expect(mapSportalityGame(game, CFG, SWE, new Set(['fhc1_fhc']))).toBeNull();
+    });
+});
 
 describe('swedishTeamCodes', () => {
     it('plockar bara nationality "sv" — "SE" sitter felaktigt på utländska lag', () => {

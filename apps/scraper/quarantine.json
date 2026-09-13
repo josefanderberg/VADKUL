@@ -65,12 +65,6 @@
       "lastRetry": "2026-09-12",
       "emptyRetries": 3
     },
-    "sdhl": {
-      "since": "2026-09-01",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-08",
-      "emptyRetries": 1
-    },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",

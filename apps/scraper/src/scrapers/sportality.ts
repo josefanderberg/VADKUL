@@ -57,7 +57,7 @@ export interface SportalityConfig {
     leagueName: string;
 }
 
-interface SportalityTeam { name?: string; code?: string }
+interface SportalityTeam { name?: string; code?: string; logo?: string }
 interface SportalityGame {
     uuid?: string;
     startDateTime?: string;      // ISO UTC
@@ -84,6 +84,30 @@ export function swedishTeamCodes(settings: unknown): Set<string> {
 }
 
 /**
+ * Instans-id:n (ownerInstanceId, t.ex. "fhc1_fhc") för sajtens svenska lag.
+ * SDHL-fallet 13/9: settings-teamCode blev "DAM" för ALLA lag medan
+ * matcherna bär riktiga koder (FHC/BIF/…) — kodmatchningen gav 0 svenska
+ * lag och hela ligan filtrerades som "utomlands". Matchens logo-URL
+ * (team-logos/<instans>.svg) bär däremot exakt samma instans-id som
+ * settings — en perfekt join-nyckel (11/11 vid bygget). Exporterad för test.
+ */
+export function swedishInstanceIds(settings: unknown): Set<string> {
+    const teams = (settings as { allTeamsInSite?: { ownerInstanceId?: string; nationality?: string }[] })?.allTeamsInSite;
+    const out = new Set<string>();
+    if (!Array.isArray(teams)) return out;
+    for (const t of teams) {
+        if (t?.nationality === 'sv' && t.ownerInstanceId) out.add(t.ownerInstanceId);
+    }
+    return out;
+}
+
+/** Instans-id ur en lag-logga ("…/team-logos/fhc1_fhc.svg" → "fhc1_fhc"). */
+export function logoInstanceId(logoUrl: string | undefined): string | null {
+    const m = logoUrl?.match(/team-logos\/([^./]+)\./);
+    return m ? m[1] : null;
+}
+
+/**
  * En match → RawEvent. Returnerar null för spelade matcher, matcher utan
  * hemmalag i `swedish` (= arena utomlands) och ofullständiga poster.
  * Exporterad för test.
@@ -92,14 +116,20 @@ export function mapSportalityGame(
     game: SportalityGame,
     cfg: SportalityConfig,
     swedish: Set<string>,
+    swedishInstances?: Set<string>,
 ): RawEvent | null {
     if (game.played) return null;
     const home = game.homeTeam?.name?.trim();
     const away = game.awayTeam?.name?.trim();
     const code = game.homeTeam?.code;
     if (!home || !away || !game.uuid || !game.startDateTime) return null;
-    // Hemmalaget avgör arenans land — utan svenskt hemmalag spelas matchen utomlands.
-    if (!code || !swedish.has(code)) return null;
+    // Hemmalaget avgör arenans land — utan svenskt hemmalag spelas matchen
+    // utomlands. Kodmatchning först (SHL/SSL-vägen), logo-instans som
+    // fallback (SDHL, se swedishInstanceIds).
+    const homeInstance = logoInstanceId(game.homeTeam?.logo);
+    const isSwedish = (!!code && swedish.has(code))
+        || (!!homeInstance && !!swedishInstances?.has(homeInstance));
+    if (!isSwedish) return null;
 
     const start = new Date(game.startDateTime);
     if (isNaN(start.getTime())) return null;
@@ -142,16 +172,19 @@ export const sportalityEngine: Engine = async (config: SportalityConfig, ctx) =>
     const headers = { 'User-Agent': UA, Accept: 'application/json' };
 
     let swedish: Set<string>;
+    let swedishInstances: Set<string>;
     try {
         const res = await fetch(`${base}/api/site/settings`, { headers, signal: ctx.signal ?? AbortSignal.timeout(30_000) });
         if (!res.ok) { ctx.log(`settings HTTP ${res.status}`); return []; }
-        swedish = swedishTeamCodes(await res.json());
+        const settings = await res.json();
+        swedish = swedishTeamCodes(settings);
+        swedishInstances = swedishInstanceIds(settings);
     } catch (err) {
         ctx.log(`settings-fel: ${(err as Error).message}`);
         return [];
     }
     // Utan laglista skulle Sverige-filtret släppa igenom allt — avbryt hellre.
-    if (swedish.size === 0) { ctx.log('inga svenska lag i settings — hoppar över'); return []; }
+    if (swedish.size === 0 && swedishInstances.size === 0) { ctx.log('inga svenska lag i settings — hoppar över'); return []; }
 
     let byDate: Record<string, SportalityGame[]>;
     try {
@@ -169,7 +202,7 @@ export const sportalityEngine: Engine = async (config: SportalityConfig, ctx) =>
     for (const games of Object.values(byDate ?? {})) {
         if (!Array.isArray(games)) continue;
         for (const g of games) {
-            const ev = mapSportalityGame(g, config, swedish);
+            const ev = mapSportalityGame(g, config, swedish, swedishInstances);
             if (!ev) { if (!g.played && g.homeTeam?.code && !swedish.has(g.homeTeam.code)) skippedAbroad++; continue; }
             if (seen.has(ev.url)) continue;
             seen.add(ev.url);

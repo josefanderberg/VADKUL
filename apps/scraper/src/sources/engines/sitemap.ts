@@ -166,9 +166,24 @@ export function dateFromDetailSelector(
     html: string, selector: string, now: Date = new Date(),
 ): { date: Date; hasTime: boolean } | null {
     const $ = cheerio.load(html);
-    const text = decodeHtmlEntities($(selector).first().text()).replace(/\s+/g, ' ').trim();
+    // Taggar → mellanslag i stället för cheerios .text(): den limmar ihop
+    // angränsande block-element ("<div>januari</div><div>30</div>" →
+    // "januari30") och då känns datumet aldrig igen. Samma konvention som
+    // findFirstDateInText själv använder för rå-HTML.
+    const el = $(selector).first();
+    if (el.length === 0) return null;
+    const text = decodeHtmlEntities((el.html() ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
     if (!text) return null;
-    const date = findFirstDateInText(text, now);
+    // Månad-FÖRST ("januari 30 Kl 14:30" — Malmö Arenas tre datum-divar,
+    // 13/9): vänd till svensk ordning så findFirstDateInText känner igen
+    // det. Bara första förekomsten — första föreställningen vinner ändå.
+    // Medvetet LOKALT här (inte i swedishDate): utanför ett utpekat datum-
+    // fält är "månadsnamn + tal" för tvetydigt ("under januari 30 platser").
+    const normalized = text.replace(
+        /\b(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+(\d{1,2})\b/i,
+        '$2 $1',
+    );
+    const date = findFirstDateInText(normalized, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
 }
 

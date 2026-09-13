@@ -68,6 +68,11 @@ const TICKSTER_CITIES: Array<{ city: string; base: string; slug?: string; pages:
     { city: 'Eskilstuna',   base: 'eskilstuna',   pages: 2 },
     { city: 'Östersund',    base: 'ostersund',    pages: 2 },
     { city: 'Helsingborg',  base: 'helsingborg',  pages: 1 },
+    // Skellefteå (13/9, Josefs "lite tunt"): 78 event varav 73 på Sara
+    // Kulturhus — stadens storscen säljer HELA sin säsong via Tickster, så
+    // den här raden ersätter en egen Sara-källa (deras sajt är Umbraco med
+    // JS-lista, samma återvändsgränd som Göta Lejon/Oscars/China 4/9).
+    { city: 'Skellefteå',   base: 'skelleftea',   pages: 1 },
     { city: 'Borås',        base: 'boras',        pages: 1 },
     { city: 'Kristianstad', base: 'kristianstad', pages: 1 },
     { city: 'Växjö',        base: 'vaxjo',        pages: 1 },
@@ -874,7 +879,10 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
-        notes: 'Probe 2026-06-08: 1424 event-URLs i sitemap-events.xml, JSON-LD @type=Event + startDate per sida. SOMNAD 2026-07-27: HTTP 429 + Vercel Security Checkpoint (botskydd) — 0 event i DB. Kräver headless med challenge-lösning eller annan väg (biljettpartner?).',
+        notes: 'Probe 2026-06-08: 1424 event-URLs i sitemap-events.xml, JSON-LD @type=Event + startDate per sida. SOMNAD 2026-07-27: HTTP 429 + Vercel Security Checkpoint (botskydd) — 0 event i DB. '
+            + 'REPROBAT 13/9 med Puppeteer: WAF:en SLÄPPER headless Chrome (200)! Sajten är ombyggd (Next.js/Payload): gamla sitemap-events.xml är borta, kalendern bor på /sv/evenemang/ med kategorisidor '
+            + '(konsert/musikal/humor/dans) och detaljsidor direkt på /sv/evenemang/<slug>/. MEN sitemap-motorn kör detaljsidor med vanlig fetch → 429 — källan kräver en egen Puppeteer-motor (browser på VARJE sida). '
+            + 'Recept: rendera kategorisidorna, samla /sv/evenemang/<slug>/-länkar (exkl. kategori-slugs), rendera detaljsidor och läs JSON-LD/DOM.',
         lastVerified: '2026-06-08',
     },
     {
@@ -4355,6 +4363,29 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-09',
     },
     {
+        id: 'malmoarena',
+        hostName: 'Malmö Arena',
+        region: 'malmo',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://www.malmoarena.com/sitemap.xml',
+            // Bara svenska event-sidor — /en/events/ är samma event på engelska.
+            urlPatterns: [/malmoarena\.com\/evenemang\/[^/]+\/?$/i],
+            // Datumet ligger månad-FÖRST i tre divar (januari / 30 / Kl 14:30)
+            // i datecost-containern; cheerio-fallbacken nappade annars på
+            // beskrivningens datum (4/9-receptet). Vändningen till svensk
+            // ordning sker i dateFromDetailSelector.
+            detailDateSelector: '.event-single-view__datecost-container',
+            defaultCity: 'Malmö',
+        },
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Receptet från källsvepet 4/9 (HubSpot-sajt, 117 evenemang-URLs). Byggd 13/9 när dateFromDetailSelector fick månad-först-vändningen. Multipla föreställningar på en sida → första datumet vinner.',
+        lastVerified: '2026-09-13',
+        discovery: { method: 'probe-sitemap', probeUrl: 'https://www.malmoarena.com/sitemap.xml', date: '2026-09-04', rawEventCount: 117 },
+    },
+    {
         id: 'konserthuset-stockholm',
         hostName: 'Konserthuset Stockholm',
         region: 'stockholm',
@@ -4765,7 +4796,8 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
-        notes: 'Probe-venues 2026-06-09: 19 event-URLs (evenemang-mönster) — sommarscen (utomhus). Körd: 0/0 extraherade — evenemang-URLs är landningssidor utan event-struktur. Kräver annan approach.',
+        notes: 'Probe-venues 2026-06-09: 19 event-URLs (evenemang-mönster) — sommarscen (utomhus). Körd: 0/0 extraherade — evenemang-URLs är landningssidor utan event-struktur. Kräver annan approach. '
+            + '13/9: LEGITIMT TOM — säsongen slut, sitemapen listar RADERADE 2026-sidor (p-floyd → 404), 2027 opublicerad. Låt karantänens självläkning återproba; proba om ordentligt när vårsäsongen släpps (typiskt jan–mars).',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.dalhalla.se/sitemap.xml', date: '2026-06-09' },
     },
     {
