@@ -23,10 +23,14 @@ interface EventListRowProps {
      *  normal vikt och det som matchar i fetstil, så man ser VARFÖR raden
      *  kom med (FB-klagomålet 11/9). */
     highlight?: string;
+    /** Liten neutral chip efter titeln — t.ex. "Varje vecka" på profilens
+     *  hopgrupperade serierader, så det syns att raden står för fler
+     *  tillfällen än det visade datumet. */
+    tag?: string;
 }
 
 /** Kompakt eventrad för panellistor (sökträffar, sparade event). */
-export default function EventListRow({ evt, onPick, right, dimmed = false, highlight }: EventListRowProps) {
+export default function EventListRow({ evt, onPick, right, dimmed = false, highlight, tag }: EventListRowProps) {
     return (
         <li className={`flex items-center ${dimmed ? 'opacity-60' : ''}`}>
             <button
@@ -59,6 +63,11 @@ export default function EventListRow({ evt, onPick, right, dimmed = false, highl
                         {isVadkulHostedEvent(evt) && (
                             <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-500 text-white">
                                 VADKUL
+                            </span>
+                        )}
+                        {tag && (
+                            <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                                {tag}
                             </span>
                         )}
                     </div>

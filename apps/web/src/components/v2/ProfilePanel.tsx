@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
+import { collapseWeeklySeries } from '@/utils/collapseWeeklySeries';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
@@ -58,6 +59,14 @@ const NO_EVENTS: LinkEvent[] = [];
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
 export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, savedCount = 0, onOpenSaved, anchor = 'left' }: ProfilePanelProps) {
+    // Mina event med veckoserierna HOPGRUPPERADE till en rad per serie
+    // (Josef 14/9: "nu blir det en jättelång lista") — raden visar nästa
+    // tillfälle + "Varje vecka"-chip, och soptunnan tar hela serien (samma
+    // id-stam som handleDeleteOwnEvent redan raderar på).
+    const myEventsList = useMemo(
+        () => (myEvents ? collapseWeeklySeries(myEvents, Date.now()) : undefined),
+        [myEvents],
+    );
     const { user, logout, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount } = useAuth();
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState('');
@@ -630,30 +639,36 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
 
                         {/* Mina event — bara när sidan vet vilka de är (kartan);
                             utelämnad lista = sektionen döljs. */}
-                        {myEvents && (
+                        {myEventsList && (
                         <div className="border-t border-slate-100 dark:border-slate-800">
                             <div className="px-4 pt-3 pb-1.5">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                    Mina event · {myEvents.length}
+                                    Mina event · {myEventsList.length}
                                 </span>
                             </div>
-                            {myEvents.length === 0 ? (
+                            {myEventsList.length === 0 ? (
                                 <p className="px-4 pb-3 text-xs text-slate-400 font-semibold">
                                     Du har inte skapat några event än — tryck på + uppe till höger på kartan.
                                 </p>
                             ) : (
                                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {myEvents.map(evt => (
+                                    {myEventsList.map(evt => (
                                         <EventListRow
                                             key={evt.id}
                                             evt={evt}
+                                            tag={evt.repeatWeekly ? 'Varje vecka' : undefined}
                                             onPick={evt => onPickEvent?.(evt)}
                                             right={
                                                 <button
                                                     type="button"
-                                                    onClick={() => { if (confirm(`Ta bort "${evt.title}" permanent?`)) onDeleteEvent?.(evt.id); }}
-                                                    title="Ta bort eventet"
-                                                    aria-label="Ta bort eventet"
+                                                    onClick={() => {
+                                                        const fraga = evt.repeatWeekly
+                                                            ? `Ta bort "${evt.title}" och alla kommande tillfällen permanent?`
+                                                            : `Ta bort "${evt.title}" permanent?`;
+                                                        if (confirm(fraga)) onDeleteEvent?.(evt.id);
+                                                    }}
+                                                    title={evt.repeatWeekly ? 'Ta bort hela serien' : 'Ta bort eventet'}
+                                                    aria-label={evt.repeatWeekly ? 'Ta bort hela serien' : 'Ta bort eventet'}
                                                     className="p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                                                 >
                                                     <Trash2 size={15} />
