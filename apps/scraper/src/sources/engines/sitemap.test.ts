@@ -3,7 +3,7 @@
  * länkar + ort ur location-scopad microdata. Fixtures är nedskalade utsnitt
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector } from './sitemap';
 import type { RawEvent } from '../types';
 
@@ -313,6 +313,14 @@ const NKM_PAGE = `<html><head><title>Augustifesten: Familjedag i Skulpturparken 
 
 describe('cheerioFallback — "Mer i kalendariet"-korten förgiftar inte sidan', () => {
     const URL = 'https://www.norrkopingskonstmuseum.se/kalender/augustifesten-familjedag/';
+
+    // cheerioFallback läser `new Date()` internt (ingen injicerbar NOW) och
+    // årsgissningen/veckodagskontrollen beror på dagens datum. Fixturens
+    // "15 augusti" resp. "fre 11 sep" måste bedömas mot SAMMA nu som när
+    // fixturen skrevs (11 sep 2026, precis som systerblocket nedan) — annars
+    // blir testet en tidsbomb som slår rött när båda datumen glidit förbi.
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 8, 11, 10, 0)); });
+    afterAll(() => { vi.useRealTimers(); });
 
     it('tar sidans egna datum (15 augusti kl 11), inte kortens "fre 11 sep"', () => {
         const ev = cheerioFallback(NKM_PAGE, URL, 'Norrköping')!;
