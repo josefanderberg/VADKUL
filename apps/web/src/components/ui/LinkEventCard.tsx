@@ -1,6 +1,7 @@
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { eventOutlink } from '@/utils/eventExpand';
-import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -172,6 +173,17 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // → rendera INGEN bild i stället för webbläsarens trasiga bild-ikon med
     // titeln (alt-texten) bredvid.
     const [coverFailed, setCoverFailed] = useState(false);
+    // Helskärmsvisning av omslagsbilden — BARA för VADKUL-värdade event
+    // (Josef 14/9): de saknar extern länk, så bilden i kortet är enda vägen
+    // till hela bilden. Skrapade events bildklick stegar reveal som förut.
+    const [coverFull, setCoverFull] = useState(false);
+
+    useEffect(() => {
+        if (!coverFull) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCoverFull(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [coverFull]);
     // Nollställ när eventet (eller dess bild-URL) byts så felet inte "fastnar".
     useEffect(() => { setCoverFailed(false); }, [linkEvent.id, linkEvent.coverImage]);
 
@@ -650,8 +662,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         göra ingenting. Klick stegar reveal, som förut. */}
                     {hasRealCover && !coverFailed && (
                         <div
-                            className="w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
-                            onClick={handleContentClick}
+                            className="relative w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
+                            onClick={vadkulHosted
+                                ? (e) => { e.stopPropagation(); setCoverFull(true); }
+                                : handleContentClick}
                         >
                             <img
                                 data-cover-img
@@ -660,7 +674,44 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 onError={() => setCoverFailed(true)}
                                 className="w-full h-56 object-cover"
                             />
+                            {/* VADKUL-värdade event saknar extern länk — kortet är
+                                enda vägen till hela bilden (Josef 14/9). Klick →
+                                HELSKÄRM, INTE 21/8-expansionen i kortet (riven:
+                                liggande bilder blev LÄGRE än h-56-beskärningen och
+                                klicket såg trasigt ut — helskärm funkar åt båda
+                                hållen). Chipen berättar att bilden går att trycka. */}
+                            {vadkulHosted && (
+                                <span className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/50 text-white text-[10px] font-bold backdrop-blur-sm pointer-events-none whitespace-nowrap">
+                                    Tryck för hela bilden
+                                </span>
+                            )}
                         </div>
+                    )}
+                    {/* Helskärmsvisningen PORTALAS till body: kortet ligger i en
+                        transformerad sheet, och fixed inuti en transform fastnar
+                        i kortet i stället för viewporten (samma skäl som
+                        ProfilePanel portalas). */}
+                    {coverFull && hasRealCover && !coverFailed && typeof document !== 'undefined' && createPortal(
+                        <div
+                            className="fixed inset-0 z-[1350] bg-black/90 flex items-center justify-center p-3"
+                            onClick={(e) => { e.stopPropagation(); setCoverFull(false); }}
+                        >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={usableImageUrl(linkEvent.coverImage)}
+                                alt={linkEvent.title}
+                                className="max-w-full max-h-full object-contain"
+                            />
+                            <button
+                                type="button"
+                                aria-label="Stäng bilden"
+                                onClick={(e) => { e.stopPropagation(); setCoverFull(false); }}
+                                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>,
+                        document.body,
                     )}
 
                     {/* Description Section */}
