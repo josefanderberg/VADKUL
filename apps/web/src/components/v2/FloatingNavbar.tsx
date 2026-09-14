@@ -287,8 +287,18 @@ export default function FloatingNavbar({
                                 // Hopfälld: hover:scale-105 som skapa-knappen
                                 // (Josef 10/9). Utfälld: ingen skalning — ett
                                 // brett sökfält som växer under musen är fel.
+                                // UTFÄLLD = ABSOLUT över HELA topplinjen (Josef
+                                // 14/9: fältet var ~85px på mobil): kolumnens
+                                // flex-1 får bara det som blir över när vänster-
+                                // kolumnen (profil + topplattan, ~250px, shrink-0)
+                                // tagit sitt — w-full I kolumnen hjälpte inte.
+                                // Fältet ligger redan medvetet ÖVER plattan och
+                                // kategorikolumnen (z-1200), så det får täcka
+                                // topplinjen medan man söker; radens `relative`
+                                // är ankaret. 2xl: håll högerkanten innanför
+                                // ytan som kategorifiltret lånar (pr-[56px]).
                                 className={`peer pointer-events-auto flex items-center h-10 rounded-full border border-white/50 ${searchOpen
-                                    ? 'relative z-[1200] w-full max-w-[520px] bg-white px-4 shadow-xl transition-colors'
+                                    ? 'absolute top-0 right-0 2xl:right-[56px] z-[1200] w-full max-w-[520px] bg-white px-4 shadow-xl transition-colors'
                                     : 'w-10 justify-center bg-white/90 backdrop-blur-md shadow-lg hover:bg-white hover:scale-105 active:scale-95 transition duration-200 cursor-pointer'}`}
                             >
                                 <Search size={searchOpen ? 16 : 20} aria-hidden className={searchOpen ? 'text-slate-400 shrink-0 mr-2' : 'text-slate-700 shrink-0'} />
