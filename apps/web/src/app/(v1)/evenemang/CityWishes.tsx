@@ -26,11 +26,12 @@ interface Props {
     radiusKm: number;
     /** Kartlänk med &skapa=1 — platsval-först-flödet. */
     createHref: string;
-    /** Ren kartlänk över staden — där önskar man (kräver konto, sker på kartan). */
-    mapHref: string;
+    /** Kartlänk med &onska=1 — SAMMA platsval-först-flöde men med önska-läget
+     *  förvalt (14/9: "man ska direkt välja var man vill önska eventet"). */
+    wishHref: string;
 }
 
-export default function CityWishes({ cityName, cityLat, cityLng, radiusKm, createHref, mapHref }: Props) {
+export default function CityWishes({ cityName, cityLat, cityLng, radiusKm, createHref, wishHref }: Props) {
     // null = hämtar fortfarande → rendera ingenting (sektionen dyker upp när
     // svaret finns; inget hoppigt skelett för en sektion långt ner på sidan).
     const [wishes, setWishes] = useState<EventWish[] | null>(null);
@@ -60,7 +61,7 @@ export default function CityWishes({ cityName, cityLat, cityLng, radiusKm, creat
                         Kanske är det någon annan som ordnar det.
                     </p>
                     <Link
-                        href={mapHref}
+                        href={wishHref}
                         className="mt-4 inline-block rounded-full bg-[#006AA7] hover:bg-[#005590] px-5 py-2.5 text-sm font-black text-white transition-colors"
                     >
                         Önska ett event på kartan ✨
@@ -104,7 +105,7 @@ export default function CityWishes({ cityName, cityLat, cityLng, radiusKm, creat
                         ))}
                     </ul>
                     <p className="mt-3 text-[11px] font-medium text-slate-500 dark:text-zinc-500">
-                        Saknar du något annat? <Link href={mapHref} className="underline text-[#006AA7] dark:text-sky-400">Önska det på kartan</Link> — syns för alla i {WISH_LIFETIME_DAYS} dagar.
+                        Saknar du något annat? <Link href={wishHref} className="underline text-[#006AA7] dark:text-sky-400">Önska det på kartan</Link> — syns för alla i {WISH_LIFETIME_DAYS} dagar.
                     </p>
                 </>
             )}

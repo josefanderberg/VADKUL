@@ -282,7 +282,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                     cityLng={city.lng}
                     radiusKm={city.small ? 20 : 35}
                     createHref={`${cityMapHref(city)}&skapa=1`}
-                    mapHref={cityMapHref(city)}
+                    wishHref={`${cityMapHref(city)}&onska=1`}
                 />
 
                 <div className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">

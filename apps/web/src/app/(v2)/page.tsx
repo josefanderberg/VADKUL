@@ -1242,16 +1242,20 @@ export default function HomePage() {
         if (!eventsSettled || eveningSwitchTriedRef.current) return;
         eveningSwitchTriedRef.current = true; // en chans — aldrig igen
         if (dayOffset !== 0 || dayRangeDays !== 1) return;
+        // Pågående platsval (?skapa=1/?onska=1 har redan hunnit strippas ur
+        // URL:en när events settlar — därför grindas på creationMode också):
+        // ett dagbyte + toast mitt i "välj plats" är bara störande.
+        if (creationMode !== 'idle') return;
         try {
             const params = new URLSearchParams(window.location.search);
-            if (params.has('event') || params.has('skapa')) return;
+            if (params.has('event') || params.has('skapa') || params.has('onska')) return;
         } catch { /* ingen söksträng — kör vidare */ }
         if (!shouldLandOnTomorrow(events, new Date())) return;
         setDayOffset(1);
         // Kvittot är för återvändaren (välkomstrutans förstagångare ser
         // plattans IMORGON när rutan stängts — det räcker där).
         toast('Kvällens event har varit — kartan visar imorgon. ↺ tar dig tillbaka.', { icon: '🌙', duration: 6000 });
-    }, [eventsSettled, dayOffset, dayRangeDays, events]);
+    }, [eventsSettled, dayOffset, dayRangeDays, events, creationMode]);
 
     // Önskningarna: EGEN poll (samma mönster som användarevent-hämtningen i
     // linkEventService — de bor bara i Firestore). Servicen filtrerar redan
@@ -2799,19 +2803,30 @@ export default function HomePage() {
     // har sin egen pinne (den animerade plusknappen) och berörs inte —
     // deepPlacing gäller bara djuplänken.
     const pendingDeepCreateRef = useRef(false);
+    // ?onska=1 (14/9): stadssidornas önske-CTA — SAMMA platsval-först-flöde
+    // som ?skapa=1 men med önska-läget förvalt i arket, så flödet aldrig
+    // tappas ("klickar man önska ska man direkt välja var man vill önska").
+    const pendingDeepWishRef = useRef(false);
     const [deepPlacing, setDeepPlacing] = useState(false);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        if (!params.has('skapa')) return;
+        const wish = params.has('onska');
+        if (!params.has('skapa') && !wish) return;
         params.delete('skapa');
+        params.delete('onska');
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
         pendingDeepCreateRef.current = true;
+        pendingDeepWishRef.current = wish;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     useEffect(() => {
         if (!pendingDeepCreateRef.current || welcomeOpen) return;
         pendingDeepCreateRef.current = false;
+        if (pendingDeepWishRef.current) {
+            pendingDeepWishRef.current = false;
+            setCreateKind('wish');
+        }
         setCreationMode('placing');
         setDeepPlacing(true);
     }, [welcomeOpen]);
@@ -4295,7 +4310,11 @@ export default function HomePage() {
                     <div className="fixed inset-x-0 top-[calc(50%+18px)] z-[1190] flex justify-center px-4 pointer-events-none">
                         <div className="pointer-events-auto flex flex-col items-center gap-2.5 rounded-3xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-5 py-3.5 max-w-sm">
                             <div className="text-center">
-                                <p className="text-sm font-black text-slate-800">Var vill du att din aktivitet ska äga rum?</p>
+                                <p className="text-sm font-black text-slate-800">
+                                    {createKind === 'wish'
+                                        ? 'Var önskar du att det hände något?'
+                                        : 'Var vill du att din aktivitet ska äga rum?'}
+                                </p>
                                 <p className="mt-0.5 text-xs font-medium text-slate-500">Panorera kartan tills pinnen står rätt.</p>
                             </div>
                             <div className="flex items-center gap-2">
