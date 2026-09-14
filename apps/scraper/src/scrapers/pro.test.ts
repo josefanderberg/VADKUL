@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapProActivity, parseProDate, kommunFromUrl, dedupeSeries, foreningsNamn, kommunNameFromSlug } from './pro';
+import { mapProActivity, parseProDate, kommunFromUrl, dedupeSeries, foreningsNamn, kommunNameFromSlug, parseActivityDescription } from './pro';
 
 const FORENING_URL = 'https://pro.se/distrikt/skaraborg/kommun/falkoping/pro-falkoping/vara-aktiviteter';
 
@@ -111,5 +111,30 @@ describe('dedupeSeries', () => {
         const a = mapProActivity(baseActivity, FORENING_URL, 'PRO Falköping')!;
         const b = mapProActivity(baseActivity, FORENING_URL, 'PRO Skövde')!;
         expect(dedupeSeries([a, b])).toHaveLength(2);
+    });
+});
+
+describe('parseActivityDescription', () => {
+    const page = (inner: string, prefix = '') =>
+        `<html><body>${prefix}<div class="pro-activity"><h1>Boule</h1><div class="normal">${inner}</div><div class="meta">…</div></div></body></html>`;
+
+    it('plockar texten ur första normal-diven efter pro-activity-markören', () => {
+        expect(parseActivityDescription(page('Vi spelar <b>boule</b> i Folkets Park varje torsdag.')))
+            .toBe('Vi spelar boule i Folkets Park varje torsdag.');
+    });
+
+    it('null när markören eller diven saknas, och för för kort text', () => {
+        expect(parseActivityDescription('<html><div class="normal">text</div></html>')).toBeNull();
+        expect(parseActivityDescription(page('kort'))).toBeNull();
+        expect(parseActivityDescription('<div class="pro-activity">ingen normal-div</div>')).toBeNull();
+    });
+
+    it('tål STORA sidor utan att krascha (regressionen 5/9: regex-stackoverflow)', () => {
+        // Gamla [\s\S]*?-regexen fick V8 att kasta "Maximum call stack size
+        // exceeded" på stora dokument — kraschen som karantänsatte PRO.
+        // 2 MB brus före markören ska varken krascha eller sabba träffen.
+        const noise = '<div class="x">brus</div>\n'.repeat(80_000);
+        expect(parseActivityDescription(page('Vi vandrar i Mörrums naturreservat, samling vid ICA.', noise)))
+            .toBe('Vi vandrar i Mörrums naturreservat, samling vid ICA.');
     });
 });

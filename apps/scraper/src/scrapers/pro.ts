@@ -166,9 +166,21 @@ export function mapProActivity(a: any, foreningUrl: string, foreningNamn: string
  * Exporterad för test + backfill-skriptet.
  */
 export function parseActivityDescription(html: string): string | null {
-    const m = html.match(/class="pro-activity"[\s\S]*?<div class="normal">([\s\S]*?)<\/div>/);
-    if (!m) return null;
-    const text = cleanDescription(m[1].replace(/<[^>]+>/g, ' '));
+    // indexOf-slicing i stället för den gamla [\s\S]*?-regexen över HELA
+    // dokumentet: V8 kastade "Maximum call stack size exceeded" på stora
+    // sidor (katastrofal backtracking) — kraschen som fällde varje körning
+    // 5–8/9 och karantänsatte PRO trots frisk sajt. Samma semantik som den
+    // lata regexen: första <div class="normal"> EFTER pro-activity-markören,
+    // fram till närmaste </div>.
+    const start = html.indexOf('class="pro-activity"');
+    if (start === -1) return null;
+    const marker = '<div class="normal">';
+    const normalAt = html.indexOf(marker, start);
+    if (normalAt === -1) return null;
+    const contentAt = normalAt + marker.length;
+    const end = html.indexOf('</div>', contentAt);
+    if (end === -1) return null;
+    const text = cleanDescription(html.slice(contentAt, end).replace(/<[^>]+>/g, ' '));
     return text && text.length >= 10 ? text : null;
 }
 
@@ -269,17 +281,29 @@ export const proEngine: Engine = async (config, ctx) => {
     if (nya.length > 0) {
         ctx.log(`${nya.length} nya aktiviteter → hämtar detaljbeskrivningar`);
         let enriched = 0;
+        let detailFails = 0;
         await mapPool(nya, CONCURRENCY, async (e) => {
-            const desc = await fetchProActivityDescription(e.url);
-            if (!desc) return;
-            e.description = desc;
-            enriched++;
-            const venue = extractVenueFromText(desc);
-            const anchor = ortFromForeningsnamn(e.hostName || '') || e.city;
-            if (venue && anchor) {
-                e.geocodeCandidates = [`${venue}, ${anchor}`, ...(e.geocodeCandidates ?? [])];
+            // ETT dåligt dokument får ALDRIG fälla hela körningen: 5/9
+            // saknades det här bältet, kraschen i parsningen bubblade upp
+            // genom mapPool och nollade varje körning → auto-karantän.
+            try {
+                const desc = await fetchProActivityDescription(e.url);
+                if (!desc) return;
+                e.description = desc;
+                enriched++;
+                const venue = extractVenueFromText(desc);
+                const anchor = ortFromForeningsnamn(e.hostName || '') || e.city;
+                if (venue && anchor) {
+                    e.geocodeCandidates = [`${venue}, ${anchor}`, ...(e.geocodeCandidates ?? [])];
+                }
+            } catch (err) {
+                detailFails++;
+                if (detailFails <= 5) {
+                    ctx.log(`detaljsida föll (${e.url}): ${err instanceof Error ? err.message : String(err)}`);
+                }
             }
         });
+        if (detailFails > 0) ctx.log(`${detailFails} detaljsidor föll — eventen behåller API-beskrivningen`);
         ctx.log(`${enriched} detaljbeskrivningar hämtade`);
     }
     return all;

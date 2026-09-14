@@ -226,6 +226,11 @@ export const SOURCES: Source[] = [
         hostName: 'Hovet',
         region: 'stockholm',
         engine: 'sitemap',
+        // Triagen 14/9: bara ~6 eventsidor med korrekt JSON-LD, men arena-
+        // konserter släpps månader i förväg — 30-dagarsfönstret slängde
+        // allt (skipped_outside_window) tills det var nästan för sent.
+        // Sex URL:er kostar inget: vidga (jfr Visit Västra Mälardalen 120).
+        windowDays: 120,
         config: {
             sitemapUrl: 'https://hovetarena.se/sitemap.xml',
             urlPatterns: [/^https:\/\/hovetarena\.se\/evenemang\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i],
@@ -1382,9 +1387,13 @@ export const SOURCES: Source[] = [
             baseUrl: 'https://www.trelleborg.se',
             variant: 'wp-v2',
             defaultCity: 'Trelleborg',
+            // Karantän-triagen 14/9: list-svaret bär inte längre content/acf-
+            // datum — datumet finns bara serverrenderat på detaljsidan
+            // ("7 december 2026"). Samma konfig som fungerande eslov.
+            fetchDetailPage: true,
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06: 33 events. wp/v2 + content-parser.',
+        notes: 'Probe 2026-06: 33 events. wp/v2 + content-parser. 14/9: detaljsida krävs för datum (listan strippad) — fetchDetailPage.',
     },
     {
         id: 'lidingo',
@@ -1595,12 +1604,15 @@ export const SOURCES: Source[] = [
         id: 'sater',
         hostName: 'Säters Kommun',
         region: 'sater',
-        engine: 'wp-rest',
+        // Karantän-triagen 14/9: sajten replatformad — wp/v2-API:t 301:ar till
+        // 404 på nya sater.se. Nya sajten har sitemap_index.xml med
+        // /evenemang/<slug>/-sidor, serverrenderade med "Startdatum
+        // 2026-10-14 11:00" + plats/pris/arrangör → sitemap-motorn räcker.
+        engine: 'sitemap',
         config: {
-            baseUrl: 'https://www.sater.se',
-            variant: 'wp-v2',
+            sitemapUrl: 'https://sater.se/sitemap_index.xml',
+            urlPatterns: [/\/evenemang\/[^/]+\/?$/i],
             defaultCity: 'Säter',
-            fetchDetailPage: true,
         },
         updateFrequency: 'weekly',
         notes: 'Probe 2026-06: 5 events. fetchDetailPage.',
@@ -3461,16 +3473,28 @@ export const SOURCES: Source[] = [
     },
     {
         id: 'tjorn',
-        hostName: 'Tjörn Kommun',
+        hostName: 'Visit Tjörn',
         region: 'tjorn',
         engine: 'sitemap',
+        // Karantän-triagen 14/9: kommunen har OUTSOURCAT kalendern —
+        // tjorn.se/evenemang 301:ar till vastsverige.com/tjorn/evenemang/.
+        // Samma JS-renderade katalog som vastsverige-trollhattan-vanersborg
+        // (7/9-mallen): isHtmlCatalog + useBrowser.
         config: {
-                    sitemapUrl: 'https://tjorn.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
-                    defaultCity: 'Tjörn',
-                },
+            sitemapUrl: 'https://www.vastsverige.com/tjorn/evenemang/',
+            isHtmlCatalog: true,
+            useBrowser: true,
+            browserSettleMs: 5000,
+            urlPatterns: [/\/tjorn\/evenemang\/[a-z0-9-]{3,}/i],
+            // Kategori-/portalsidor på samma URL-form (jfr Trollhättans
+            // blacklist) — justera efter första körningens junk.
+            urlBlacklist: [/\/evenemang\/(hojdpunkter|portal|kalender|tjorn)\/?$/i],
+            defaultCity: 'Tjörn',
+            maxUrls: 60,
+        },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 8 event-URLs (evenemang-mönster).',
+        windowDays: 180,
+        notes: 'T.o.m. 14/9 skrapades tjorn.se/sitemap.xml — replatformad till vastsverige.com (kommunsidan redirectar dit).',
         lastVerified: '2026-06-04',
     },
     {
