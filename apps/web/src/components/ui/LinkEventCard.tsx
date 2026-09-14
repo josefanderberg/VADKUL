@@ -173,9 +173,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // → rendera INGEN bild i stället för webbläsarens trasiga bild-ikon med
     // titeln (alt-texten) bredvid.
     const [coverFailed, setCoverFailed] = useState(false);
-    // Helskärmsvisning av omslagsbilden — BARA för VADKUL-värdade event
-    // (Josef 14/9): de saknar extern länk, så bilden i kortet är enda vägen
-    // till hela bilden. Skrapade events bildklick stegar reveal som förut.
+    // Helskärmsvisning av omslagsbilden — för VADKUL-värdade event OCH tips
+    // (Josef 14/9, tips tillagda samma dag): bådas bilder är ofta en affisch
+    // där all info sitter I bilden, och kortet är enda vägen till den
+    // (tips-URL:en, när den finns, pekar på arrangören — inte på affischen).
+    // Skrapade events bildklick stegar reveal som förut.
+    const showFullImageOnClick = vadkulHosted || isTip;
     const [coverFull, setCoverFull] = useState(false);
 
     useEffect(() => {
@@ -663,7 +666,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     {hasRealCover && !coverFailed && (
                         <div
                             className="relative w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
-                            onClick={vadkulHosted
+                            onClick={showFullImageOnClick
                                 ? (e) => { e.stopPropagation(); setCoverFull(true); }
                                 : handleContentClick}
                         >
@@ -674,13 +677,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 onError={() => setCoverFailed(true)}
                                 className="w-full h-56 object-cover"
                             />
-                            {/* VADKUL-värdade event saknar extern länk — kortet är
-                                enda vägen till hela bilden (Josef 14/9). Klick →
-                                HELSKÄRM, INTE 21/8-expansionen i kortet (riven:
-                                liggande bilder blev LÄGRE än h-56-beskärningen och
-                                klicket såg trasigt ut — helskärm funkar åt båda
-                                hållen). Chipen berättar att bilden går att trycka. */}
-                            {vadkulHosted && (
+                            {/* VADKUL-värdade event och tips: kortet är enda vägen
+                                till hela bilden (Josef 14/9). Klick → HELSKÄRM,
+                                INTE 21/8-expansionen i kortet (riven: liggande
+                                bilder blev LÄGRE än h-56-beskärningen och klicket
+                                såg trasigt ut — helskärm funkar åt båda hållen).
+                                Chipen berättar att bilden går att trycka. */}
+                            {showFullImageOnClick && (
                                 <span className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/50 text-white text-[10px] font-bold backdrop-blur-sm pointer-events-none whitespace-nowrap">
                                     Tryck för hela bilden
                                 </span>
