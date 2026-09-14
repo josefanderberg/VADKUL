@@ -272,12 +272,19 @@ service cloud.firestore {
         // boostat dokument bär dem, och diff-vakten ovan ser till att ägaren
         // inte rör dem.
         && validLinkEventDoc(request.resource.data)
+        // updatedAt: klientens updateUserEvent stämplar den (som scraperns
+        // stamped()) så att den inkrementella SQLite-syncen ser ändringen.
+        // 12/9-härdningen glömde fältet i whitelistan — då nekades VARJE
+        // redigering av egna event med permission-denied (Josef 14/9).
+        // Bara på update: create går på createdAt och skickar den inte.
+        && (!request.resource.data.keys().hasAny(['updatedAt'])
+            || request.resource.data.updatedAt is timestamp)
         && request.resource.data.keys().hasOnly([
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
             'description', 'createdAt', 'isLocationVerified', 'coverImage',
             'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks', 'price',
-            'featuredUntil', 'featuredPaymentId'
+            'featuredUntil', 'featuredPaymentId', 'updatedAt'
         ])
         // Identitets- och härkomstfälten är oföränderliga: ägarskap ska inte
         // kunna flyttas och ett tips inte tvättas till "arrangerat av mig".
