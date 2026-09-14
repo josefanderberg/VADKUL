@@ -15,7 +15,7 @@ import { useDrafts, type DraftResponse } from './DraftStore';
 const fmtTime = (ms: number) =>
     new Date(ms).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
 
-export function DraftGenerator({ contactId, contactName, mode, autoStart = false }: {
+export function DraftGenerator({ contactId, contactName, mode, autoStart = false, kind }: {
     contactId: string;
     contactName: string;
     mode: 'approval' | 'direct' | 'unknown';
@@ -23,6 +23,9 @@ export function DraftGenerator({ contactId, contactName, mode, autoStart = false
      *  själv vid montering/aktivering — en gång, aldrig i retry-loop, och
      *  aldrig om ett färskt utkast redan ligger i lagret. */
     autoStart?: boolean;
+    /** 'arrangorsmejl' (14/9): mejlutkastet till arrangörer — contactId ska
+     *  då vara 'mejl-<riktigt id>' (Arrangörer-fliken sköter det). */
+    kind?: 'arrangorsmejl';
 }) {
     const { drafts, generate } = useDrafts();
     const d = drafts[contactId];
@@ -36,16 +39,18 @@ export function DraftGenerator({ contactId, contactName, mode, autoStart = false
     useEffect(() => {
         if (!autoStart || startedRef.current || d) return;
         startedRef.current = true;
-        generate(contactId, contactName);
-    }, [autoStart, d, generate, contactId, contactName]);
+        generate(contactId, contactName, kind);
+    }, [autoStart, d, generate, contactId, contactName, kind]);
 
     return (
         <div className="flex flex-col gap-2 pt-1">
             <div className="flex items-center gap-2">
-                <button type="button" onClick={() => generate(contactId, contactName)} disabled={busy}
+                <button type="button" onClick={() => generate(contactId, contactName, kind)} disabled={busy}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#006AA7] text-white text-[11px] font-black hover:bg-[#005590] transition-colors disabled:opacity-50">
                     {busy ? <><Loader2 size={12} className="animate-spin" /> Skriver utkast… (~30 s)</>
-                          : <><Sparkles size={12} /> {result ? 'Generera om' : 'Generera utkast'}</>}
+                          : <><Sparkles size={12} /> {result
+                              ? (kind === 'arrangorsmejl' ? 'Generera om mejlet' : 'Generera om')
+                              : (kind === 'arrangorsmejl' ? 'Generera mejlutkast' : 'Generera utkast')}</>}
                 </button>
                 {busy && (
                     <span className="text-[11px] font-bold text-slate-400">
@@ -68,6 +73,22 @@ export function DraftResultView({ result, mode, generatedAt }: {
     mode: 'approval' | 'direct' | 'unknown';
     generatedAt?: number;
 }) {
+    // Arrangörsmejlet (14/9): egen vy — ämne + brödtext med kopiera-knappar,
+    // inga V1/V2-block och ingen sidpublicering (mejl postas inte på FB).
+    // Siffrorna i texten är hämtade server-side av draft-routen (facit).
+    if (result.email && result.meta.kind === 'arrangorsmejl') {
+        return (
+            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                <p className="text-[11px] font-bold text-slate-500">
+                    {generatedAt !== undefined && <>skrivet {fmtTime(generatedAt)} · </>}
+                    mejlutkast till {result.meta.contactName} — siffrorna hämtade ur klickstatistiken
+                    {result.meta.usage && <> · ~${result.meta.usage.costUsd.toFixed(2)}</>}
+                </p>
+                <DraftBlock label="Ämnesrad" text={result.email.subject} />
+                <DraftBlock label="Mejlet (klistra in i Zoho)" text={result.email.body} />
+            </div>
+        );
+    }
     // Färskvaruvarning: eventen i ett halvdygnsgammalt utkast kan ha passerat.
     const stale = generatedAt !== undefined && Date.now() - generatedAt > 12 * 3_600_000;
     return (

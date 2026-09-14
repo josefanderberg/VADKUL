@@ -266,6 +266,52 @@ export interface OutreachApiUsage {
     lastModel?: string;
 }
 
+/* ── Arrangörsstatistiken (fliken Arrangörer, 14/9) ─────────────────────── */
+
+/** Ett klickat event hos en arrangör — ur eventStats, aldrig manuellt. */
+export interface OrganizerEventStat {
+    eventId: string;
+    title: string;
+    clicks: number;
+    views: number;
+}
+
+/**
+ * En arrangörsrad i Arrangörer-fliken: eventStats grupperat på domän (fallback
+ * hostName) + join mot outreachContacts (kind='arrangor') på domain. Siffrorna
+ * räknas ALLTID server-side (organizerStats.ts) — konsolen är facit och inget
+ * matas in manuellt (kravlistan 20/8).
+ */
+export interface OrganizerStat {
+    /** Grupperingsnyckeln: domain, annars hostName. */
+    key: string;
+    domain: string | null;
+    hostName: string | null;
+    clicks: number;               // totalt, alla tider
+    views: number;
+    /** Ur clicksByDay — 0 tills dagshinkarna (14/9) hunnit samla data. */
+    clicks7d: number;
+    clicks30d: number;
+    /** Ur clicksByMonth — de ärliga etiketterna tills dagsserien fyllts. */
+    clicksThisMonth: number;
+    clicksPrevMonth: number;
+    events: OrganizerEventStat[]; // topp per klick
+    /* join mot outreachContacts (null = saknas i registret/arrangorer.md) */
+    contactId: string | null;
+    contactName: string | null;
+    email: string | null;
+    replyStatus: string | null;
+    followUpDueAt: number | null;
+}
+
+export interface OrganizerListResponse {
+    generatedAt: number;
+    organizers: OrganizerStat[];
+    /** Äldsta dagen i någon clicksByDay — null tills serien börjat mäta.
+     *  Panelen etiketterar 7/30-fönstren ärligt utifrån den. */
+    dayDataSince: string | null;
+}
+
 export interface QueueResponse {
     generatedAt: number;
     quota: { postedToday: number; maxPerDay: number };

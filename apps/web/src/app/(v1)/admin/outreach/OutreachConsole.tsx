@@ -14,12 +14,13 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import type { OutreachApiUsage, QueueResponse } from '@/types/outreach';
-import { Megaphone, RefreshCw, Building2, CalendarDays, KeyRound, ListTodo, BarChart3, ScrollText } from 'lucide-react';
+import { Megaphone, RefreshCw, Building2, CalendarDays, KeyRound, ListTodo, BarChart3, ScrollText, Mail } from 'lucide-react';
 import TodayPanel from './panels/TodayPanel';
 import CityPanel from './panels/CityPanel';
 import SchedulePanel from './panels/SchedulePanel';
 import LogPanel from './panels/LogPanel';
 import StatsPanel from './panels/StatsPanel';
+import OrganizerPanel from './panels/OrganizerPanel';
 import { DraftProvider } from './panels/DraftStore';
 import DraftDock from './panels/DraftDock';
 
@@ -27,11 +28,14 @@ import DraftDock from './panels/DraftDock';
 // annan layout) — stadskorten i Städer är sorterade på score, så kortordningen
 // ÄR kön. Karta-fliken togs bort 19/8 (ägarbeslut: "inte ett helt avsnitt")
 // och blev en lista/karta-toggle inne i Städer.
-type Tab = 'idag' | 'stader' | 'planering' | 'logg' | 'statistik';
+type Tab = 'idag' | 'stader' | 'arrangorer' | 'planering' | 'logg' | 'statistik';
 
+// Arrangörer (NY flik 14/9, inte en återinförd): säljmejlen ur klick-
+// statistiken — "ditt event fick X klick hos oss, lägg upp nästa själv".
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'idag', label: 'Idag', icon: <ListTodo size={14} /> },
     { id: 'stader', label: 'Städer', icon: <Building2 size={14} /> },
+    { id: 'arrangorer', label: 'Arrangörer', icon: <Mail size={14} /> },
     { id: 'planering', label: 'Planering', icon: <CalendarDays size={14} /> },
     { id: 'logg', label: 'Logg', icon: <ScrollText size={14} /> },
     { id: 'statistik', label: 'Statistik', icon: <BarChart3 size={14} /> },
@@ -130,6 +134,8 @@ export default function OutreachConsole() {
                 <CityPanel data={data} onChanged={load} view={cityView} onViewChange={setCityView} />
             )}
             {data && tab === 'planering' && <SchedulePanel data={data} onChanged={load} />}
+            {/* Egen hämtning (först när fliken öppnas) — inget i kö-anropet. */}
+            {tab === 'arrangorer' && <OrganizerPanel />}
             {tab === 'logg' && <LogPanel />}
             {tab === 'statistik' && <StatsPanel />}
         </Shell>

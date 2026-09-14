@@ -18,11 +18,16 @@ export type DraftResponse = {
     drafts: { v1: string; v2Post: string; v2FirstComment: string };
     mentionedEvents: { title: string; day: string; place: string; emoji: string }[];
     angle: string;
+    /** Arrangörsmejlet (14/9) — satt när meta.kind === 'arrangorsmejl';
+     *  FB-fälten ovan är då tomma strängar (formen hålls stabil). */
+    email?: { subject: string; body: string };
     meta: {
         contactId: string; contactName: string;
         postingMode: 'approval' | 'direct' | 'unknown';
         linkTarget: string; weekCount: number; nearCount: number; radiusKm: number;
         dataUpdatedAt: string; source: 'live' | 'snapshot';
+        /** Utelämnad = FB-utkast (äldre sparade utkast saknar fältet). */
+        kind?: 'fb' | 'arrangorsmejl';
         generatedAt: number;
         // Vad genereringen drog — visas i utkast-rutan och summeras i API-kortet.
         usage?: { inputTokens: number; outputTokens: number; costUsd: number };
@@ -36,7 +41,9 @@ export type DraftState =
 
 interface DraftStoreValue {
     drafts: Record<string, DraftState>;
-    generate: (contactId: string, contactName: string) => void;
+    /** kind 'arrangorsmejl' ⇒ contactId ska vara 'mejl-<riktigt id>' — så
+     *  FB- och mejlutkast för samma kontakt aldrig krockar i lagret. */
+    generate: (contactId: string, contactName: string, kind?: 'arrangorsmejl') => void;
 }
 
 const Ctx = createContext<DraftStoreValue | null>(null);
@@ -86,7 +93,7 @@ export function DraftProvider({ children }: { children: React.ReactNode }) {
         return () => { cancelled = true; };
     }, [user]);
 
-    const generate = useCallback((contactId: string, contactName: string) => {
+    const generate = useCallback((contactId: string, contactName: string, kind?: 'arrangorsmejl') => {
         if (!user || inflight.current.has(contactId)) return;
         inflight.current.add(contactId);
         setDrafts(prev => ({
@@ -99,7 +106,7 @@ export function DraftProvider({ children }: { children: React.ReactNode }) {
                 const res = await fetch('/api/admin/outreach/draft', {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contactId }),
+                    body: JSON.stringify({ contactId, ...(kind ? { kind } : {}) }),
                 });
                 const json = await res.json().catch(() => null);
                 if (!res.ok) {

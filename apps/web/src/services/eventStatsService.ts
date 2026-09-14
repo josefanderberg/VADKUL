@@ -40,7 +40,12 @@ export function recordEventView(eventId: string): void {
 export function recordEventClick(evt: { id: string; url?: string; title?: string; hostName?: string }): void {
     try {
         const ref = doc(db, 'eventStats', eventShareSlug(evt.id));
-        const month = new Date().toISOString().slice(0, 7); // 'ÅÅÅÅ-MM'
+        const now = new Date().toISOString();
+        const month = now.slice(0, 7);  // 'ÅÅÅÅ-MM'
+        // Dagshink (14/9): månadshinkarna kan inte svara på "klick senaste
+        // 7/30 dagarna" — arrangörsmejlens fönster behöver dagar. Docstorleken
+        // är ofarlig: event lever veckor, inte år.
+        const day = now.slice(0, 10);   // 'ÅÅÅÅ-MM-DD'
         let domain: string | null = null;
         try { domain = new URL(evt.url || evt.id).hostname.replace(/^www\./, ''); } catch { /* icke-URL */ }
         // OBS: nästlad map (INTE punktnotation) — setDoc+merge deep-mergar
@@ -50,6 +55,7 @@ export function recordEventClick(evt: { id: string; url?: string; title?: string
             eventId: evt.id,
             clicks: increment(1),
             clicksByMonth: { [month]: increment(1) },
+            clicksByDay: { [day]: increment(1) },
             ...(evt.title ? { title: evt.title } : {}),
             ...(evt.hostName ? { hostName: evt.hostName } : {}),
             ...(domain ? { domain } : {}),

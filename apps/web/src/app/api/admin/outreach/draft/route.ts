@@ -18,6 +18,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { getAdminDb, requireAdmin } from '@/lib/firestore-admin';
 import { pickEventsForContact } from '@/lib/outreach/eventPicker';
+import { statsForOrganizer } from '@/lib/outreach/organizerStats';
 import type { OutreachContact, OutreachLogEntry } from '@/types/outreach';
 
 export const dynamic = 'force-dynamic';
@@ -157,6 +158,33 @@ type DraftOutput = {
     angle: string;
 };
 
+/* ── Arrangörsmejlet (14/9) ──────────────────────────────────────────────── */
+
+const EMAIL_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+        subject: { type: 'string', description: 'Ämnesraden — kort, konkret, gärna med arrangörens namn. Ingen clickbait.' },
+        body: { type: 'string', description: 'Hela mejlet i klartext (ingen HTML), avslutat med "Vänliga hälsningar,\\nJosef".' },
+    },
+    required: ['subject', 'body'],
+} as const;
+
+// Destillat av Mall A i docs/outreach/mail-mallar.md + säljvinkeln
+// "siffrorna är facit". Ändra inte tonreglerna utan att läsa mallfilen.
+const EMAIL_SYSTEM_PROMPT = `Du skriver ett kort mejl från Josef som driver vadkul.se — en gratis karta över allt som händer i Sverige. Mottagaren är en EVENTARRANGÖR vars event vi redan visar och skickar besökare till. Tonen är varm, personlig, granne-som-tipsar — aldrig säljig eller corporate. Alltid på svenska. Brödtexten max ~150 ord.
+
+Regler i prioritetsordning:
+1. SIFFRORNA ÄR FACIT: citera ENDAST tal som står i underlaget, ordagrant. Hitta aldrig på, summera aldrig själv, runda aldrig av uppåt.
+2. Är totalklicken små (under 10): nämn inga tal alls — skriv "folk hittar er via kartan". Ett skrytmejl med "3 klick" gör mer skada än nytta.
+3. Personifiera första raden med deras mest klickade event (ur underlaget).
+4. Kärnbudskap: era event finns redan på kartan (gratis) och vi skickar besökare vidare till er — nästa steg är att lägga upp era event själva på vadkul.se: gratis, egen bricka som alltid ligger uppe på kartan och överst på stadssidan.
+5. P.S.-raden (EN mening, aldrig mer sälj än så): vill ni synas mest går det att boosta ett event för 99 kr/vecka — guldmarkör som lyser på kartan i 7 dagar.
+6. Länka till stadssidan om den finns i underlaget, annars https://vadkul.se.
+7. Avsluta "Vänliga hälsningar,\\nJosef". Ingen HTML, inga hashtags, inga påhittade kontaktuppgifter.`;
+
+type EmailOutput = { subject: string; body: string };
+
 // Färskvaruregeln (23/7): utkast äldre än så här serveras inte tillbaka.
 const DRAFT_TTL_MS = 48 * 3_600_000;
 
@@ -181,8 +209,15 @@ export async function GET(request: Request) {
  * direkt. Stegen provas i tur och ordning tills en går igenom; alla andra
  * fel än 529 kastas vidare direkt.
  */
-async function generateDraftMessage(client: Anthropic, userMessage: string) {
-    const jsonInstruktion = `${SYSTEM_PROMPT}\n\nSVARA ENBART med ett JSON-objekt — ingen inledande text, inga \`\`\`-staket — som exakt följer detta JSON-schema (alla fält obligatoriska, "tomt" = tom sträng/array):\n${JSON.stringify(DRAFT_SCHEMA)}`;
+async function generateDraftMessage(
+    client: Anthropic,
+    userMessage: string,
+    systemPrompt: string = SYSTEM_PROMPT,
+    // SDK:ns OutputConfig kräver indexsignatur — as const-scheman saknar den,
+    // därav casten (formen är redan rätt, det är bara typen som är snävare).
+    schema: Record<string, unknown> = DRAFT_SCHEMA as unknown as Record<string, unknown>,
+) {
+    const jsonInstruktion = `${systemPrompt}\n\nSVARA ENBART med ett JSON-objekt — ingen inledande text, inga \`\`\`-staket — som exakt följer detta JSON-schema (alla fält obligatoriska, "tomt" = tom sträng/array):\n${JSON.stringify(schema)}`;
     const steg = [
         { model: MODEL, structured: true },
         { model: FALLBACK_MODEL, structured: true },
@@ -196,8 +231,8 @@ async function generateDraftMessage(client: Anthropic, userMessage: string) {
                 model,
                 max_tokens: 10000,
                 thinking: { type: 'adaptive' },
-                ...(structured ? { output_config: { format: { type: 'json_schema', schema: DRAFT_SCHEMA } } } : {}),
-                system: structured ? SYSTEM_PROMPT : jsonInstruktion,
+                ...(structured ? { output_config: { format: { type: 'json_schema', schema } } } : {}),
+                system: structured ? systemPrompt : jsonInstruktion,
                 messages: [{ role: 'user', content: userMessage }],
             });
             return { msg, structured, model };
@@ -224,17 +259,114 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
 
-    let body: { contactId?: unknown };
+    let body: { contactId?: unknown; kind?: unknown };
     try { body = await request.json(); } catch {
         return NextResponse.json({ error: 'Ogiltig JSON' }, { status: 400 });
     }
-    const contactId = typeof body.contactId === 'string' ? body.contactId : '';
-    if (!contactId) return NextResponse.json({ error: 'contactId saknas' }, { status: 400 });
+    // 'arrangorsmejl' (14/9) = säljmejlet till arrangörer med klicksiffrorna
+    // som facit; allt annat = FB-utkastet som förut. DraftStore nycklar
+    // mejlutkast som 'mejl-<contactId>' så FB- och mejlutkast för samma
+    // kontakt aldrig skriver över varandra — prefixet skalas av här.
+    const draftKind = body.kind === 'arrangorsmejl' ? 'arrangorsmejl' as const : 'fb' as const;
+    const rawContactId = typeof body.contactId === 'string' ? body.contactId : '';
+    if (!rawContactId) return NextResponse.json({ error: 'contactId saknas' }, { status: 400 });
+    const contactId = draftKind === 'arrangorsmejl' ? rawContactId.replace(/^mejl-/, '') : rawContactId;
 
     try {
         const snap = await db.collection('outreachContacts').doc(contactId).get();
         if (!snap.exists) return NextResponse.json({ error: 'Kontakten finns inte' }, { status: 404 });
         const contact = { ...(snap.data() as OutreachContact), id: snap.id };
+
+        // ── ARRANGÖRSMEJLET: egen gren — inga FB-kandidater plockas. ─────
+        if (draftKind === 'arrangorsmejl') {
+            if (contact.kind !== 'arrangor') {
+                return NextResponse.json({ error: 'Mejlutkast kan bara genereras för arrangörskontakter.' }, { status: 400 });
+            }
+            if (!contact.domain) {
+                return NextResponse.json({
+                    error: `${contact.name} saknar domän på kontakten — utan den kan klicken inte attribueras. Komplettera i arrangorer.md och importera om.`,
+                }, { status: 422 });
+            }
+            // Siffrorna hämtas HÄR, server-side — klienten skickar bara
+            // contactId, aldrig statistik (kravlistan 20/8: konsolen är facit).
+            const figures = await statsForOrganizer(db, contact.domain);
+            if (!figures) {
+                return NextResponse.json({
+                    error: `Inga registrerade vidareklick för ${contact.domain} ännu — mejlet har inga siffror att stå på.`,
+                }, { status: 422 });
+            }
+
+            const cityLink = contact.hasCityPage && contact.citySlug
+                ? `https://vadkul.se/evenemang/${contact.citySlug}` : null;
+            const emailUserMessage = [
+                `ARRANGÖR: ${contact.orgName || contact.name}${contact.city ? ` (${contact.city})` : ''}`,
+                cityLink ? `STADSSIDA: ${cityLink}` : null,
+                '',
+                'KLICKSTATISTIK (server-side — FACIT, citera inget annat):',
+                `- ${figures.clicks} vidareklick till arrangörens sidor totalt`,
+                `- ${figures.clicksThisMonth} denna månad, ${figures.clicksPrevMonth} förra månaden`,
+                figures.clicks30d > 0 ? `- ${figures.clicks30d} senaste 30 dagarna (varav ${figures.clicks7d} senaste 7)` : null,
+                `- ${figures.views} visningar av eventkorten totalt`,
+                '',
+                'MEST KLICKADE EVENT:',
+                ...figures.events.map(e => `- ${e.title} (${e.clicks} klick)`),
+            ].filter((x): x is string => x !== null).join('\n');
+
+            const emailClient = new Anthropic({ apiKey });
+            const { msg, structured, model } = await generateDraftMessage(
+                emailClient, emailUserMessage, EMAIL_SYSTEM_PROMPT,
+                EMAIL_SCHEMA as unknown as Record<string, unknown>,
+            );
+            if (msg.stop_reason === 'refusal') {
+                return NextResponse.json({ error: 'Modellen avböjde förfrågan — försök igen.' }, { status: 502 });
+            }
+            if (msg.stop_reason === 'max_tokens') {
+                return NextResponse.json({ error: 'Svaret blev avhugget (max_tokens) — försök igen.' }, { status: 502 });
+            }
+            let text = msg.content.find(b => b.type === 'text')?.text ?? '';
+            if (!structured) text = text.trim().replace(/^```(?:json)?\s*/, '').replace(/\s*```\s*$/, '');
+            let email: EmailOutput;
+            try { email = JSON.parse(text) as EmailOutput; } catch {
+                console.error('[outreach/draft] oparsbart mejlsvar:', text.slice(0, 400));
+                return NextResponse.json({ error: 'Kunde inte tolka modellens svar — försök igen.' }, { status: 502 });
+            }
+
+            const costUsd = trackApiUsage(db, msg.usage, model);
+            const storeId = `mejl-${contact.id}`;
+            const contactName = contact.orgName || contact.name;
+            const emailBody = {
+                // Tomma FB-fält håller DraftResponse-formen stabil — mejlvyn
+                // i DraftResultView grenar på `email` innan de läses.
+                drafts: { v1: '', v2Post: '', v2FirstComment: '' },
+                mentionedEvents: [] as { title: string; day: string; place: string; emoji: string }[],
+                angle: '',
+                email: { subject: email.subject, body: email.body },
+                meta: {
+                    contactId: storeId,
+                    contactName,
+                    postingMode: contact.postingMode ?? 'unknown',
+                    linkTarget: cityLink ?? 'https://vadkul.se',
+                    weekCount: 0, nearCount: 0, radiusKm: 0,
+                    dataUpdatedAt: '', source: 'live' as const,
+                    kind: 'arrangorsmejl' as const,
+                    model,
+                    generatedAt: Date.now(),
+                    usage: {
+                        inputTokens: msg.usage.input_tokens ?? 0,
+                        outputTokens: msg.usage.output_tokens ?? 0,
+                        costUsd: Math.round(costUsd * 10_000) / 10_000,
+                    },
+                },
+            };
+            db.collection('outreachDrafts').doc(storeId).set({
+                contactId: storeId,
+                contactName,
+                payload: emailBody,
+                generatedAt: emailBody.meta.generatedAt,
+            }).catch(e => console.warn('[outreach/draft] kunde inte spara mejlutkastet:', e));
+
+            return NextResponse.json(emailBody, { headers: { 'Cache-Control': 'private, no-store' } });
+        }
 
         const picked = await pickEventsForContact(db, contact, contact.postingMode);
         if (!picked) {
