@@ -1745,7 +1745,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // den här raden togs capturen på KORTET, klicket retargetades bort
         // från summaryn (listan öppnades aldrig) och tappen togglade kortets
         // höjd i stället — "kortet går ner men de 7 andra visas inte".
-        const interactive = target.closest('button, a, summary') as HTMLElement | null;
+        // `[data-cover-zone]` likaså (14/9): omslagsbildens klickyta i
+        // LinkEventCard öppnar helskärmsbilden — utan den retargetades
+        // klicket bort och tappen fällde ihop kortet ("eventkortet åker ner
+        // när jag klickar på bilden, så den öppnar aldrig"). Drag från
+        // bilden fungerar som från knappar: händelserna bubblar hit ändå.
+        const interactive = target.closest('button, a, summary, [data-cover-zone]') as HTMLElement | null;
 
         // Firefox avfyrar pointerdown även för klick PÅ EN SCROLLBAR (Chrome
         // undertrycker dem). Utan vakten blev ett drag i den inre scrollistens

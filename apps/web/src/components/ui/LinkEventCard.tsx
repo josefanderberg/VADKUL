@@ -665,6 +665,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         göra ingenting. Klick stegar reveal, som förut. */}
                     {hasRealCover && !coverFailed && (
                         <div
+                            // data-cover-zone: kart-kortets gestlogik (EventCard
+                            // onPointerDown) behandlar ytan som knapp/länk och
+                            // sätter pointer-capturen HÄR i stället för på kortet
+                            // — annars retargetas klicket bort och helskärmen
+                            // öppnas aldrig (desktop-rapporten 14/9: "eventkortet
+                            // åker ner när jag klickar på bilden").
+                            data-cover-zone
                             className="relative w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
                             onClick={(e) => { e.stopPropagation(); setCoverFull(true); }}
                         >
@@ -693,6 +700,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         <div
                             className="fixed inset-0 z-[1350] bg-black/90 flex items-center justify-center p-3"
                             onClick={(e) => { e.stopPropagation(); setCoverFull(false); }}
+                            // Portalen bor i body i DOM men i kortets REACT-träd —
+                            // synthetic pointerdown bubblar därför ändå upp till
+                            // kart-kortets gestlogik, vars tap-toggle fällde ihop
+                            // kortet bakom overlayn vid varje stängningsklick.
+                            onPointerDown={(e) => e.stopPropagation()}
                         >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
