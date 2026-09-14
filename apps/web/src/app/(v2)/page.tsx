@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { EventWish, LinkEvent } from '@/types';
 import { linkEventService, isBoostShownEveryDay, expandWeekly } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
-import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, BOOST_TIERS, type BoostTier } from '@/services/boostService';
+import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CategoryFilter from '@/components/v2/CategoryFilter';
 import AuthModal from '@/components/v2/AuthModal';
@@ -34,7 +34,7 @@ import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { shouldLandOnTomorrow } from '@/utils/eveningLanding';
-import { eventShareSlug } from '@/utils/eventShareSlug';
+import PostCreateNudge from '@/components/v2/PostCreateNudge';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -371,6 +371,9 @@ export default function HomePage() {
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
+    // Spridningsmodalen efter skapat event (dela → boost) — sätts vid lyckat
+    // skapande, null = stängd. Bär id + titel (titeln till native share).
+    const [postCreateNudge, setPostCreateNudge] = useState<{ id: string; title: string } | null>(null);
     // Antal dagar i det visade intervallet: 1 = en dag (default), 3 = fre–sön osv.
     const [dayRangeDays, setDayRangeDays] = useState(1);
     // Spegel för bildspelets blink-effekt — den ska läsa nuvarande fas utan att
@@ -1702,71 +1705,13 @@ export default function HomePage() {
                 : isTip
                 ? 'Tack för tipset — eventet syns nu på kartan! 💡'
                 : 'Eventet är skapat och syns på kartan! 🎉');
-            // SPRIDNINGS-NUDGEN: den som just skapat ett event är sajtens
-            // bästa distributionskanal OCH mest köpbenägna person — visa EN
-            // toast strax efter kvittot (fördröjd så succé-toasten hinner
-            // landa) med två vägar: DELA (gratis — /e/-länken via native
-            // share, precis som kortets dela-knapp) och BOOSTA (checkouten
-            // direkt; enda nivån är veckan, priset står på knappen). Bara
-            // riktiga konton: tips-flödet är anonymt och backend avvisar
-            // anonyma köp ändå.
+            // SPRIDNINGS-NUDGEN (14/9: toasten var för trång — "något mer
+            // ordentligt … i mitten av skärmen"): tvåstegsmodalen
+            // PostCreateNudge (dela → boost) öppnas direkt efter kvittot.
+            // Bara riktiga konton: tips-flödet är anonymt och backend
+            // avvisar anonyma köp ändå.
             if (!isTip && user) {
-                const boostDocId = docId;
-                const createdTitle = newEventTitle.trim();
-                setTimeout(() => {
-                    toast((t) => (
-                        <div className="flex flex-col gap-2">
-                            <span className="text-sm font-bold">
-                                Vill du att fler ser ditt event? Dela det i din stads grupper — eller boosta med guld-⭐ på kartan i 7 dagar.
-                            </span>
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        toast.dismiss(t.id);
-                                        const url = `${window.location.origin}/e/${eventShareSlug(boostDocId)}`;
-                                        try {
-                                            if (navigator.share) {
-                                                await navigator.share({ title: createdTitle, url });
-                                                return;
-                                            }
-                                            await navigator.clipboard.writeText(url);
-                                            toast.success('Länk kopierad — klistra in i din stads Facebookgrupp!');
-                                        } catch { /* avbruten delning är inget fel */ }
-                                    }}
-                                    className="px-3.5 py-1.5 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white text-xs font-black transition-colors"
-                                >
-                                    📣 Dela eventet
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        toast.dismiss(t.id);
-                                        try {
-                                            const load = toast.loading('Öppnar betalning…');
-                                            await startEventBoostCheckout(boostDocId, 'week');
-                                            toast.dismiss(load);
-                                        } catch (err) {
-                                            console.error(err);
-                                            toast.error(err instanceof Error ? err.message : 'Kunde inte starta boost.');
-                                        }
-                                    }}
-                                    className="px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-black transition-colors"
-                                >
-                                    {/* Priset ur BOOST_TIERS — EN källa, samma som väljaren. */}
-                                    ⭐ Boosta — {BOOST_TIERS.find(bt => bt.tier === 'week')?.priceLabel ?? '99 kr'}/vecka
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => toast.dismiss(t.id)}
-                                    className="px-3.5 py-1.5 rounded-full text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors"
-                                >
-                                    Nej tack
-                                </button>
-                            </div>
-                        </div>
-                    ), { duration: 20000, icon: '🚀' });
-                }, 1500);
+                setPostCreateNudge({ id: docId, title: newEventTitle.trim() });
             }
             resetCreateFlow();
         } catch (err) {
@@ -4455,6 +4400,13 @@ export default function HomePage() {
                 open={authModal.open}
                 reason={authModal.reason}
                 onClose={() => setAuthModal({ open: false })}
+            />
+
+            {/* Spridningsmodalen efter skapat event: dela → boost, två steg
+                mitt på skärmen (ersätter 13/9-toasten som var för trång). */}
+            <PostCreateNudge
+                event={postCreateNudge}
+                onClose={() => setPostCreateNudge(null)}
             />
 
             {/* Onboarding — auto-öppnas vid sidladdning för UTLOGGADE (gaten
