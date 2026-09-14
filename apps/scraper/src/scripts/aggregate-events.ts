@@ -3,6 +3,7 @@ import { publicUrl } from '../utils/affiliateUrl';
 import { sqlite } from '../utils/sqliteHelper';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildTitleFreq, isPopularEvent, normTitlePop } from '../utils/popularEvent';
+import { firstSeenExport } from '../utils/firstSeenExport';
 import { eventKey } from '../utils/eventKey';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
 import * as path from 'path';
@@ -24,6 +25,10 @@ interface DestinationLayer {
     emoji?: string;
     /** true = 🔥 Populär (utils/popularEvent). Utelämnas annars (bytes × 30k event i aggregatet). */
     pop?: true;
+    /** Först sedd i pipelinen (YYYY-MM-DD, UTC) — BARA med för event yngre än
+     *  14 dagar (utils/firstSeenExport; bytes × 30k event). Webbens "Nytt
+     *  sedan sist"-banner jämför fältet mot besökarens förra besök. */
+    fs?: string;
 }
 
 /**
@@ -109,6 +114,11 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     const titleFreq = buildTitleFreq(rows);
     let popCount = 0;
 
+    // Riktigt "nu" (inte dygnsstarten ovan) — först-sedd-fönstret ska mätas
+    // från körningsögonblicket, samma referens oavsett när på dygnet vi kör.
+    const firstSeenNowMs = Date.now();
+    let firstSeenCount = 0;
+
     let skippedNoUrl = 0;
     rows.forEach(row => {
         const id = row.url; // Use url as unique identifier
@@ -148,6 +158,9 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         ) ? true as const : undefined;
         if (pop) popCount++;
 
+        const fsDay = firstSeenExport(row.createdAt, firstSeenNowMs);
+        if (fsDay) firstSeenCount++;
+
         destinations.push({
             id,
             title: row.title || '',
@@ -161,7 +174,8 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             locationName: row.locationName || '',
             category: row.category || 'other',
             emoji: row.emoji || undefined,
-            pop
+            pop,
+            fs: fsDay
         });
 
         // Bara det destinations INTE redan bär. Tomma värden utelämnas — webben
@@ -190,6 +204,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         console.log(`   ⏭  ${skippedNoUrl} event utan url hoppades över (saknar aggregat-nyckel).`);
     }
     console.log(`   🔥 ${popCount} av ${destinations.length} event klassade som Populära (${destinations.length ? Math.round(popCount / destinations.length * 100) : 0} %)`);
+    console.log(`   🆕 ${firstSeenCount} event bär först-sedd-dag (≤14 dagar) — grunden för "Nytt sedan sist"`);
     if (droppedCoords > 0) {
         console.log(`   ⚠️  ${droppedCoords} event hade ogiltiga koordinater (utanför WGS84) — sanerade till 0,0 i kartlagret`);
     }

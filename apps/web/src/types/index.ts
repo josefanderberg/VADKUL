@@ -200,6 +200,10 @@ export interface LinkEvent {
    *  och bakad i aggregaten. Utelämnas när inte populär — gamla cachade lager
    *  saknar fältet helt, så undefined betyder alltid "inte populär". */
   pop?: boolean;
+  /** Först sedd i pipelinen (YYYY-MM-DD, UTC) — bakas i destinations-aggregatet
+   *  (fältet `fs`) BARA för event yngre än 14 dagar; äldre lager saknar fältet
+   *  helt. Driver "Nytt sedan sist"-bannern (utils/newSinceLastVisit). */
+  firstSeen?: string;
   /** Användarskapade event: skaparens uid — styr "Ta bort eventet" på kortet. */
   hostUid?: string;
   /**

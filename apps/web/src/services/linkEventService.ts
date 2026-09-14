@@ -427,6 +427,7 @@ function mapDestinationsToLinkEvents(events: any[]): LinkEvent[] {
             isLocationVerified: evt.isLocationVerified || false,
             emoji: evt.emoji || undefined,
             pop: evt.pop || undefined,
+            firstSeen: typeof evt.fs === 'string' ? evt.fs : undefined,
             hasSpecificTime: hasSpecificTimeOf(evt, time),
             endDate,
         };

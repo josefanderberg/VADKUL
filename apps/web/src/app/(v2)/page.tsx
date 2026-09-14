@@ -34,6 +34,7 @@ import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { shouldLandOnTomorrow } from '@/utils/eveningLanding';
+import { isNewSince, readAndStampVisit, NEW_SINCE_MIN_COUNT } from '@/utils/newSinceLastVisit';
 import PostCreateNudge from '@/components/v2/PostCreateNudge';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
@@ -2362,6 +2363,40 @@ export default function HomePage() {
     }, [periodCount, periodAllPastAt]);
     const nearbyAllPast = promptContextQuiet && periodAllPast;
 
+    /**
+     * "NYTT SEDAN SIST"-läget: återkommande besökare hälsas med hur många NYA
+     * event som dykt upp i vyn sedan förra besöket. Baslinjen läses och
+     * stämplas EN gång per sidladdning (utils/newSinceLastVisit — modulnätet
+     * gör StrictMode-dubbelkörningen ofarlig); första besöket ger null och
+     * bannern uteblir. Räkningen går genom SAMMA mått som stadsrutan
+     * (matchesFilter + inMapView — aldrig ett eget närhetsmått) och räknar
+     * över ALLA kommande dagar i vyn, inte bara vald period: nyheten är att
+     * utbudet växt, inte vad som händer just idag. isEventPast håller redan
+     * passerade event ute (delade "har varit"-gränsen).
+     */
+    const [visitBaseline, setVisitBaseline] = useState<string | null>(null);
+    useEffect(() => { setVisitBaseline(readAndStampVisit()); }, []);
+    const newSinceCount = useMemo(() => {
+        if (!visitBaseline) return 0;
+        const nowMs = Date.now();
+        let n = 0;
+        for (const evt of events) {
+            if (!isNewSince(evt.firstSeen, visitBaseline)) continue;
+            if (isEventPast(evt, nowMs)) continue;
+            if (!matchesFilter(evt)) continue;
+            if (!inMapView(evt)) continue;
+            n++;
+        }
+        return n;
+    }, [visitBaseline, events, matchesFilter, inMapView]);
+    /** Lägst prioritet i botten-slotten: tom-/allt-har-varit-prompterna är
+     *  åtgärdsprompter och vinner platsen. Samma stadshopps-vakt som
+     *  areaCounts — mitt i ett hopp beskriver kartrutan förra staden. */
+    const [newSinceDismissed, setNewSinceDismissed] = useState(false);
+    const showNewSince = promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast
+        && !newSinceDismissed && newSinceCount >= NEW_SINCE_MIN_COUNT
+        && !(cityTourTarget && boundsCityKey !== cityTourTarget.key);
+
     /** Går det att erbjuda veckan? Bara inzoomad (samma grind som dagväljaren),
      *  bara från dagsläget, och bara om veckan faktiskt har något — mätt med
      *  SAMMA tal som stadsrutans veckorad, så siffran vi lovar är den man ser
@@ -4292,6 +4327,36 @@ export default function HomePage() {
                                 Visa {getDayLabel(dayOffset + 1, dayRangeDays).toLowerCase()}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Nytt sedan sist: hälsar återkommande besökare med hur många nya
+                event som dykt upp i vyn sedan förra besöket (se showNewSince —
+                lägst prioritet i samma botten-slot som prompterna ovan, de kan
+                aldrig visas samtidigt). Ren hälsning, ingen åtgärdsprompt: ✕
+                tystar den för resten av besöket. */}
+            {showNewSince && (
+                <div className="fixed inset-x-0 bottom-52 z-[1150] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
+                        <span className="text-2xl" aria-hidden>🎉</span>
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800">
+                                {newSinceCount} nya event här sedan ditt senaste besök.
+                            </p>
+                            <p className="text-xs text-slate-500">
+                                Tillagda efter att du var här sist — bläddra bland
+                                dagarna så hittar du dem.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setNewSinceDismissed(true)}
+                            aria-label="Stäng"
+                            className="shrink-0 p-2 -m-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
             )}
