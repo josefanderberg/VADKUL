@@ -342,6 +342,12 @@ export function buildCityPostText(
         'ställe i stället för utspritt på tio olika sidor. Gratis, inget konto',
         `behövs för att titta: ${link}`,
         '',
+        // Tipsa-raden (ägarbeslut 14/9): stående uppmaning i VARJE inlägg —
+        // tips-flödet på kartan är kontofritt och gruppmedlemmarna är exakt
+        // rätt publik. Skild från CLOSERS-raden: den fiskar kommentarer (FB-
+        // räckvidd), den här värvar event till kartan.
+        'Saknas något? Tipsa oss direkt på kartan — tar en halv minut, inget konto behövs.',
+        '',
         CLOSERS[s % CLOSERS.length],
     );
     return parts.join('\n');

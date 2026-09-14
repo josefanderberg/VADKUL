@@ -113,6 +113,12 @@ describe('buildCityPostText', () => {
         expect(text).not.toMatch(/\bjag\b/i);    // Sidans röst är "vi"
     });
 
+    it('har tipsa-raden i varje inlägg (ägarbeslut 14/9)', () => {
+        const text = buildCityPostText('Kalmar', 'x', rows, FRI);
+        expect(text).toContain('Saknas något? Tipsa oss direkt på kartan');
+        expect(text).toContain('inget konto behövs');
+    });
+
     it('är deterministisk för samma ort+dag och varierar mellan orter', () => {
         const a1 = buildCityPostText('Kalmar', 'x', rows, FRI);
         const a2 = buildCityPostText('Kalmar', 'x', rows, FRI);
