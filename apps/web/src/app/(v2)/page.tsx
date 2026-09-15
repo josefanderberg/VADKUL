@@ -4430,6 +4430,25 @@ export default function HomePage() {
                 </>
             )}
 
+            {/* VANLIGA +-flödet i platsvals-läget: plusset har droppat till
+                kartans mitt och blivit bocken — men utan förklaring såg det ut
+                som att inget hände (Gårdsby Hantverkshus 15/9: "Lyckas inte
+                lägga till evenemang!?"; ägarkvitto: "en banner kan nog
+                förtydliga"). Samma placering som djuplänks-bannern ovan, men
+                bara text — bocken ÄR bekräftaknappen och ska inte få en
+                konkurrent. */}
+            {creationMode === 'placing' && !deepPlacing && (
+                <div className="fixed inset-x-0 top-[calc(50%+26px)] z-[1190] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-none rounded-3xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-5 py-3 max-w-sm text-center">
+                        <p className="text-sm font-black text-slate-800">Var händer det?</p>
+                        <p className="mt-0.5 text-xs font-medium text-slate-500">
+                            Panorera kartan tills bocken står över rätt plats — och
+                            tryck sen på den.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* "Ändra plats"-varvet: modalen gömd, kartan fri att panorera.
                 Center-pinnen visar var platsen hamnar (kartans mitt) och pillen
                 bekräftar/avbryter. Formuläret väntar orört under tiden. */}
