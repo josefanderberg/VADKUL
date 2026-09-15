@@ -309,16 +309,18 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     };
 
     // Dela eventet: native share-dialog på mobil, annars kopiera länken.
-    // Skrapade event delas som /e/<slug> — den sidan serverar eventets EGEN
-    // delningsbild (titel/emoji/plats) till FB/Messenger och skickar människor
-    // vidare till kartan. User-skapade event finns inte i aggregat-datat som
-    // /e/-uppslaget läser, så de behåller den direkta ?event=-länken.
+    // ALLA event delas som /e/<slug> — den sidan serverar eventets EGEN
+    // delningsbild och OG-taggar till FB/Messenger och skickar människor
+    // vidare till kartan. User-skapade event fick /e/ först 15/9 (Firestore-
+    // fallbacken i shareData): deras gamla /?event=-länkar normaliserades av
+    // Facebook till og:url = nakna startsidan, så förhandsvisningskortet
+    // tappade queryn. Ett veckoserietillfälle ("<docId>__2026-09-18") delas
+    // på seriens DOKUMENT-id — det är det /e/-uppslaget och /?event= löser.
     const handleShare = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        const shareUrl = linkEvent.userCreated
-            ? `${window.location.origin}/?event=${encodeURIComponent(linkEvent.id)}`
-            : `${window.location.origin}/e/${eventShareSlug(linkEvent.id)}`;
+        const shareId = linkEvent.userCreated ? linkEvent.id.split('__')[0] : linkEvent.id;
+        const shareUrl = `${window.location.origin}/e/${eventShareSlug(shareId)}`;
         try {
             if (navigator.share) {
                 await navigator.share({ title: linkEvent.title, url: shareUrl });

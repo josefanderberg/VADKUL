@@ -2,13 +2,19 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { buildCardIndex } from '@/utils/eventKey';
+import { emojiForCategory } from '@/utils/categories';
+import { getAdminDb } from '@/lib/firestore-admin';
 
 // Uppslag slug → event för delningssidorna (/e/[slug]). Läser samma
 // events-JSON som stadssidorna, men vid RUNTIME (delningssidor renderas på
 // begäran — 21k möjliga slugs går inte att förrendera). Funktionspaketet
 // innehåller public/-mappen, så fs-läsning fungerar i drift.
-// OBS: user-skapade event (Firestore linkEvents) finns INTE i aggregaten —
-// deras dela-knapp använder gamla /?event=-länken i stället.
+// User-skapade event (Firestore linkEvents) finns INTE i aggregaten — de slås
+// upp via Firestore-fallbacken längst ner (sedan 15/9). Bakgrund: deras gamla
+// /?event=-delningslänkar normaliserades av Facebook till og:url =
+// https://vadkul.se, så förhandsvisningskortet tappade queryn och öppnade
+// bara startsidan (Drömfabriken-länkarna 14–15/9). Dela-knappen ger dem
+// numera /e/-länkar precis som skrapade event.
 
 export type ShareEvent = {
     id: string;
@@ -57,9 +63,70 @@ function loadIndex(): Promise<Map<string, ShareEvent>> {
     return indexPromise;
 }
 
+// ── Firestore-fallbacken: user-skapade event ────────────────────────────────
+// Sluggen är en hash av dokument-id:t och kan inte vändas — men de användar-
+// skapade eventen är FÅ (tiotal): hämta alla synliga i EN select()-query och
+// matcha per slug. Memoiseras med kort TTL så FB-skrapare + besökare inte
+// kostar en query var (jfr regeln: aldrig hela kollektioner — det här är den
+// lilla userCreated-skivan, inte pipelinens tiotusentals rader).
+const USER_INDEX_TTL_MS = 5 * 60_000;
+let userIndexMemo: { at: number; index: Map<string, ShareEvent> } | null = null;
+let userIndexBuild: Promise<Map<string, ShareEvent>> | null = null;
+
+function loadUserCreatedIndex(): Promise<Map<string, ShareEvent>> {
+    if (userIndexMemo && Date.now() - userIndexMemo.at < USER_INDEX_TTL_MS) {
+        return Promise.resolve(userIndexMemo.index);
+    }
+    if (!userIndexBuild) {
+        userIndexBuild = (async () => {
+            const index = new Map<string, ShareEvent>();
+            try {
+                const db = getAdminDb();
+                if (db) {
+                    const snap = await db.collection('linkEvents')
+                        .where('userCreated', '==', true)
+                        .select('title', 'time', 'hasSpecificTime', 'locationName',
+                            'category', 'emoji', 'hostName', 'coverImage', 'hidden')
+                        .get();
+                    snap.forEach(doc => {
+                        const v = doc.data() as Record<string, unknown>;
+                        // hidden skrivs som 0/1 av klienten och bool av andra vägar.
+                        if (v.hidden === true || v.hidden === 1) return;
+                        const time = v.time && typeof (v.time as { toDate?: unknown }).toDate === 'function'
+                            ? (v.time as { toDate: () => Date }).toDate()
+                            : new Date(String(v.time ?? ''));
+                        if (isNaN(time.getTime())) return;
+                        if (typeof v.title !== 'string' || !v.title.trim()) return;
+                        index.set(eventShareSlug(doc.id), {
+                            id: doc.id,
+                            title: v.title,
+                            time: time.toISOString(),
+                            hasSpecificTime: v.hasSpecificTime !== false,
+                            locationName: typeof v.locationName === 'string' ? v.locationName : '',
+                            emoji: (typeof v.emoji === 'string' && v.emoji)
+                                ? v.emoji
+                                : emojiForCategory(typeof v.category === 'string' ? v.category : null),
+                            hostName: typeof v.hostName === 'string' && v.hostName ? v.hostName : undefined,
+                            coverImage: typeof v.coverImage === 'string' && v.coverImage ? v.coverImage : undefined,
+                        });
+                    });
+                }
+            } catch {
+                // Utan admin-db (t.ex. lokal dev utan service-account): ingen
+                // fallback — exakt beteendet som fanns före 15/9.
+            }
+            userIndexMemo = { at: Date.now(), index };
+            return index;
+        })().finally(() => { userIndexBuild = null; });
+    }
+    return userIndexBuild;
+}
+
 export async function getShareEvent(slug: string): Promise<ShareEvent | null> {
     const index = await loadIndex();
-    return index.get(slug) ?? null;
+    const hit = index.get(slug);
+    if (hit) return hit;
+    return (await loadUserCreatedIndex()).get(slug) ?? null;
 }
 
 // Svensk datum-/tidsformattering (samma zon-tänk som stadssidorna).
