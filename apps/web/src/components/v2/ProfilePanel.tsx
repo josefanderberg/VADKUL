@@ -656,7 +656,9 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                         <EventListRow
                                             key={evt.id}
                                             evt={evt}
-                                            tag={evt.repeatWeekly ? 'Varje vecka' : undefined}
+                                            tag={evt.repeatWeekly
+                                                ? (evt.repeatIntervalWeeks === 2 ? 'Varannan vecka' : 'Varje vecka')
+                                                : undefined}
                                             onPick={evt => onPickEvent?.(evt)}
                                             right={
                                                 <button

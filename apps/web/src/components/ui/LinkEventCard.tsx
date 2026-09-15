@@ -818,7 +818,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                         tillfällen ut som tolv separata event. */}
                                     {linkEvent.repeatWeekly && (
                                         <p className="text-[10px] font-semibold text-slate-400 py-0.5">
-                                            🔁 Varje {linkEvent.time.toLocaleDateString('sv-SE', { weekday: 'long' })}
+                                            🔁 {linkEvent.repeatIntervalWeeks === 2 ? 'Varannan' : 'Varje'} {linkEvent.time.toLocaleDateString('sv-SE', { weekday: 'long' })}
                                         </p>
                                     )}
                                     {reportSent ? (

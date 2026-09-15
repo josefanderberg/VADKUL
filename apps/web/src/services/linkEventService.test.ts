@@ -6,8 +6,8 @@ import type { LinkEvent } from '../types';
 // repeatWeeks begränsar serien; utan fältet rullar den tills vidare (gamla
 // dokument, från innan valet fanns, ska bete sig exakt som förut).
 
-const base = (time: Date, repeatWeeks?: number): LinkEvent =>
-    ({ id: 'doc1', title: 'Pubquiz', time, repeatWeekly: true, repeatWeeks } as unknown as LinkEvent);
+const base = (time: Date, repeatWeeks?: number, repeatIntervalWeeks?: number): LinkEvent =>
+    ({ id: 'doc1', title: 'Pubquiz', time, repeatWeekly: true, repeatWeeks, repeatIntervalWeeks } as unknown as LinkEvent);
 
 describe('expandWeekly', () => {
     // "Idag" i testet: onsdag 19 aug 2026. Serien startade onsdag 5 aug 19:00.
@@ -51,6 +51,36 @@ describe('expandWeekly', () => {
         const future = new Date(2026, 7, 21, 18, 0);
         const out = expandWeekly(base(future, 1), from);
         expect(out.map(e => e.id)).toEqual(['doc1__2026-08-21']);
+    });
+
+    // Varannan vecka (repeatIntervalWeeks 2, 15/9) — Stobirk-fallet: serien
+    // stegar 14 dagar och snabbspolningen förbi passerade datum bevarar
+    // PARITETEN, så tillfällena aldrig glider över på "fel" vecka.
+    it('varannan vecka: 14-dagarssteg och bevarad paritet förbi passerade datum', () => {
+        // Serien startade 5/8; den 19/8 är nästa tillfälle just 19/8 (5/8 + 14 d).
+        const out = expandWeekly(base(seriesStart, undefined, 2), from);
+        expect(out[0].id).toBe('doc1__2026-08-19');
+        expect(out[1].id).toBe('doc1__2026-09-02');
+        expect(out[2].id).toBe('doc1__2026-09-16');
+    });
+
+    it('varannan vecka: paritet bevaras även när "nu" ligger på mellanveckan', () => {
+        // Den 26/8 (mellanvecka) är nästa tillfälle 2/9 — inte 26/8.
+        const midWeek = new Date(2026, 7, 26, 0, 0);
+        const out = expandWeekly(base(seriesStart, undefined, 2), midWeek);
+        expect(out[0].id).toBe('doc1__2026-09-02');
+    });
+
+    it('varannan vecka: repeatWeeks räknar fortfarande VECKOR — 8 veckor = 4 tillfällen', () => {
+        const out = expandWeekly(base(seriesStart, 8, 2), new Date(2026, 7, 1));
+        expect(out.map(e => e.id)).toEqual([
+            'doc1__2026-08-05', 'doc1__2026-08-19', 'doc1__2026-09-02', 'doc1__2026-09-16',
+        ]);
+    });
+
+    it('ogiltig rytm (0/1/negativ) faller tillbaka på varje vecka', () => {
+        const out = expandWeekly(base(seriesStart, 3, 1), from);
+        expect(out.map(e => e.id)).toEqual(['doc1__2026-08-19']);
     });
 });
 

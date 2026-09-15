@@ -76,11 +76,17 @@ export function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
         if (seriesEnd < horizon) horizon.setTime(seriesEnd.getTime());
     }
 
-    // Starta på basens tid och stega en vecka i taget fram till `from` —
+    // Starta på basens tid och stega en period i taget fram till `from` —
     // serier som startade i våras ska börja vid nästa kommande tillfälle,
-    // inte spamma kartan med varje passerat datum.
+    // inte spamma kartan med varje passerat datum. Rytmen (repeatIntervalWeeks
+    // 2 = varannan vecka) styr steget; stegning från BASEN bevarar pariteten,
+    // så en varannan vecka-serie hamnar aldrig på "fel" vecka. Utelämnad/
+    // ogiltig rytm = varje vecka (alla serier före 15/9).
+    const stepDays = 7 * (Number.isInteger(base.repeatIntervalWeeks) && base.repeatIntervalWeeks! >= 2
+        ? base.repeatIntervalWeeks!
+        : 1);
     const cursor = new Date(base.time);
-    while (cursor < from) cursor.setDate(cursor.getDate() + 7);
+    while (cursor < from) cursor.setDate(cursor.getDate() + stepDays);
 
     while (cursor <= horizon) {
         const y = cursor.getFullYear();
@@ -92,7 +98,7 @@ export function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
             seriesId: base.id,
             time: new Date(cursor),
         });
-        cursor.setDate(cursor.getDate() + 7);
+        cursor.setDate(cursor.getDate() + stepDays);
     }
     return out;
 }
@@ -575,6 +581,8 @@ export const linkEventService = {
         hostName: string; hostUid: string; coverImage?: string; url?: string;
         isTip?: boolean; anonTip?: boolean; repeatWeekly?: boolean;
         repeatWeeks?: number;
+        /** 2 = varannan vecka; utelämnad/1 = varje vecka. */
+        repeatIntervalWeeks?: number;
     }): Promise<string> {
         if (!db) throw new Error('Firestore ej initierad');
         const payload: Record<string, unknown> = {
@@ -615,6 +623,11 @@ export const linkEventService = {
             // fortsätter acceptera obegränsade serier tills nya är deployade.
             if (input.repeatWeeks && input.repeatWeeks >= 1) {
                 payload.repeatWeeks = Math.floor(input.repeatWeeks);
+            }
+            // Rytm: bara varannan vecka (2) skrivs — varje vecka är seriens
+            // default och ska inte bära ett fält (bytes + rules-enkelhet).
+            if (input.repeatIntervalWeeks === 2) {
+                payload.repeatIntervalWeeks = 2;
             }
         }
         try {
@@ -687,6 +700,8 @@ export const linkEventService = {
         locationName?: string; category?: string; description?: string;
         price?: string; hostName: string; coverImage?: string; url?: string;
         isTip?: boolean; repeatWeekly?: boolean; repeatWeeks?: number;
+        /** 2 = varannan vecka; utelämnad/1 = varje vecka. */
+        repeatIntervalWeeks?: number;
     }): Promise<void> {
         if (!db) throw new Error('Firestore ej initierad');
         const payload: Record<string, unknown> = {
@@ -705,6 +720,9 @@ export const linkEventService = {
             repeatWeekly: input.repeatWeekly ? true : deleteField(),
             repeatWeeks: input.repeatWeekly && input.repeatWeeks && input.repeatWeeks >= 1
                 ? Math.floor(input.repeatWeeks)
+                : deleteField(),
+            repeatIntervalWeeks: input.repeatWeekly && input.repeatIntervalWeeks === 2
+                ? 2
                 : deleteField(),
             updatedAt: serverTimestamp(),
         };

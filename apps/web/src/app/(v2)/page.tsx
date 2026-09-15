@@ -300,16 +300,17 @@ const pickNearestToPoint =(point: { lat: number; lng: number } | null, dayEvents
 // klustring). Tröskeln (WEEK_VIEW_MIN_ZOOM) bor i utils/mapUtils — V2Map
 // behöver samma värde för stadsrutans auto-inzoomning till veckan (31/8).
 /**
- * "Varje torsdag kl 19:00" — veckodagen och tiden en serie skulle ärva från
- * det valda datumet. Tar datetime-local-strängen rakt av (den är redan lokal
- * tid); ogiltig sträng ger tom text så etiketten aldrig visar "Invalid Date".
+ * "Varje torsdag kl 19:00" (eller "Varannan …" vid rytm 2) — veckodagen och
+ * tiden en serie skulle ärva från det valda datumet. Tar datetime-local-
+ * strängen rakt av (den är redan lokal tid); ogiltig sträng ger tom text så
+ * etiketten aldrig visar "Invalid Date".
  */
-const weeklyLabelFor = (datetimeLocal: string): string => {
+const weeklyLabelFor = (datetimeLocal: string, intervalWeeks: number = 1): string => {
     const d = new Date(datetimeLocal);
     if (isNaN(d.getTime())) return '';
     const weekday = d.toLocaleDateString('sv-SE', { weekday: 'long' });
     const time = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-    return `Varje ${weekday} kl ${time}`;
+    return `${intervalWeeks === 2 ? 'Varannan' : 'Varje'} ${weekday} kl ${time}`;
 };
 /**
  * Hur många veckor en serie kan pågå (inkl. första tillfället). VARJE vecka
@@ -491,6 +492,8 @@ export default function HomePage() {
     // dem med en inloggningsspärr för ett läge de inte var ute efter.
     const [newEventRole, setNewEventRole] = useState<'host' | 'tip'>('tip');
     const [newEventRepeatWeekly, setNewEventRepeatWeekly] = useState(false); // veckovis serie
+    // Rytm: 1 = varje vecka (default, skrivs aldrig), 2 = varannan vecka.
+    const [newEventRepeatInterval, setNewEventRepeatInterval] = useState<1 | 2>(1);
     // Hur många veckor serien pågår (inkl. första gången). null = tills vidare.
     const [newEventRepeatWeeks, setNewEventRepeatWeeks] = useState<number | null>(null);
     const [newEventUrl, setNewEventUrl] = useState('');   // tips: länk till källan (valfri)
@@ -541,6 +544,7 @@ export default function HomePage() {
         setNewEventImagePreview('');
         setNewEventRole('tip');
         setNewEventRepeatWeekly(false);
+        setNewEventRepeatInterval(1);
         setNewEventRepeatWeeks(null);
         setNewEventUrl('');
         setNewEventHost('');
@@ -594,6 +598,7 @@ export default function HomePage() {
         setNewEventUrl(evt.url || '');
         setNewEventHost(evt.isTip || evt.url ? evt.hostName || '' : '');
         setNewEventRepeatWeekly(!!evt.repeatWeekly);
+        setNewEventRepeatInterval(evt.repeatIntervalWeeks === 2 ? 2 : 1);
         setNewEventRepeatWeeks(evt.repeatWeeks ?? null);
         // Befintlig bild visas som förhandsvisning ("behåll"). Krysset tömmer
         // den → bilden tas bort vid Spara; ny fil ersätter den.
@@ -1619,6 +1624,7 @@ export default function HomePage() {
                     url: tipUrl ?? '',
                     isTip,
                     repeatWeekly: newEventRepeatWeekly,
+                    repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
                     repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
                 });
                 const updated: LinkEvent = {
@@ -1630,6 +1636,7 @@ export default function HomePage() {
                     coverImage: editImage, description: newEventDescription.trim(), price,
                     userCreated: true, isTip,
                     repeatWeekly: newEventRepeatWeekly,
+                    repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
                     repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
                 } as LinkEvent;
                 // Optimistiskt: byt ut ALLA tillfällen som hör till dokumentet
@@ -1668,6 +1675,7 @@ export default function HomePage() {
                 isTip,
                 anonTip: isAnonTip,
                 repeatWeekly: newEventRepeatWeekly,
+                repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
                 repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
             });
             const created: LinkEvent = {
@@ -1677,6 +1685,7 @@ export default function HomePage() {
                 category: newEventCategory, coverImage, description: newEventDescription.trim(), price, attendees: 0,
                 isLocationVerified: true, userCreated: true, isTip, anonTip: isAnonTip,
                 repeatWeekly: newEventRepeatWeekly,
+                repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
                 repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
                 hostUid: authorUid,
             } as LinkEvent;
@@ -1727,7 +1736,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatWeeks, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatInterval, newEventRepeatWeeks, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -4008,13 +4017,30 @@ export default function HomePage() {
                                 />
                                 <span className="min-w-0 flex-1">
                                     <span className="block text-sm font-bold text-slate-800 dark:text-white">
-                                        Återkommer varje vecka
+                                        Återkommer regelbundet
                                     </span>
                                     <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
-                                        {weeklyLabelFor(newEventTime)} — t.ex. pubquiz eller
-                                        träningstider. Ändrar du tiden senare gäller det alla
-                                        kommande gånger.
+                                        {weeklyLabelFor(newEventTime, newEventRepeatInterval)} — t.ex.
+                                        pubquiz eller träningstider. Ändrar du tiden senare gäller
+                                        det alla kommande gånger.
                                     </span>
+                                    {/* Rytmen: varje eller varannan vecka (15/9 — Stobirk-
+                                        besöken var varannan-lördag och gick inte att lägga
+                                        som serie). Varje vecka är default och skrivs aldrig
+                                        till dokumentet. */}
+                                    {newEventRepeatWeekly && (
+                                        <span className="mt-2 flex items-center gap-2 text-xs font-normal text-slate-600 dark:text-slate-300" onClick={e => e.preventDefault()}>
+                                            Hur ofta?
+                                            <select
+                                                value={newEventRepeatInterval}
+                                                onChange={e => setNewEventRepeatInterval(Number(e.target.value) === 2 ? 2 : 1)}
+                                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-xs text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white focus:border-green-500 focus:outline-none"
+                                            >
+                                                <option value={1}>Varje vecka</option>
+                                                <option value={2}>Varannan vecka</option>
+                                            </select>
+                                        </span>
+                                    )}
                                     {/* Hur länge serien pågår. Tills vidare är förval —
                                         det är beteendet serier alltid haft. Väljs ett antal
                                         slutar serien efter sista tillfället och försvinner

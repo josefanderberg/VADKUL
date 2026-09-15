@@ -251,6 +251,13 @@ export interface LinkEvent {
    */
   repeatWeeks?: number;
   /**
+   * Serie-rytm: 2 = varannan vecka (15/9). Utelämnad = varje vecka — alla
+   * serier skapade innan valet fanns fortsätter exakt som förut. repeatWeeks
+   * behåller sin betydelse (hur många VECKOR serien pågår): en varannan
+   * vecka-serie på 8 veckor har 4 tillfällen.
+   */
+  repeatIntervalWeeks?: number;
+  /**
    * Sätts BARA på utvecklade tillfällen av en veckoserie: id:t på dokumentet
    * tillfället kommer från. Tillfällena har egna id ("<docId>__2026-08-13")
    * eftersom kartan, dedupen i emit() och React-nycklarna kräver unika id —

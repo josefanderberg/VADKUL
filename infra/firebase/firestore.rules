@@ -229,7 +229,13 @@ service cloud.firestore {
           && (!d.keys().hasAny(['hidden']) || d.hidden is bool || d.hidden is int)
           && (!d.keys().hasAny(['repeatWeekly']) || d.repeatWeekly is bool)
           && (!d.keys().hasAny(['repeatWeeks'])
-              || (d.repeatWeeks is int && d.repeatWeeks >= 1 && d.repeatWeeks <= 52));
+              || (d.repeatWeeks is int && d.repeatWeeks >= 1 && d.repeatWeeks <= 52))
+          // Serie-rytm: 2 = varannan vecka (15/9). Utelämnad = varje vecka
+          // (alla serier före valet fanns). 3–4 tillåts för framtida glesare
+          // rytmer utan ny rules-deploy.
+          && (!d.keys().hasAny(['repeatIntervalWeeks'])
+              || (d.repeatIntervalWeeks is int
+                  && d.repeatIntervalWeeks >= 2 && d.repeatIntervalWeeks <= 4));
       }
 
       allow create: if isAuthenticated()
@@ -255,7 +261,8 @@ service cloud.firestore {
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
             'description', 'createdAt', 'isLocationVerified', 'coverImage',
-            'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks', 'price'
+            'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks',
+            'repeatIntervalWeeks', 'price'
         ]);
 
       // Uppdatera: bara sitt eget användarskapade event — OCH aldrig de
@@ -283,7 +290,8 @@ service cloud.firestore {
             'title', 'time', 'lat', 'lng', 'locationName', 'category', 'emoji',
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
             'description', 'createdAt', 'isLocationVerified', 'coverImage',
-            'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks', 'price',
+            'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks',
+            'repeatIntervalWeeks', 'price',
             'featuredUntil', 'featuredPaymentId', 'updatedAt'
         ])
         // Identitets- och härkomstfälten är oföränderliga: ägarskap ska inte
