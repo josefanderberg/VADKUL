@@ -123,12 +123,14 @@ export default function FloatingNavbar({
                                 onClick={handleProfileClick}
                                 // hover:scale-105 som skapa-knappen (Josef 10/9:
                                 // "så fattar man att de går att klicka på").
-                                className={`peer pointer-events-auto bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200 relative ${user?.photoURL ? 'p-0.5' : 'p-2.5'}`}
+                                // h-11 w-11: ALLA FYRA hörnknappar (profil, sök, +, 🔥)
+                                // är lika stora, 44 px (Josef 15/9).
+                                className={`peer pointer-events-auto h-11 w-11 flex items-center justify-center bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200 relative ${user?.photoURL ? 'p-0.5' : ''}`}
                                 aria-label={user ? 'Min profil' : 'Logga in'}
                             >
                                 {user?.photoURL ? (
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={user.photoURL} alt="" className="w-9 h-9 rounded-full object-cover" />
+                                    <img src={user.photoURL} alt="" className="w-full h-full rounded-full object-cover" />
                                 ) : (
                                     <User size={20} className="text-slate-700" />
                                 )}
@@ -186,9 +188,9 @@ export default function FloatingNavbar({
                                 // Fältet ligger medvetet ÖVER plattan (z-1200),
                                 // så det får täcka topplinjen medan man söker;
                                 // radens `relative` är ankaret.
-                                className={`peer pointer-events-auto flex items-center h-10 rounded-full border border-white/50 ${searchOpen
+                                className={`peer pointer-events-auto flex items-center h-11 rounded-full border border-white/50 ${searchOpen
                                     ? 'absolute top-0 right-0 z-[1200] w-full max-w-[520px] bg-white px-4 shadow-xl transition-colors'
-                                    : 'w-10 justify-center bg-white/90 backdrop-blur-md shadow-lg hover:bg-white hover:scale-105 active:scale-95 transition duration-200 cursor-pointer'}`}
+                                    : 'w-11 justify-center bg-white/90 backdrop-blur-md shadow-lg hover:bg-white hover:scale-105 active:scale-95 transition duration-200 cursor-pointer'}`}
                             >
                                 <Search size={searchOpen ? 16 : 20} aria-hidden className={searchOpen ? 'text-slate-400 shrink-0 mr-2' : 'text-slate-700 shrink-0'} />
                                 <input

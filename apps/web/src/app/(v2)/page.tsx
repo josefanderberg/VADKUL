@@ -8,6 +8,7 @@ import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type Boos
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CreateEventButton from '@/components/v2/CreateEventButton';
 import PopularButton from '@/components/v2/PopularButton';
+import HoverLabel from '@/components/v2/HoverLabel';
 import AuthModal from '@/components/v2/AuthModal';
 import EventCard from '@/components/v2/EventCard';
 import SearchResults from '@/components/v2/SearchResults';
@@ -907,7 +908,8 @@ export default function HomePage() {
     // "Tryck för att växla" lite större och det EJ valda segmentet ("Hela
     // veckan") står i sitt hover-läge, också 4 s.
     // Fjärde och sista ('city'): 1 s senare står stadsknappen överst i sitt
-    // hover-läge i 4 s — ingen text, bara effekten.
+    // hover-läge i 4 s, med pillen "Gå till stadssidan" under (Josef 15/9 —
+    // steget var bara en effekt utan text fram till dess).
     const [tourHint, setTourHint] = useState<'popular' | 'create' | 'toggle' | 'city' | null>(null);
     const tourHintPlayedRef = useRef(false);
     const tourHintTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -3376,7 +3378,7 @@ export default function HomePage() {
                 gröt över ljusa kvarter. px-16 håller den fri från navbarens
                 knappkolumner i hörnen. */}
 {!chromeHidden && (
-    <div className="fixed inset-x-0 top-6 z-[1090] flex justify-center px-16 pointer-events-none">
+    <div className="fixed inset-x-0 top-6 z-[1090] flex flex-col items-center gap-1.5 px-16 pointer-events-none">
         <a
             key={cityTourTarget?.key ?? 0}
             href={cityLink.href}
@@ -3387,7 +3389,7 @@ export default function HomePage() {
             // styr inflygningens animation OCH övergångarna — hovern ska vara
             // lika kvick som knapparna (200 ms).
             // tourHint 'city' = visningsrundans sista steg: samma hover-läge i 4 s.
-            className={`relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
+            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
                 tourHint === 'city' ? 'bg-slate-900/90 scale-105' : 'bg-slate-900/80 hover:bg-slate-900/90 hover:scale-105'
             }`}
             style={{ transitionDuration: '200ms' }}
@@ -3425,6 +3427,10 @@ export default function HomePage() {
             </span>
             <span className="sr-only">{cityLink.label}</span>
         </a>
+        {/* Visningsrundans sista steg ('city') SÄGER vad plattan gör (Josef
+            15/9: "skriva gå till stadssida typ") — samma pill som skapa- och
+            🔥-stegen, och på desktop även vid hover (peer på länken). */}
+        <HoverLabel show={tourHint === 'city'}>Gå till stadssidan</HoverLabel>
     </div>
 )}
 

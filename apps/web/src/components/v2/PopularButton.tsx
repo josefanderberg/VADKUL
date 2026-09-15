@@ -36,7 +36,7 @@ export default function PopularButton({ events, popularOnly, onToggle, available
     if (!available) return null;
 
     return (
-        <div className="fixed bottom-3 right-3 z-[1090] flex flex-row-reverse items-center gap-2 pointer-events-none">
+        <div className="fixed bottom-4 right-4 z-[1090] flex flex-row-reverse items-center gap-2 pointer-events-none">
             <button
                 type="button"
                 onClick={onToggle}
@@ -45,7 +45,7 @@ export default function PopularButton({ events, popularOnly, onToggle, available
                 style={popularOnly ? { background: sourceGradientCss('#E8590C') } : undefined}
                 // Hover = lite större + flamman växer, som skapa-knappen
                 // (Josef 10/9); hint håller samma läge framme under rundan.
-                className={`peer group pointer-events-auto relative h-12 w-12 rounded-full shadow-lg flex items-center justify-center text-xl leading-none transition-all duration-200 border active:scale-95 ${
+                className={`peer group pointer-events-auto relative h-11 w-11 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all duration-200 border active:scale-95 ${
                     hint ? 'scale-105' : 'hover:scale-105'
                 } ${
                     popularOnly

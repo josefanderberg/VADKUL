@@ -20,7 +20,8 @@ interface CreateEventButtonProps {
  * 15/9: "en meny längst ner med knappen för skapa event"; 🔥 står i högra
  * hörnet, dagväljaren mellan dem ovanför). Bodde 14/8–15/9 under profilen uppe
  * till vänster. Formspråket är oförändrat: blå gradient, gul kant,
- * gold-glow-pulse.
+ * gold-glow-pulse. 44 px med 16 px luft — samma storlek som profil, sök och 🔥
+ * (Josef 15/9: alla hörnknappar lika stora).
  *
  * z-[1090] = samma som dagväljaren → hamnar under eventkortet (1250) när ett
  * kort är uppe, precis som väljaren. I placerings-läget är knappen bekräfta-
@@ -84,18 +85,18 @@ export default function CreateEventButton({
     const label = creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska';
 
     return (
-        <div className={`fixed bottom-3 left-3 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} flex items-center gap-2 pointer-events-none`}>
+        <div className={`fixed bottom-4 left-4 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} flex items-center gap-2 pointer-events-none`}>
             <button
                 ref={plusBtnRef}
                 type="button"
                 onClick={handlePlusClick}
                 disabled={plusDropping}
                 aria-label={label}
-                className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-12 w-12 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${hint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
+                className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-11 w-11 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${hint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
             >
                 {creationMode === 'placing'
-                    ? <Check size={22} className="text-white shrink-0" />
-                    : <MapPinPlus size={22} className={`text-[#FECC02] shrink-0 transition-transform duration-200 ${hint ? 'scale-110' : 'group-hover:scale-110'}`} />}
+                    ? <Check size={20} className="text-white shrink-0" />
+                    : <MapPinPlus size={20} className={`text-[#FECC02] shrink-0 transition-transform duration-200 ${hint ? 'scale-110' : 'group-hover:scale-110'}`} />}
             </button>
             {/* Josef 10/9: "Skapa event, tipsa eller önska" — alla tre vägarna in. */}
             <HoverLabel show={hint && creationMode === 'idle'}>{label}</HoverLabel>
