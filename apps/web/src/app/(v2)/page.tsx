@@ -6,7 +6,8 @@ import { linkEventService, isBoostShownEveryDay, expandWeekly } from '@/services
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
-import CategoryFilter from '@/components/v2/CategoryFilter';
+import CreateEventButton from '@/components/v2/CreateEventButton';
+import PopularButton from '@/components/v2/PopularButton';
 import AuthModal from '@/components/v2/AuthModal';
 import EventCard from '@/components/v2/EventCard';
 import SearchResults from '@/components/v2/SearchResults';
@@ -17,13 +18,13 @@ import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
 import { recordEventView } from '@/services/eventStatsService';
-import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, Info } from 'lucide-react';
+import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
-import { toggleCategory } from '@/utils/categoryToggle';
+import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
 import { normalizeSearchQuery, eventSearchTier, rankSearchResults } from '@/utils/eventSearch';
@@ -661,10 +662,6 @@ export default function HomePage() {
     // förrän själva återställningen.
     const groupRepRef = useRef<string | null>(null);
     const unpickedGroupRef = useRef<{ repId: string; group: LinkEvent[] } | null>(null);
-    // Kartklick stänger kategorikolumnen (Josef 31/8): bumpas vid varje klick
-    // på själva kartan (MapLibre fyrar ingen 'click' efter en dragning, så en
-    // panorering lämnar kolumnen i fred) och CategoryFilter fäller ihop sig.
-    const [filterCloseNonce, setFilterCloseNonce] = useState(0);
     // (Emoji-raden under stadsrutan (CategoryMix) är BORTTAGEN 10/8 — dess jobb
     // görs nu av kategorikolumnen till höger, som står öppen och visar antal
     // per kategori i vyn. mixPick/highlightEmoji-kopplingen försvann med den.)
@@ -1916,22 +1913,14 @@ export default function HomePage() {
 
     // Opt-in-källor (Svenska kyrkan/PRO) har väldigt många event och är
     // avstängda som default: deras event GÖMS tills användaren själv kryssar i
-    // källan. Övriga (normala) kategorier behåller "tom = visa alla". Därför
-    // delar vi upp valet — opt-in-källorna ska inte räknas in i normal-valet
-    // (annars skulle en ikryssad källa dölja alla andra event).
-    const selectedNormal = useMemo(
-        // I familj-opt-in-läget behandlas 'family' som en opt-in-källa och ska
-        // därför inte heller räknas in i normal-valet (ett ikryssat 🧸 skulle
-        // annars dölja alla andra kategorier).
-        () => new Set([...selectedCategories].filter(id =>
-            !SPECIAL_CATEGORY_KEYS.has(id) && !(familyOptIn && id === 'family'))),
-        [selectedCategories, familyOptIn],
-    );
+    // källan (profilpanelens "Visa även", sedan 15/9). 🧸 Familj & barn beter
+    // sig likadant (familyOptIn). VANLIGA kategorier filtrerar INTE längre
+    // kartan: kategorikolumnen är riven (ägarbeslut 15/9) och ett normal-val
+    // utan UI vore ett osynligt filter utan väg ut — hydreringen rensar dem
+    // (keepOptInCategories), och grenen här är borta även som skydd.
     const matchesFilter = useCallback((evt: LinkEvent) => {
         // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
-        // hela kategori-/källfiltret: de göms aldrig av ett aktivt kategori-val
-        // och ligger aldrig i opt-in-källorna (Svenska kyrkan/PRO), så
-        // deras opt-in-beteende påverkas inte.
+        // hela källfiltret (de ligger aldrig i opt-in-källorna).
         if (evt.userCreated) return true;
         // 🔥 Populära: smalnar ALLT när det är på — regeln före källgrinden så
         // även en ikryssad opt-in-källa filtreras (deras event är aldrig pop,
@@ -1940,16 +1929,12 @@ export default function HomePage() {
         const src = classifySource(evt.url || evt.id);
         // Special-källa: syns bara om den är ikryssad (ingår inte i "visa alla").
         if (src) return selectedCategories.has(src);
-        // Familj & barn: opt-in för inloggade vuxna utan barn i profilen
-        // (utils/familyFilter). Bara exakt kategori 'family' berörs — breda
-        // event som passar både barn och vuxna klassas som music/party av
-        // pipelinen och göms aldrig här.
+        // Familj & barn: bara exakt kategori 'family' berörs — breda event som
+        // passar både barn och vuxna klassas som music/party av pipelinen och
+        // göms aldrig här.
         if (familyOptIn && evt.category === 'family') return selectedCategories.has('family');
-        // Normalt event: tomt normal-val = visa alla, annars matcha kategori.
-        if (selectedNormal.size === 0) return true;
-        const catKey = evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other';
-        return selectedNormal.has(catKey);
-    }, [selectedCategories, selectedNormal, familyOptIn, popularOnly]);
+        return true;
+    }, [selectedCategories, familyOptIn, popularOnly]);
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
     const visibleEvents = useMemo(
@@ -2429,13 +2414,10 @@ export default function HomePage() {
         return city.name;
     }, [cityTourTarget, boundsCityKey, mapCenter, mapZoom]);
 
-    // Kategorikolumnen till höger sammanfattar det man SER: dagens (+ sök-
-    // filtrerade) event inom kartans ruta — FÖRE kategorifiltret, så en
-    // urkryssad kategori fortfarande syns (urblekt) och går att kryssa i igen.
-    const categoryPanelEvents = useMemo(
-        // 🔥-läget smalnar även kolumnens siffror (annars lovar de event kartan
-        // inte visar) — men kategorifiltret hålls fortsatt utanför, så
-        // urkryssade kategorier syns urblekta och går att kryssa i igen.
+    // 🔥-knappens badge räknar populära event i KARTANS RUTA (dagens + sök-
+    // filtrerade), smalnat med 🔥-läget så talet aldrig lovar event kartan inte
+    // visar. (Hette categoryPanelEvents och matade kategorikolumnen t.o.m. 15/9.)
+    const popularButtonEvents = useMemo(
         () => searchFilteredEvents.filter(e => inMapView(e) && passesPopularFilter(e, popularOnly)),
         [searchFilteredEvents, inMapView, popularOnly],
     );
@@ -2450,27 +2432,12 @@ export default function HomePage() {
     // avbrytbar och blockerar inte tappen (INP på kartsidan låg >500 ms mobil).
     const [, startTransition] = useTransition();
 
-    // Toggle-regeln bor i utils/categoryToggle (ren + testad): PÅ-slag av en
-    // vanlig kategori släcker opt-in-källorna (kyrkan/PRO, 🧸 i opt-in-läget)
-    // så "filtrera på Musik" betyder bara Musik (Josef 26/8).
+    // "Visa även"-kryssen i profilpanelen (kyrkan/PRO/🧸). Toggle-regeln bor i
+    // utils/categoryToggle (ren + testad). Vanliga kategorier går inte längre
+    // att välja på kartan — kategorikolumnen är riven 15/9.
     const handleToggleCategory = useCallback((id: string) => {
         startTransition(() => setSelectedCategories(prev => toggleCategory(prev, id, { familyOptIn })));
     }, [familyOptIn]);
-    // Rensa-krysset heter "Visa alla" — då måste det landa i STANDARDLÄGET, inte
-    // i tom set: för en besökare (och för 65+) ingår opt-in-källorna i "allt",
-    // och ett tomt set hade tvärtom SLÄCKT dem. Under 65 ⇒ tomt som förut.
-    const handleClearCategories = useCallback(
-        () => startTransition(() => {
-            setSelectedCategories(
-                new Set(defaultSpecialCategories({
-                    loggedIn: !!user, age: profileAgeRef.current, hasChildren: profileHasChildrenRef.current,
-                })),
-            );
-            // "Visa alla" ska betyda ALLA — 🔥-läget släpps också.
-            setPopularOnly(false);
-        }),
-        [user],
-    );
 
     const handleTogglePopular = useCallback(() => {
         // Ett 🔥-klick är ett AKTIVT val (Josef 10/9): träffar det landnings-
@@ -3055,7 +3022,10 @@ export default function HomePage() {
         const params = new URLSearchParams(window.location.search);
         const kategori = params.get('kategori');
         if (kategori) {
-            const valid = kategori.split(',').filter(k => k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k));
+            // Bara opt-in-nycklar (kyrkan/PRO/🧸) — vanliga kategorier kan inte
+            // längre väljas på kartan (15/9), en gammal länk får inte smyga in
+            // ett osynligt filter.
+            const valid = keepOptInCategories(kategori.split(','));
             if (valid.length) {
                 setSelectedCategories(new Set(valid));
                 urlHadCategoriesRef.current = true;
@@ -3177,14 +3147,19 @@ export default function HomePage() {
                 profileHasChildrenRef.current = data?.hasChildren;
                 if (!urlHadCategoriesRef.current) {
                     if (Array.isArray(data?.mapCategories)) {
-                        const valid = data.mapCategories.filter((k): k is string =>
+                        const saved = data.mapCategories.filter((k): k is string =>
                             typeof k === 'string' && (k in EVENT_CATEGORIES || SPECIAL_CATEGORY_KEYS.has(k)));
+                        // 15/9: bara opt-in-nycklarna överlever — kategorikolumnen
+                        // är riven, ett sparat "bara Musik" hade annars filtrerat
+                        // kartan osynligt. Baseline tas på den SPARADE listan så
+                        // spar-effekten skriver tillbaka den rensade en gång.
+                        const valid = keepOptInCategories(saved);
                         // baseline = listan SOM DEN LIGGER I FIRESTORE, alltså
                         // FÖRE migreringen nedan. Skiljer den sig från valet vi
                         // faktiskt sätter skriver spar-effekten tillbaka en
                         // gång — det är så migreringen blir permanent, utan
                         // extra flagga i dokumentet.
-                        baseline = [...valid].sort().join(',');
+                        baseline = [...saved].sort().join(',');
                         // MIGRERING (Josef 1/9): 'family' blev en OPT-IN-nyckel
                         // samma dag. Listor sparade FÖRE det kan omöjligt bära
                         // nyckeln — den var inte valbar då — och matchesFilter
@@ -3347,38 +3322,39 @@ export default function HomePage() {
                 rutan stängs (och deras egna fade-in-animationer spelar då upp,
                 så kromet tonar in i stället för att smälla fram). */}
 
-            {/* 1. Svävande transparent Navbar överst */}
+            {/* 1. Svävande transparent Navbar överst — bara profil + sök (15/9) */}
             {!chromeHidden && (
             <FloatingNavbar
-                creationMode={creationMode}
-                createEventEnabled={shopFlags.createEvent}
-                onStartCreate={() => setCreationMode('placing')}
-                onConfirmPlacement={openCreateFormHere}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 closeSearchNonce={closeSearchNonce}
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
-                createHint={tourHint === 'create'}
             />
             )}
 
-            {/* 1b. Kategorikolumnen till höger — ÖPPEN som default och visar
-                bara kategorier som syns i KARTANS RUTA, med antal per kategori
-                (ersätter emoji-raden under stadsrutan, Josef 10/8). Filtrerar
-                kartan + kortleken; lager-knappen gömmer kolumnen. */}
+            {/* 1b. BOTTEN-DOCKAN (ägarbeslut 15/9): skapa-knappen i nedre vänstra
+                hörnet, 🔥 i nedre högra, dagväljaren (1b1b) mellan dem ovanför.
+                Båda ligger under eventkortet (z-1090, som väljaren). Kategori-
+                kolumnen som stod här (lagerknapp + cirklar, 10/8–15/9) är RIVEN —
+                opt-in-källorna (kyrkan/PRO/🧸) kryssas i profilpanelen, och
+                vanliga kategorier filtrerar inte längre kartan. */}
             {!chromeHidden && (
-            <CategoryFilter
-                events={categoryPanelEvents}
-                selected={selectedCategories}
-                onToggle={handleToggleCategory}
-                onClear={handleClearCategories}
-                familyOptIn={familyOptIn}
-                closeNonce={filterCloseNonce}
+            <CreateEventButton
+                creationMode={creationMode}
+                enabled={shopFlags.createEvent}
+                onStartCreate={() => setCreationMode('placing')}
+                onConfirmPlacement={openCreateFormHere}
+                hint={tourHint === 'create'}
+            />
+            )}
+            {!chromeHidden && (
+            <PopularButton
+                events={popularButtonEvents}
                 popularOnly={popularOnly}
-                onTogglePopular={handleTogglePopular}
-                popularAvailable={popularAvailable}
-                popularHint={tourHint === 'popular'}
+                onToggle={handleTogglePopular}
+                available={popularAvailable}
+                hint={tourHint === 'popular'}
             />
             )}
 
@@ -3474,7 +3450,7 @@ export default function HomePage() {
                 key på HOPP-nyckeln → tonar in på nytt vid stadshopp, precis
                 som stadsnamnet. */}
 {!chromeHidden && liveCityName && (
-    <div className="fixed inset-x-0 bottom-16 z-[1090] flex justify-center px-2 pointer-events-none">
+    <div className="fixed inset-x-0 bottom-[72px] z-[1090] flex justify-center px-2 pointer-events-none">
         <div
             key={cityTourTarget?.key ?? 0}
             className="flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 pointer-events-none"
@@ -3743,6 +3719,8 @@ export default function HomePage() {
                 onDeleteEvent={handleDeleteOwnEvent}
                 savedCount={activeSavedCount}
                 onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
+                optInCategories={{ selected: selectedCategories, onToggle: handleToggleCategory }}
+                onOpenAbout={() => { setProfilePanelOpen(false); setWelcomeOpen(true); }}
             />
 
             {/* 2. Fullskärmskarta underst */}
@@ -3796,15 +3774,13 @@ export default function HomePage() {
                 // profilePanelOpen || funcBagOpen || pågående sökning.
                 signpostsHidden
                 // Klick på kartan (inte dragning — MapLibre fyrar ingen 'click'
-                // efter en pan): fäll ihop kategorikolumnen om den står öppen,
-                // och stäng SÖKET — både fältet (closeSearchNonce) och träff-
+                // efter en pan): stäng SÖKET — både fältet (closeSearchNonce) och träff-
                 // listan (tom query är det som gömmer SearchResults) (Josef
                 // 31/8). Dag/vecka-VÄXLINGEN som bodde på dubbelklicket (18/8)
                 // är borttagen samma dag — dubbelklick/dubbeltapp zoomar nu in
                 // som på vanliga kartor (doubleClickZoom är på igen i
                 // map-init), och växeln bor enbart i dagväljaren i botten.
                 onMapClick={() => {
-                    setFilterCloseNonce(n => n + 1);
                     setCloseSearchNonce(n => n + 1);
                     setSearchQuery('');
                 }}
@@ -4529,6 +4505,7 @@ export default function HomePage() {
                 open={authModal.open}
                 reason={authModal.reason}
                 onClose={() => setAuthModal({ open: false })}
+                onOpenAbout={() => { setAuthModal({ open: false }); setWelcomeOpen(true); }}
             />
 
             {/* Spridningsmodalen efter skapat event: dela → boost, två steg
@@ -4540,7 +4517,9 @@ export default function HomePage() {
 
             {/* Onboarding — auto-öppnas vid sidladdning för UTLOGGADE (gaten
                 ligger vid welcomeAutoShownRef ovan); inloggade slipper den.
-                Info-knappen nere till HÖGER öppnar den igen, se nedan. */}
+                Om VADKUL-raden i profilpanelen (inloggad) och länken i
+                inloggningsrutan (utloggad) öppnar den igen — den flytande
+                info-knappen är riven 15/9. */}
             {welcomeOpen && (
                 <WelcomeOverlay
                     onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
@@ -4551,31 +4530,9 @@ export default function HomePage() {
                 />
             )}
 
-            {/* Info-knappen — öppnar onboarding-rutan när man själv vill ha
-                den. TILLBAKA 31/8 (ägarbeslut, river samma dags borttagning)
-                men nu i HÖGRA nederhörnet i stället för det vänstra.
-                LIGGER MEDVETET ÖVER KARTANS ⓘ (ägarbeslut 1/9: "så den täcker
-                den info knappen för kartan"). MapLibres compact-attribution bor
-                i samma hörn (addControl utan position = bottom-right) och är
-                24×24 med 10px marginal = 10–34px från botten; infoknappen är
-                36×36 på 10px, alltså 10–46px, och täcker den helt.
-                OBS: attributionen krävs juridiskt av CARTO/OSM. Samma
-                avvägning gjordes 9/7 när hörn-pillen låg här. Vill man ha den
-                SYNLIG igen utan att ge upp hörnet: flytta MapLibre-kontrollen
-                till 'bottom-left' i V2Map (addControl tar ett position-
-                argument) i stället för att flytta undan knappen.
-                z-950 = under eventkortet, som förut. */}
-            {!chromeHidden && (
-                <button
-                    type="button"
-                    onClick={() => setWelcomeOpen(true)}
-                    aria-label="Om VADKUL"
-                    title="Om VADKUL"
-                    className="fixed bottom-2.5 right-2.5 z-[950] h-9 w-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md shadow-lg border border-white/50 text-[#006AA7] hover:bg-white transition-colors"
-                >
-                    <Info size={18} />
-                </button>
-            )}
+            {/* (Den flytande info-knappen nere till höger, 31/8–15/9, är RIVEN:
+                🔥 i botten-dockan äger hörnet. Om VADKUL nås via profilpanelen
+                och inloggningsrutan.) */}
 
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard

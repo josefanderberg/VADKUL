@@ -30,3 +30,19 @@ export function toggleCategory(
     }
     return next;
 }
+
+/**
+ * Behåller bara OPT-IN-nycklarna (Svenska kyrkan/PRO + 🧸 'family') ur ett
+ * kategorival, i ursprunglig ordning och utan dubbletter. Kategorikolumnen är
+ * riven (ägarbeslut 15/9) — vanliga kategorier går inte längre att välja på
+ * kartan, så sparade listor (users.mapCategories) och ?kategori=-länkar får
+ * inte smyga in ett osynligt filter utan väg ut. 'family' räknas alltid som
+ * opt-in: familyOptIn är konstant på i kartsidan sedan 1/9.
+ */
+export function keepOptInCategories(keys: Iterable<string>): string[] {
+    const out: string[] = [];
+    for (const k of keys) {
+        if ((SPECIAL_CATEGORY_KEYS.has(k) || k === 'family') && !out.includes(k)) out.push(k);
+    }
+    return out;
+}

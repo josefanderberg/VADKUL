@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toggleCategory } from './categoryToggle';
+import { toggleCategory, keepOptInCategories } from './categoryToggle';
 
 describe('toggleCategory', () => {
     it('kryssar i och ur en vanlig kategori', () => {
@@ -47,5 +47,24 @@ describe('toggleCategory', () => {
         const prev = new Set(['pro']);
         toggleCategory(prev, 'music');
         expect([...prev]).toEqual(['pro']);
+    });
+});
+
+describe('keepOptInCategories', () => {
+    it('behåller kyrkan, PRO och 🧸 men släpper vanliga kategorier (15/9)', () => {
+        expect(keepOptInCategories(['music', 'pro', 'family', 'sports', 'svenskakyrkan']).sort())
+            .toEqual(['family', 'pro', 'svenskakyrkan']);
+    });
+
+    it('bara vanliga kategorier → tomt (inget osynligt filter)', () => {
+        expect(keepOptInCategories(['music', 'party'])).toEqual([]);
+    });
+
+    it('okända nycklar och dubbletter rensas', () => {
+        expect(keepOptInCategories(['pro', 'pro', 'bogus'])).toEqual(['pro']);
+    });
+
+    it('tar emot ett Set', () => {
+        expect(keepOptInCategories(new Set(['svenskakyrkan', 'music']))).toEqual(['svenskakyrkan']);
     });
 });

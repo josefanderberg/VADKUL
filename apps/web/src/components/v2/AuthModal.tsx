@@ -14,6 +14,9 @@ interface AuthModalProps {
     onClose: () => void;
     /** Visas överst — t.ex. "Logga in för att chatta". */
     reason?: string;
+    /** Öppna välkomstrutan (Om VADKUL). Utloggades enda väg dit sedan den
+     *  flytande info-knappen revs 15/9. Utelämnad → länken döljs. */
+    onOpenAbout?: () => void;
 }
 
 /** Översätt Firebase-felkoder till begriplig svenska. */
@@ -37,7 +40,7 @@ function authErrorText(code: string): string {
  * Inloggning/registrering i en modal — man lämnar aldrig kartan.
  * Samma e-post+lösenord-flöde som gamla /login-sidan.
  */
-export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
+export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthModalProps) {
     const { signIn, signInWithGoogle, register, resetPassword } = useAuth();
     // 'complete' = kompletteringssteget efter första Google-inloggningen:
     // registreringsblankettens statistik-/segmenteringsfält (ålder, kön,
@@ -484,6 +487,18 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
                             integritetspolicy
                         </a>.
                     </p>
+                )}
+
+                {/* Om VADKUL (15/9) — utloggades väg tillbaka till välkomstrutan
+                    sedan den flytande info-knappen revs. */}
+                {onOpenAbout && (
+                    <button
+                        type="button"
+                        onClick={onOpenAbout}
+                        className="text-xs font-semibold text-white/50 hover:text-white transition-colors self-center"
+                    >
+                        Vad är VADKUL?
+                    </button>
                 )}
                 </>
                 )}

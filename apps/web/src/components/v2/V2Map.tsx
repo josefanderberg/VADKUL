@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Tags, Globe, Mountain, Plus, Minus, Video, Target, Crosshair, Lock, Users, Flag, Map as MapIcon } from 'lucide-react';
+import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Lock, Users, Flag, Map as MapIcon } from 'lucide-react';
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView } from '../../utils/mapUtils';
@@ -4269,38 +4269,9 @@ export default function V2Map({
                             </div>
                         )}
 
-                        {/* Zoom in/ut — lodrät kolumn MITT PÅ högerkanten (Josef 26/8),
-                            klar av både topphögerns sök/kategorikolumn och stad för
-                            stad-pillen nere till höger. Samma vita husknappsstil som
-                            sökknappen. zoomIn/zoomOut går genom kartans vanliga
-                            zoom-maskineri (zoomstart → nål-läge osv), precis som en
-                            nyp-zoom — reveal-ankaret rörs aldrig vid ren zoom.
-                            z-[1148]: UNDER kategorikolumnen (1150) — en öppen
-                            kategorilista som når hit ska rita sina cirklar
-                            ÖVER zoomknapparna, inte tvärtom (Josef 26/8) —
-                            och UNDER multievent-panelen (1149, Josef 31/8:
-                            zoomknapparna är det ENDA krom som viker sig för
-                            panelen; kortet/Nästa-pillen ligger kvar över). */}
-                        <div className="fixed right-2 top-1/2 -translate-y-1/2 z-[1148] flex flex-col gap-2 pointer-events-auto">
-                            <button
-                                type="button"
-                                onClick={() => mapRef.current?.zoomIn()}
-                                aria-label="Zooma in"
-                                title="Zooma in"
-                                className="h-10 w-10 rounded-full shadow-lg border backdrop-blur-md flex items-center justify-center transition-colors bg-white/90 text-slate-700 border-white/50 hover:bg-white active:scale-95"
-                            >
-                                <Plus size={20} />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => mapRef.current?.zoomOut()}
-                                aria-label="Zooma ut"
-                                title="Zooma ut"
-                                className="h-10 w-10 rounded-full shadow-lg border backdrop-blur-md flex items-center justify-center transition-colors bg-white/90 text-slate-700 border-white/50 hover:bg-white active:scale-95"
-                            >
-                                <Minus size={20} />
-                            </button>
-                        </div>
+                        {/* (Zoomknapparna +/− som stod mitt på högerkanten 26/8–15/9
+                            är BORTTAGNA på ägarbeslut 15/9 — nyp, dubbeltapp, scroll
+                            och dubbelklick räcker. Lägg inte tillbaka dem.) */}
 
                         {/* Lager-knappen (Funktioner) — vänsterkolumnen under profilen
                             (top-[72px] left-4). Klick öppnar/stänger funktions-popupen. */}

@@ -1,16 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, MapPinPlus, Check, Search, X } from 'lucide-react';
+import { User, Search, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import HoverLabel from './HoverLabel';
 
 interface FloatingNavbarProps {
-    creationMode?: 'idle' | 'placing' | 'editing';
-    /** När false → +-knappen renderas inte alls (shop-flaggan "Skapa event"
-     *  är avaktiverad). Default true så befintliga kallningar inte ändras. */
-    createEventEnabled?: boolean;
-    onStartCreate?: () => void;
-    onConfirmPlacement?: () => void;
     searchQuery: string;
     setSearchQuery: (q: string) => void;
     /** Bumpas när sökrutan ska fällas ihop utifrån — t.ex. när man valt en stad
@@ -26,12 +21,10 @@ interface FloatingNavbarProps {
        av Sparade-raden i profilpanelen, så props savedCount/onToggleSaved
        försvann med den. Sparat-panelen öppnas numera bara därifrån.) */
     /* (Skylt-knappen och dess signsOn/onToggleSigns låg här. Borttagna 14/8 —
-       Josef: "we don't need that anymore". Skapa-knappen ärvde platsen.) */
-    /* (plusHint låg här: plusset blinkade när onboardingens actionruta flugit
-       hem hit. Actionrutan är borttagen 26/8 — för många popups.) */
-    /** Visningsrundan efter veckoblinken (Josef 10/9): true i 4 s → skapa-
-     *  knappen står i sitt hover-läge (större + etiketten framme). */
-    createHint?: boolean;
+       Josef: "we don't need that anymore".) */
+    /* (Skapa-knappen och dess creationMode/onStartCreate/onConfirmPlacement/
+       createHint låg här t.o.m. 15/9. Den bor nu i botten-dockans vänstra
+       hörn — components/v2/CreateEventButton.) */
 }
 
 /** Etiketten för vald dag/period ("Idag", "Imorgon", "Hela veckan", "3–9 aug").
@@ -58,41 +51,20 @@ export const getDayLabel = (offset: number, days = 1) => {
 };
 
 /**
- * Namn-etikett som tonar in vid hover/fokus — exakt samma formspråk som
- * kategoricirklarnas etiketter i CategoryFilter. Måste ligga som peer-syskon
- * EFTER knappen i DOM (krav för peer-selektorn); raden runtomkring avgör sedan
- * om den hamnar till höger (flex-row) eller vänster (flex-row-reverse) om
- * knappen. Ligger kvar i flödet men är pointer-events-none, och raden runt om
- * är också pointer-events-none så den osynliga etikettytan inte slukar
- * kartklick.
+ * Toppraden på kartan (ägarbeslut 15/9): BARA profil till vänster och sök till
+ * höger — dagplattan står mellan dem (renderas i sidan). Skapa-knappen och 🔥
+ * bor i botten-dockan; kategorikolumnen och zoomknapparna är rivna.
  */
-const HoverLabel = ({ children, show = false }: { children: React.ReactNode; show?: boolean }) => (
-    <span
-        aria-hidden
-        className={`pointer-events-none ${show ? 'opacity-100' : 'opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100'} transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold text-slate-700 shadow-lg border border-white/50`}
-    >
-        {children}
-    </span>
-);
-
 export default function FloatingNavbar({
-    creationMode = 'idle',
-    createEventEnabled = true,
-    onStartCreate,
-    onConfirmPlacement,
     searchQuery,
     setSearchQuery,
     closeSearchNonce = 0,
     onLoginClick,
     onOpenProfile,
-    createHint = false,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const plusBtnRef = useRef<HTMLButtonElement>(null);
-    const animationRef = useRef<Animation | null>(null);
-    const [plusDropping, setPlusDropping] = useState(false);
 
 
     // Fokusera sökfältet när det öppnas — numera bara en RESERV för öppningar
@@ -116,44 +88,6 @@ export default function FloatingNavbar({
         searchInputRef.current?.blur();
     }, [closeSearchNonce]);
 
-    // Avbryt plus-animation när creationMode återgår till idle
-    useEffect(() => {
-        if (creationMode === 'idle' && animationRef.current) {
-            animationRef.current.cancel();
-            animationRef.current = null;
-            setPlusDropping(false);
-        }
-    }, [creationMode]);
-
-    const handlePlusClick = () => {
-        if (creationMode === 'placing') {
-            onConfirmPlacement?.();
-            return;
-        }
-        if (plusDropping || creationMode !== 'idle') return;
-        const btn = plusBtnRef.current;
-        if (!btn) return;
-        const rect = btn.getBoundingClientRect();
-        const dx = window.innerWidth / 2 - (rect.left + rect.width / 2);
-        const dy = window.innerHeight / 2 - (rect.top + rect.height / 2);
-
-        setPlusDropping(true);
-
-        const animation = btn.animate(
-            [
-                { transform: 'translate(0px, 0px)', easing: 'ease-in-out' },
-                { transform: `translate(0px, ${dy}px)`, offset: 0.5, easing: 'ease-in-out' },
-                { transform: `translate(${dx}px, ${dy}px)` },
-            ],
-            { duration: 800, fill: 'forwards' },
-        );
-        animationRef.current = animation;
-        animation.onfinish = () => {
-            onStartCreate?.();
-            setPlusDropping(false);
-        };
-    };
-
     // Inloggad → profilpanelen (allt konto-relaterat på kartan).
     // Utloggad → inloggningsmodalen. Ingen lämnar kartan längre.
     const handleProfileClick = () => {
@@ -173,23 +107,15 @@ export default function FloatingNavbar({
     };
 
     return (
-        // z-[1160]: över stadsrutan (1090) OCH kategorikolumnen (1150) — öppet
-        // sökfält + resultatpanel ska täcka båda. Eventkortet (1250) och
-        // modaler (1300) ligger fortfarande över.
+        // z-[1160]: över stadsrutan (1090) — öppet sökfält + resultatpanel ska
+        // täcka den. Eventkortet (1250) och modaler (1300) ligger fortfarande över.
         <div className="absolute top-6 left-0 right-0 z-[1160] px-4 pointer-events-none">
             <div className="flex flex-col gap-3 w-full max-w-[1400px] mx-auto">
 
-                {/* Top Row. På största brytpunkten (2xl) lämnar vi plats längst till
-                    höger åt kategorifiltret som då hoppar upp på den här raden
-                    (CategoryFilter, samma max-w-[1400px]-container).
-                    items-start (inte center): vänsterkolumnen är flera knappar
-                    hög — övriga kontroller ska ligga kvar i topplinjen, inte
-                    mittcentreras mot kolumnen. */}
-                <div className="relative flex items-start gap-2 w-full 2xl:pr-[56px]">
+                {/* Top Row. items-start: kontrollerna ligger i topplinjen. */}
+                <div className="relative flex items-start gap-2 w-full">
 
-                    {/* Vänster: profil med skapa-knappen UNDER — frigör plats i
-                        topplinjen för dagväljarens bläddringspilar (6/8, Josefs
-                        önskemål: allt ska få plats utan att det blir trångt). */}
+                    {/* Vänster: profilen. */}
                     <div className="flex flex-col items-start gap-2 shrink-0">
                         <div className="flex items-center gap-2 pointer-events-none">
                             <button
@@ -218,55 +144,20 @@ export default function FloatingNavbar({
                             öppnar inloggningen för utloggade, och den som är
                             inloggad når listan via Sparade-raden i
                             profilpanelen.) */}
-                        {/* Skapa/tipsa — kartnål-med-plus. Bor SEDAN 14/8 här nere
-                            i vänsterkolumnen, på skylt-knappens gamla plats (den
-                            är borttagen), och bär dess formspråk: blå gradient,
-                            gul kant, gold-glow-pulse. Den gröna gradienten är
-                            borta — sajtens "något händer här"-språk är blått och
-                            guld, och två olika accentfärger på samma skärm sa
-                            inget extra.
-                            I placerings-läget är den bekräfta-knappen (✓) och
-                            måste alltid synas; mitt i drop-animationen får den
-                            inte unmountas (då fastnar plusDropping-låset). */}
-                        {creationMode !== 'editing' && createEventEnabled && (
-                            <div className="relative z-[1100] flex items-center gap-2 pointer-events-none">
-                                <button
-                                    ref={plusBtnRef}
-                                    type="button"
-                                    onClick={handlePlusClick}
-                                    disabled={plusDropping}
-                                    aria-label={creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska'}
-                                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-10 w-10 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${createHint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
-                                >
-                                    {creationMode === 'placing'
-                                        ? <Check size={20} className="text-white shrink-0" />
-                                        : <MapPinPlus size={20} className={`text-[#FECC02] shrink-0 transition-transform duration-200 ${createHint ? 'scale-110' : 'group-hover:scale-110'}`} />}
-                                </button>
-                                {/* Josef 10/9: "Skapa event, tipsa eller önska" (var
-                                    "Lägg in eller tipsa") — alla tre vägarna in. */}
-                                <HoverLabel show={createHint && creationMode === 'idle'}>{creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska'}</HoverLabel>
-                            </div>
-                        )}
                     </div>
 
                     {/* (Dagväljar-chipen med popover som stod här är BORTTAGEN
                         10/8: stadsrutan står numera ALLTID uppe i topplinjen och
-                        äger dag-navigeringen — pilarna stegar dag, klick växlar
-                        dag↔vecka och kalenderknappen öppnar månadskalendern
-                        direkt. Två dagväljare i samma linje vore en för mycket.) */}
+                        äger dag-navigeringen.) */}
 
-                    {/* Höger: en KOLUMN längst ut i kanten (6/8, Josef): sök överst,
-                        skapa event-knappen under, och kategorifiltret (renderas i
-                        CategoryFilter, top-[96px]) som tredje knapp — tre i rad
-                        lodrätt. Containern är pointer-events-none (dess TOMMA
+                    {/* Höger: sök. Containern är pointer-events-none (dess TOMMA
                         vänsterdel täcker annars kartbandet och slukar klick) —
                         varje faktisk kontroll sätter pointer-events-auto själv. */}
                     <div className="flex flex-col items-end gap-2 flex-1 min-w-0 pointer-events-none">
-                        {/* Sök. Öppet läge expanderar från högerkanten som förut,
-                            men ligger ÖVER allt annat i navbaren (z-[1200] >
-                            skapa-knappens 1100) med SOLID vit bakgrund — förut
-                            hamnade fältet under dagväljaren så man inte såg det
-                            man skrev.
+                        {/* Sök. Öppet läge expanderar från högerkanten, ligger
+                            ÖVER allt annat i navbaren (z-[1200]) med SOLID vit
+                            bakgrund — förut hamnade fältet under dagväljaren så
+                            man inte såg det man skrev.
                             EN OCH SAMMA CONTAINER i båda lägena (Josef 31/8:
                             tangentbordet ska öppnas DIREKT på mobilen): fältet
                             är alltid monterat (w-0/osynligt hopfällt) så
@@ -292,13 +183,11 @@ export default function FloatingNavbar({
                                 // flex-1 får bara det som blir över när vänster-
                                 // kolumnen (profil + topplattan, ~250px, shrink-0)
                                 // tagit sitt — w-full I kolumnen hjälpte inte.
-                                // Fältet ligger redan medvetet ÖVER plattan och
-                                // kategorikolumnen (z-1200), så det får täcka
-                                // topplinjen medan man söker; radens `relative`
-                                // är ankaret. 2xl: håll högerkanten innanför
-                                // ytan som kategorifiltret lånar (pr-[56px]).
+                                // Fältet ligger medvetet ÖVER plattan (z-1200),
+                                // så det får täcka topplinjen medan man söker;
+                                // radens `relative` är ankaret.
                                 className={`peer pointer-events-auto flex items-center h-10 rounded-full border border-white/50 ${searchOpen
-                                    ? 'absolute top-0 right-0 2xl:right-[56px] z-[1200] w-full max-w-[520px] bg-white px-4 shadow-xl transition-colors'
+                                    ? 'absolute top-0 right-0 z-[1200] w-full max-w-[520px] bg-white px-4 shadow-xl transition-colors'
                                     : 'w-10 justify-center bg-white/90 backdrop-blur-md shadow-lg hover:bg-white hover:scale-105 active:scale-95 transition duration-200 cursor-pointer'}`}
                             >
                                 <Search size={searchOpen ? 16 : 20} aria-hidden className={searchOpen ? 'text-slate-400 shrink-0 mr-2' : 'text-slate-700 shrink-0'} />
@@ -329,12 +218,6 @@ export default function FloatingNavbar({
                                 letade efter en egen sökruta för orter. */}
                             {!searchOpen && <HoverLabel>Sök stad eller event</HoverLabel>}
                         </div>
-
-                        {/* (Skapa-knappen låg här i högerkolumnen fram till 14/8.
-                            Den bor nu i VÄNSTERKOLUMNEN, på skylt-knappens gamla
-                            plats — söket får därmed hela högerkanten för sig
-                            själv och behöver inte längre gömma knappen medan
-                            fältet är utfällt.) */}
                     </div>
                 </div>
             </div>

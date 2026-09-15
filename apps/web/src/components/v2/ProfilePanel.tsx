@@ -8,7 +8,7 @@ import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
 import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby } from 'lucide-react';
+import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
 import { doc, getDoc, setDoc, deleteField, serverTimestamp, collection, getDocs, query, where, limit, Timestamp } from 'firebase/firestore';
@@ -16,6 +16,11 @@ import { db } from '@/lib/firebase';
 import { CITIES, getCity } from '@/lib/cityUtils';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { boostedUntilLabel } from '@/utils/boostLabel';
+import { EVENT_CATEGORIES, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
+
+/** "Visa även på kartan"-raderna: opt-in-källorna + 🧸 (samma ordning som
+ *  kategorikolumnen hade dem överst, innan den revs 15/9). */
+const OPT_IN_ROWS = [...SPECIAL_CATEGORY_LIST, EVENT_CATEGORIES.family];
 
 /** En rad i "Mina boostar": eventets namn + hur länge boosten syns. */
 interface MyBoost {
@@ -47,6 +52,12 @@ interface ProfilePanelProps {
     /** Var panelen hänger: under profilknappen i kartans VÄNSTRA hörn
      *  (default) eller till höger (stadssidornas toppnav). */
     anchor?: 'left' | 'right';
+    /** "Visa även på kartan" — opt-in-källorna (Svenska kyrkan, PRO, 🧸 Familj)
+     *  som kategorikolumnen kryssade t.o.m. 15/9. Utelämnad (stadssidornas
+     *  toppnav — där finns inget kartfilter) → sektionen döljs. */
+    optInCategories?: { selected: ReadonlySet<string>; onToggle: (id: string) => void };
+    /** Öppna välkomstrutan (Om VADKUL). Utelämnad → raden döljs. */
+    onOpenAbout?: () => void;
 }
 
 // Stabil tom lista när allEvents utelämnas — en ny [] per render hade varit
@@ -58,7 +69,7 @@ const NO_EVENTS: LinkEvent[] = [];
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, savedCount = 0, onOpenSaved, anchor = 'left' }: ProfilePanelProps) {
+export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, savedCount = 0, onOpenSaved, anchor = 'left', optInCategories, onOpenAbout }: ProfilePanelProps) {
     // Mina event med veckoserierna HOPGRUPPERADE till en rad per serie
     // (Josef 14/9: "nu blir det en jättelång lista") — raden visar nästa
     // tillfälle + "Varje vecka"-chip, och soptunnan tar hela serien (samma
@@ -648,7 +659,7 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                             </div>
                             {myEventsList.length === 0 ? (
                                 <p className="px-4 pb-3 text-xs text-slate-400 font-semibold">
-                                    Du har inte skapat några event än — tryck på + uppe till höger på kartan.
+                                    Du har inte skapat några event än — tryck på + nere till vänster på kartan.
                                 </p>
                             ) : (
                                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -729,6 +740,42 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                         );
                                     })}
                                 </ul>
+                            </div>
+                        )}
+
+                        {/* Visa även på kartan (15/9) — opt-in-källorna som annars är
+                            gömda: Svenska kyrkan, PRO och 🧸 Familj & barn. Bodde
+                            överst i kategorikolumnen tills den revs. Sparas via
+                            sidans vanliga spar-effekt (users.mapCategories). */}
+                        {optInCategories && (
+                            <div className="border-t border-slate-100 dark:border-slate-800">
+                                <div className="px-4 pt-3 pb-1.5">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        Visa även på kartan
+                                    </span>
+                                </div>
+                                {OPT_IN_ROWS.map(cat => {
+                                    const on = optInCategories.selected.has(cat.id);
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={on}
+                                            onClick={() => optInCategories.onToggle(cat.id)}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                                        >
+                                            <span aria-hidden className="w-4 text-center leading-none shrink-0">{cat.emoji}</span>
+                                            <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">{cat.label}</span>
+                                            <span
+                                                aria-hidden
+                                                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${on ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                            >
+                                                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
 
@@ -862,6 +909,18 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                 </div>
                             )}
                         </div>
+
+                        {/* Om VADKUL — öppnar välkomstrutan igen (15/9: den
+                            flytande info-knappen på kartan är riven). */}
+                        {onOpenAbout && (
+                            <div className="border-t border-slate-100 dark:border-slate-800">
+                                <button type="button" onClick={onOpenAbout} className={actionRow}>
+                                    <Info size={16} className="text-[#006AA7] shrink-0" />
+                                    <span className="flex-1">Om VADKUL</span>
+                                    <ChevronRight size={15} className="text-slate-400 shrink-0" />
+                                </button>
+                            </div>
+                        )}
 
                         {/* Logga ut — under mappen, egen rad */}
                         <div className="border-t border-slate-100 dark:border-slate-800">
