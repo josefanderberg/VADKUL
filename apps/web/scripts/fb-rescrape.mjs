@@ -43,18 +43,27 @@ async function main() {
     if (DRY) { for (const u of urls) console.log('  ' + u); return; }
 
     let ok = 0, fail = 0;
-    for (const url of urls) {
-        try {
-            const body = new URLSearchParams({ id: url, scrape: 'true', access_token: token });
-            const res = await fetch(GRAPH, { method: 'POST', body, signal: AbortSignal.timeout(30_000) });
-            const json = await res.json().catch(() => ({}));
-            if (res.ok && !json.error) { ok++; }
-            else { fail++; console.log(`  ⚠️ ${url}: ${json.error?.message || res.status}`); }
-        } catch (e) {
-            fail++; console.log(`  ⚠️ ${url}: ${e?.message || e}`);
+    // Litet arbetslag i stället för sekventiellt (15/9): ett anrop i taget
+    // + 250 ms paus tog 2,4 min för ~290 länkar och var näst största posten
+    // i hela deployen. Graph-kvoten räknas i anrop per timme, inte i
+    // samtidighet — 8 parallella scrape-anrop är väl inom artigt.
+    const POOL = 8;
+    const queue = [...urls];
+    await Promise.all(Array.from({ length: POOL }, async () => {
+        for (;;) {
+            const url = queue.shift();
+            if (!url) return;
+            try {
+                const body = new URLSearchParams({ id: url, scrape: 'true', access_token: token });
+                const res = await fetch(GRAPH, { method: 'POST', body, signal: AbortSignal.timeout(30_000) });
+                const json = await res.json().catch(() => ({}));
+                if (res.ok && !json.error) { ok++; }
+                else { fail++; console.log(`  ⚠️ ${url}: ${json.error?.message || res.status}`); }
+            } catch (e) {
+                fail++; console.log(`  ⚠️ ${url}: ${e?.message || e}`);
+            }
         }
-        await new Promise(r => setTimeout(r, 250));   // artighet mot Graph-kvoten
-    }
+    }));
     console.log(`Klart: ${ok} omhämtade, ${fail} misslyckade.`);
     if (fail > 0 && ok === 0) console.log('::warning::Facebook-omhämtningen misslyckades för alla länkar — kolla FB_SCRAPE_TOKEN.');
 }

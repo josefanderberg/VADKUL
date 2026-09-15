@@ -33,6 +33,11 @@ const nextConfig = {
         if (process.env.CI) config.cache = false;
         return config;
     },
+    // SSG-arbetarna (15/9): genereringen av de ~1 045 statiska sidorna är
+    // deployens största post (~8 min). Nexts default är cpus-1 (= 3 på
+    // GitHub-runnerns 4 kärnor) — använd alla fyra i CI. Bara CI: lokalt
+    // får Next välja själv.
+    ...(process.env.CI ? { experimental: { cpus: 4 } } : {}),
     // Gamla sidor (/shop, /login) är skrotade — inloggning + funktioner bor på
     // kartan. Mjuk redirect på routing-nivå så gamla länkar/bokmärken landar på
     // kartan i stället för 404. (Ersätter redirect-only page-stubbar som kraschade
