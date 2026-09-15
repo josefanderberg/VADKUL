@@ -4,8 +4,8 @@
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-05",
-      "emptyRetries": 2
+      "lastRetry": "2026-09-15",
+      "emptyRetries": 3
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
@@ -16,8 +16,8 @@
     "folk-goteborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-06",
-      "emptyRetries": 2
+      "lastRetry": "2026-09-15",
+      "emptyRetries": 3
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
@@ -28,8 +28,8 @@
     "nordmaling": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-06",
-      "emptyRetries": 2
+      "lastRetry": "2026-09-15",
+      "emptyRetries": 3
     },
     "nybro": {
       "since": "2026-08-19",
@@ -49,6 +49,14 @@
       "lastRetry": "2026-09-12",
       "emptyRetries": 3
     },
+    "sater": {
+      "since": "2026-09-15",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "sb-vastsverige-com": {
+      "since": "2026-09-15",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -58,14 +66,18 @@
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-08",
-      "emptyRetries": 2
+      "lastRetry": "2026-09-15",
+      "emptyRetries": 3
     },
     "tingsryd": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-06",
-      "emptyRetries": 2
+      "lastRetry": "2026-09-15",
+      "emptyRetries": 3
+    },
+    "tjorn": {
+      "since": "2026-09-15",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
 }
