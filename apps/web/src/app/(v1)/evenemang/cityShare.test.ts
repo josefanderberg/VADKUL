@@ -52,7 +52,9 @@ describe('pickShareLines', () => {
         expect(titles).not.toContain('Om tre veckor');
         for (const l of lines) {
             expect(l.emoji.length).toBeGreaterThan(0);
-            expect(l.when).toMatch(/^[A-ZÅÄÖ][a-zåäö]{2} \d{1,2}\/\d{1,2}( · \d{2}[:.]\d{2})?$/);
+            // {2,3}: svenska korta veckodagar är tre tecken UTOM "tors" —
+            // med {2} gick sviten röd varje gång testdatumet blev en torsdag.
+            expect(l.when).toMatch(/^[A-ZÅÄÖ][a-zåäö]{2,3} \d{1,2}\/\d{1,2}( · \d{2}[:.]\d{2})?$/);
         }
         const loppis = lines.find(l => l.title === 'Loppis på torget');
         if (loppis) expect(loppis.when).not.toContain('·');   // utan klockslag → bara dagen

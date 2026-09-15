@@ -47,6 +47,7 @@
  */
 
 import { Engine, RawEvent } from '../sources/types';
+import { LEAGUE_SPORTS, type LeagueSport } from '../utils/leagueSport';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -55,6 +56,8 @@ export interface SportalityConfig {
     baseUrl: string;
     /** Visas som värd i UI:t, t.ex. "SHL" */
     leagueName: string;
+    /** Sporten — står först i beskrivningen och styr kartpinnens emoji (utils/leagueSport). */
+    sport?: LeagueSport;
 }
 
 interface SportalityTeam { name?: string; code?: string; logo?: string }
@@ -147,6 +150,9 @@ export function mapSportalityGame(
     const initials = cfg.leagueName.replace(/[^A-ZÅÄÖ]/g, '');
     const comp = series && series !== cfg.leagueName && series !== initials ? series : cfg.leagueName;
     const round = game.roundLabel?.trim();
+    // Sporten först: "SSLDam: Växjö Vipers möter …" säger inte att det är
+    // innebandy — auditen gissade ⚽/🥅/🥒 på SSL-matcherna (15/9).
+    const sportMatch = cfg.sport ? LEAGUE_SPORTS[cfg.sport]?.match : undefined;
 
     return {
         externalId: game.uuid,
@@ -156,7 +162,7 @@ export function mapSportalityGame(
         venueName: venue,
         // Ingen ort i datan — arenanamnet ensamt är den bästa geokodningsfrågan.
         geocodeCandidates: venue ? [venue] : undefined,
-        description: `${comp}: ${home} möter ${away}`
+        description: `${sportMatch ? `${sportMatch} i ${comp}` : comp}: ${home} möter ${away}`
             + (venue ? ` i ${venue}` : '')
             + (round ? ` (${round.charAt(0).toLowerCase()}${round.slice(1)})` : '')
             + '.',

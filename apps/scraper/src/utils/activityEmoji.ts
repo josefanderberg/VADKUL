@@ -9,7 +9,8 @@
  * träffar "badminton" och "golf" inte "discgolf".
  *
  * Reglerna är avsiktligt få och entydiga: bara aktiviteter där en enda emoji
- * är självklar. Allt annat lämnas åt auditen. Bio hanteras i utils/cinema.
+ * är självklar. Allt annat lämnas åt auditen. Bio hanteras i utils/cinema,
+ * matcher på ligornas egna sajter i utils/leagueSport.
  */
 
 const RULES: { re: RegExp; emoji: string }[] = [
@@ -20,7 +21,11 @@ const RULES: { re: RegExp; emoji: string }[] = [
     { re: /(?<!\p{L})badminton(?:\p{L}*)?(?!\p{L})/iu, emoji: '🏸' },
     { re: /(?<!\p{L})(?:simning|simskola|simhopp|simtävling|simträning)(?!\p{L})/iu, emoji: '🏊' },
     { re: /(?<!\p{L})bowling(?:\p{L}*)?(?!\p{L})/iu, emoji: '🎳' },
+    // Innebandy fick ⚽/🏃/🏒 (aggregatet 15/9). Ingen innebandy-emoji finns — 🏑 är praxis.
+    { re: /(?<!\p{L})(?:innebandy|floorball)(?:\p{L}*)?(?!\p{L})/iu, emoji: '🏑' },
     { re: /(?<!\p{L})(?:ishockey|hockey)(?:\p{L}*)?(?!\p{L})/iu, emoji: '🏒' },
+    // Hockeyligornas namn i titeln ("SDHL: LHC – Skellefteå AIK" fick 🥒). Skiftlägeskänsligt.
+    { re: /(?<!\p{L})(?:SHL|SDHL|NDHL|HockeyAllsvenskan)(?!\p{L})/u, emoji: '🏒' },
     { re: /(?<!\p{L})(?:basket|basketboll)(?:\p{L}*)?(?!\p{L})/iu, emoji: '🏀' },
     { re: /(?<!\p{L})volleyboll(?:\p{L}*)?(?!\p{L})/iu, emoji: '🏐' },
     { re: /(?<!\p{L})handboll(?:\p{L}*)?(?!\p{L})/iu, emoji: '🤾' },

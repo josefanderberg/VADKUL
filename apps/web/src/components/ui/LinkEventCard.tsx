@@ -7,6 +7,7 @@ import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { hostLabelFor } from '../../utils/hostLabel';
 import { boostedUntilLabel } from '../../utils/boostLabel';
+import { seriesLabel } from '../../utils/weeklySeries';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { eventShareSlug } from '../../utils/eventShareSlug';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
@@ -90,12 +91,6 @@ interface LinkEventCardProps {
     onBackToGroup?: () => void;
     /** Antal i gruppen — bara för pilens title/aria. */
     backToGroupCount?: number;
-    /** Fler event på SAMMA plats (multi-event-hög): position + antal → pager på
-     *  platsraden ("3/7"). onGroupNext stegar till nästa i högen. groupTotal ≤ 1
-     *  döljer pagern. */
-    groupIndex?: number;
-    groupTotal?: number;
-    onGroupNext?: () => void;
     /** Stjärn-gåvan ⭐: eventet har redan (någons) stjärna → guld-indikator. */
     hasStar?: boolean;
     /** Inloggad + oanvänd stjärna (och eventet inte passerat) → ⭐-knappen är
@@ -104,7 +99,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, groupIndex = 0, groupTotal = 1, onGroupNext, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
@@ -359,6 +354,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const priceLabel = normalizePriceLabel(linkEvent.price);
     // Källans domän tills cards-lagret mergat in värden (aldrig "Okänd" med länk).
     const hostLabel = hostLabelFor(linkEvent.hostName, linkEvent.url);
+    // "Varannan lördag · t.o.m. 31 okt." — null för allt som inte är en serie.
+    const seriesText = seriesLabel(linkEvent);
 
     // Eventets emoji (samma logik som kartnålen/EventCard): per-event-emoji, annars
     // kategori-fallback. Visas i början av titeln.
@@ -385,21 +382,38 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     </button>
                 )}
 
-                {/* Event VÄRDADE på VADKUL lyfts fram med en grön badge — de är
-                    sajtens kärna och ska kännas igen direkt. */}
-                {vadkulHosted && (
-                    <span className="self-start inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
-                        <Sparkles size={11} className="shrink-0" />
-                        Skapat på VADKUL
-                    </span>
-                )}
-                {/* TIPS får samma plats (Josef 24/8) men en egen dämpad bricka:
-                    inlagt av en användare, men anonymt — tipsaren ska aldrig se
-                    ut som arrangör, därför inte den gröna. */}
-                {isTip && (
-                    <span className="self-start inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider">
-                        💡 Tipsat av en VADKUL-användare
-                    </span>
+                {/* HÄRKOMST-RADEN. Badgen till vänster (VADKUL-värdat = grön;
+                    TIPS = egen dämpad bricka sedan 24/8, tipsaren ska aldrig se
+                    ut som arrangör) och för ÅTERKOMMANDE event seriens rytm +
+                    slutdatum LÄNGST TILL HÖGER (Josef 16/9: "det kan stå längst
+                    åt höger där det står skapat av en vadkul-användare, så man
+                    vet hur länge det håller på"). Serien stod tidigare som en
+                    ensam 🔁-rad längst NER i kortet — den är FLYTTAD hit, inte
+                    dubblerad. */}
+                {(vadkulHosted || isTip || seriesText) && (
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+                            {vadkulHosted && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
+                                    <Sparkles size={11} className="shrink-0" />
+                                    Skapat på VADKUL
+                                </span>
+                            )}
+                            {isTip && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider">
+                                    💡 Tipsat av en VADKUL-användare
+                                </span>
+                            )}
+                        </div>
+                        {seriesText && (
+                            <span
+                                className="shrink-0 max-w-[45%] pt-0.5 text-right text-[10px] font-bold leading-tight text-slate-500 dark:text-zinc-400"
+                                title={`Återkommande event: ${seriesText}`}
+                            >
+                                🔁 {seriesText}
+                            </span>
+                        )}
+                    </div>
                 )}
 
                 {/* Översta raden: chatt-vytoggeln till vänster, åtgärdsknapparna
@@ -583,20 +597,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     )}
                     {/* (👁-visningsbadgen som stod här är borttagen 31/8 —
                         se kommentaren vid recordEventView-inforutan ovan.) */}
-                    {/* Fler event på samma plats → pager längst till höger på platsraden:
-                        antal ("3/7") + pil som stegar till nästa event i högen. */}
-                    {groupTotal > 1 && onGroupNext && (
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onGroupNext(); }}
-                            aria-label={`Nästa av ${groupTotal} event på samma plats`}
-                            title="Fler event på samma plats"
-                            className="shrink-0 flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 active:scale-95 transition-all"
-                        >
-                            <span className="text-[11px] font-black tabular-nums leading-none">{groupIndex + 1}/{groupTotal}</span>
-                            <ArrowRight size={13} className="shrink-0" />
-                        </button>
-                    )}
+                    {/* (Multievent-pagern "3/7" satt här t.o.m. 16/9 men åt upp
+                        platsraden på mobil — tid, avstånd och plats fick inte
+                        plats. Den bor nu bredvid NÄSTA-knappen ovanför kortet,
+                        se navraden i EventCard.) */}
                 </div>
 
                 {vadkulHosted && (
@@ -814,13 +818,8 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 )}
                                 {/* Småtext-åtgärder: rapportera (alla) + ta bort (ägaren) */}
                                 <div className="flex flex-col items-center gap-1 pt-1">
-                                    {/* Veckoserie: utan den här raden ser tolv utvecklade
-                                        tillfällen ut som tolv separata event. */}
-                                    {linkEvent.repeatWeekly && (
-                                        <p className="text-[10px] font-semibold text-slate-400 py-0.5">
-                                            🔁 {linkEvent.repeatIntervalWeeks === 2 ? 'Varannan' : 'Varje'} {linkEvent.time.toLocaleDateString('sv-SE', { weekday: 'long' })}
-                                        </p>
-                                    )}
+                                    {/* (Veckoserie-raden som stod här flyttade 16/9 upp till
+                                        härkomst-raden i headern — med slutdatum i sig.) */}
                                     {reportSent ? (
                                         <p className="text-xs font-bold text-emerald-600 py-1.5">Tack! Vi tittar på det. 🙏</p>
                                     ) : reportOpen ? (

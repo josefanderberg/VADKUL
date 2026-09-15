@@ -123,7 +123,7 @@ async function processBatch(rows: Row[]): Promise<number> {
             // Biovisning → scen oavsett LLM:ens val (utils/cinema, samma regel som audit-events);
             // regel-emoji (🎬 bio, 🥏 discgolf …) går före LLM:ens val (utils/emojiRules).
             if (looksLikeCinema(r.title, r.locationName)) { result.category = 'stage'; result.categoryConfidence = 'high'; }
-            const ruleEmoji = ruleEmojiFor(r.title, r.locationName);
+            const ruleEmoji = ruleEmojiFor(r.title, r.locationName, r.url);
             if (ruleEmoji) result.emoji = ruleEmoji;
 
             const swFlag = result.inSweden ? '' : ' [EJ-SE]';

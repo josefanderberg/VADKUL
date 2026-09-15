@@ -395,9 +395,9 @@ export async function runSource(
             // dokumentet inte bär ett null-fält i onödan.
             const validEnd = validEventEnd(e.startDate, e.endDate);
 
-            // Regelstyrd emoji (🎬 bio, 🥏 discgolf …) sätts redan vid spar;
+            // Regelstyrd emoji (🎬 bio, 🏑 ligamatch, 🥏 discgolf …) sätts redan vid spar;
             // övriga event lämnar emoji åt auditen/kategoridefaulten.
-            const ruleEmoji = ruleEmojiFor(e.title, e.venueName);
+            const ruleEmoji = ruleEmojiFor(e.title, e.venueName, e.url);
 
             pendingWrites.push({
                 title: e.title,

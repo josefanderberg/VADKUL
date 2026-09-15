@@ -27,6 +27,7 @@
  */
 
 import { Engine, RawEvent } from '../sources/types';
+import type { LeagueSport } from '../utils/leagueSport';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
     + '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -36,6 +37,8 @@ export interface SweHockeyConfig {
     leagueId: string;
     /** Visas som värd, t.ex. "SHL". */
     leagueName: string;
+    /** Sporten — styr kartpinnens emoji (utils/leagueSport). */
+    sport?: LeagueSport;
 }
 
 export interface SweHockeyGame {

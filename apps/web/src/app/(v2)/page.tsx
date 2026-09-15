@@ -47,6 +47,7 @@ import toast from 'react-hot-toast';
 
 // V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
 import dynamic from 'next/dynamic';
+import { occurrencesLeftFrom, seriesEndDate, seriesLastDate, weeksForOccurrences } from '@/utils/weeklySeries';
 
 const V2MapDynamic = dynamic(() => import('@/components/v2/V2Map'), {
     ssr: false,
@@ -315,12 +316,13 @@ const weeklyLabelFor = (datetimeLocal: string, intervalWeeks: number = 1): strin
     return `${intervalWeeks === 2 ? 'Varannan' : 'Varje'} ${weekday} kl ${time}`;
 };
 /**
- * Hur många veckor en serie kan pågå (inkl. första tillfället). VARJE vecka
- * 2–12 finns med — bara jämna tal räckte inte: en kurs på 3 eller 5 gånger är
- * lika vanlig som en på 4, och den som inte hittade sitt tal fick välja "tills
- * vidare" och sedan städa serien själv. Därefter glesare terminslängder.
+ * Hur många GÅNGER en serie kan pågå (inkl. första tillfället). 2–12 styck
+ * finns med en och en — en kurs på 3 eller 5 gånger är lika vanlig som en på
+ * 4, och den som inte hittar sitt tal väljer "tills vidare" och får städa
+ * serien själv. Därefter glesare terminslängder. Med varannan vecka filtreras
+ * de högsta bort: reglernas tak är 52 VECKOR, alltså 26 gånger.
  */
-const REPEAT_WEEK_CHOICES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 20, 26, 52];
+const REPEAT_TIMES_CHOICES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 20, 26, 52];
 // Radie kring en SÖKT stads centrum när träfflistan räknar "X event den
 // närmaste veckan". 2,5 mil ≈ orten plus dess byar (Hudiksvall + Forsa/Hög/
 // Iggesund). Siffran är alltså en CIRKEL kring centrum, medan stadsrutan man
@@ -496,8 +498,12 @@ export default function HomePage() {
     const [newEventRepeatWeekly, setNewEventRepeatWeekly] = useState(false); // veckovis serie
     // Rytm: 1 = varje vecka (default, skrivs aldrig), 2 = varannan vecka.
     const [newEventRepeatInterval, setNewEventRepeatInterval] = useState<1 | 2>(1);
-    // Hur många veckor serien pågår (inkl. första gången). null = tills vidare.
-    const [newEventRepeatWeeks, setNewEventRepeatWeeks] = useState<number | null>(null);
+    // Hur många GÅNGER serien ska hända (inkl. första gången). null = tills
+    // vidare. Dokumentet lagrar fortfarande VECKOR (repeatWeeks) — omräkningen
+    // sker vid spar (weeksForOccurrences). Frågan ställdes i veckor t.o.m.
+    // 16/9, men med varannan vecka-rytmen gick den inte ihop: "4 veckor" var
+    // 2 gånger och en tom slutvecka.
+    const [newEventRepeatTimes, setNewEventRepeatTimes] = useState<number | null>(null);
     const [newEventUrl, setNewEventUrl] = useState('');   // tips: länk till källan (valfri)
     const [newEventHost, setNewEventHost] = useState('');  // tips: arrangörens namn (valfritt)
     // ── Önska-funktionen ✨ ──────────────────────────────────────────────────
@@ -547,7 +553,7 @@ export default function HomePage() {
         setNewEventRole('tip');
         setNewEventRepeatWeekly(false);
         setNewEventRepeatInterval(1);
-        setNewEventRepeatWeeks(null);
+        setNewEventRepeatTimes(null);
         setNewEventUrl('');
         setNewEventHost('');
         setCreateKind('event');
@@ -601,7 +607,13 @@ export default function HomePage() {
         setNewEventHost(evt.isTip || evt.url ? evt.hostName || '' : '');
         setNewEventRepeatWeekly(!!evt.repeatWeekly);
         setNewEventRepeatInterval(evt.repeatIntervalWeeks === 2 ? 2 : 1);
-        setNewEventRepeatWeeks(evt.repeatWeeks ?? null);
+        // Antalet gånger räknas från DET TILLFÄLLE man redigerar (dess tid blir
+        // seriens nya start) fram till seriens slut — annars förlängdes en
+        // begränsad serie varje gång den redigerades från ett senare tillfälle.
+        const serieSlut = seriesEndDate(evt);
+        setNewEventRepeatTimes(serieSlut
+            ? occurrencesLeftFrom(evt.time, serieSlut, evt.repeatIntervalWeeks)
+            : null);
         // Befintlig bild visas som förhandsvisning ("behåll"). Krysset tömmer
         // den → bilden tas bort vid Spara; ny fil ersätter den.
         setNewEventImage(null);
@@ -1624,7 +1636,8 @@ export default function HomePage() {
                     isTip,
                     repeatWeekly: newEventRepeatWeekly,
                     repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
-                    repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
+                    repeatWeeks: newEventRepeatWeekly && newEventRepeatTimes
+                        ? weeksForOccurrences(newEventRepeatTimes, newEventRepeatInterval) : undefined,
                 });
                 const updated: LinkEvent = {
                     ...(orig ?? ({} as LinkEvent)),
@@ -1636,7 +1649,8 @@ export default function HomePage() {
                     userCreated: true, isTip,
                     repeatWeekly: newEventRepeatWeekly,
                     repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
-                    repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
+                    repeatWeeks: newEventRepeatWeekly && newEventRepeatTimes
+                        ? weeksForOccurrences(newEventRepeatTimes, newEventRepeatInterval) : undefined,
                 } as LinkEvent;
                 // Optimistiskt: byt ut ALLA tillfällen som hör till dokumentet
                 // (en veckoserie ligger utvecklad i listan) mot de nya.
@@ -1675,7 +1689,8 @@ export default function HomePage() {
                 anonTip: isAnonTip,
                 repeatWeekly: newEventRepeatWeekly,
                 repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
-                repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
+                repeatWeeks: newEventRepeatWeekly && newEventRepeatTimes
+                    ? weeksForOccurrences(newEventRepeatTimes, newEventRepeatInterval) : undefined,
             });
             const created: LinkEvent = {
                 id: docId, url: tipUrl ?? '', title: newEventTitle.trim(), time, createdAt: new Date(),
@@ -1685,7 +1700,8 @@ export default function HomePage() {
                 isLocationVerified: true, userCreated: true, isTip, anonTip: isAnonTip,
                 repeatWeekly: newEventRepeatWeekly,
                 repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
-                repeatWeeks: newEventRepeatWeekly ? newEventRepeatWeeks ?? undefined : undefined,
+                repeatWeeks: newEventRepeatWeekly && newEventRepeatTimes
+                    ? weeksForOccurrences(newEventRepeatTimes, newEventRepeatInterval) : undefined,
                 hostUid: authorUid,
             } as LinkEvent;
             // Behåll i sessions-listan så pollen inte rensar bort det (se myCreatedRef).
@@ -1735,7 +1751,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatInterval, newEventRepeatWeeks, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatInterval, newEventRepeatTimes, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -1770,7 +1786,7 @@ export default function HomePage() {
     // som får) + optimistisk borttagning ur kartan/kortleken. Sitt eget alltid
     // — och ANONYMA TIPS får vem som helst plocka bort, eftersom de saknar
     // ägare som kan städa upp efter sig om någon spammar.
-    const handleDeleteOwnEvent = useCallback(async (eventId: string) => {
+    const handleDeleteOwnEvent = useCallback(async (eventIdOrIds: string | string[]) => {
         try {
             // Reglerna kräver ett uid även för den öppna raderingen, och en
             // besökare som aldrig tipsat har ingen session alls. Hämta en först
@@ -1780,11 +1796,16 @@ export default function HomePage() {
             // motsvarar inget eget dokument — dokumentet är seriens bas. Skala
             // av datumsuffixet före raderingen, annars försöker vi ta bort ett
             // dokument som inte finns och hela serien blir kvar på kartan.
-            const docId = eventId.split('__')[0];
-            await linkEventService.deleteUserEvent(docId);
-            // ...och städa bort ALLA tillfällen som hör till dokumentet, inte
+            // Profilens rader kan dessutom stå för FLERA dokument (samma event
+            // inlagt på flera datum, Stobirk-fallet) — då kommer en lista hit.
+            const docIds = [...new Set((Array.isArray(eventIdOrIds) ? eventIdOrIds : [eventIdOrIds])
+                .map(id => id.split('__')[0]))];
+            for (const docId of docIds) {
+                await linkEventService.deleteUserEvent(docId);
+            }
+            // ...och städa bort ALLA tillfällen som hör till dokumenten, inte
             // bara det man råkade ha framme.
-            const belongsToDeleted = (id: string) => id === docId || id.startsWith(`${docId}__`);
+            const belongsToDeleted = (id: string) => docIds.some(d => id === d || id.startsWith(`${d}__`));
             myCreatedRef.current = myCreatedRef.current.filter(e => !belongsToDeleted(e.id));
             lastUserEventsRef.current = lastUserEventsRef.current.filter(e => !belongsToDeleted(e.id));
             setEvents(prev => prev.filter(e => !belongsToDeleted(e.id)));
@@ -1796,7 +1817,7 @@ export default function HomePage() {
                 stale.forEach(id => next.delete(id));
                 return next;
             });
-            toast.success('Eventet är borttaget.');
+            toast.success(docIds.length > 1 ? `${docIds.length} event är borttagna.` : 'Eventet är borttaget.');
         } catch (err) {
             const code = createEventErrorCode(err);
             console.warn('[event] raderingen stoppades:', code);
@@ -2563,6 +2584,16 @@ export default function HomePage() {
         setSavedPanelOpen(false);
         setSearchQuery('');
     }, []);
+
+    // Formulärets "sista gången"-rad: vilket datum serien tar slut med valt
+    // antal gånger och vald rytm. Utan den måste man räkna veckor i huvudet.
+    const seriesEndPreview = useMemo(() => {
+        if (!newEventRepeatWeekly || !newEventRepeatTimes || !newEventTime) return null;
+        const start = new Date(newEventTime);
+        if (isNaN(start.getTime())) return null;
+        return seriesLastDate(start, newEventRepeatTimes, newEventRepeatInterval)
+            .toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+    }, [newEventRepeatWeekly, newEventRepeatTimes, newEventRepeatInterval, newEventTime]);
 
     // Användarens egna skapade event — visas i profilpanelen.
     const myEvents = useMemo(
@@ -4015,7 +4046,16 @@ export default function HomePage() {
                                             Hur ofta?
                                             <select
                                                 value={newEventRepeatInterval}
-                                                onChange={e => setNewEventRepeatInterval(Number(e.target.value) === 2 ? 2 : 1)}
+                                                onChange={e => {
+                                                    const next = Number(e.target.value) === 2 ? 2 : 1;
+                                                    setNewEventRepeatInterval(next);
+                                                    // 52 gånger ryms varje vecka men inte varannan
+                                                    // (reglernas tak är 52 veckor) — klipp valet i
+                                                    // stället för att skriva ett repeatWeeks som
+                                                    // reglerna kastar tillbaka.
+                                                    setNewEventRepeatTimes(prev =>
+                                                        prev && weeksForOccurrences(prev, next) > 52 ? 26 : prev);
+                                                }}
                                                 className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-xs text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white focus:border-green-500 focus:outline-none"
                                             >
                                                 <option value={1}>Varje vecka</option>
@@ -4023,25 +4063,34 @@ export default function HomePage() {
                                             </select>
                                         </span>
                                     )}
-                                    {/* Hur länge serien pågår. Tills vidare är förval —
-                                        det är beteendet serier alltid haft. Väljs ett antal
-                                        slutar serien efter sista tillfället och försvinner
-                                        då från kartan av sig själv. */}
+                                    {/* Hur många GÅNGER serien ska hända. Frågan ställdes i
+                                        veckor t.o.m. 16/9 men blev obegriplig med varannan
+                                        vecka-rytmen (bara ojämna veckotal gick jämnt ut, och
+                                        "8 veckor" var 4 gånger). Gånger betyder samma sak i
+                                        båda rytmerna. Tills vidare är kvar som förval — det
+                                        är beteendet serier alltid haft. Väljs ett antal slutar
+                                        serien efter sista tillfället och försvinner då från
+                                        kartan av sig själv. */}
                                     {newEventRepeatWeekly && (
-                                        <span className="mt-2 flex items-center gap-2 text-xs font-normal text-slate-600 dark:text-slate-300" onClick={e => e.preventDefault()}>
-                                            Hur länge?
+                                        <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-normal text-slate-600 dark:text-slate-300" onClick={e => e.preventDefault()}>
+                                            Hur många gånger?
                                             <select
-                                                value={newEventRepeatWeeks ?? ''}
-                                                onChange={e => setNewEventRepeatWeeks(e.target.value ? Number(e.target.value) : null)}
+                                                value={newEventRepeatTimes ?? ''}
+                                                onChange={e => setNewEventRepeatTimes(e.target.value ? Number(e.target.value) : null)}
                                                 className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-xs text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white focus:border-green-500 focus:outline-none"
                                             >
                                                 <option value="">Tills vidare</option>
-                                                {REPEAT_WEEK_CHOICES.map(n => (
-                                                    <option key={n} value={n}>
-                                                        {n === 52 ? '52 veckor (ett år)' : `${n} veckor`}
-                                                    </option>
-                                                ))}
+                                                {REPEAT_TIMES_CHOICES
+                                                    .filter(n => weeksForOccurrences(n, newEventRepeatInterval) <= 52)
+                                                    .map(n => (
+                                                        <option key={n} value={n}>{n} gånger</option>
+                                                    ))}
                                             </select>
+                                            {seriesEndPreview && (
+                                                <span className="text-slate-500 dark:text-slate-400">
+                                                    sista gången {seriesEndPreview}
+                                                </span>
+                                            )}
                                         </span>
                                     )}
                                 </span>

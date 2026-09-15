@@ -228,7 +228,7 @@ async function main() {
                 category: result.category,
                 categoryConfidence: result.categoryConfidence,
                 // Regel-emoji (🎬 bio, 🥏 discgolf …) går före LLM:ens val (utils/emojiRules).
-                emoji: ruleEmojiFor(r.title, r.locationName) ?? result.emoji,
+                emoji: ruleEmojiFor(r.title, r.locationName, r.url) ?? result.emoji,
                 price: result.price,
             });
             // Spegla hidden till SQLite — den publika feeden aggregeras från SQLite

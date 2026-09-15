@@ -64,7 +64,7 @@ async function main() {
 
     for (const r of rows) {
         const cat = r.category || 'other';
-        const emoji = ruleEmojiFor(r.title, r.locationName) ?? CATEGORY_EMOJI[cat] ?? CATEGORY_EMOJI.other;
+        const emoji = ruleEmojiFor(r.title, r.locationName, r.url) ?? CATEGORY_EMOJI[cat] ?? CATEGORY_EMOJI.other;
         perCat.set(cat, (perCat.get(cat) || 0) + 1);
         updated++;
 

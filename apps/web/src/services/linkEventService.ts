@@ -1,3 +1,4 @@
+import { occurrencesForWeeks, seriesLastDate } from '../utils/weeklySeries';
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
 import { doc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
@@ -67,14 +68,14 @@ export function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
     const horizon = new Date(from);
     horizon.setDate(horizon.getDate() + WEEKLY_HORIZON_WEEKS * 7);
 
-    // Begränsad serie (repeatWeeks): sista tillfället är basen + (N-1) veckor.
-    // Utan fältet rullar serien tills vidare, som alla serier gjorde innan
-    // valet fanns. En färdigspelad serie ger [] och försvinner från kartan.
-    if (base.repeatWeeks && base.repeatWeeks >= 1) {
-        const seriesEnd = new Date(base.time);
-        seriesEnd.setDate(seriesEnd.getDate() + (base.repeatWeeks - 1) * 7);
-        if (seriesEnd < horizon) horizon.setTime(seriesEnd.getTime());
-    }
+    // Begränsad serie (repeatWeeks): serien tar slut vid sista TILLFÄLLET, som
+    // med varannan vecka-rytm kan ligga före sista veckan (8 veckor varannan
+    // vecka = fjärde gången i vecka 7). Utan fältet rullar serien tills vidare,
+    // som alla serier gjorde innan valet fanns. En färdigspelad serie ger []
+    // och försvinner från kartan.
+    const times = occurrencesForWeeks(base.repeatWeeks, base.repeatIntervalWeeks);
+    const seriesEnd = times === null ? null : seriesLastDate(base.time, times, base.repeatIntervalWeeks);
+    if (seriesEnd && seriesEnd < horizon) horizon.setTime(seriesEnd.getTime());
 
     // Starta på basens tid och stega en period i taget fram till `from` —
     // serier som startade i våras ska börja vid nästa kommande tillfälle,
@@ -96,6 +97,7 @@ export function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
             ...base,
             id: `${base.id}__${y}-${m}-${d}`,
             seriesId: base.id,
+            seriesEndsAt: seriesEnd ?? undefined,
             time: new Date(cursor),
         });
         cursor.setDate(cursor.getDate() + stepDays);
@@ -175,6 +177,11 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
                     repeatWeekly: !!v.repeatWeekly,
                     repeatWeeks: typeof v.repeatWeeks === 'number' && v.repeatWeeks >= 1
                         ? Math.floor(v.repeatWeeks) : undefined,
+                    // Utan den här raden föll rytmen bort vid inläsning: en
+                    // varannan vecka-serie skrevs rätt till Firestore men
+                    // vecklades ut VARJE vecka så fort sidan laddades om.
+                    repeatIntervalWeeks: typeof v.repeatIntervalWeeks === 'number' && v.repeatIntervalWeeks >= 2
+                        ? Math.floor(v.repeatIntervalWeeks) : undefined,
                     hostUid: v.hostUid || undefined,
                     featuredUntil,
                     // Utan den här raden är hidden-filtret nedan verkningslöst:

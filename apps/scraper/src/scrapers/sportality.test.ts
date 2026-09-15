@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { swedishTeamCodes, swedishInstanceIds, logoInstanceId, mapSportalityGame } from './sportality';
+import { swedishTeamCodes, swedishInstanceIds, logoInstanceId, mapSportalityGame, type SportalityConfig } from './sportality';
 
-const CFG = { baseUrl: 'https://www.shl.se', leagueName: 'SHL' };
+const CFG: SportalityConfig = { baseUrl: 'https://www.shl.se', leagueName: 'SHL', sport: 'ishockey' };
 const SWE = new Set(['BIF', 'DIF', 'RBK']);
 
 const GAME = {
@@ -109,20 +109,35 @@ describe('mapSportalityGame', () => {
         const chl = { ...GAME, seriesCode: 'CHL', homeTeam: { name: 'Rögle BK', code: 'RBK' } };
         const e = mapSportalityGame(chl, CFG, SWE)!;
         expect(e.title).toBe('Rögle BK – Djurgårdens IF Hockey');
-        expect(e.description).toBe('CHL: Rögle BK möter Djurgårdens IF Hockey i Monitor ERP Arena (omgång 3).');
+        expect(e.description).toBe('Ishockeymatch i CHL: Rögle BK möter Djurgårdens IF Hockey i Monitor ERP Arena (omgång 3).');
     });
 
     it('beskrivningen är en hel mening — aldrig bara serie-koden', () => {
         expect(mapSportalityGame(GAME, CFG, SWE)!.description)
-            .toBe('SHL: Brynäs möter Djurgårdens IF Hockey i Monitor ERP Arena (omgång 3).');
+            .toBe('Ishockeymatch i SHL: Brynäs möter Djurgårdens IF Hockey i Monitor ERP Arena (omgång 3).');
         // HockeyAllsvenskans feed har seriesCode "HA" (namnets versaler) —
         // det ska bli hela liganamnet, inte koden.
         const ha = mapSportalityGame(
             { ...GAME, seriesCode: 'HA', roundLabel: undefined, venue: undefined },
-            { baseUrl: 'https://www.hockeyallsvenskan.se', leagueName: 'HockeyAllsvenskan' },
+            { baseUrl: 'https://www.hockeyallsvenskan.se', leagueName: 'HockeyAllsvenskan', sport: 'ishockey' },
             SWE,
         )!;
-        expect(ha.description).toBe('HockeyAllsvenskan: Brynäs möter Djurgårdens IF Hockey.');
+        expect(ha.description).toBe('Ishockeymatch i HockeyAllsvenskan: Brynäs möter Djurgårdens IF Hockey.');
+    });
+
+    it('sporten står först — SSL-lagnamnen säger inte att det är innebandy (🥒-fallet 15/9)', () => {
+        const ssl = mapSportalityGame(
+            {
+                ...GAME, seriesCode: 'SSLDam', roundLabel: undefined, venue: 'Fortnox Arena',
+                homeTeam: { name: 'Växjö Vipers', code: 'VV' }, awayTeam: { name: 'Team Thorengruppen', code: 'TT' },
+            },
+            { baseUrl: 'https://www.ssl.se', leagueName: 'SSL', sport: 'innebandy' },
+            new Set(['VV']),
+        )!;
+        expect(ssl.description).toBe('Innebandymatch i SSLDam: Växjö Vipers möter Team Thorengruppen i Fortnox Arena.');
+        // Utan sport i config: gamla formen, ingen krasch.
+        expect(mapSportalityGame(GAME, { baseUrl: 'https://www.shl.se', leagueName: 'SHL' }, SWE)!.description)
+            .toBe('SHL: Brynäs möter Djurgårdens IF Hockey i Monitor ERP Arena (omgång 3).');
     });
 
     it('hoppar över spelade matcher', () => {

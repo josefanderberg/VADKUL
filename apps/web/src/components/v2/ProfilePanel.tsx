@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
-import { collapseWeeklySeries } from '@/utils/collapseWeeklySeries';
+import { buildMyEventRows } from '@/utils/myEventRows';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
@@ -44,7 +44,9 @@ interface ProfilePanelProps {
      *  Utelämnad = tom lista (boost-raderna faller tillbaka på domännamnet). */
     allEvents?: LinkEvent[];
     onPickEvent?: (evt: LinkEvent) => void;
-    onDeleteEvent?: (id: string) => void;
+    /** Radera det profilraden står för — EN lista med dokument-id, eftersom en
+     *  rad kan vara flera tillfällen av samma event. */
+    onDeleteEvent?: (ids: string[]) => void;
     savedCount?: number;
     /** Byt till sparat-panelen (stänger profilen). Utelämnad → Sparade-raden
      *  döljs (stadssidan har ingen sparat-panel att byta till). */
@@ -70,12 +72,13 @@ const NO_EVENTS: LinkEvent[] = [];
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
 export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, savedCount = 0, onOpenSaved, anchor = 'left', optInCategories, onOpenAbout }: ProfilePanelProps) {
-    // Mina event med veckoserierna HOPGRUPPERADE till en rad per serie
-    // (Josef 14/9: "nu blir det en jättelång lista") — raden visar nästa
-    // tillfälle + "Varje vecka"-chip, och soptunnan tar hela serien (samma
-    // id-stam som handleDeleteOwnEvent redan raderar på).
+    // Mina event HOPGRUPPERADE till en rad per sak man skapat (Josef 14/9:
+    // "nu blir det en jättelång lista"): både veckoserier och samma event
+    // inlagt på flera datum (Josef 16/9, destilleribesöken på Stobirk —
+    // fyra separata dokument som hör ihop för ögat). Raden visar nästa
+    // tillfälle + chip, och soptunnan tar ALLA dokument raden står för.
     const myEventsList = useMemo(
-        () => (myEvents ? collapseWeeklySeries(myEvents, Date.now()) : undefined),
+        () => (myEvents ? buildMyEventRows(myEvents, Date.now()) : undefined),
         [myEvents],
     );
     const { user, logout, updateDisplayName, updatePhotoURL, resetPassword, deleteAccount } = useAuth();
@@ -663,32 +666,44 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                 </p>
                             ) : (
                                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {myEventsList.map(evt => (
+                                    {myEventsList.map(row => {
+                                        // Soptunnan tar hela raden: en serie (ett dokument
+                                        // med alla sina tillfällen) eller flera dokument av
+                                        // samma event. Tar man bara det visade tillfället
+                                        // ligger resten kvar utan rad att radera dem från.
+                                        const flera = row.docIds.length > 1;
+                                        const titel = row.evt.repeatWeekly
+                                            ? 'Ta bort hela serien'
+                                            : flera
+                                                ? `Ta bort alla ${row.docIds.length} tillfällen`
+                                                : 'Ta bort eventet';
+                                        return (
                                         <EventListRow
-                                            key={evt.id}
-                                            evt={evt}
-                                            tag={evt.repeatWeekly
-                                                ? (evt.repeatIntervalWeeks === 2 ? 'Varannan vecka' : 'Varje vecka')
-                                                : undefined}
+                                            key={row.evt.id}
+                                            evt={row.evt}
+                                            tag={row.tag}
                                             onPick={evt => onPickEvent?.(evt)}
                                             right={
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        const fraga = evt.repeatWeekly
-                                                            ? `Ta bort "${evt.title}" och alla kommande tillfällen permanent?`
-                                                            : `Ta bort "${evt.title}" permanent?`;
-                                                        if (confirm(fraga)) onDeleteEvent?.(evt.id);
+                                                        const fraga = row.evt.repeatWeekly
+                                                            ? `Ta bort "${row.evt.title}" och alla kommande tillfällen permanent?`
+                                                            : flera
+                                                                ? `Ta bort alla ${row.docIds.length} tillfällen av "${row.evt.title}" permanent?`
+                                                                : `Ta bort "${row.evt.title}" permanent?`;
+                                                        if (confirm(fraga)) onDeleteEvent?.(row.docIds);
                                                     }}
-                                                    title={evt.repeatWeekly ? 'Ta bort hela serien' : 'Ta bort eventet'}
-                                                    aria-label={evt.repeatWeekly ? 'Ta bort hela serien' : 'Ta bort eventet'}
+                                                    title={titel}
+                                                    aria-label={titel}
                                                     className="p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                                                 >
                                                     <Trash2 size={15} />
                                                 </button>
                                             }
                                         />
-                                    ))}
+                                        );
+                                    })}
                                 </ul>
                             )}
                         </div>

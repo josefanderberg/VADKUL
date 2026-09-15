@@ -36,7 +36,7 @@ import { extractPriceFromText } from '../utils/priceFromText';
 import { normalizeDescription, sanitizePriceField } from '../utils/normalizeEvent';
 import { looksStripped } from '../utils/contentRefresh';
 import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
-import { activityEmojiFor } from '../utils/activityEmoji';
+import { ruleEmojiFor } from '../utils/emojiRules';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -98,9 +98,10 @@ async function main() {
             if ((r.emoji ?? '') !== CINEMA_EMOJI) { patch.emoji = CINEMA_EMOJI; stats.cinema++; }
             if ((r.category ?? '') !== 'stage') { patch.category = 'stage'; stats.cinemaCategory++; }
         } else {
-            // 0b) Entydig aktivitet (🥏 discgolf, 🧭 orientering …) där auditen
-            //     gissade generiskt (⚽/⛳) — utils/activityEmoji, ägaren 4/9.
-            const a = activityEmojiFor(r.title);
+            // 0b) Ligamatch (🏑 SSL, 🏒 SHL — utils/leagueSport, 🥒-fallet 15/9) eller
+            //     entydig aktivitet (🥏 discgolf, 🧭 orientering …) där auditen
+            //     gissade generiskt (⚽/⛳) — utils/emojiRules, ägaren 4/9.
+            const a = ruleEmojiFor(r.title, r.locationName, r.url);
             if (a && (r.emoji ?? '') !== a) { patch.emoji = a; stats.activity++; }
         }
 
@@ -155,7 +156,7 @@ async function main() {
     console.log(`🏷️  Prisfält sanerade (skräp tömt / långtext → intervall): ${stats.priceCleaned}`);
     console.log(`🎬 Biovisningar som fick filmsymbol: ${stats.cinema}`);
     console.log(`🎬 Biovisningar flyttade till kategori scen: ${stats.cinemaCategory}`);
-    console.log(`🥏 Aktiviteter som fick sin egen emoji: ${stats.activity}`);
+    console.log(`🥏 Liga-/aktivitetsmatcher som fick sin egen emoji: ${stats.activity}`);
 
     const top = (o: Record<string, number>) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 12)
         .map(([h, n]) => `  ${String(n).padStart(5)}  ${h}`).join('\n') || '  (inga)';

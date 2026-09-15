@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { SOURCES, ENGINES } from './index';
+import { isLeagueSport, leagueSiteHost } from '../utils/leagueSport';
 
 describe('source-registryt', () => {
     it('alla ids är unika', () => {
@@ -40,6 +41,21 @@ describe('source-registryt', () => {
                 expect(s.windowDays, `${s.id}: windowDays utanför 1–365`).toBeLessThanOrEqual(365);
             }
         }
+    });
+
+    it('ligakällorna bär sin sport — styr kartpinnens emoji (utils/leagueSport, 🥒-fallet 15/9)', () => {
+        const missing = SOURCES.filter((s) => leagueSiteHost(s) && !isLeagueSport(s.config.sport)).map((s) => s.id);
+        expect(missing).toEqual([]);
+    });
+
+    it('en ligasajt har EN sport', () => {
+        const byHost = new Map<string, Set<string>>();
+        for (const s of SOURCES) {
+            const host = leagueSiteHost(s);
+            if (host) byHost.set(host, (byHost.get(host) ?? new Set<string>()).add(s.config.sport));
+        }
+        const mixed = [...byHost].filter(([, sports]) => sports.size > 1).map(([host]) => host);
+        expect(mixed).toEqual([]);
     });
 
     it('nätverkskällorna (paraply-API:erna) finns och är aktiva', () => {

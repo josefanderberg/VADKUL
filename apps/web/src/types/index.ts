@@ -266,6 +266,14 @@ export interface LinkEvent {
    */
   seriesId?: string;
   /**
+   * Sätts BARA på utvecklade tillfällen av en BEGRÄNSAD serie: datumet för
+   * seriens SISTA tillfälle. Tillfällets egen `time` är dess eget datum, så
+   * utan det här fältet kunde "t.o.m."-raden på kortet bara räknas fram från
+   * basdokumentet — och hade flyttat fram ett steg för varje tillfälle.
+   * Saknas = serien rullar tills vidare (eller så är eventet ingen serie).
+   */
+  seriesEndsAt?: Date;
+  /**
    * Boostat ("featured") event: visas prioriterat på kartan t.o.m. denna tid.
    * Sätts ENBART av servern (Cloud Function) efter en verifierad Stripe-betalning —
    * aldrig av klienten. Saknas/passerat datum = vanligt event.

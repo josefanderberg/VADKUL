@@ -2280,6 +2280,31 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     <ArrowLeft size={18} className="text-[#006AA7]" />
                                 )}
                             </button>
+                            {/* MULTIEVENT-PAGERN "1/11 →" (flyttad hit 16/9): satt
+                                tidigare på kortets platsrad och trängde undan tid,
+                                avstånd och plats på mobil. Här står den direkt till
+                                vänster om NÄSTA — samma glaslook som bakåtknappen, och
+                                ml-auto flyttar med till den när pagern syns så paret
+                                sitter ihop i högerkanten. Döljs i väljarläget: då ÄR
+                                kortets innehåll listan över högen. */}
+                            {!chooserActive && sameSpotGroup.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={handleSameSpotNext}
+                                    onPointerDown={onButtonPointerDown}
+                                    onPointerMove={onButtonPointerMove}
+                                    onPointerUp={onButtonPointerUp}
+                                    onPointerCancel={onButtonPointerUp}
+                                    aria-label={`Nästa av ${sameSpotGroup.length} event på samma plats`}
+                                    title="Fler event på samma plats"
+                                    className="pointer-events-auto shrink-0 ml-auto h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all"
+                                >
+                                    <span className="text-[12px] font-black tabular-nums leading-none">
+                                        {(sameSpotIndex < 0 ? 0 : sameSpotIndex) + 1}/{sameSpotGroup.length}
+                                    </span>
+                                    <ArrowRight size={13} className="shrink-0" />
+                                </button>
+                            )}
                             {/* Nästa — knappen ÄR kapseln: ytan till vänster om den
                                 var tidigare klickbar (flex-1) men revs 31/8 (Josef:
                                 "det ska bara vara på nästa-knappen"), så kartklick i
@@ -2301,7 +2326,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 disabled={nextDisabled}
                                 aria-label={nextTitle}
                                 title={nextTitle}
-                                className={`group/nasta pointer-events-auto relative shrink-0 ml-auto h-[38px] box-border flex items-center bg-transparent${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
+                                className={`group/nasta pointer-events-auto relative shrink-0 h-[38px] box-border flex items-center bg-transparent${!chooserActive && sameSpotGroup.length > 1 ? '' : ' ml-auto'}${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
                             >
                                 {/* DAGBYTES-LÄGET: samma blå kapsel men med GUL RAM (Josef
                                     2/9: "skit i det att den byter färg, lägg en gul ram i
@@ -2445,9 +2470,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // mest tomyta. Läses vid mount; nonce-förbrukningen (ref-
                         // skrivningen) sker i ankar-effekten ovan.
                         initialRevealStep={fullOpenNonce > consumedFullOpenNonceRef.current ? 2 : 0}
-                        groupIndex={sameSpotIndex < 0 ? 0 : sameSpotIndex}
-                        groupTotal={sameSpotGroup.length}
-                        onGroupNext={handleSameSpotNext}
                         onRevealStepChange={(step) => {
                             setCardRevealStep(step);
                             // Steg 1 (bild + trunkad beskr): öppna till första beskrivningsraden

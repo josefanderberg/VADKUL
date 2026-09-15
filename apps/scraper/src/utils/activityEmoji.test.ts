@@ -17,6 +17,15 @@ describe('activityEmojiFor', () => {
         expect(activityEmojiFor('Schack på biblioteket')).toBe('♟️');
     });
 
+    it('innebandy → 🏑, hockeyligor i titeln → 🏒 (aggregatet 15/9: ⚽/🏃/🥒)', () => {
+        expect(activityEmojiFor('Testa på Innebandy')).toBe('🏑');
+        expect(activityEmojiFor('Innebandykul 5-9 år')).toBe('🏑');
+        expect(activityEmojiFor('Innebandy, SSL Mullsjö AIS - Visby IBK')).toBe('🏑');
+        expect(activityEmojiFor('SDHL: LHC – Skellefteå AIK')).toBe('🏒');
+        expect(activityEmojiFor('Brynäs IF - HV 71 SDHL')).toBe('🏒');
+        expect(activityEmojiFor('Växjö Vipers – Team Thorengruppen')).toBeNull();   // lagnamn ensamma → leagueSport via url
+    });
+
     it('ordgränser: "bad" ≠ badminton, "golf" ≠ discgolf, ingen träff på vanlig text', () => {
         expect(activityEmojiFor('Badminton drop-in')).toBe('🏸');
         expect(activityEmojiFor('Golfens dag på Skellefteå GK')).toBeNull();     // vanlig golf lämnas åt auditen (⛳)
