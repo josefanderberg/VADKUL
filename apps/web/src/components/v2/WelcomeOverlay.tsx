@@ -306,6 +306,21 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             Skapa gratis konto
                         </button>
                     </div>
+
+                    {/* KARTANS KÄLLOR (15/9): kartans egen ⓘ-attribution är
+                        borttagen — 🔥 täckte hörnet. OSMF:s attributionsriktlinje
+                        godkänner attribution i en startruta som visas när man
+                        öppnar sidan, så länge den går att hitta igen via "Om"
+                        (profilpanelens Om VADKUL / inloggningsrutans länk öppnar
+                        just den här rutan). CARTO (baskartans kakel) kräver också
+                        att nämnas. Ta INTE bort raden utan att lägga tillbaka
+                        attributionen på kartan. */}
+                    <p className="welcome-row -mt-2 text-center text-[11px] font-semibold text-slate-400 leading-snug" style={{ animationDelay: '1150ms' }}>
+                        Kartdata ©{' '}
+                        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" className="underline hover:text-slate-600">OpenStreetMap</a>
+                        {' '}· ©{' '}
+                        <a href="https://carto.com/attributions" target="_blank" rel="noopener" className="underline hover:text-slate-600">CARTO</a>
+                    </p>
                 </div>
             </div>
         </div>

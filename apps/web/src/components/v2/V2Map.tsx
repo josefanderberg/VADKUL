@@ -2719,10 +2719,12 @@ export default function V2Map({
             // bieffekten är att baskartans ortsnamn poppar in i stället för
             // att tona vid tile-laddning.
             fadeDuration: 0,
-            // Lägg INTE till default-attributionen automatiskt. På breda skärmar
-            // renderas den som en utfälld textrad ("MapLibre | © CARTO …") längst
-            // ner — vi vill i stället ha en egen i compact-läge (liten ⓘ-knapp) som
-            // läggs till direkt efter init nedan.
+            // Ingen attribution PÅ kartan (ägarbeslut 15/9 — 🔥 i botten-dockan
+            // täckte ⓘ-hörnet). Källorna (© OpenStreetMap · © CARTO) står i
+            // välkomstrutan i stället, vilket OSMF:s attributionsriktlinje
+            // tillåter för en startruta som går att öppna igen via "Om" — se
+            // WelcomeOverlay. Ta inte bort raden där utan att lägga tillbaka
+            // en AttributionControl här.
             attributionControl: false,
             // Dubbelklick/dubbeltapp ZOOMAR IN som på vanliga kartor (Josef
             // 31/8 — periodväxeln som ägde gesten 18–31/8 är borttagen;
@@ -2757,31 +2759,6 @@ export default function V2Map({
         // projicerar sina geo-ankare vid varje 'move').
         setMapInstance(map);
 
-        // Egen attribution: alltid compact (en liten ⓘ-knapp i hörnet i stället för
-        // en utfälld textrad). Attributionen MÅSTE finnas kvar — CARTO och
-        // OpenStreetMap kräver den juridiskt — men den behöver inte stå utfälld.
-        map.addControl(new maplibregl.AttributionControl({ compact: true }));
-
-        // MapLibre's compact-attribution öppnar sig SJÄLV ('maplibregl-compact-show'
-        // + <details open>) varje gång compact-läget (åter)etableras under
-        // inladdningen — vid första resizen och vid stilbytet bootstrap→themepark. En
-        // engångs-collapse vinner därför en kapplöpning ibland och förlorar ibland. Vi
-        // håller den hopfälld med en observer tills kartan blivit idle; därefter slutar
-        // MapLibre toggla själv och användarens klick på ikonen får expandera den fritt.
-        const attribEl = mapContainerRef.current?.querySelector('details.maplibregl-ctrl-attrib');
-        let attribObserver: MutationObserver | null = null;
-        if (attribEl instanceof HTMLDetailsElement) {
-            const collapseAttrib = () => {
-                if (attribEl.open || attribEl.classList.contains('maplibregl-compact-show')) {
-                    attribEl.open = false;
-                    attribEl.classList.remove('maplibregl-compact-show');
-                }
-            };
-            collapseAttrib();
-            attribObserver = new MutationObserver(collapseAttrib);
-            attribObserver.observe(attribEl, { attributes: true, attributeFilter: ['open', 'class'] });
-            map.once('idle', () => { attribObserver?.disconnect(); attribObserver = null; });
-        }
 
 
         let glCanvas: HTMLCanvasElement | null = null;
@@ -3233,7 +3210,6 @@ export default function V2Map({
         });
 
         return () => {
-            if (attribObserver) attribObserver.disconnect();
             if (moveEndTimer) clearTimeout(moveEndTimer);
             if (zoomIdleTimer) clearTimeout(zoomIdleTimer);
             if (glCanvas && onCtxLost) glCanvas.removeEventListener('webglcontextlost', onCtxLost as EventListener);
