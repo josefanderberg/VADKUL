@@ -10,6 +10,7 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
+import { categoryLabel } from './v2MapLabel';
 import { chooserDefaultTargetPx } from '@/utils/chooserSheetHeight';
 import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
@@ -420,6 +421,15 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                                 </span>
                             )}
                             <StatusBadge status={status} />
+                            {/* KATEGORIN nere till höger på bilden (Josef 16/9).
+                                KORTFORMEN — samma enda ord som står under
+                                eventmarkörerna på kartan (categoryLabel), inte
+                                EVENT_CATEGORIES långa etiketter: samma sak ska
+                                heta samma sak på båda ytorna. Samma glas-pill
+                                som ×N-brickan, sist i raden = längst till höger. */}
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-[10px] font-black uppercase tracking-wider text-white whitespace-nowrap">
+                                {categoryLabel(evt.category)}
+                            </span>
                         </div>
                     </div>
                     <div className="px-4 md:px-6 py-2 flex items-center gap-2">
