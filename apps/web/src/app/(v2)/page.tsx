@@ -39,6 +39,7 @@ import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/e
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { shouldLandOnTomorrow } from '@/utils/eveningLanding';
 import { isNewSince, readAndStampVisit, NEW_SINCE_MIN_COUNT } from '@/utils/newSinceLastVisit';
+import { fitCamera, SWEDEN_BOUNDS, OVERVIEW_PADDING, SWEDEN_NUDGE_DELAY_MS, canOfferOverview, hasLeftOverview, readSwedenNudgeDone, markSwedenNudgeDone } from '@/utils/swedenOverview';
 import PostCreateNudge from '@/components/v2/PostCreateNudge';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
@@ -803,10 +804,12 @@ export default function HomePage() {
     // av auto-starten, som läser userPos-state:en direkt.)
 
     /** Flyg till en punkt och sätt om reveal-ankaret (nyckeln måste ändras —
-     *  utan nytt hopp tänds inga brickor, bara nål-prickar). */
-    const flyToPoint = useCallback((lat: number, lng: number, label: string) => {
+     *  utan nytt hopp tänds inga brickor, bara nål-prickar). Zoomen är
+     *  stadsnivån om inget annat sägs — Sverige-översikten (16/9) skickar
+     *  sin egen, räknad ur viewporten. */
+    const flyToPoint = useCallback((lat: number, lng: number, label: string, zoom: number = TOUR_ZOOM) => {
         tourKeyRef.current += 1;
-        setCityTourTarget({ lat, lng, zoom: TOUR_ZOOM, key: tourKeyRef.current, cityName: label });
+        setCityTourTarget({ lat, lng, zoom, key: tourKeyRef.current, cityName: label });
     }, []);
 
     const flyToCity = useCallback((index: number) => {
@@ -1141,7 +1144,13 @@ export default function HomePage() {
     // Stopp-callback från V2Map: användaren drog/klickade → pausa bildspelet.
     // Blinket slutar där det står — dayRangeDays rörs INTE här, så den fas man
     // ser i stoppögonblicket är den man blir kvar i.
+    // Sant så fort man tagit i kartan själv (drag/tapp/klick) — Sverige-
+    // tipsets ena villkor (Josef 16/9: "när du har rört kartan en gång eller
+    // flera gånger"). Hjulzoom räknas inte hit, men den håller bildspelet
+    // igång och därmed prompt-slotten tyst ändå.
+    const [userTouchedMap, setUserTouchedMap] = useState(false);
     const handleMapUserInteraction = useCallback(() => {
+        setUserTouchedMap(true);
         // Har man tagit i kartan är vyn ens egen — en sen platsuppgift får inte
         // rycka iväg kameran efteråt.
         tourStartedBlindRef.current = false;
@@ -2490,6 +2499,73 @@ export default function HomePage() {
         if (haversineKm(mapCenter.lat, mapCenter.lng, city.lat, city.lng) > CITY_NAME_MAX_KM) return 'Sverige';
         return city.name;
     }, [cityTourTarget, boundsCityKey, mapCenter, mapZoom]);
+
+    /**
+     * SVERIGE-TIPSET (Josef 16/9): "när du har rört kartan en gång eller
+     * flera gånger … en rolig pop-up: vill du se en hel översiktsbild över
+     * Sverige, så att du ser hur många event som verkligen finns … gör den
+     * tjugo sekunder in, så kan du stänga ner den sen". Visas EN gång per
+     * enhet (flaggan i utils/swedenOverview), tidigast 20 s efter
+     * välkomstrutan och först när man tagit i kartan själv (userTouchedMap).
+     * Samma slot och tystnadsregler som de andra botten-prompterna:
+     * åtgärdsprompterna (tomt / allt har varit) vinner, nytt-sedan-sist får
+     * vika. Står man redan utzoomad finns inget att erbjuda.
+     *
+     * "Visa hela Sverige" = ett vanligt stadshopp (flyToPoint med egen zoom:
+     * frost → jumpTo → reveal-ankare → landningskvitto) till kameran som
+     * ramar in landet i den fria ytan mellan topplattan och dagväljaren
+     * (fitCamera — zoomen räknas ur viewporten, aldrig hårdkodad; på telefon
+     * blir det kartans golv 4). Vyn man lämnade sparas i overviewReturn och
+     * Tillbaka-pillen tar en hem med samma hopp. Zoomar man själv in igen
+     * förbi översikten är den lämnad och pillen försvinner. Pillen är den
+     * enda vägen tillbaka och vinner därför över ALLA andra prompter i
+     * slotten så länge man står i översikten.
+     */
+    const [swedenTimerOver, setSwedenTimerOver] = useState(false);
+    useEffect(() => {
+        if (!welcomeDone) return;
+        const t = setTimeout(() => setSwedenTimerOver(true), SWEDEN_NUDGE_DELAY_MS);
+        return () => clearTimeout(t);
+    }, [welcomeDone]);
+    // true tills flaggan lästs — tipset finns aldrig i server-HTML:n.
+    const [swedenNudgeDone, setSwedenNudgeDone] = useState(true);
+    useEffect(() => { setSwedenNudgeDone(readSwedenNudgeDone()); }, []);
+    // Mitt i ett stadshopp beskriver kartrutan förra vyn (samma vakt som
+    // areaCounts/nytt-sedan-sist).
+    const inCityJump = !!cityTourTarget && boundsCityKey !== cityTourTarget.key;
+    /** Vyn att återvända till från översikten — null = inte i översikten. */
+    const [overviewReturn, setOverviewReturn] = useState<{ lat: number; lng: number; zoom: number; name: string; overviewZoom: number } | null>(null);
+    const showOverviewReturn = overviewReturn !== null && promptContextQuiet && !inCityJump;
+    const showSwedenOffer = !swedenNudgeDone && swedenTimerOver && userTouchedMap
+        && promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn && !inCityJump
+        && mapZoom !== null && canOfferOverview(mapZoom);
+    const dismissSwedenOffer = useCallback(() => {
+        markSwedenNudgeDone();
+        setSwedenNudgeDone(true);
+    }, []);
+    const showSwedenOverview = useCallback(() => {
+        if (!mapCenter || mapZoom === null) return;
+        markSwedenNudgeDone();
+        setSwedenNudgeDone(true);
+        const cam = fitCamera(SWEDEN_BOUNDS, { width: window.innerWidth, height: window.innerHeight }, OVERVIEW_PADDING);
+        // Namnet på vyn man lämnar: stadens om topplattan har en, annars
+        // närmsta ort (för "Tillbaka till X" och frostens "Blickar över X").
+        const name = liveCityName && liveCityName !== 'Sverige'
+            ? liveCityName
+            : nearestCityPoint(mapCenter.lat, mapCenter.lng).name;
+        setOverviewReturn({ lat: mapCenter.lat, lng: mapCenter.lng, zoom: mapZoom, name, overviewZoom: cam.zoom });
+        flyToPoint(cam.lat, cam.lng, 'Sverige', cam.zoom);
+    }, [mapCenter, mapZoom, liveCityName, flyToPoint]);
+    const returnFromOverview = useCallback(() => {
+        const back = overviewReturn;
+        if (!back) return;
+        setOverviewReturn(null);
+        flyToPoint(back.lat, back.lng, back.name, back.zoom);
+    }, [overviewReturn, flyToPoint]);
+    useEffect(() => {
+        if (!overviewReturn || inCityJump || mapZoom === null) return;
+        if (hasLeftOverview(mapZoom, overviewReturn.overviewZoom)) setOverviewReturn(null);
+    }, [overviewReturn, inCityJump, mapZoom]);
 
     // Eventen i KARTANS RUTA (dagens + sök-filtrerade), smalnade med 🔥-läget
     // men FÖRE kategorifiltret: 🔥-knappens badge och kategoriradens siffror
@@ -4392,7 +4468,7 @@ export default function HomePage() {
                 väljaren i botten (bottom-[228px] klarar väljarens ~130px från
                 bottom-[92px]) så de inte täcker varandra — rutan pekar ju på
                 växeln man i så fall ska trycka på. */}
-            {nearbyIsEmpty && (
+            {nearbyIsEmpty && !showOverviewReturn && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
                         <span className="text-2xl" aria-hidden>{popularOnly ? '🔥' : mapCategory ? EVENT_CATEGORIES[mapCategory].emoji : canOfferWeek ? '📅' : '🤷'}</span>
@@ -4497,7 +4573,7 @@ export default function HomePage() {
                 aldrig visas samtidigt (den ena kräver noll, den andra fler än
                 noll). Knapparna ligger på egen rad: två pillar + texten fick
                 inte plats på en rad i mobilbredd. */}
-            {nearbyAllPast && (
+            {nearbyAllPast && !showOverviewReturn && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
                         <div className="flex items-center gap-3">
@@ -4539,7 +4615,7 @@ export default function HomePage() {
                 lägst prioritet i samma botten-slot som prompterna ovan, de kan
                 aldrig visas samtidigt). Ren hälsning, ingen åtgärdsprompt: ✕
                 tystar den för resten av besöket. */}
-            {showNewSince && (
+            {showNewSince && !showOverviewReturn && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
                         <span className="text-2xl" aria-hidden>🎉</span>
@@ -4560,6 +4636,85 @@ export default function HomePage() {
                         >
                             <X className="w-4 h-4" />
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Sverige-tipset (Josef 16/9): en rolig engångs-pop-up 20 s in i
+                besöket, när man tagit i kartan — "vill du se hela Sverige?".
+                Samma slot som prompterna ovan; turordningen i showSwedenOffer. */}
+            {showSwedenOffer && (
+                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl" aria-hidden>🇸🇪</span>
+                            <div className="min-w-0">
+                                <p className="text-sm font-bold text-slate-800">
+                                    Vill du se hela Sverige?
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    Zooma ut och se hur många event som händer i
+                                    landet just nu — sen tar vi dig tillbaka hit.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={dismissSwedenOffer}
+                                aria-label="Stäng"
+                                className="shrink-0 p-2 -m-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="mt-2.5 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={showSwedenOverview}
+                                className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
+                            >
+                                Visa hela Sverige 🗺️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* I översikten: siffran för hela landet + vägen tillbaka till vyn
+                man lämnade (Josef 16/9: "när du har kommit till översikt så
+                kan du bara klicka gå ner igen"). ✕ = stanna kvar utzoomad. */}
+            {showOverviewReturn && overviewReturn && (
+                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl" aria-hidden>🗺️</span>
+                            <div className="min-w-0">
+                                <p className="text-sm font-bold text-slate-800">
+                                    {periodCount > 0
+                                        ? `${periodCount.toLocaleString('sv-SE')} event ${promptDayLabel} i hela Sverige.`
+                                        : 'Hela Sverige i bild.'}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    Zooma in var du vill — eller hoppa tillbaka dit du var.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setOverviewReturn(null)}
+                                aria-label="Stäng"
+                                className="shrink-0 p-2 -m-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="mt-2.5 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={returnFromOverview}
+                                className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
+                            >
+                                ↩ Tillbaka till {overviewReturn.name}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
