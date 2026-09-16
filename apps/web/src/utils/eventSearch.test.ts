@@ -5,6 +5,7 @@ import {
     highlightSegments,
     normalizeSearchQuery,
     rankSearchResults,
+    splitCityFromQuery,
 } from './eventSearch';
 
 const ev = (title: string, extra: { locationName?: string; hostName?: string; url?: string } = {}) => ({
@@ -94,5 +95,81 @@ describe('highlightSegments', () => {
     });
     it('gemener med annan längd (İ) → ingen fetstil hellre än fel bokstäver', () => {
         expect(highlightSegments('İstanbul-kväll', 'kväll')).toEqual([{ text: 'İstanbul-kväll', hit: false }]);
+    });
+});
+
+// 16/9 — användarfeedback: "söka på stad och event" + "bara sport eller musik".
+const evc = (title: string, extra: { locationName?: string; hostName?: string; category?: string } = {}) => ({
+    title,
+    locationName: '',
+    hostName: '',
+    url: 'https://example.se/e/1',
+    ...extra,
+});
+
+describe('eventSearchTier — flera ord', () => {
+    it('hela frasen vinner som förut', () => {
+        expect(eventSearchTier(evc('Jazz på Pustervik'), 'jazz på')).toBe(SEARCH_TIER.TITLE_START);
+    });
+
+    it('varje ord får matcha ett eget fält — sämsta ordets nivå gäller', () => {
+        const e = evc('Jazzkväll', { locationName: 'Pustervik' });
+        expect(eventSearchTier(e, 'jazz pustervik')).toBe(SEARCH_TIER.LOCATION);
+    });
+
+    it('ett ord som inte matchar något fält fäller hela raden', () => {
+        expect(eventSearchTier(evc('Jazzkväll', { locationName: 'Pustervik' }), 'jazz hamnen')).toBe(-1);
+    });
+});
+
+describe('eventSearchTier — kategoriord', () => {
+    it('"sport" hittar sportevent utan ordet i titeln', () => {
+        expect(eventSearchTier(evc('Lördagsmatch', { category: 'sport' }), 'sport')).toBe(SEARCH_TIER.CATEGORY);
+    });
+
+    it('prefix och böjning räcker ("spo", "marknader")', () => {
+        expect(eventSearchTier(evc('Match', { category: 'sport' }), 'spo')).toBe(SEARCH_TIER.CATEGORY);
+        expect(eventSearchTier(evc('Höstloppis', { category: 'market' }), 'marknader')).toBe(SEARCH_TIER.CATEGORY);
+    });
+
+    it('"festival" drar inte in hela Fest & uteliv', () => {
+        expect(eventSearchTier(evc('Klubbkväll', { category: 'party' }), 'festival')).toBe(-1);
+    });
+
+    it('Övrigt är inget sökord, och titelträff rankas före kategoriträff', () => {
+        expect(eventSearchTier(evc('Något', { category: 'other' }), 'övrigt')).toBe(-1);
+        const titel = evc('Sportlov på badet', { category: 'family' });
+        const kategori = evc('Innebandy', { category: 'sport' });
+        expect(rankSearchResults([kategori, titel], 'sport')).toEqual([titel, kategori]);
+    });
+
+    it('kategoriord fungerar som ett av flera ord', () => {
+        expect(eventSearchTier(evc('Derby', { category: 'sport', locationName: 'Ullevi' }), 'sport ullevi'))
+            .toBe(SEARCH_TIER.CATEGORY);
+    });
+});
+
+describe('splitCityFromQuery', () => {
+    it('ort sist eller först blir plats, resten eventsök', () => {
+        expect(splitCityFromQuery('jazz göteborg')).toMatchObject({ city: { name: 'Göteborg' }, text: 'jazz' });
+        expect(splitCityFromQuery('göteborg jazz')).toMatchObject({ city: { name: 'Göteborg' }, text: 'jazz' });
+    });
+
+    it('bindeord närmast orten tas bort', () => {
+        expect(splitCityFromQuery('jazz i göteborg')).toMatchObject({ city: { name: 'Göteborg' }, text: 'jazz' });
+        expect(splitCityFromQuery('i göteborg')).toMatchObject({ city: { name: 'Göteborg' }, text: '' });
+    });
+
+    it('alias fungerar (sthlm → Stockholm)', () => {
+        expect(splitCityFromQuery('quiz sthlm')).toMatchObject({ city: { name: 'Stockholm' }, text: 'quiz' });
+    });
+
+    it('ren ortsökning och text utan ort lämnas orörda', () => {
+        expect(splitCityFromQuery('göteborg')).toEqual({ city: null, text: 'göteborg' });
+        expect(splitCityFromQuery('håkan hellström')).toEqual({ city: null, text: 'håkan hellström' });
+    });
+
+    it('gissar aldrig på ett prefix ("jazz kar" är ingen ort)', () => {
+        expect(splitCityFromQuery('jazz kar')).toEqual({ city: null, text: 'jazz kar' });
     });
 });

@@ -16,6 +16,9 @@ interface FloatingNavbarProps {
     onLoginClick?: () => void;
     /** Inloggad: profilknappen öppnar profilpanelen (allt konto-relaterat). */
     onOpenProfile?: () => void;
+    /** Sökfältet fälls ut/ihop — sidan visar kategoriraden i sökpanelen så
+     *  fort fältet är öppet, även utan söktext (16/9). */
+    onSearchOpenChange?: (open: boolean) => void;
     /* (Hjärtknappen "Sparade" låg här. BORTTAGEN 22/8, Josef: gilla-knappen
        ska inte finnas för utloggade — och för inloggade var den redan ersatt
        av Sparade-raden i profilpanelen, så props savedCount/onToggleSaved
@@ -61,6 +64,7 @@ export default function FloatingNavbar({
     closeSearchNonce = 0,
     onLoginClick,
     onOpenProfile,
+    onSearchOpenChange,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
@@ -76,6 +80,11 @@ export default function FloatingNavbar({
             setTimeout(() => searchInputRef.current?.focus(), 50);
         }
     }, [searchOpen]);
+
+    // Speglar fältets läge till sidan (kategoriraden i sökpanelen).
+    useEffect(() => {
+        onSearchOpenChange?.(searchOpen);
+    }, [searchOpen, onSearchOpenChange]);
 
     // Sidan bad oss stänga (man valde en stad ur träfflistan, eller klickade
     // på kartan) — fäll ihop fältet så kartan syns när den landar. BLUR är
@@ -199,8 +208,10 @@ export default function FloatingNavbar({
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
                                     onFocus={() => setSearchOpen(true)}
-                                    placeholder="Sök stad eller event…"
-                                    aria-label="Sök stad eller event"
+                                    // "eller båda" (16/9): "jazz göteborg" fungerar
+                                    // numera, och användare trodde att det inte gick.
+                                    placeholder="Sök stad, event – eller båda…"
+                                    aria-label="Sök stad, event eller båda"
                                     className={searchOpen
                                         ? 'flex-1 bg-transparent outline-none text-base text-slate-800 placeholder:text-slate-400 min-w-0'
                                         : 'w-0 min-w-0 p-0 bg-transparent outline-none opacity-0'}
@@ -215,10 +226,11 @@ export default function FloatingNavbar({
                                     </button>
                                 )}
                             </div>
-                            {/* "Stad" står först i etiketten med flit: knappen lästes
-                                som ren eventsökning (användarkommentar 10/8) och man
-                                letade efter en egen sökruta för orter. */}
-                            {!searchOpen && <HoverLabel>Sök stad eller event</HoverLabel>}
+                            {/* "Sök och filtrera" (16/9): kategorifiltret bor bakom
+                                knappen sedan kolumnen revs. Platshållaren har
+                                fortfarande "stad" först — knappen lästes som ren
+                                eventsökning (användarkommentar 10/8). */}
+                            {!searchOpen && <HoverLabel>Sök och filtrera</HoverLabel>}
                         </div>
                     </div>
                 </div>

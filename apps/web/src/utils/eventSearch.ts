@@ -15,11 +15,16 @@
  * behålls listans ordning (tid).
  */
 
+import { EVENT_CATEGORIES, type EventCategoryType } from './categories';
+import { findCityPoint, type CityPoint } from './cityPoints';
+
 export interface SearchableEvent {
     title: string;
     locationName?: string;
     hostName?: string;
     url?: string;
+    /** Kategorinyckel (music, sport …) — söks via kategorins namn (16/9). */
+    category?: string;
 }
 
 /** Rankningsnivåer, lägst först. -1 = ingen träff. */
@@ -29,7 +34,8 @@ export const SEARCH_TIER = {
     TITLE_ANY: 2,    // mitt i ett ord i titeln ("Afrojazz")
     LOCATION: 3,     // platsraden — syns i raden
     HOST: 4,         // arrangören — syns inte i raden
-    URL: 5,          // bara URL:en — syns inte alls
+    CATEGORY: 5,     // bara kategorin ("sport" → Sport & träning) — syns som emoji
+    URL: 6,          // bara URL:en — syns inte alls
 } as const;
 
 /**
@@ -67,16 +73,96 @@ function titleTier(lowerTitle: string, q: string): number {
 }
 
 /**
- * Eventets nivå för söktexten, -1 om det inte matchar alls.
- * `q` ska vara normaliserad (normalizeSearchQuery) och icke-tom.
+ * Kategoriord (Josef 16/9, användarfeedback "bara få upp sport eller musik"):
+ * orden i kategoriernas svenska namn ("Sport & träning" → sport, träning).
+ * Övrigt är inget sökord. Förberäknat — listan är statisk.
  */
-export function eventSearchTier(evt: SearchableEvent, q: string): number {
+const CATEGORY_WORDS: { key: string; words: string[] }[] = (Object.keys(EVENT_CATEGORIES) as EventCategoryType[])
+    .filter(key => key !== 'other')
+    .map(key => ({
+        key,
+        words: EVENT_CATEGORIES[key].label.toLowerCase().split(/[^a-zåäöéü]+/).filter(w => w.length >= 3),
+    }));
+
+/**
+ * Matchar söktexten eventets kategori? Prefix åt båda håll men snålt: man
+ * skriver "spo" → Sport, och böjningar ("marknader", "barnen") får högst tre
+ * tecken extra — "festival" ska INTE dra in hela Fest & uteliv.
+ */
+function categoryMatches(category: string | undefined, q: string): boolean {
+    if (!category || q.length < 3) return false;
+    const entry = CATEGORY_WORDS.find(c => c.key === category);
+    if (!entry) return false;
+    return entry.words.some(w => w.startsWith(q) || (q.startsWith(w) && q.length - w.length <= 3));
+}
+
+/** Ett ords (eller hela frasens) nivå i eventets fält, -1 = ingen träff. */
+function fieldTier(evt: SearchableEvent, q: string): number {
     const t = titleTier(evt.title.toLowerCase(), q);
     if (t >= 0) return t;
     if (evt.locationName?.toLowerCase().includes(q)) return SEARCH_TIER.LOCATION;
     if (evt.hostName?.toLowerCase().includes(q)) return SEARCH_TIER.HOST;
+    if (categoryMatches(evt.category, q)) return SEARCH_TIER.CATEGORY;
     if (evt.url?.toLowerCase().includes(q)) return SEARCH_TIER.URL;
     return -1;
+}
+
+/**
+ * Eventets nivå för söktexten, -1 om det inte matchar alls.
+ * `q` ska vara normaliserad (normalizeSearchQuery) och icke-tom.
+ *
+ * Hela frasen först, som förut. Matchar den inte måste VARJE ORD matcha
+ * något fält ("håkan pustervik", "quiz pub"), och raden får det sämsta
+ * ordets nivå. Förr (t.o.m. 15/9) krävdes hela strängen i ett och samma fält.
+ */
+export function eventSearchTier(evt: SearchableEvent, q: string): number {
+    const whole = fieldTier(evt, q);
+    if (whole >= 0) return whole;
+    const words = q.split(' ');
+    if (words.length < 2) return -1;
+    let worst = 0;
+    for (const w of words) {
+        const t = fieldTier(evt, w);
+        if (t < 0) return -1;
+        if (t > worst) worst = t;
+    }
+    return worst;
+}
+
+/** Småord som binder ortnamnet till resten ("jazz i göteborg"). */
+const CITY_GLUE = new Set(['i', 'på', 'vid', 'nära', 'runt', 'in']);
+
+function dropGlue(rest: string[], side: 'start' | 'end'): string {
+    const out = [...rest];
+    if (side === 'end') {
+        while (out.length > 0 && CITY_GLUE.has(out[out.length - 1])) out.pop();
+    } else {
+        while (out.length > 0 && CITY_GLUE.has(out[0])) out.shift();
+    }
+    return out.join(' ');
+}
+
+/**
+ * Ortnamn i söktexten (Josef 16/9, användarfeedback: "söka på stad och
+ * event, nu verkar man kunna söka på antingen eller"). Prövar 1–3 ord i
+ * SLUTET och i BÖRJAN (längst först) mot findCityPoint — exakt uppslag,
+ * aldrig en gissning, så "kar" blir aldrig Karlstad. Resten är eventsöket;
+ * bindeord närmast orten ("i", "på") tas bort.
+ *
+ * Bara när det finns mer än orten: en ren ortsökning ("göteborg") ger
+ * city = null och sköts av stadsraden som förut. Bestod resten bara av
+ * bindeord ("i göteborg") blir text tom — alla event runt orten.
+ * `q` ska vara normaliserad (normalizeSearchQuery).
+ */
+export function splitCityFromQuery(q: string): { city: CityPoint | null; text: string } {
+    const words = q.split(' ').filter(Boolean);
+    for (let n = Math.min(3, words.length - 1); n >= 1; n--) {
+        const tail = findCityPoint(words.slice(-n).join(' '));
+        if (tail) return { city: tail, text: dropGlue(words.slice(0, -n), 'end') };
+        const head = findCityPoint(words.slice(0, n).join(' '));
+        if (head) return { city: head, text: dropGlue(words.slice(n), 'start') };
+    }
+    return { city: null, text: q };
 }
 
 /**

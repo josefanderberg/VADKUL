@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planCategoryChips, categoryChipHref, activeCategorySlug, categoryPageMin } from './categoryChips';
+import { planCategoryChips, categoryChipHref, activeCategorySlug, categoryPageMin, planMapCategoryChips } from './categoryChips';
 
 const KEYS = ['music', 'family', 'sport', 'market', 'food'];
 
@@ -52,5 +52,31 @@ describe('activeCategorySlug', () => {
         expect(activeCategorySlug('/evenemang/borgholm', '', 'borgholm')).toBeNull();
         expect(activeCategorySlug('/evenemang/stockholm/barn', '', 'borgholm')).toBeNull();
         expect(activeCategorySlug('/', '?kategori=barn', 'borgholm')).toBeNull();
+    });
+});
+
+describe('planMapCategoryChips', () => {
+    const MAP_KEYS = ['music', 'stage', 'sport', 'food', 'other'];
+
+    it('flest först, nollor dolda, Övrigt sist', () => {
+        const counts = new Map([['music', 3], ['sport', 9], ['other', 20], ['food', 3]]);
+        expect(planMapCategoryChips(MAP_KEYS, counts, null)).toEqual([
+            { key: 'sport', count: 9 },
+            { key: 'music', count: 3 },
+            { key: 'food', count: 3 },
+            { key: 'other', count: 20 },
+        ]);
+    });
+
+    it('vald kategori följer med även på noll, så den går att släppa', () => {
+        const plan = planMapCategoryChips(MAP_KEYS, new Map([['music', 2]]), 'stage');
+        expect(plan).toEqual([
+            { key: 'music', count: 2 },
+            { key: 'stage', count: 0 },
+        ]);
+    });
+
+    it('tom vy utan val ger inga chips', () => {
+        expect(planMapCategoryChips(MAP_KEYS, new Map(), null)).toEqual([]);
     });
 });

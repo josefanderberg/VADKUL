@@ -62,3 +62,26 @@ export function activeCategorySlug(pathname: string, search: string, citySlug: s
     const q = new URLSearchParams(search).get('kategori');
     return q && q.trim() ? q.trim() : null;
 }
+
+export type MapCategoryChip = { key: string; count: number };
+
+/**
+ * KARTANS kategorichips i sökpanelen (Josef 16/9): kategorierna med event i
+ * kartans ruta, flest först (lika → `keys`-ordningen), Övrigt alltid sist.
+ * Den valda kategorin följer ALLTID med — även på noll — annars går ett
+ * filter som tömt vyn inte att släppa i raden.
+ */
+export function planMapCategoryChips(
+    keys: readonly string[],
+    counts: ReadonlyMap<string, number>,
+    selected: string | null,
+): MapCategoryChip[] {
+    const chips = keys
+        .map((key, order) => ({ key, count: counts.get(key) ?? 0, order }))
+        .filter(c => c.count > 0 || c.key === selected);
+    chips.sort((a, b) =>
+        (a.key === 'other' ? 1 : 0) - (b.key === 'other' ? 1 : 0)
+        || b.count - a.count
+        || a.order - b.order);
+    return chips.map(({ key, count }) => ({ key, count }));
+}
