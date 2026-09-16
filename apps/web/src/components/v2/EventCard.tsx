@@ -767,12 +767,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const DEEPLINK_HEIGHT_VH = 80;
     // VÄLJARLISTANS öppningshöjd (Josef 2/9: "multieventet blir inte alls lika
     // högt"). Listan saknar data-peek-boundary och föll ner på peek-höjden
-    // 22 vh. Det vanliga kortet öppnar på header + 60 px bildremsa ≈ 285 px
-    // (mobil; 291 px på md): pt-10 40 + knapprad 40 + titelrad 57 + tidsrad 36
-    // + Värd/Pris 52 + 60. Listan visar så många HELA rader som ryms inom
+    // 22 vh. Det vanliga kortet öppnar på header + 110 px bildremsa ≈ 335 px
+    // (mobil; 341 px på md): pt-10 40 + knapprad 40 + titelrad 57 + tidsrad 36
+    // + Värd/Pris 52 + 110 (bildremsan höjd 60 → 110 den 16/9). Listan visar så många HELA rader som ryms inom
     // budgeten (3 rader i dagsläget, dagrubrik + 2 rader i veckovyn — se
     // chooserDefaultTargetPx) — ingen halv rad i vikningen, samma korthöjd.
-    const CHOOSER_DEFAULT_MAX_PX = 300;
+    const CHOOSER_DEFAULT_MAX_PX = 350;
 
     // VÄLJARLÄGET (Josef 31/8): en multi-brickas grupp har skickats upp och
     // inget val är gjort än — kortets innehåll är väljarlistan i stället för
@@ -968,8 +968,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     // Default-höjd när ett kort öppnas: visa HELA headern (titel, tid, plats,
     // värd, pris) + en remsa av bilden — så man direkt ser värden OCH lite av
-    // bilden. Mäts mot Värd/Pris-radens botten (data-peek-boundary) + ~60px ner
+    // bilden. Mäts mot Värd/Pris-radens botten (data-peek-boundary) + ~110px ner
     // i innehållet (bilden ligger direkt under), eftersom header-höjden varierar.
+    // Remsan var 60 px t.o.m. 15/9 — Josef 16/9: "typ 70px högre upp, så man ser
+    // lite mer", justerat samma dag till "ta 335px istället" (= remsan 110 px,
+    // kortet ≈335 px totalt på mobil). Ändrar du den måste
+    // CHOOSER_DEFAULT_MAX_PX följa med: väljarlistan ska öppna lika högt som
+    // ett vanligt event.
     const measureDefaultHeight = (): number => {
         const sc = scrollContainerRef.current;
         if (!sc) return OPEN_HEIGHT_VH;
@@ -992,7 +997,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (!peek) return measureCollapsedHeight();
         const scRect = sc.getBoundingClientRect();
         const peekRect = peek.getBoundingClientRect();
-        const targetPx = (peekRect.bottom - scRect.top) + sc.scrollTop + 60;
+        const targetPx = (peekRect.bottom - scRect.top) + sc.scrollTop + 110;
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(PEEK_HEIGHT_VH, Math.min(80, Math.round(vh)));
     };
