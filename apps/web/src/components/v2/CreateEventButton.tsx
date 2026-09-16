@@ -85,21 +85,26 @@ export default function CreateEventButton({
     const label = creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska';
 
     return (
-        <div className={`fixed bottom-4 left-4 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} flex items-center gap-2 pointer-events-none`}>
-            <button
-                ref={plusBtnRef}
-                type="button"
-                onClick={handlePlusClick}
-                disabled={plusDropping}
-                aria-label={label}
-                className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-11 w-11 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${hint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
-            >
-                {creationMode === 'placing'
-                    ? <Check size={20} className="text-white shrink-0" />
-                    : <MapPinPlus size={20} className={`text-[#FECC02] shrink-0 transition-transform duration-200 ${hint ? 'scale-110' : 'group-hover:scale-110'}`} />}
-            </button>
-            {/* Josef 10/9: "Skapa event, tipsa eller önska" — alla tre vägarna in. */}
-            <HoverLabel show={hint && creationMode === 'idle'}>{label}</HoverLabel>
+        // Samma kolumn som toppraden (FloatingNavbar: px-4 + max-w-[1400px]
+        // mx-auto) så + står i lod under profilknappen även på bred skärm
+        // (Josef 16/9) — inte ute i skärmens hörn.
+        <div className={`fixed inset-x-0 bottom-9 px-4 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} pointer-events-none`}>
+            <div className="max-w-[1400px] mx-auto flex items-center gap-2">
+                <button
+                    ref={plusBtnRef}
+                    type="button"
+                    onClick={handlePlusClick}
+                    disabled={plusDropping}
+                    aria-label={label}
+                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-11 w-11 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${hint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
+                >
+                    {creationMode === 'placing'
+                        ? <Check size={20} className="text-white shrink-0" />
+                        : <MapPinPlus size={20} className={`text-[#FECC02] shrink-0 transition-transform duration-200 ${hint ? 'scale-110' : 'group-hover:scale-110'}`} />}
+                </button>
+                {/* Josef 10/9: "Skapa event, tipsa eller önska" — alla tre vägarna in. */}
+                <HoverLabel show={hint && creationMode === 'idle'}>{label}</HoverLabel>
+            </div>
         </div>
     );
 }

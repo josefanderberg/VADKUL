@@ -36,45 +36,50 @@ export default function PopularButton({ events, popularOnly, onToggle, available
     if (!available) return null;
 
     return (
-        <div className="fixed bottom-4 right-4 z-[1090] flex flex-row-reverse items-center gap-2 pointer-events-none">
-            <button
-                type="button"
-                onClick={onToggle}
-                aria-pressed={popularOnly}
-                aria-label={popularOnly ? `Visar bara populära (${popCount} i vyn) — tryck för alla event` : 'Visa bara populära event'}
-                style={popularOnly ? { background: sourceGradientCss('#E8590C') } : undefined}
-                // Hover = lite större + flamman växer, som skapa-knappen
-                // (Josef 10/9); hint håller samma läge framme under rundan.
-                className={`peer group pointer-events-auto relative h-11 w-11 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all duration-200 border active:scale-95 ${
-                    hint ? 'scale-105' : 'hover:scale-105'
-                } ${
-                    popularOnly
-                        ? 'border-transparent ring-2 ring-white'
-                        : 'bg-white/90 backdrop-blur-md border-white/50 hover:bg-white'
-                }`}
-            >
-                <span aria-hidden className={`inline-block transition-transform duration-200 ${hint ? 'scale-110' : 'group-hover:scale-110'}`}>🔥</span>
-                {popCount > 0 && (
-                    <span
-                        aria-hidden
-                        className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-[10px] font-black tabular-nums flex items-center justify-center border border-slate-200 dark:border-slate-600 shadow leading-none pointer-events-none"
-                    >
-                        {popCount > 99 ? '99+' : popCount}
-                    </span>
-                )}
-            </button>
-            <span
-                aria-hidden
-                className={`pointer-events-none transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold shadow-lg border border-white/50 ${
-                    popularOnly
-                        ? 'opacity-100 text-[#c2410c]'
-                        : hint
-                            ? 'opacity-100 text-slate-700'
-                            : 'opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 text-slate-700'
-                }`}
-            >
-                {popularOnly ? 'Visar bara populära' : 'Visa bara populära'}
-            </span>
+        // Samma kolumn som toppraden (FloatingNavbar: px-4 + max-w-[1400px]
+        // mx-auto) så 🔥 står i lod under sökknappen även på bred skärm
+        // (Josef 16/9) — inte ute i skärmens hörn.
+        <div className="fixed inset-x-0 bottom-9 px-4 z-[1090] pointer-events-none">
+            <div className="max-w-[1400px] mx-auto flex flex-row-reverse items-center gap-2">
+                <button
+                    type="button"
+                    onClick={onToggle}
+                    aria-pressed={popularOnly}
+                    aria-label={popularOnly ? `Visar bara populära (${popCount} i vyn) — tryck för alla event` : 'Visa bara populära event'}
+                    style={popularOnly ? { background: sourceGradientCss('#E8590C') } : undefined}
+                    // Hover = lite större + flamman växer, som skapa-knappen
+                    // (Josef 10/9); hint håller samma läge framme under rundan.
+                    className={`peer group pointer-events-auto relative h-11 w-11 rounded-full shadow-lg flex items-center justify-center text-lg leading-none transition-all duration-200 border active:scale-95 ${
+                        hint ? 'scale-105' : 'hover:scale-105'
+                    } ${
+                        popularOnly
+                            ? 'border-transparent ring-2 ring-white'
+                            : 'bg-white/90 backdrop-blur-md border-white/50 hover:bg-white'
+                    }`}
+                >
+                    <span aria-hidden className={`inline-block transition-transform duration-200 ${hint ? 'scale-110' : 'group-hover:scale-110'}`}>🔥</span>
+                    {popCount > 0 && (
+                        <span
+                            aria-hidden
+                            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-[10px] font-black tabular-nums flex items-center justify-center border border-slate-200 dark:border-slate-600 shadow leading-none pointer-events-none"
+                        >
+                            {popCount > 99 ? '99+' : popCount}
+                        </span>
+                    )}
+                </button>
+                <span
+                    aria-hidden
+                    className={`pointer-events-none transition-opacity duration-150 whitespace-nowrap rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 text-xs font-bold shadow-lg border border-white/50 ${
+                        popularOnly
+                            ? 'opacity-100 text-[#c2410c]'
+                            : hint
+                                ? 'opacity-100 text-slate-700'
+                                : 'opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 text-slate-700'
+                    }`}
+                >
+                    {popularOnly ? 'Visar bara populära' : 'Visa bara populära'}
+                </span>
+            </div>
         </div>
     );
 }

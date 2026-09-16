@@ -3601,7 +3601,7 @@ export default function HomePage() {
             {/* 1b1b. DAG/VECKA-VÄLJAREN — flyttad till BOTTEN av skärmen
                 (Josef 31/8; ersätter både toppläget och 26/8-dragflytten —
                 den är inte längre flyttbar, den BOR här). Ligger strax
-                ovanför eventkortets verktygsrad (bottom-16 klarar radens
+                ovanför botten-dockan (bottom-[92px] sedan 16/9; klarar radens
                 38px + marginal) och GÖMS BAKOM kortet när det är uppfällt
                 (z 1090 < kortets 1250) — då är det kortet man läser.
                 TVÅ RADER (Josef 9/8): "Idag" och "Hela veckan" står alltid
@@ -3620,7 +3620,7 @@ export default function HomePage() {
                 key på HOPP-nyckeln → tonar in på nytt vid stadshopp, precis
                 som stadsnamnet. */}
 {!chromeHidden && liveCityName && (
-    <div className="fixed inset-x-0 bottom-[72px] z-[1090] flex justify-center px-2 pointer-events-none">
+    <div className="fixed inset-x-0 bottom-[92px] z-[1090] flex justify-center px-2 pointer-events-none">
         <div
             key={cityTourTarget?.key ?? 0}
             className="flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 pointer-events-none"
@@ -4389,11 +4389,11 @@ export default function HomePage() {
 
             {/* Tomt här: dagväljarens siffra för valt läge är noll — samma mått
                 som väljaren (se nearbyIsEmpty). Sitter strax OVANFÖR dag/vecka-
-                väljaren i botten (bottom-52 klarar väljarens ~130px från
-                bottom-16) så de inte täcker varandra — rutan pekar ju på
+                väljaren i botten (bottom-[228px] klarar väljarens ~130px från
+                bottom-[92px]) så de inte täcker varandra — rutan pekar ju på
                 växeln man i så fall ska trycka på. */}
             {nearbyIsEmpty && (
-                <div className="fixed inset-x-0 bottom-52 z-[1150] flex justify-center px-4 pointer-events-none">
+                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
                         <span className="text-2xl" aria-hidden>{popularOnly ? '🔥' : mapCategory ? EVENT_CATEGORIES[mapCategory].emoji : canOfferWeek ? '📅' : '🤷'}</span>
                         <div className="min-w-0">
@@ -4498,7 +4498,7 @@ export default function HomePage() {
                 noll). Knapparna ligger på egen rad: två pillar + texten fick
                 inte plats på en rad i mobilbredd. */}
             {nearbyAllPast && (
-                <div className="fixed inset-x-0 bottom-52 z-[1150] flex justify-center px-4 pointer-events-none">
+                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
                         <div className="flex items-center gap-3">
                             <span className="text-2xl" aria-hidden>⏳</span>
@@ -4540,7 +4540,7 @@ export default function HomePage() {
                 aldrig visas samtidigt). Ren hälsning, ingen åtgärdsprompt: ✕
                 tystar den för resten av besöket. */}
             {showNewSince && (
-                <div className="fixed inset-x-0 bottom-52 z-[1150] flex justify-center px-4 pointer-events-none">
+                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
                         <span className="text-2xl" aria-hidden>🎉</span>
                         <div className="min-w-0">
