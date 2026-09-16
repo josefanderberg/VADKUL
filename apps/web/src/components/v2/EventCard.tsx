@@ -1914,7 +1914,19 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // Började tappen på en knapp/länk är knappens onClick tappens hela
             // betydelse — höjdtoggeln ska inte också slå till.
             if (cardView === 'info' && !dragFromInteractiveRef.current) {
-                updateHeightVh(heightVhRef.current > 50 ? measureDefaultHeight() : measureOpenHeight());
+                // Gränsen är kortets EGEN default-höjd, inte en fast 50 vh
+                // (Josef 16/9: "när kortet täcker halva skärmen går den inte
+                // ner"): tapp-höjden ligger själv runt halva skärmen, så med
+                // 50 vh skickade ett tap där kortet till den höjd det redan
+                // stod på — ingenting hände. Nu fäller ett tap ihop kortet
+                // från ALLA lägen ovanför default, och fäller ut det från
+                // default. Mäts färskt: default varierar med header/bild.
+                const defaultVh = measureDefaultHeight();
+                updateHeightVh(
+                    heightVhRef.current > defaultVh + SNAP_TOLERANCE_VH
+                        ? defaultVh
+                        : measureOpenHeight(),
+                );
             }
         }
 
