@@ -6,6 +6,7 @@ import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { hostLabelFor } from '../../utils/hostLabel';
+import HScrollRow from './HScrollRow';
 import { boostedUntilLabel } from '../../utils/boostLabel';
 import { seriesLabel } from '../../utils/weeklySeries';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
@@ -567,9 +568,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 {/* VADKUL-värdade event länkar inte ut någonstans — platsen är
                     enda sättet att hitta dit och får därför ALDRIG trunkeras:
                     den får en egen rad (nedan) som radbryts fritt. Skrapade
-                    event och tips behåller platsen inline (trunkerad) — där
-                    finns alltid ANMÄL-länken med fullständig info. */}
-                <div className={`flex items-center gap-x-4 text-xs font-bold text-slate-600 dark:text-zinc-300 overflow-hidden ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
+                    event och tips har platsen inline — RADEN RULLAR I SIDLED
+                    (Josef 16/9: "då ser du inte alltid plats ifall det är
+                    väldigt mycket text … precis som i sökfältet, så att du kan
+                    slida och se all text"). Inget trunkeras längre: texten
+                    glider under kortets kant (-mx/px = ända ut till kanten)
+                    och hela raden går att dra fram, med finger eller mus. */}
+                <HScrollRow className={`-mx-4 md:-mx-6 px-4 md:px-6 gap-x-4 text-xs font-bold text-slate-600 dark:text-zinc-300 ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
                     <div className="flex items-center gap-2 shrink-0">
                         <Clock size={14} className="text-primary" />
                         <span className="whitespace-nowrap">{formatEventDateSpan(linkEvent.time, linkEvent.endDate, linkEvent.hasSpecificTime !== false)}</span>
@@ -582,14 +587,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             <span className="whitespace-nowrap">{formatDistanceKm(distance)}</span>
                         </div>
                     )}
-                    {vadkulHosted ? (
-                        <div className="flex-1 min-w-0" />
-                    ) : (
-                        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                    {!vadkulHosted && (
+                        <div className="flex items-center gap-2 shrink-0">
                             <MapPin size={14} className="text-primary shrink-0" />
-                            <span className="text-sm truncate">{linkEvent.locationName}</span>
+                            <span className="text-sm whitespace-nowrap">{linkEvent.locationName}</span>
                             {secondaryAddress && (
-                                <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 shrink-0">
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 whitespace-nowrap">
                                     · {secondaryAddress}
                                 </span>
                             )}
@@ -601,7 +604,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         platsraden på mobil — tid, avstånd och plats fick inte
                         plats. Den bor nu bredvid NÄSTA-knappen ovanför kortet,
                         se navraden i EventCard.) */}
-                </div>
+                </HScrollRow>
 
                 {vadkulHosted && (
                     <div className="flex items-start gap-2 mb-4 text-xs font-bold text-slate-600 dark:text-zinc-300">
@@ -636,7 +639,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     <span className="font-bold text-[8px]">{hostLabel.charAt(0).toUpperCase()}</span>
                                 )}
                             </div>
-                            <span className="text-xs font-black text-black dark:text-white truncate">{hostLabel}</span>
+                            {/* Långa värdnamn rullar i sidled i stället för
+                                att kapas — samma rad-mekanik som tid/plats. */}
+                            <HScrollRow className="min-w-0 flex-1">
+                                <span className="text-xs font-black text-black dark:text-white whitespace-nowrap">{hostLabel}</span>
+                            </HScrollRow>
                         </div>
                     </div>
 

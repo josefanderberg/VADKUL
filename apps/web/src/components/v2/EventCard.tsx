@@ -1100,10 +1100,23 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // webbläsaren från att scrolla — pointermove driver kortet, samma
         // mekanism som dra-ner-vid-toppen nedan. Väljarlistan scrollar alltid.
         let dragsSheet = false;
+        // Gesten började i en sidledsrullande rad (HScrollRow, 16/9) som
+        // faktiskt rullar över. Då avgörs vid första rörelsen: vågrätt →
+        // webbläsaren panorerar raden (ingen preventDefault, touch-action
+        // pan-x), lodrätt → kortet dras som vanligt.
+        let inHScroll = false;
+        let hscrollDecided = false;
+        let hscrollOwns = false;
+        let touchStartX = 0;
         const onTouchStart = (e: TouchEvent) => {
             // maxVhRef, inte MAX_HEIGHT_VH: effekten binds en gång per valt
             // event, taket följer viewporten (rotation/storlek).
             dragsSheet = !chooserActiveRef.current && heightVhRef.current < maxVhRef.current - 5;
+            const row = (e.target as HTMLElement).closest('[data-hscroll]') as HTMLElement | null;
+            inHScroll = !!row && row.scrollWidth > row.clientWidth + 1;
+            hscrollDecided = false;
+            hscrollOwns = false;
+            touchStartX = e.touches[0].clientX;
             // BARA textfälten lämnas åt webbläsaren (markera text, flytta
             // markören) — knappar/länkar är DRAGYTA, samma filosofi som
             // onPointerDown (Josef 31/8). 'button' låg tidigare i exkluderingen
@@ -1121,6 +1134,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             pullingRef.current = false;
         };
         const onTouchMove = (e: TouchEvent) => {
+            if (inHScroll) {
+                if (!hscrollDecided) {
+                    const dx = Math.abs(e.touches[0].clientX - touchStartX);
+                    const dy = Math.abs(e.touches[0].clientY - touchStartY);
+                    if (dx <= 4 && dy <= 4) return; // oavgjort ännu — rör inte gesten
+                    hscrollDecided = true;
+                    hscrollOwns = dx > dy;
+                }
+                if (hscrollOwns) return; // radens egen rullning, låt webbläsaren ha den
+            }
             if (dragsSheet) { if (e.cancelable) e.preventDefault(); return; }
             if (!startedAtTop) return;
             const dy = e.touches[0].clientY - touchStartY;
@@ -1710,6 +1733,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     };
 
     const THRESHOLD = 100; // Pixels to trigger a swipe action
+    // SIDSVEPET ÄR AV (ägarbeslut 16/9: "ta bort/avaktivera den swipe-
+    // effekten, alltså swipe höger-vänster — vi tar bort det så länge, så
+    // allt bara hålls still"). Tid/plats-raden och värdnamnet rullar numera i
+    // sidled inne i kortet (HScrollRow), och ett Tinder-svep som kastar hela
+    // kortet åt sidan slogs med den gesten. Ett vågrätt drag är nu en död
+    // gest: kortet står still och tappen räknas inte som klick. Logiken
+    // (handleSwipeOut: höger = spara, vänster = nästa) står kvar bakom
+    // flaggan tills beslutet omprövas.
+    const SIDE_SWIPE_ENABLED: boolean = false;
 
     // Sätts när en press blir en riktig drag (>5px). Används för att INTE
     // navigera när man dragit i Föregående/Nästa-knappen i stället för klickat.
@@ -1765,6 +1797,19 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // när jag klickar på bilden, så den öppnar aldrig"). Drag från
         // bilden fungerar som från knappar: händelserna bubblar hit ändå.
         const interactive = target.closest('button, a, summary, [data-cover-zone]') as HTMLElement | null;
+
+        // SIDLEDSRULLANDE RADER (HScrollRow, 16/9): tid/plats-raden och
+        // värdnamnet rullar i sidled inne i kortet. Med MUS drar raden sig
+        // själv (pointer-capture på raden) — tog kortet gesten här hade
+        // radens pointermove aldrig nått fram. Bara rader som faktiskt
+        // rullar över släpps; en kort rad är vanlig kortyta. Touch går
+        // som vanligt hit (webbläsaren panorerar raden via touch-action
+        // pan-x, och touch-lyssnaren låter bli preventDefault för ett
+        // vågrätt svep i raden — se onTouchMove).
+        if (e.pointerType === 'mouse') {
+            const row = target.closest('[data-hscroll]') as HTMLElement | null;
+            if (row && row.scrollWidth > row.clientWidth + 1) return;
+        }
 
         // Firefox avfyrar pointerdown även för klick PÅ EN SCROLLBAR (Chrome
         // undertrycker dem). Utan vakten blev ett drag i den inre scrollistens
@@ -1838,7 +1883,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // live: fingret äger höjden direkt, ingen React-render per pixel.
             // Ingen gain här — vid drag SKA kortet följa fingret 1:1.
             updateHeightVh(newHeight, true);
-        } else if (dragDirection.current === 'horizontal') {
+        } else if (dragDirection.current === 'horizontal' && SIDE_SWIPE_ENABLED) {
             updateDragX(startDragX.current + deltaX);
         }
     };
@@ -1890,7 +1935,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             }
         } else if (dragDirection.current === 'horizontal') {
             const currentDragX = dragXRef.current;
-            if (currentDragX > THRESHOLD) {
+            if (!SIDE_SWIPE_ENABLED) {
+                // Död gest (se flaggan): kortet har inte rört sig — inget att
+                // snäppa tillbaka, och inget spara/nästa.
+            } else if (currentDragX > THRESHOLD) {
                 handleSwipeOut('right');
             } else if (currentDragX < -THRESHOLD) {
                 handleSwipeOut('left');
@@ -1912,7 +1960,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // i läsningen.
             // Började tappen på en knapp/länk är knappens onClick tappens hela
             // betydelse — höjdtoggeln ska inte också slå till.
-            if (cardView === 'info' && !dragFromInteractiveRef.current) {
+            // pointercancel (webbläsaren tog gesten — t.ex. sidledsrullningen
+            // i tid/plats-raden, 16/9) är aldrig ett tap.
+            if (cardView === 'info' && !dragFromInteractiveRef.current && e.type !== 'pointercancel') {
                 // Gränsen är kortets EGEN default-höjd, inte en fast 50 vh
                 // (Josef 16/9: "när kortet täcker halva skärmen går den inte
                 // ner"): tapp-höjden ligger själv runt halva skärmen, så med

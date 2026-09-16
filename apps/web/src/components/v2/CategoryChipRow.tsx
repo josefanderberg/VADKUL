@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import HScrollRow from '@/components/ui/HScrollRow';
 import { EVENT_CATEGORIES, SPECIAL_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 import { planMapCategoryChips, visibleSourceKeys } from '@/utils/categoryChips';
 import { SOURCE_DEFS } from '@/utils/sources';
@@ -19,9 +20,6 @@ export const SOURCE_EMOJI: Record<string, string> = {
 const CHIP = 'shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors';
 const CHIP_ON = 'bg-white text-slate-900';
 const CHIP_IDLE = 'bg-white/10 text-white/85 hover:bg-white/20';
-
-/** Så här långt (px) måste musen flyttas innan det räknas som drag, inte klick. */
-const DRAG_SLOP_PX = 4;
 
 interface CategoryChipRowProps {
     /** Event per kategori i kartans ruta, räknade med alla filter utom själva
@@ -53,6 +51,7 @@ interface CategoryChipRowProps {
  * MUS (Josef 16/9: "om man är på en dator utan touchpad"): raden går att
  * DRA i sidled, och scrollhjulet rullar den i sidled. Ett drag räknas inte
  * som klick på chippet där det började. Touch sköts av webbläsaren (pan-x).
+ * Själva rullningen bor i HScrollRow (delad med eventkortets rader).
  */
 export default function CategoryChipRow({
     counts, selected, onSelect, sourceCounts, selectedSource, onSelectSource,
@@ -70,8 +69,6 @@ export default function CategoryChipRow({
     );
 
     const scrollRef = useRef<HTMLDivElement>(null);
-    const dragRef = useRef<{ x: number; left: number; moved: boolean } | null>(null);
-    const suppressClickRef = useRef(false);
 
     // Fäller man ut Fler hamnar källorna längst till höger — rulla fram dem.
     useEffect(() => {
@@ -79,59 +76,13 @@ export default function CategoryChipRow({
         if (moreOpen && el) el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
     }, [moreOpen]);
 
-    const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (e.pointerType !== 'mouse' || e.button !== 0 || !scrollRef.current) return;
-        dragRef.current = { x: e.clientX, left: scrollRef.current.scrollLeft, moved: false };
-    };
-    const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        const drag = dragRef.current;
-        const el = scrollRef.current;
-        if (!drag || !el) return;
-        // Knappen släppt utanför raden utan att pointerup nådde hit — avsluta.
-        if (e.buttons === 0) { dragRef.current = null; return; }
-        const dx = e.clientX - drag.x;
-        if (!drag.moved && Math.abs(dx) > DRAG_SLOP_PX) {
-            drag.moved = true;
-            // Fångsten håller draget vid liv när musen lämnar raden. Går den
-            // inte att ta fortsätter draget ändå.
-            try { el.setPointerCapture(e.pointerId); } catch { /* ingen fångst */ }
-        }
-        if (drag.moved) el.scrollLeft = drag.left - dx;
-    };
-    const endDrag = () => {
-        if (dragRef.current?.moved) suppressClickRef.current = true;
-        dragRef.current = null;
-    };
-    // Klicket som avslutar ett drag ska inte välja chippet det började på.
-    const onClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!suppressClickRef.current) return;
-        suppressClickRef.current = false;
-        e.preventDefault();
-        e.stopPropagation();
-    };
-    // Vanligt scrollhjul (bara lodrätt) rullar raden i sidled.
-    const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-        const el = scrollRef.current;
-        if (!el || el.scrollWidth <= el.clientWidth) return;
-        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY;
-    };
-
     return (
         <div className="px-4 pt-2.5 pb-3">
             <span className="block mb-2 text-[10px] font-black uppercase tracking-widest text-white/45">
                 Visa bara
             </span>
             {/* -mx-4/px-4: raden rullar ända ut till panelens kanter. */}
-            <div
-                ref={scrollRef}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={endDrag}
-                onPointerCancel={endDrag}
-                onClickCapture={onClickCapture}
-                onWheel={onWheel}
-                className="-mx-4 px-4 flex items-center gap-2 overflow-x-auto no-scrollbar [touch-action:pan-x] select-none cursor-grab active:cursor-grabbing"
-            >
+            <HScrollRow ref={scrollRef} wheel className="-mx-4 px-4 gap-2">
                 {chips.length === 0 && (
                     <span className="shrink-0 text-xs text-white/55">Inga kategorier i vyn</span>
                 )}
@@ -180,7 +131,7 @@ export default function CategoryChipRow({
                         </button>
                     );
                 })}
-            </div>
+            </HScrollRow>
         </div>
     );
 }
