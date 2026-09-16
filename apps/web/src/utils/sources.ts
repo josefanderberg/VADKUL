@@ -11,12 +11,13 @@
 // resten). Utan rad här klassas de inte som källa → de faller in i sin vanliga
 // LLM-kategori och syns alltid, precis som övriga event.
 //
-// KORPEN står kvar här UTAN motsvarande knapp i SPECIAL_CATEGORIES (8/8,
+// KORPEN står kvar här UTAN motsvarande kryssruta i SPECIAL_CATEGORIES (8/8,
 // ägarbeslut: utbudet är i praktiken Stockholmsbundet). Poängen med att behålla
-// raden: matchesFilter göms allt som klassas som en källa tills källan kryssas
-// i — finns ingen knapp kryssas den aldrig i, och de ~2 600 Korpen-eventen
-// förblir dolda. Tas raden bort i stället slutar de klassas som källa och
-// hamnar direkt i "visa alla".
+// raden: matchesFilter göms allt som klassas som en källa tills källan väljs,
+// så de ~2 600 Korpen-eventen ingår aldrig i "visa alla". Sedan 16/9 går de
+// att nå via FLER i kartans sökpanel ("visa bara Korpen", CategoryChipRow) —
+// precis som via stadssidornas Fler-chip. Tas raden bort slutar de klassas
+// som källa och hamnar direkt i "visa alla".
 
 export interface SourceDef {
     key: string;

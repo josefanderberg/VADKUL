@@ -8,7 +8,7 @@ import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type Boos
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CreateEventButton from '@/components/v2/CreateEventButton';
 import PopularButton from '@/components/v2/PopularButton';
-import CategoryChipRow from '@/components/v2/CategoryChipRow';
+import CategoryChipRow, { SOURCE_EMOJI } from '@/components/v2/CategoryChipRow';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import HoverLabel from '@/components/v2/HoverLabel';
 import AuthModal from '@/components/v2/AuthModal';
@@ -23,7 +23,7 @@ import { storageService } from '@/services/storageService';
 import { recordEventView } from '@/services/eventStatsService';
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
-import { classifySource } from '@/utils/sources';
+import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
@@ -420,6 +420,11 @@ export default function HomePage() {
     // bricka under dagplattan när det är på. Sparade vanliga kategorier var
     // precis det som gav osynliga filter (15/9).
     const [mapCategory, setMapCategory] = useState<EventCategoryType | null>(null);
+    // FLER-KÄLLAN (16/9): "visa bara" Svenska kyrkan / PRO / Korpen — Fler-
+    // chippet längst till höger i kategoriraden, som på stadssidorna.
+    // Utesluter kategorin (en sak åt gången) och 🔥 (källorna är aldrig
+    // populära). Korpen saknade väg in på kartan sedan 8/8 — nu via Fler.
+    const [mapSource, setMapSource] = useState<string | null>(null);
     // Bumpas när sökrutan ska fällas ihop utifrån (man valde en stad ur
     // träfflistan) — se closeSearchNonce i FloatingNavbar.
     const [closeSearchNonce, setCloseSearchNonce] = useState(0);
@@ -1967,7 +1972,7 @@ export default function HomePage() {
     // smalnar allt annat till EN kategori — även ikryssade opt-in-källor.
     // matchesFilterFor tar kategorin som argument, så kategoriradens siffror
     // räknar "vad visas om jag trycker här" med exakt samma regler.
-    const matchesFilterFor = useCallback((evt: LinkEvent, category: EventCategoryType | null) => {
+    const matchesFilterFor = useCallback((evt: LinkEvent, category: EventCategoryType | null, source: string | null = null) => {
         // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
         // hela filtret, även ett aktivt kategorival.
         if (evt.userCreated) return true;
@@ -1975,9 +1980,12 @@ export default function HomePage() {
         // även en ikryssad opt-in-källa filtreras (deras event är aldrig pop,
         // pipelinen vetar dem). Bypass-mängden bor i utils/popularFilter.
         if (!passesPopularFilter(evt, popularOnly)) return false;
+        const src = classifySource(evt.url || evt.id);
+        // Fler-källan (16/9): BARA den källans event — och de visas även om
+        // källan inte är ikryssad i profilen; valet är ju just att se den.
+        if (source) return src === source;
         const cat = categoryKeyOf(evt);
         if (category && cat !== category) return false;
-        const src = classifySource(evt.url || evt.id);
         // Special-källa: syns bara om den är ikryssad (ingår inte i "visa alla").
         if (src) return selectedCategories.has(src);
         // Familj & barn: bara exakt kategori 'family' berörs — breda event som
@@ -1987,8 +1995,8 @@ export default function HomePage() {
         return true;
     }, [selectedCategories, familyOptIn, popularOnly]);
     const matchesFilter = useCallback(
-        (evt: LinkEvent) => matchesFilterFor(evt, mapCategory),
-        [matchesFilterFor, mapCategory],
+        (evt: LinkEvent) => matchesFilterFor(evt, mapCategory, mapSource),
+        [matchesFilterFor, mapCategory, mapSource],
     );
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
@@ -2458,10 +2466,13 @@ export default function HomePage() {
     const canOfferWeek = weekUnlocked && dayRangeDays < WEEK_RANGE_MIN_DAYS && (areaCounts?.week ?? 0) > 0;
     // Tomlägets filterfall: 🔥 och/eller kategorin har smalnat bort allt —
     // svaret är då "släpp filtret", inte "zooma ut".
-    const filterActive = popularOnly || mapCategory !== null;
+    const filterActive = popularOnly || mapCategory !== null || mapSource !== null;
+    const sourceLabel = mapSource ? (SOURCE_DEFS.find(s => s.key === mapSource)?.label ?? mapSource) : null;
     const filterPhrase = popularOnly
         ? `Inga populära event${mapCategory ? ` inom ${categoryLabel(mapCategory)}` : ''}`
-        : `Inget inom ${mapCategory ? categoryLabel(mapCategory) : ''}`;
+        : sourceLabel
+            ? `Inget från ${sourceLabel}`
+            : `Inget inom ${mapCategory ? categoryLabel(mapCategory) : ''}`;
 
     /**
      * Stadsnamnet i rutan FÖLJER KARTAN (Josef 10/8): närmsta ort ur den stora
@@ -2500,6 +2511,17 @@ export default function HomePage() {
         }
         return counts;
     }, [viewEvents, matchesFilterFor]);
+    // Fler-källornas siffror: källans event i vyn, UTAN 🔥-smalningen — ett
+    // källval släcker 🔥, och källorna är aldrig populära.
+    const sourceChipCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const evt of searchFilteredEvents) {
+            if (!inMapView(evt)) continue;
+            const src = classifySource(evt.url || evt.id);
+            if (src) counts.set(src, (counts.get(src) ?? 0) + 1);
+        }
+        return counts;
+    }, [searchFilteredEvents, inMapView]);
 
     // Finns 🔥-klassade event alls i lagret? Gamla cachade aggregat (deploy-
     // snapshoten, 5-min-API-cachen) saknar fältet helt — då döljs cirkeln i
@@ -2524,19 +2546,40 @@ export default function HomePage() {
         // kastas tillbaka till dagen — samma tystnadsregel som stadsrutans
         // eget periodval (pulseSuppressed river puls-timrarna, fasen fryser).
         setPulseSuppressed(true);
-        startTransition(() => setPopularOnly(v => !v));
-    }, []);
+        const turningOn = !popularOnly;
+        startTransition(() => {
+            setPopularOnly(turningOn);
+            // Fler-källorna är aldrig populära — 🔥 på släpper källvalet.
+            if (turningOn) setMapSource(null);
+        });
+    }, [popularOnly]);
 
     // Kategoriradens val (16/9) — ett AKTIVT val precis som 🔥-klicket, så
     // landningspulsen fryser i stället för att kasta tillbaka vyn.
     const handleSelectMapCategory = useCallback((category: EventCategoryType | null) => {
         setPulseSuppressed(true);
-        startTransition(() => setMapCategory(category));
+        startTransition(() => {
+            setMapCategory(category);
+            // En sak åt gången: en kategori släpper Fler-källan.
+            if (category) setMapSource(null);
+        });
     }, []);
-    // Tomlägets "Visa alla": släpper både kategorin och 🔥.
+    // Fler-källan (16/9): utesluter kategorin och 🔥, som på stadssidorna.
+    const handleSelectMapSource = useCallback((source: string | null) => {
+        setPulseSuppressed(true);
+        startTransition(() => {
+            setMapSource(source);
+            if (source) {
+                setMapCategory(null);
+                setPopularOnly(false);
+            }
+        });
+    }, []);
+    // Tomlägets "Visa alla": släpper kategorin, Fler-källan och 🔥.
     const handleClearFilters = useCallback(() => {
         startTransition(() => {
             setMapCategory(null);
+            setMapSource(null);
             setPopularOnly(false);
         });
     }, []);
@@ -3135,6 +3178,7 @@ export default function HomePage() {
         // kategori i ?kategori= tolkas likadant. Det syns alltid som bricka.
         const kat = params.get('kat') ?? katParts.find(k => k in EVENT_CATEGORIES && !valid.includes(k)) ?? null;
         if (kat && kat in EVENT_CATEGORIES) setMapCategory(kat as EventCategoryType);
+        else if (kat && SOURCE_DEFS.some(s => s.key === kat)) setMapSource(kat);
         // 🔥-läget i en delad länk — samma mönster som ?kategori=.
         if (params.get('pop') === '1') setPopularOnly(true);
         const dag = parseInt(params.get('dag') ?? '', 10);
@@ -3209,10 +3253,11 @@ export default function HomePage() {
             params.set('kategori', [...selectedCategories].join(','));
         }
         if (popularOnly) params.set('pop', '1');
-        if (mapCategory) params.set('kat', mapCategory);
+        const kat = mapCategory ?? mapSource;
+        if (kat) params.set('kat', kat);
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user, popularOnly, mapCategory]);
+    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user, popularOnly, mapCategory, mapSource]);
 
     // ── Sparade kategorifilter (inloggade) ──────────────────────────────────
     // Aktiverar man t.ex. Svenska kyrkan eller PRO ska valet överleva nästa
@@ -3535,18 +3580,18 @@ export default function HomePage() {
             15/9: "skriva gå till stadssida typ") — samma pill som skapa- och
             🔥-stegen, och på desktop även vid hover (peer på länken). */}
         <HoverLabel show={tourHint === 'city'}>Gå till stadssidan</HoverLabel>
-        {/* KATEGORIFILTRET PÅ (16/9): alltid synligt under plattan — ett
-            filter får aldrig vara osynligt när sökpanelen är stängd.
-            Tryck = släpp filtret. */}
-        {mapCategory && (
+        {/* FILTRET PÅ (16/9) — kategori eller Fler-källa: alltid synligt
+            under plattan, ett filter får aldrig vara osynligt när sökpanelen
+            är stängd. Tryck = släpp filtret. */}
+        {(mapCategory || mapSource) && (
             <button
                 type="button"
-                onClick={() => handleSelectMapCategory(null)}
-                aria-label={`Visar bara ${categoryLabel(mapCategory)} — tryck för alla kategorier`}
+                onClick={() => (mapCategory ? handleSelectMapCategory(null) : handleSelectMapSource(null))}
+                aria-label={`Visar bara ${mapCategory ? categoryLabel(mapCategory) : sourceLabel} — tryck för att visa allt`}
                 className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-slate-800 shadow-lg border border-white/50 hover:bg-white active:scale-95 transition animate-in fade-in duration-200"
             >
-                <span aria-hidden>{EVENT_CATEGORIES[mapCategory].emoji}</span>
-                {categoryLabel(mapCategory)}
+                <span aria-hidden>{mapCategory ? EVENT_CATEGORIES[mapCategory].emoji : (SOURCE_EMOJI[mapSource ?? ''] ?? '•')}</span>
+                {mapCategory ? categoryLabel(mapCategory) : sourceLabel}
                 <X size={13} strokeWidth={3} className="text-slate-400" aria-hidden />
             </button>
         )}
@@ -3828,6 +3873,9 @@ export default function HomePage() {
                         counts={categoryChipCounts}
                         selected={mapCategory}
                         onSelect={handleSelectMapCategory}
+                        sourceCounts={sourceChipCounts}
+                        selectedSource={mapSource}
+                        onSelectSource={handleSelectMapSource}
                     />
                 }
                 cityName={searchCity?.name}
