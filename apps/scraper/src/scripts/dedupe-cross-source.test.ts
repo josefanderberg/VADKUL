@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows } from './dedupe-cross-source';
+import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows, stableIdKey, renameGhosts } from './dedupe-cross-source';
 
 const base = {
     url: 'https://example.se/e/1',
@@ -233,5 +233,73 @@ describe('titelvarianter', () => {
         const live = { ...at, url: 'u1', title: 'Lucinda Williams' };
         const off = { ...at, url: 'u2', title: 'Lucinda Williams - inställd' };
         expect(titleVariantLinks([live, off])).toHaveLength(0);
+    });
+});
+
+// Titelbyte på källan = ny slug under samma id (16/9: Blenda nätverksträff på
+// Billetto stod två gånger på kartan, gamla adressen omdirigeras till nya).
+describe('omdöpta event (stableIdKey + renameGhosts)', () => {
+    const at = { ...base, time: '2026-09-16T15:30:00.000Z', locationName: 'Mather Studio', lat: 59.3167, lng: 18.0726, hostName: 'Billetto' };
+    const old = { ...at, url: 'https://billetto.se/e/blenda-natverkstraff-krypto-utan-krangel-biljetter-1981447', title: 'Blenda nätverksträff - Krypto utan krångel', firestoreId: 'old', createdAt: '2026-08-20T09:11:14.818Z' };
+    const cur = { ...at, url: 'https://billetto.se/e/blenda-natverkstraff-mojligheter-risker-biljetter-1981447', title: 'Blenda nätverksträff - Möjligheter & risker', firestoreId: 'cur', createdAt: '2026-09-01T07:26:16.529Z' };
+
+    it('samma käll-id + starttid ger samma nyckel trots olika slug', () => {
+        expect(stableIdKey(old)).toBe(stableIdKey(cur));
+        expect(stableIdKey(old)).toBe('billetto:1981447|2026-09-16T15:30:00.000Z');
+        expect(stableIdKey({ ...old, url: 'https://billetto.se/en/e/blenda-biljetter-1981447' })).toBe(stableIdKey(old));
+    });
+
+    it('verifierade mönster för Tickster, sv.se, ABF och SiteVision', () => {
+        const pairs = [
+            ['https://www.tickster.com/se/sv/events/yezkrhpx24977pf/2026-09-23/storseans-med-martin-ohlson-tierp',
+             'https://www.tickster.com/se/sv/events/yezkrhpx24977pf/2026-09-23/storseans-tierp-med-martin-ohlson-medium'],
+            ['https://www.sv.se/kurser-och-evenemang/ovrigt/oringens-aterkomst-109408',
+             'https://www.sv.se/kurser-och-evenemang/distans/oringens-aterkomst-onlineforelasning-109408'],
+            ['https://www.abf.se/vast/kurs/utstallning-vi-som-arbetar-med-vara-kroppar-3945996/',
+             'https://www.abf.se/vast/kurs/utstallning-vi-som-arbetar-med-vara-kroppar-vernissage-3945996/'],
+            ['https://www.varmdo.se/upplevaochgora/evenemang/evenemangsarkiv/hostkonsertluxacappella.5.15eced8c1a0423602c2d25.html',
+             'https://www.varmdo.se/upplevaochgora/evenemang/evenemangsarkiv/lux.5.15eced8c1a0423602c2d25.html'],
+        ];
+        for (const [a, b] of pairs) {
+            expect(stableIdKey({ url: a, time: at.time })).not.toBeNull();
+            expect(stableIdKey({ url: a, time: at.time })).toBe(stableIdKey({ url: b, time: at.time }));
+        }
+    });
+
+    it('olika id, olika SiteVision-nod, olika Tickster-datum eller okänd värd ger inte samma nyckel', () => {
+        const k = (url: string) => stableIdKey({ url, time: at.time });
+        expect(k('https://billetto.se/e/a-biljetter-1981447')).not.toBe(k('https://billetto.se/e/a-biljetter-1981448'));
+        expect(k('https://www.jonkoping.se/e/lisbeth.5.70939fa91a005ceb77a9333.html'))
+            .not.toBe(k('https://www.jonkoping.se/e/lisbeth.5.70939fa91a005ceb77a9344.html'));
+        expect(k('https://www.boras.se/a/x.5.4591983b19eaaa7de5e1caf7.html'))
+            .not.toBe(k('https://www.goteborg.se/a/x.5.4591983b19eaaa7de5e1caf7.html'));
+        expect(k('https://www.tickster.com/se/sv/events/abc123/2026-09-23/x'))
+            .not.toBe(k('https://www.tickster.com/se/sv/events/abc123/2026-09-24/x'));
+        // swehockey: samma schema-id, olika matcher i queryn — ska aldrig matcha
+        expect(k('https://stats.swehockey.se/ScheduleAndResults/Schedule/20962?game=90131002')).toBeNull();
+        expect(k('https://www.nortic.se/ticket/event/82316#a0')).toBeNull();
+        expect(stableIdKey({ ...old, time: 'inte ett datum' })).toBeNull();
+    });
+
+    it('annan starttid under samma id slås INTE ihop', () => {
+        const later = { ...cur, time: '2026-09-17T15:30:00.000Z' };
+        expect(renameGhosts([old, later])).toEqual([]);
+    });
+
+    it('den senast skapade raden behålls oavsett ordning och poäng', () => {
+        const richOld = { ...old, coverImage: 'https://storage.googleapis.com/x.jpg', description: 'x'.repeat(80) };
+        expect(renameGhosts([richOld, cur])).toEqual([richOld]);
+        expect(renameGhosts([cur, richOld])).toEqual([richOld]);
+    });
+
+    it('tre slugar → de två äldre göms; rad utan createdAt räknas som äldst', () => {
+        const oldest = { ...old, url: 'https://billetto.se/e/blenda-biljetter-1981447', firestoreId: 'x', createdAt: null };
+        const ghosts = renameGhosts([cur, oldest, old]);
+        expect(ghosts.map((r) => r.firestoreId).sort()).toEqual(['old', 'x']);
+    });
+
+    it('ensam rad eller vanliga titeldubbletter berörs inte', () => {
+        expect(renameGhosts([cur])).toEqual([]);
+        expect(renameGhosts([base, { ...base, firestoreId: 'b', url: 'https://example.se/e/2' }])).toEqual([]);
     });
 });

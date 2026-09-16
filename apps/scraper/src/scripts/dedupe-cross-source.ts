@@ -41,6 +41,8 @@ interface Row {
     isLocationVerified: number;
     hostName: string;
     firestoreId: string;
+    /** Avgör vilken omdöpt rad som bär den aktuella slugen (renameGhosts). */
+    createdAt?: string | null;
 }
 
 export function normalizeTitle(s: string): string {
@@ -220,6 +222,65 @@ export function ticketTwinLinks(rows: Row[]): [Row, Row][] {
     return links;
 }
 
+/**
+ * OMDÖPTA EVENT (2026-09-16, "Blenda nätverksträff" på Billetto): källor vars
+ * url = titel-slug + stabilt id byter adress när arrangören byter titel.
+ * Gamla adressen omdirigeras till (eller serverar) samma sida, men url är
+ * primärnyckel — så skrapan såg ett nytt event och den gamla raden levde
+ * kvar bredvid med inaktuell titel ("Krypto utan krångel" / "Möjligheter &
+ * risker", "NÄRMARE GUD" / "LEV MER"). Titelnyckeln missar dem per
+ * definition. Samma id + exakt samma starttid = samma event.
+ *
+ * Mönstren är verifierade mot live-sidorna 16/9 (båda adresserna → samma
+ * sida). Nortic hör INTE hit: där är båda adresserna giltiga (ticketTwinKey).
+ */
+const STABLE_ID_PATTERNS: { name: string; re: RegExp }[] = [
+    // billetto.se/e/<slug>-biljetter-1981447 (även /en/e/…)
+    { name: 'billetto', re: /^https?:\/\/(?:www\.)?billetto\.se\/(?:[a-z]{2}\/)?e\/[^/?#]*-(\d+)\/?(?:[?#]|$)/i },
+    // tickster.com/se/sv/events/<id>/<datum>/<slug> — id + datum är förekomsten
+    { name: 'tickster', re: /^https?:\/\/(?:www\.)?tickster\.com\/(?:[a-z]{2}\/)*events\/([a-z0-9]+\/\d{4}-\d{2}-\d{2})\//i },
+    // sv.se/kurser-och-evenemang/<kategori…>/<slug>-55967 (kategorin kan också bytas)
+    { name: 'sv', re: /^https?:\/\/(?:www\.)?sv\.se\/kurser-och-evenemang\/(?:[^?#]*\/)?[^/?#]*-(\d+)\/?(?:[?#]|$)/i },
+    // abf.se/<avdelning>/kurs/<slug>-3945996/
+    { name: 'abf', re: /^https?:\/\/(?:www\.)?abf\.se\/([^/?#]+\/kurs)\/[^/?#]*-(\d+)\/?(?:[?#]|$)/i },
+    // SiteVision (kommunsajter): <slug>.5.15eced8c1a0423602c2d25.html — nod-id:t
+    // är sidan, slugen är kosmetisk. Värden ingår (nod-id är per installation).
+    { name: 'sitevision', re: /^https?:\/\/([^/?#]+)\/[^?#]*\.(\d+\.[0-9a-f]{16,})\.html(?:#|$)/i },
+];
+
+export function stableIdKey(r: Pick<Row, 'url' | 'time'>): string | null {
+    const t = new Date(r.time);
+    if (isNaN(t.getTime())) return null;
+    for (const { name, re } of STABLE_ID_PATTERNS) {
+        const m = r.url.match(re);
+        if (m) return `${name}:${m.slice(1).join(':').toLowerCase()}|${t.toISOString()}`;
+    }
+    return null;
+}
+
+/**
+ * Spökraderna efter titelbyten: per stableIdKey göms alla utom den SENAST
+ * skapade — den bär den aktuella slugen och titeln (skrapan skapar bara en
+ * rad när en url är ny). Görs FÖRE poängvalet: en död slug ska aldrig vinna
+ * på bättre bild eller beskrivning.
+ */
+export function renameGhosts(rows: Row[]): Row[] {
+    const byKey = new Map<string, Row[]>();
+    for (const r of rows) {
+        const k = stableIdKey(r);
+        if (!k) continue;
+        if (!byKey.has(k)) byKey.set(k, []);
+        byKey.get(k)!.push(r);
+    }
+    const ghosts: Row[] = [];
+    for (const members of byKey.values()) {
+        if (new Set(members.map((r) => r.url)).size < 2) continue;
+        const newest = members.reduce((a, b) => ((b.createdAt ?? '') > (a.createdAt ?? '') ? b : a));
+        ghosts.push(...members.filter((r) => r !== newest));
+    }
+    return ghosts;
+}
+
 /** Slå ihop dedup-grupper som delar en biljett-tvilling (ticketTwinKey). */
 export function mergeTicketTwins(groups: Row[][], rows: Row[]): Row[][] {
     return mergeLinkedRows(groups, ticketTwinLinks(rows));
@@ -314,12 +375,23 @@ async function main() {
 
     console.log(apply ? '🔧 APPLY mode' : '🔍 DRY-RUN');
 
-    const rows: Row[] = sqliteDb.prepare(`
+    const allRows: Row[] = sqliteDb.prepare(`
         SELECT url, title, time, locationName, coverImage, description, lat, lng,
-               isLocationVerified, hostName, firestoreId
+               isLocationVerified, hostName, firestoreId, createdAt
         FROM link_events
         WHERE hidden = 0 AND firestoreId IS NOT NULL AND title IS NOT NULL AND time IS NOT NULL
     `).all() as Row[];
+
+    // Omdöpta event först (se renameGhosts): spökraden göms oavsett poäng och
+    // deltar inte i grupperingen nedan.
+    const ghosts = renameGhosts(allRows);
+    const ghostSet = new Set(ghosts);
+    const rows = allRows.filter((r) => !ghostSet.has(r));
+    if (ghosts.length) {
+        console.log(`Hittade ${ghosts.length} spökrader efter titelbyte (samma käll-id + starttid, äldre slug):`);
+        for (const g of ghosts) console.log(`     [göm spöke] ${g.hostName.padEnd(18)} ${g.title.slice(0, 50)}  ${g.url.slice(0, 70)}`);
+        console.log('');
+    }
 
     // Gruppera med tvilling-fästning (se buildDedupGroups). Events utan
     // plats-nyckel som inte kan fästas hoppas över — utan plats kan vi inte
@@ -342,7 +414,7 @@ async function main() {
     const dupGroups = groups.filter((arr) => arr.length > 1);
     console.log(`Hittade ${dupGroups.length} dubblett-grupper (${dupGroups.reduce((s, a) => s + a.length, 0)} events totalt, varav ${dupGroups.reduce((s, a) => s + a.length - 1, 0)} ska gömmas)\n`);
 
-    const toHide: Row[] = [];
+    const toHide: Row[] = [...ghosts];
     for (const arr of dupGroups) {
         const scored = arr.map((r) => ({ r, s: scoreOf(r) })).sort((a, b) => b.s - a.s);
         const keeper = scored[0].r;
