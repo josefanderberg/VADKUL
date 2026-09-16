@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { EVENT_CATEGORIES, SPECIAL_CATEGORIES, type EventCategoryType } from '@/utils/categories';
-import { planMapCategoryChips } from '@/utils/categoryChips';
+import { planMapCategoryChips, visibleSourceKeys } from '@/utils/categoryChips';
 import { SOURCE_DEFS } from '@/utils/sources';
 import { categoryLabel } from './v2MapLabel';
 
@@ -47,7 +47,8 @@ interface CategoryChipRowProps {
  *
  * FLER längst till höger (Josef 16/9, som stadssidornas Fler-chip): fäller
  * ut Svenska kyrkan, PRO och Korpen i samma rad. Ett källval betyder "visa
- * bara källan" — sidan släpper då kategorin och 🔥.
+ * bara källan" — sidan släpper då kategorin och 🔥. Källor utan event i vyn
+ * göms som kategorierna, och finns ingen alls göms Fler-chippet också.
  *
  * MUS (Josef 16/9: "om man är på en dator utan touchpad"): raden går att
  * DRA i sidled, och scrollhjulet rullar den i sidled. Ett drag räknas inte
@@ -61,6 +62,12 @@ export default function CategoryChipRow({
     // så valet alltid syns och går att släppa i raden.
     const [moreOpen, setMoreOpen] = useState(false);
     const showSources = moreOpen || selectedSource !== null;
+    // Fler-källor med event i vyn (eller den valda) — utan någon alls göms
+    // även Fler-chippet, samma regel som kategorierna (Josef 16/9).
+    const sourceKeys = useMemo(
+        () => visibleSourceKeys(SOURCE_DEFS.map(s => s.key), sourceCounts, selectedSource),
+        [sourceCounts, selectedSource],
+    );
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<{ x: number; left: number; moved: boolean } | null>(null);
@@ -145,17 +152,19 @@ export default function CategoryChipRow({
                         </button>
                     );
                 })}
-                <button
-                    type="button"
-                    aria-expanded={showSources}
-                    aria-label={showSources ? 'Dölj fler källor' : 'Visa fler källor: Svenska kyrkan, PRO och Korpen'}
-                    onClick={() => setMoreOpen(o => !o)}
-                    className={`${CHIP} ${selectedSource ? CHIP_ON : CHIP_IDLE}`}
-                >
-                    Fler
-                    <ChevronRight size={12} className={`transition-transform ${showSources ? 'rotate-180' : ''}`} aria-hidden />
-                </button>
-                {showSources && SOURCE_DEFS.map(s => {
+                {sourceKeys.length > 0 && (
+                    <button
+                        type="button"
+                        aria-expanded={showSources}
+                        aria-label={showSources ? 'Dölj fler källor' : 'Visa fler källor: Svenska kyrkan, PRO och Korpen'}
+                        onClick={() => setMoreOpen(o => !o)}
+                        className={`${CHIP} ${selectedSource ? CHIP_ON : CHIP_IDLE}`}
+                    >
+                        Fler
+                        <ChevronRight size={12} className={`transition-transform ${showSources ? 'rotate-180' : ''}`} aria-hidden />
+                    </button>
+                )}
+                {showSources && SOURCE_DEFS.filter(s => sourceKeys.includes(s.key)).map(s => {
                     const on = selectedSource === s.key;
                     return (
                         <button

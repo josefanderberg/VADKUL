@@ -85,3 +85,16 @@ export function planMapCategoryChips(
         || a.order - b.order);
     return chips.map(({ key, count }) => ({ key, count }));
 }
+
+/**
+ * Kartans FLER-källor (Svenska kyrkan/PRO/Korpen, 16/9): bara de med event i
+ * vyn, i `keys`-ordningen — plus den valda även på noll, så valet går att
+ * släppa. Samma regel som kategorichipsen. Tom lista = Fler-chippet göms helt.
+ */
+export function visibleSourceKeys(
+    keys: readonly string[],
+    counts: ReadonlyMap<string, number>,
+    selected: string | null,
+): string[] {
+    return keys.filter(k => (counts.get(k) ?? 0) > 0 || k === selected);
+}

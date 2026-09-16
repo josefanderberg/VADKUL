@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planCategoryChips, categoryChipHref, activeCategorySlug, categoryPageMin, planMapCategoryChips } from './categoryChips';
+import { planCategoryChips, categoryChipHref, activeCategorySlug, categoryPageMin, planMapCategoryChips, visibleSourceKeys } from './categoryChips';
 
 const KEYS = ['music', 'family', 'sport', 'market', 'food'];
 
@@ -78,5 +78,22 @@ describe('planMapCategoryChips', () => {
 
     it('tom vy utan val ger inga chips', () => {
         expect(planMapCategoryChips(MAP_KEYS, new Map(), null)).toEqual([]);
+    });
+});
+
+describe('visibleSourceKeys', () => {
+    const SOURCES = ['svenskakyrkan', 'pro', 'korpen'];
+
+    it('döljer källor på noll och behåller ordningen', () => {
+        expect(visibleSourceKeys(SOURCES, new Map([['korpen', 5], ['svenskakyrkan', 1]]), null))
+            .toEqual(['svenskakyrkan', 'korpen']);
+    });
+
+    it('vald källa syns även på noll, så den går att släppa', () => {
+        expect(visibleSourceKeys(SOURCES, new Map([['korpen', 5]]), 'pro')).toEqual(['pro', 'korpen']);
+    });
+
+    it('ingen källa i vyn → tom lista (Fler-chippet göms)', () => {
+        expect(visibleSourceKeys(SOURCES, new Map([['pro', 0]]), null)).toEqual([]);
     });
 });
