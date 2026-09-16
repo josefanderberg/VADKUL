@@ -111,9 +111,7 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
         const catLabel = EVENT_CATEGORIES[catKey].label;
         const isSel = selectedEvent?.id === ev.id;
         return (
-            // data-group-row: EventCard mäter radernas underkanter för att
-            // öppna kortet på hela rader (measureDefaultHeight).
-            <li key={ev.id} data-group-row>
+            <li key={ev.id}>
                 <button
                     type="button"
                     onClick={() => onSelect(ev)}

@@ -11,7 +11,6 @@ import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
-import { chooserDefaultTargetPx } from '@/utils/chooserSheetHeight';
 import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
 
@@ -769,10 +768,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // högt"). Listan saknar data-peek-boundary och föll ner på peek-höjden
     // 22 vh. Det vanliga kortet öppnar på header + 110 px bildremsa ≈ 335 px
     // (mobil; 341 px på md): pt-10 40 + knapprad 40 + titelrad 57 + tidsrad 36
-    // + Värd/Pris 52 + 110 (bildremsan höjd 60 → 110 den 16/9). Listan visar så många HELA rader som ryms inom
-    // budgeten (3 rader i dagsläget, dagrubrik + 2 rader i veckovyn — se
-    // chooserDefaultTargetPx) — ingen halv rad i vikningen, samma korthöjd.
-    const CHOOSER_DEFAULT_MAX_PX = 350;
+    // + Värd/Pris 52 + 110 (bildremsan höjd 60 → 110 den 16/9). Listan öppnar
+    // på EXAKT den höjden (Josef 16/9: "samma höjd som när man öppnar ett
+    // vanligt") — hela-rader-snäppet (2/9) landade på 290 px eftersom
+    // raderna slutar på 290/353, och en halv rad i vikningen visar dessutom
+    // att listan går att scrolla. Ryms hela listan blir kortet lägre.
+    const CHOOSER_DEFAULT_PX = 335;
 
     // VÄLJARLÄGET (Josef 31/8): en multi-brickas grupp har skickats upp och
     // inget val är gjort än — kortets innehåll är väljarlistan i stället för
@@ -973,23 +974,21 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Remsan var 60 px t.o.m. 15/9 — Josef 16/9: "typ 70px högre upp, så man ser
     // lite mer", justerat samma dag till "ta 335px istället" (= remsan 110 px,
     // kortet ≈335 px totalt på mobil). Ändrar du den måste
-    // CHOOSER_DEFAULT_MAX_PX följa med: väljarlistan ska öppna lika högt som
+    // CHOOSER_DEFAULT_PX följa med: väljarlistan ska öppna lika högt som
     // ett vanligt event.
     const measureDefaultHeight = (): number => {
         const sc = scrollContainerRef.current;
         if (!sc) return OPEN_HEIGHT_VH;
-        // VÄLJARLISTAN (multievent): ingen peek-markör — mät radernas under-
-        // kanter och ta så många hela rader som ryms i CHOOSER_DEFAULT_MAX_PX,
-        // så kortet öppnar lika högt som ett vanligt event (Josef 2/9).
+        // VÄLJARLISTAN (multievent): ingen peek-markör — öppna på
+        // CHOOSER_DEFAULT_PX, så kortet står lika högt som ett vanligt event
+        // (Josef 2/9 + 16/9). Kortare lista → kortet slutar vid listans botten.
         const groupList = sc.querySelector('[data-group-list]') as HTMLElement | null;
         if (groupList) {
             const scRect = sc.getBoundingClientRect();
             // Innehållets topp i viewport-koordinater (oberoende av scroll).
             const contentTop = scRect.top - sc.scrollTop;
-            const rowBottoms = Array.from(sc.querySelectorAll<HTMLElement>('[data-group-row]'))
-                .map(row => row.getBoundingClientRect().bottom - contentTop);
             const contentHeight = groupList.getBoundingClientRect().bottom - contentTop;
-            const targetPx = chooserDefaultTargetPx(rowBottoms, contentHeight, CHOOSER_DEFAULT_MAX_PX);
+            const targetPx = Math.min(contentHeight, CHOOSER_DEFAULT_PX);
             const vh = (targetPx / window.innerHeight) * 100;
             return Math.max(PEEK_HEIGHT_VH, Math.min(80, Math.round(vh)));
         }
