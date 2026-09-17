@@ -22,8 +22,16 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-10",
-      "emptyRetries": 3
+      "lastRetry": "2026-09-17",
+      "emptyRetries": 4
+    },
+    "hockeyallsvenskan": {
+      "since": "2026-09-17",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "karlsborg": {
+      "since": "2026-09-17",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "nordmaling": {
       "since": "2026-08-19",
@@ -34,8 +42,8 @@
     "nybro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-10",
-      "emptyRetries": 3
+      "lastRetry": "2026-09-17",
+      "emptyRetries": 4
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
