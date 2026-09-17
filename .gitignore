@@ -81,3 +81,8 @@ apps/web/public/events-today.json
 
 # Medlemsexporter — innehåller e-postadresser, får ALDRIG committas
 medlemmar-*.csv
+
+# Vad kul-studion (klippverktyget) är ett eget git-repo med egen historik
+# (github.com/josefanderberg/vadkulyt). Mappen ligger här för närhet till
+# sajten men hör inte till monorepots deploy eller CI. Se vadkulyt/README.md.
+vadkulyt/

@@ -9,6 +9,7 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 - `apps/functions` — Cloud Functions (boost, notiser, digest).
 - `infra/launchd` — schemalagda jobb (nattkedjan 00:30, digest 07:00, audit-daemon).
 - `docs/` — arbetsdokument per område.
+- `vadkulyt/` — Vad kul-studion, lokalt klippverktyg för marknadsföringsvideor. **Eget git-repo** (`github.com/josefanderberg/vadkulyt`) som det här repot ignorerar; ingår inte i deploy eller CI. Jobba i den mappen med dess egen `CLAUDE.md` och `README.md`.
 
 ## Två maskiner, en main
 
