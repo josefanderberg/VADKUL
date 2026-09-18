@@ -492,6 +492,21 @@ export function setEventStatus(url: string, status: EventStatus): void {
     }
 }
 
+/**
+ * Plocka bort rader ur spegeln via Firestore-dokumentets id (inte url:en).
+ * Används av synken för att rensa användarskapade event som slunkit in —
+ * se syncSkipReason i utils/syncPlan. Returnerar antal raderade rader.
+ */
+export function deleteEventsByFirestoreIds(ids: string[]): number {
+    if (!ids.length) return 0;
+    const stmt = sqlite.prepare('DELETE FROM link_events WHERE firestoreId = ?');
+    let n = 0;
+    sqlite.transaction((batch: string[]) => {
+        for (const id of batch) n += stmt.run(id).changes;
+    })(ids);
+    return n;
+}
+
 export function countSqliteEvents(): number {
     const row = countStmt.get() as { n: number };
     return row.n;

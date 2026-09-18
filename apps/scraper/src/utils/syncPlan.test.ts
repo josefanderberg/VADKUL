@@ -4,7 +4,7 @@
  * bakåt så klockskev/samtidiga skrivningar aldrig tappas.
  */
 import { describe, it, expect } from 'vitest';
-import { planSync, CURSOR_OVERLAP_MS, FULL_SYNC_INTERVAL_DAYS } from './syncPlan';
+import { planSync, syncSkipReason, CURSOR_OVERLAP_MS, FULL_SYNC_INTERVAL_DAYS } from './syncPlan';
 
 const NOW = new Date('2026-08-17T00:30:00.000Z');
 const YESTERDAY = '2026-08-16T00:30:00.000Z';
@@ -37,5 +37,25 @@ describe('planSync', () => {
 
     it('cursor finns men hel-sync saknas → hel sync', () => {
         expect(planSync({ now: NOW, lastSyncAt: YESTERDAY, lastFullSyncAt: null }).mode).toBe('full');
+    });
+});
+
+describe('syncSkipReason', () => {
+    it('släpper igenom skrapade event med url', () => {
+        expect(syncSkipReason({ url: 'https://example.se/event/1' })).toBeNull();
+        expect(syncSkipReason({ url: 'https://example.se/event/1', userCreated: false })).toBeNull();
+    });
+
+    it('hoppar över länklösa event (tom primärnyckel)', () => {
+        expect(syncSkipReason({ url: '' })).toBe('noUrl');
+        expect(syncSkipReason({})).toBe('noUrl');
+    });
+
+    it('hoppar över TIPS — användarskapade MED url (dubblettbuggen 18/9)', () => {
+        expect(syncSkipReason({ url: 'https://sinclairs.se/stockholm/maskeradfest/', userCreated: true })).toBe('userCreated');
+    });
+
+    it('hoppar över VADKUL-värdade event som användarskapade, inte som länklösa', () => {
+        expect(syncSkipReason({ url: '', userCreated: true })).toBe('userCreated');
     });
 });

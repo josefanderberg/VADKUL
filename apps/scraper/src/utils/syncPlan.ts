@@ -52,3 +52,20 @@ export function planSync({ now, lastSyncAt, lastFullSyncAt, forceFull }: SyncPla
         reason: `ändringar sedan ${lastSyncAt} (${CURSOR_OVERLAP_MS / 60_000} min överlapp)`,
     };
 }
+
+/**
+ * Ska dokumentet in i SQLite-spegeln? null = ja, annars skälet att hoppa över.
+ *
+ * - 'noUrl': url är spegelns (och aggregatets) primärnyckel — länklösa event
+ *   skulle skriva över varandra på den tomma nyckeln.
+ * - 'userCreated': ALLA användarskapade event bor på kartans live-spår
+ *   (fetchUserCreatedEvents läser dem direkt ur Firestore, id = dokument-id).
+ *   Före 18/9 släpptes TIPS (userCreated MED url) igenom här, hamnade i
+ *   aggregatet med url:en som id — och kartan, som bara dedupar på id, ritade
+ *   varje tips TVÅ gånger från nästa natt (9 av 30 kommande tips 18/9).
+ */
+export function syncSkipReason(data: { url?: unknown; userCreated?: unknown }): 'noUrl' | 'userCreated' | null {
+    if (data.userCreated === true) return 'userCreated';
+    if (!data.url) return 'noUrl';
+    return null;
+}

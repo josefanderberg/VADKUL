@@ -8,7 +8,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import {
     upsertEvent, sqliteEventExists, getSqliteEvent, setEventStatus,
     recordScrapeRun, getRunsBySource, upsertKnownVenue, lookupVenueExact,
-    getSyncMeta, setSyncMeta,
+    getSyncMeta, setSyncMeta, deleteEventsByFirestoreIds,
 } from './sqliteHelper';
 
 beforeAll(() => {
@@ -91,5 +91,21 @@ describe('sync_meta', () => {
         expect(getSyncMeta('test.cursor')).toBe('2026-08-17T00:30:00.000Z');
         setSyncMeta('test.cursor', '2026-08-18T00:30:00.000Z');
         expect(getSyncMeta('test.cursor')).toBe('2026-08-18T00:30:00.000Z');
+    });
+});
+
+describe('deleteEventsByFirestoreIds', () => {
+    it('raderar på Firestore-id (inte url) och lämnar övriga rader orörda', () => {
+        upsertEvent(ev('https://t.se/tips-1', { firestoreId: 'tipsDocA' }));
+        upsertEvent(ev('https://t.se/tips-2', { firestoreId: 'tipsDocB' }));
+        upsertEvent(ev('https://t.se/skrapat', { firestoreId: 'skrapatDoc' }));
+        expect(deleteEventsByFirestoreIds(['tipsDocA', 'tipsDocB', 'finnsInte'])).toBe(2);
+        expect(sqliteEventExists('https://t.se/tips-1')).toBe(false);
+        expect(sqliteEventExists('https://t.se/tips-2')).toBe(false);
+        expect(sqliteEventExists('https://t.se/skrapat')).toBe(true);
+    });
+
+    it('tom lista är en no-op', () => {
+        expect(deleteEventsByFirestoreIds([])).toBe(0);
     });
 });

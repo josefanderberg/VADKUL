@@ -20,8 +20,9 @@
 import { db } from '../config/firebase';
 import {
     upsertEvent, countSqliteEvents, getSqlitePath, getSyncMeta, setSyncMeta,
+    deleteEventsByFirestoreIds,
 } from '../utils/sqliteHelper';
-import { planSync } from '../utils/syncPlan';
+import { planSync, syncSkipReason } from '../utils/syncPlan';
 import { normalizeCategory } from '../utils/categoryNormalize';
 
 const CURSOR_KEY      = 'linkEvents.lastSyncAt';
@@ -57,14 +58,17 @@ async function main() {
     let written = 0;
     let failed = 0;
     let skippedNoUrl = 0;
+    let skippedUserCreated = 0;
     snap.forEach(doc => {
         const data = doc.data() as any;
-        // SQLite (och aggregatet) nycklar på url. Event UTAN url — VADKUL-värdade
-        // användarevent — skulle därför skriva över varandra på den tomma nyckeln
-        // och bara den sist synkade skulle överleva. De hör hemma i live-spåret
-        // (fetchUserCreatedEvents läser dem direkt ur Firestore vid varje poll)
-        // och ska aldrig in i den skrapade pipelinen.
-        if (!data.url) { skippedNoUrl++; return; }
+        // SQLite (och aggregatet) nycklar på url. Användarskapade event —
+        // VADKUL-värdade (utan url) OCH tips (med url) — hör hemma i live-
+        // spåret (fetchUserCreatedEvents läser dem direkt ur Firestore vid
+        // varje poll) och ska aldrig in i den skrapade pipelinen: tipsen
+        // ritades annars dubbelt på kartan (se syncSkipReason).
+        const skip = syncSkipReason(data);
+        if (skip === 'userCreated') { skippedUserCreated++; return; }
+        if (skip === 'noUrl') { skippedNoUrl++; return; }
         try {
             upsertEvent({
                 url:                data.url,
@@ -115,6 +119,13 @@ async function main() {
         }
     });
 
+    // RENSNING av användarskapade rader som redan ligger i spegeln (tips som
+    // slank in före 18/9-fixen, eller ett dokument som fått userCreated i
+    // efterhand). Filtrerad fråga med select() = bara id:n, en read per
+    // användarevent (~60 st 18/9) — inte kollektionen.
+    const userSnap = await db.collection('linkEvents').where('userCreated', '==', true).select().get();
+    const purged = deleteEventsByFirestoreIds(userSnap.docs.map(d => d.id));
+
     // Cursor sätts till KÖRSTART (inte sluttid) så dokument som skrevs medan
     // synken pågick fångas nästa gång. Bara vid lyckad körning, bara mot prod.
     if (isProd && failed === 0) {
@@ -128,6 +139,12 @@ async function main() {
     console.log(`\n✅ Klar. ${written} skrivna, ${failed} misslyckade.`);
     if (skippedNoUrl > 0) {
         console.log(`   ⏭  ${skippedNoUrl} event utan url hoppades över (live-spåret, inte aggregatet).`);
+    }
+    if (skippedUserCreated > 0) {
+        console.log(`   ⏭  ${skippedUserCreated} användarskapade event hoppades över (live-spåret, inte aggregatet).`);
+    }
+    if (purged > 0) {
+        console.log(`   🧹 ${purged} användarskapade rader rensades ur spegeln (${userSnap.size} reads).`);
     }
     if (plan.mode === 'incremental') {
         console.log(`   ♻️  Inkrementell sync: ${snap.size} reads i stället för ~${mirrorCount} (hel läsning).`);
