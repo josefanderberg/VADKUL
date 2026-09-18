@@ -10,8 +10,8 @@
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-11",
-      "emptyRetries": 3
+      "lastRetry": "2026-09-18",
+      "emptyRetries": 4
     },
     "folk-goteborg": {
       "since": "2026-08-19",
@@ -76,6 +76,10 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-09-15",
       "emptyRetries": 3
+    },
+    "storsjoyran": {
+      "since": "2026-09-18",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "tingsryd": {
       "since": "2026-08-19",
