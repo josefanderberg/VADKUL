@@ -51,6 +51,22 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
     const res = await fetch(STREETS_STYLE_URL);
     const style = await res.json() as maplibregl.StyleSpecification;
 
+    // EGNA VEKTORKAKEL (20/9) — bara när NEXT_PUBLIC_VECTOR_TILES_URL är satt,
+    // vilket den är enbart när scripts/render-city-maps.mjs kör. Stadssidornas
+    // kartbilder får då INTE hämta kakel från CARTO: deras villkor tillåter
+    // direktvisning till besökare (§9.c.i) men förbjuder att vi cachar
+    // innehållet på vår server (§9.c.iii), och en förrenderad bild är just det.
+    //
+    // Att det GÅR beror på att Voyager-stilen är BSD-3-licensierad och skriven
+    // mot det öppna OpenMapTiles-schemat (source-layers landcover, water,
+    // transportation, place …). Samma stil mot egna kakel ur OSM-data ger
+    // därför identiskt utseende. I DRIFT är den här raden inaktiv och
+    // huvudkartan hämtar som vanligt direkt från CARTO — vilket är tillåtet.
+    const egnaKakel = process.env.NEXT_PUBLIC_VECTOR_TILES_URL;
+    if (egnaKakel && style.sources?.carto) {
+        style.sources.carto = { type: 'vector', url: egnaKakel };
+    }
+
     if (style.layers) {
         style.layers = style.layers.map(layer => {
             // Hav-/ocean-namn (Östersjön m.fl.) ligger som ETT label-lager per
