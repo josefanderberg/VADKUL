@@ -48,14 +48,14 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-12",
-      "emptyRetries": 3
+      "lastRetry": "2026-09-19",
+      "emptyRetries": 4
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-12",
-      "emptyRetries": 3
+      "lastRetry": "2026-09-19",
+      "emptyRetries": 4
     },
     "sater": {
       "since": "2026-09-15",
@@ -68,8 +68,8 @@
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-13",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-20",
+      "emptyRetries": 2
     },
     "staffanstorp": {
       "since": "2026-08-19",
