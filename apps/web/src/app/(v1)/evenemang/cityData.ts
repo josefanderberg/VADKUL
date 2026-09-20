@@ -346,10 +346,15 @@ export function pickRecommended(events: CityEvent[], n = 8): CityEvent[] {
  * Antal kommande event i HELA landet — siffran i toppnavens kart-ingång
  * ("Se alla N event på kartan").
  *
- * Räknas på samma två villkor som kartan visar som default: kommande (idag
- * eller senare, samma dagnyckel-regel som stadssidorna) och INTE en
- * opt-in-källa (Svenska kyrkan/PRO/Korpen är avstängda för alla utom
- * inloggade 65+, så de vore ett löfte om event besökaren inte ser).
+ * ETT enda villkor utöver "kommande": eventet måste ha en koordinat.
+ * Null island (0,0) döljs från kartan, så de eventen finns inte bakom
+ * länken och ska inte räknas.
+ *
+ * OPT-IN-KÄLLORNA RÄKNAS MED (ägarbeslut 20/9). De var uteslutna först,
+ * men Svenska kyrkan, PRO och Korpen ligger faktiskt PÅ kartan — de är
+ * bara dolda som förval och tänds med ett kryss. Siffran lovar "alla event
+ * på kartan", och då hör de dit: 17 639 av 49 647 är opt-in.
+ *
  * Till skillnad från getCityCounts summeras inte städerna — radierna
  * överlappar, så det hade dubbelräknat.
  */
@@ -359,7 +364,6 @@ export async function getNationalUpcomingCount(): Promise<number> {
     let n = 0;
     for (const e of dests) {
         if (!e.lat || !e.lng) continue;        // null island syns inte på kartan
-        if (classifySource(e.id)) continue;    // opt-in-källa
         if (dayKey(e.time) >= todayK) n++;
     }
     return n;

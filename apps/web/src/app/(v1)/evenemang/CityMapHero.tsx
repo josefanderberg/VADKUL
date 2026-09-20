@@ -169,21 +169,14 @@ export default function CityMapHero({ city, events, recommended }: {
     return (
         <>
         <div className="group relative block mt-5 h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 transition-all">
-            {/* Kartbotten: rena bild-tiles, absolut positionerade runt mitten. */}
-            {tiles.map(t => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                    key={t.key}
-                    src={t.src}
-                    alt=""
-                    aria-hidden
-                    width={TILE}
-                    height={TILE}
-                    decoding="async"
-                    className="absolute max-w-none select-none pointer-events-none"
-                    style={{ left: `calc(50% + ${t.left}px)`, top: `calc(50% + ${t.top}px)`, width: TILE, height: TILE }}
-                />
-            ))}
+            {/* KAKLEN LIGGER INTE LÄNGRE I SERVER-HTML:EN (20/9). De är bara
+                reservväg om WebGL fallerar, men webbläsaren brydde sig inte
+                om det: 15 kakelbilder hämtades vid VARJE sidladdning, ovanpå
+                MapLibre och CARTO:s vektorkakel — och ingen av dem syntes
+                någonsin, eftersom landfärgs-plattan och GL-canvasen ligger
+                över dem. Nu skickas de som data till CityMapHeroCanvas, som
+                renderar dem först om GL faktiskt fallerat. Flytta inte
+                tillbaka dem hit. */}
 
             {/* Riktiga kartan (passiv men klickbar — kartbotten-klick öppnar
                 stora kartan via bigMapHref) i huvudkartans stil, tonas in
@@ -194,7 +187,7 @@ export default function CityMapHero({ city, events, recommended }: {
                 (makeBrickaImageData): hörnradien är HALVA kroppen — droppen
                 ska se rund ut med ett enda spetsigt hörn — kanten är svagt
                 vit och emojin ~0,6 av kroppen. */}
-            <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} markers={live} bigMapHref={cityMapHref(city)}>
+            <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} markers={live} bigMapHref={cityMapHref(city)} fallbackTiles={tiles} tileSize={TILE}>
                 {bricks.map((b, i) => (
                     <span
                         key={b.id}

@@ -106,7 +106,7 @@ function buildBrickaEl(e: HeroLiveEvent, count: number, delayMs: number): HTMLDi
 type MapLibreMap = import('maplibre-gl').Map;
 type MapLibreMarker = import('maplibre-gl').Marker;
 
-export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref, children }: {
+export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref, fallbackTiles, tileSize, children }: {
     lat: number;
     lng: number;
     /** MapLibre-zoom, INTE kakel-zoom — se HERO_GL_ZOOM i CityMapHero. */
@@ -116,6 +116,11 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
     /** Stora kartan centrerad på staden (cityMapHref) — dit går klick på
      *  kartbotten. */
     bigMapHref: string;
+    /** Reservkaklen (OSM) som DATA, inte som bilder: de renderas FÖRST när
+     *  GL fallerat. Låg de i server-HTML:en hämtade webbläsaren alla 15 vid
+     *  varje sidladdning trots att de aldrig syntes (20/9). */
+    fallbackTiles: { key: string; src: string; left: number; top: number }[];
+    tileSize: number;
     /** De statiska SSR-brickorna — visas bara i GL-fallerade reservläget. */
     children?: ReactNode;
 }) {
@@ -257,6 +262,23 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
 
     return (
         <>
+            {/* RESERVKAKLEN — monteras FÖRST när GL fallerat, så en vanlig
+                sidladdning aldrig hämtar 15 bilder den ändå skulle dölja.
+                Under plattan i DOM-ordning, precis som förr. */}
+            {failed && fallbackTiles.map(t => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                    key={t.key}
+                    src={t.src}
+                    alt=""
+                    aria-hidden
+                    width={tileSize}
+                    height={tileSize}
+                    decoding="async"
+                    className="absolute max-w-none select-none pointer-events-none"
+                    style={{ left: `calc(50% + ${t.left}px)`, top: `calc(50% + ${t.top}px)`, width: tileSize, height: tileSize }}
+                />
+            ))}
             {/* Landfärgs-plattan: ligger ÖVER rastret från första server-
                 renderade rutan (inget Voyager-blink), och tas bara bort om GL
                 fallerar. GL-canvasen tonas in ovanpå. */}
