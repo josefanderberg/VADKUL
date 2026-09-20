@@ -62,6 +62,9 @@ const HERO_W = 630;
 const HERO_H = 318;
 // 2× för retina. Högre ger skarpare bild men tyngre filer — 2× räcker.
 const SCALE = 2;
+// Under detta är bilden med säkerhet en tom platta, inte en karta (se
+// tomhetsvakten nedan). Glesaste riktiga stad hittills: ~20 kB.
+const MIN_IMAGE_BYTES = 8 * 1024;
 
 const args = Object.fromEntries(
     process.argv.slice(2).map(a => {
@@ -133,10 +136,19 @@ async function main() {
                 // Spåra var kaklen kom ifrån — vakten nedan bygger på detta.
                 const cartoKakel = [];
                 const onResp = r => {
-                    // Stil-JSON:en (basemaps.cartocdn.com/gl/...) är BSD-3 och
-                    // fri att hämta. Det är KAKLEN (tiles.basemaps.cartocdn.com)
-                    // som inte får hamna i en bild vi sparar.
-                    if (/tiles\.basemaps\.cartocdn\.com/.test(r.url())) cartoKakel.push(r.url());
+                    // Bara KARTKAKLEN får fälla renderingen. De ligger under
+                    // deras /vector/-sökväg (stilens källa pekar på
+                    // tiles.basemaps.cartocdn.com/vector/carto.streets/v1/).
+                    //
+                    // Stilens övriga delar hämtas fortfarande därifrån och SKA
+                    // göra det: style.json (BSD-3), sprite/*.png (ikonatlasen)
+                    // och fonts/*.pbf (typsnitten) hör till formgivningen, som
+                    // är CC-BY och fri att använda när vi krediterar — vilket
+                    // kartkrediten gör. Typsnitten slutar på .pbf och fällde
+                    // vakten i en tidigare version; matcha därför på sökvägen,
+                    // inte på filändelsen.
+                    const u = r.url();
+                    if (/cartocdn\.com\/[^?]*\/vector\//.test(u)) cartoKakel.push(u);
                 };
                 page.on('response', onResp);
 
@@ -177,10 +189,19 @@ async function main() {
                 // det enda realistiska sättet att hamna här.
                 page.off('response', onResp);
                 if (cartoKakel.length) {
-                    throw new Error(`${cartoKakel.length} kakel hämtades från CARTO — kör dev-servern med NEXT_PUBLIC_VECTOR_TILES_URL mot egna kakel`);
+                    throw new Error(`${cartoKakel.length} kakel hämtades från CARTO (${cartoKakel[0]}) — kör dev-servern med NEXT_PUBLIC_VECTOR_TILES_URL mot egna kakel`);
                 }
 
                 const buf = await hero.screenshot({ type: 'webp', quality: 82, optimizeForSpeed: false });
+                // TOMHETSVAKT: en karta utan kakel blir en enfärgad platta i
+                // landfärgen, och den komprimerar till ett par kB medan en
+                // riktig karta landar på 20–90 kB. Hände på riktigt: en
+                // felaktig Content-Encoding på kakelservern gjorde att
+                // MapLibre tyst fick noll kakel, kartan sa ändå 'load', och
+                // 71 gröna plattor hade sparats utan att någon märkt det.
+                if (buf.length < MIN_IMAGE_BYTES) {
+                    throw new Error(`bilden är bara ${Math.round(buf.length / 1024)} kB — kartan ritade troligen inga kakel`);
+                }
                 await writeFile(mål, buf);
                 ok++;
                 console.log(`  [${i + 1}/${slugs.length}] ${slug} — ${Math.round(buf.length / 1024)} kB`);
@@ -193,14 +214,16 @@ async function main() {
         await browser.close();
     }
 
-    // Städer som inte gick igenom får behålla sin gamla bild hellre än ingen.
+    // Allt som INTE fick en ny bild får tillbaka sin gamla — både städer som
+    // misslyckades och (viktigt vid --city) alla som aldrig var med i den här
+    // körningen. Utan den andra delen raderade en enstads-körning de övriga
+    // 70 bilderna tillsammans med stashen.
     if (stashed) {
-        for (const slug of misslyckade) {
-            const gammal = path.join(STASH_DIR, `${slug}.webp`);
-            if (existsSync(gammal)) {
-                await rename(gammal, path.join(OUT_DIR, `${slug}.webp`));
-                console.log(`  ${slug} — behöll den gamla bilden`);
-            }
+        for (const fil of await readdir(STASH_DIR)) {
+            if (existsSync(path.join(OUT_DIR, fil))) continue; // ny bild finns
+            await rename(path.join(STASH_DIR, fil), path.join(OUT_DIR, fil));
+            const slug = fil.replace(/\.webp$/, '');
+            if (misslyckade.includes(slug)) console.log(`  ${slug} — behöll den gamla bilden`);
         }
         await rm(STASH_DIR, { recursive: true, force: true });
     }
