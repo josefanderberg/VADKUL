@@ -166,7 +166,6 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                     city={city}
                     events={events}
                     recommended={[]}
-                    ctaLabel={`Öppna kartan över ${city.name}`}
                 />
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-zinc-400 font-medium">
                     Just nu ligger <strong className="text-slate-900 dark:text-zinc-100">{events.length} kommande evenemang</strong> med

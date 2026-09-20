@@ -133,12 +133,10 @@ function pickBricks(city: City, events: CityEvent[], recommended: CityEvent[]): 
     return picked;
 }
 
-export default function CityMapHero({ city, events, recommended, ctaLabel }: {
+export default function CityMapHero({ city, events, recommended }: {
     city: City;
     events: CityEvent[];
     recommended: CityEvent[];
-    /** T.ex. "Öppna kartan över Malmö". */
-    ctaLabel: string;
 }) {
     const center = worldPx(city.lat, city.lng, HERO_ZOOM);
     const ctx = Math.floor(center.x / TILE);
@@ -216,21 +214,14 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
                 ))}
             </CityMapHeroCanvas>
 
-            {/* Läsbarhets-scrim nedtill + CTA-pillen (samma ljussvep som
-                kartans hörn-pill). Sedan kartan blev interaktiv är PILLEN
-                länken till stora kartan — inte hela ytan. pointer-events-none
-                på scrimmen så den inte äter kartgester. */}
-            <span aria-hidden className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent pointer-events-none" />
-            <Link
-                href={cityMapHref(city)}
-                aria-label={ctaLabel}
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap z-20"
-            >
-                <span className="city-cta gold-glow-pulse relative overflow-hidden inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white font-black text-xs shadow-lg hover:scale-105 transition-all">
-                    {ctaLabel} →
-                </span>
-            </Link>
-
+            {/* "Öppna kartan över {stad}"-pillen är BORTTAGEN 20/9
+                (ägarbeslut: "den behövs inte"). Vägen till stora kartan finns
+                på två andra ställen: hela kartytan är klickbar
+                (CityMapHeroCanvas lyssnar på kartklick och går till
+                bigMapHref) och toppnaven har kart-ingången med landets
+                eventsiffra. Läsbarhets-scrimmen följde med pillen ut — den
+                fanns bara för att göra dess text läsbar mot kartan.
+                Lägg inte tillbaka dem. */}
         </div>
         {/* KARTKREDITEN — flyttad UT ur kartrutan 20/9 (ägarbeslut: symbolen
             i hörnet skulle bort). Den får inte försvinna helt: licenserna
