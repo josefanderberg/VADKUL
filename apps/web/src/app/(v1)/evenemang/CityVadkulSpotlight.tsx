@@ -230,7 +230,12 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
     };
 
     return (
-        <div className={`relative rounded-2xl overflow-hidden transition-colors ${frame.box}`}>
+        // shrink-0: raden är flex-barn i den maxHeight-kapade listan, och med
+        // overflow-hidden är dess automatiska min-höjd 0 — utan shrink-0
+        // klämde flexbox ihop ALLA rader i taket i stället för att scrolla
+        // (och ResizeObservern mätte om taket från de hopklämda raderna, så
+        // höjden spiralerade ner mot noll i städer med många rader).
+        <div className={`relative shrink-0 rounded-2xl overflow-hidden transition-colors ${frame.box}`}>
             {/* <a href=/?event=> står kvar för crawl + cmd/ctrl-klick (kartan i
                 ny flik) — vanligt klick fäller ut på plats, som listraderna. */}
             {hasImage ? (
