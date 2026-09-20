@@ -39,12 +39,12 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
                     .map-portal i globals.css: en gradient i VADKUL-paletten
                     klippt till bokstäverna som långsamt vandrar blått → guld
                     → blått. Lägg inte tillbaka bakgrund/ram.
-                    Pilen och kartan står UTANFÖR gradienten: emoji färgas
-                    inte av background-clip (den har egna färger), och en
-                    halvt genomskinlig pil hade sett trasig ut. */}
+                    Pilen står UTANFÖR gradienten: en halvt genomskinlig pil
+                    hade sett trasig ut. Kartemojin är borttagen 20/9 —
+                    texten säger redan "på kartan". */}
                 <Link
                     href={ctaHref}
-                    className="group inline-flex min-w-0 items-center gap-2 font-black text-xs hover:opacity-80 transition-opacity"
+                    className="group inline-flex min-w-0 items-center gap-2 font-black text-sm hover:opacity-80 transition-opacity"
                 >
                     {/* Pilen pekar UT ur sidan, åt vänster: kartan är det man
                         kommer tillbaka till, inte något man går vidare till. */}
@@ -59,7 +59,6 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
                             ? `Se alla ${ctaCount.toLocaleString('sv-SE')} event på kartan`
                             : ctaLabel}
                     </span>
-                    <span aria-hidden className="shrink-0 text-sm leading-none">🗺️</span>
                 </Link>
                 <div className="flex items-center gap-2 shrink-0">
                     {backHref && backLabel && (
