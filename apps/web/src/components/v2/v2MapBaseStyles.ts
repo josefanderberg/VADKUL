@@ -62,9 +62,12 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
     // transportation, place …). Samma stil mot egna kakel ur OSM-data ger
     // därför identiskt utseende. I DRIFT är den här raden inaktiv och
     // huvudkartan hämtar som vanligt direkt från CARTO — vilket är tillåtet.
+    // Värdet får vara antingen en TileJSON-URL eller en kakel-mall med {z}/{x}/{y}.
     const egnaKakel = process.env.NEXT_PUBLIC_VECTOR_TILES_URL;
     if (egnaKakel && style.sources?.carto) {
-        style.sources.carto = { type: 'vector', url: egnaKakel };
+        style.sources.carto = egnaKakel.includes('{z}')
+            ? { type: 'vector', tiles: [egnaKakel], minzoom: 0, maxzoom: 14 }
+            : { type: 'vector', url: egnaKakel };
     }
 
     if (style.layers) {

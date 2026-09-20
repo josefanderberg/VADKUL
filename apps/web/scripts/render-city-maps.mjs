@@ -20,10 +20,23 @@
  * fotograferar, och skriver de nya bilderna. Ingen särskild render-route
  * behövs, och reservvägen testas på köpet.
  *
- * KÖRS SÄLLAN — inte i CI. Bara när en stad tillkommer eller kartstilen ändras:
+ * KAKLEN MÅSTE VARA VÅRA EGNA. CARTO tillåter att deras kakel visas direkt
+ * för besökare (§9.c.i) men förbjuder att vi cachar innehållet på vår server
+ * (§9.c.iii) — och en förrenderad bild är precis det. Voyager-stilen däremot
+ * är BSD-3 och skriven mot det öppna OpenMapTiles-schemat, så samma stil mot
+ * egna kakel ur OSM-data ger identiskt utseende, helt lagligt.
+ * Skriptet KONTROLLERAR detta per stad och vägrar spara en bild som ritats ur
+ * CARTO:s kakel — ta inte bort den vakten.
  *
- *   cd apps/web && npm run dev          # i en egen terminal
- *   node scripts/render-city-maps.mjs   # i en annan
+ * KÖRS SÄLLAN — inte i CI. Bara när en stad tillkommer eller kartstilen ändras.
+ * Tre terminaler:
+ *
+ *   1) kakelservern (se docs/kartbilder.md för hur sweden.pmtiles byggs)
+ *      node serve-tiles.mjs
+ *   2) dev-servern MED egna kakel:
+ *      cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/{z}/{x}/{y}.pbf' npm run dev
+ *   3) själva renderingen:
+ *      node scripts/render-city-maps.mjs
  *
  * Flaggor:
  *   --city=malmo,vaxjo   bara de städerna
@@ -117,6 +130,16 @@ async function main() {
             const mål = path.join(OUT_DIR, `${slug}.webp`);
             if (args.keep && existsSync(mål)) { console.log(`  [${i + 1}/${slugs.length}] ${slug} — finns, hoppar över`); continue; }
             try {
+                // Spåra var kaklen kom ifrån — vakten nedan bygger på detta.
+                const cartoKakel = [];
+                const onResp = r => {
+                    // Stil-JSON:en (basemaps.cartocdn.com/gl/...) är BSD-3 och
+                    // fri att hämta. Det är KAKLEN (tiles.basemaps.cartocdn.com)
+                    // som inte får hamna i en bild vi sparar.
+                    if (/tiles\.basemaps\.cartocdn\.com/.test(r.url())) cartoKakel.push(r.url());
+                };
+                page.on('response', onResp);
+
                 await page.goto(`${BASE}/evenemang/${slug}`, { waitUntil: 'networkidle2', timeout: 90_000 });
 
                 // Vänta på att GL-kartan tonats in (.city-hero-map får
@@ -149,6 +172,14 @@ async function main() {
                 if (!box || Math.round(box.width) !== HERO_W || Math.round(box.height) !== HERO_H) {
                     throw new Error(`hero är ${Math.round(box?.width)}×${Math.round(box?.height)}, väntade ${HERO_W}×${HERO_H} — justera HERO_W/HERO_H här och i CityMapHero`);
                 }
+                // LICENSVAKTEN: ritades kartan ur CARTO:s kakel får bilden inte
+                // sparas. Glömd NEXT_PUBLIC_VECTOR_TILES_URL på dev-servern är
+                // det enda realistiska sättet att hamna här.
+                page.off('response', onResp);
+                if (cartoKakel.length) {
+                    throw new Error(`${cartoKakel.length} kakel hämtades från CARTO — kör dev-servern med NEXT_PUBLIC_VECTOR_TILES_URL mot egna kakel`);
+                }
+
                 const buf = await hero.screenshot({ type: 'webp', quality: 82, optimizeForSpeed: false });
                 await writeFile(mål, buf);
                 ok++;

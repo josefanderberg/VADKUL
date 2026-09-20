@@ -281,11 +281,14 @@ export default function CityMapHero({ city, events, recommended }: {
                 Lägg inte tillbaka dem. */}
         </div>
         {/* KARTKREDITEN — flyttad UT ur kartrutan 20/9 (ägarbeslut: symbolen
-            i hörnet skulle bort). Den får inte försvinna helt: licenserna
-            bakom kartan (OSM:s ODbL, CARTO:s villkor) KRÄVER synlig
-            attribution. Samma lösning som stora kartan, där raden bor i
-            välkomstrutan i stället för på kartan. Tar du bort raden här
-            måste krediten tillbaka någon annanstans på sidan. */}
+            i hörnet skulle bort), men den får inte försvinna: tre licenser
+            kräver var sin kredit.
+              • Kartdatan är OpenStreetMap (ODbL) — vi renderar egna kakel.
+              • Utseendet är CARTO:s Voyager-stil (BSD-3), som kräver att
+                upphovsrättsnotisen behålls.
+              • Schemat kaklen följer är OpenMapTiles (CC-BY 4.0).
+            Samma lösning som stora kartan, där raden bor i välkomstrutan.
+            Tar du bort raden måste krediten tillbaka någon annanstans. */}
         <p className="mt-1 text-right text-[10px] leading-none text-slate-400 dark:text-zinc-600">
             Kartdata ©{' '}
             <a
@@ -296,7 +299,15 @@ export default function CityMapHero({ city, events, recommended }: {
             >
                 OpenStreetMap
             </a>
-            {' '}· © CARTO
+            {' '}· stil © CARTO ·{' '}
+            <a
+                href="https://openmaptiles.org/"
+                target="_blank"
+                rel="noopener"
+                className="underline hover:text-slate-600 dark:hover:text-zinc-400"
+            >
+                OpenMapTiles
+            </a>
         </p>
         </>
     );
