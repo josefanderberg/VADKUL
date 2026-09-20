@@ -1,78 +1,298 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { BRICKA_DARK_BG, sourceGradientCss } from '@/components/v2/v2MapBricka';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+    THEMEPARK_LAND_COLOR_NEAR,
+} from '@/components/v2/v2MapBaseStyles';
+import { NO_TIME_PAST_HOUR, sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
 import { PERIODS, periodKeys } from './periods';
 import { useDayFilter } from './dayFilter';
-import { pickHeroMarkers, type HeroLiveEvent } from './heroMarkers';
 
-export type { HeroLiveEvent };
+// Den RIKTIGA VADKUL-kartan i stads-heron — PASSIV men klickbar (Josef 24/8).
+// 18/8-varianten var fullt interaktiv (zoom/panorering, cooperativeGestures),
+// men gav två problem: de statiska byggtids-brickorna syntes på gröna plattan
+// innan kartan laddat och "stämde inte överens" med de levande markörerna som
+// tog över, och panorering i en liten hero-yta tillförde inget. Nu gäller:
+// KARTAN FÖRST, EVENTEN SEN — inga brickor förrän GL-kartan är uppe — och
+// inga kartgester alls. ALLA klick leder till STORA kartan (Josef 30/8 —
+// sidorna ska mata kartan, inte hålla kvar besökaren i en miniatyr):
+// kartbotten öppnar den centrerad på staden (bigMapHref) och brick-klick
+// öppnar den med eventet uppslaget (?event= via href). Platspopupen som
+// tidigare öppnades i heron är BORTTAGEN — lägg inte tillbaka den.
+// Dagchipsen delar fortfarande filter med daglistan (dayFilter).
+//
+// Lagren (i hero-containern i CityMapHero):
+//   1. Serverrenderade Carto-rasterkakel — reservväg om GL fallerar.
+//   2. Landfärgs-plattan täcker kaklen redan i server-HTML:en (inget
+//      Voyager-blink) och släpps fram bara om GL inte går att starta.
+//   3. Riktiga MapLibre-kartan i "nöjesfälts"-stilen tonas in när den laddat.
+//   4. De statiska SSR-brickorna (children) visas BARA i GL-fallerade
+//      reservläget (ovanpå rasterkaklen) — aldrig före den riktiga kartan.
+//
+// CSS:en för markörerna ligger scopad under .city-hero-map i globals.css —
+// maplibre-gl.css importeras fortfarande INTE (render-blockerande på en sida
+// som ska vara lätt).
+//
+// MARKÖRER: alla stadens kommande event (filtrerade på valt dagfilter, med
+// kartans delade "har varit"-gräns NO_TIME_PAST_HOUR) grupperade per koordinat
+// — samma gruppnyckel-idé som stora kartan. DOM-markörer saknar GL:ens
+// kollisionshantering, så en greedy min-avstånds-gallring i SKÄRMPIXLAR görs
+// vid den fasta hero-zoomen. Tidigast-först = prioritetsordningen.
 
-/**
- * Stads-heronas BRICKLAGER.
- *
- * INGEN KARTMOTOR HÄR (ombyggt 20/9, ägarbeslut: "vi kan ju ändå inte dra
- * eller zooma på kartan. onödigt tungt att ladda en riktig karta istället för
- * en bild"). Kartbilden är de statiska OSM-kaklen som CityMapHero redan
- * renderar i server-HTML:en; det här lagret placerar bara brickorna ovanpå
- * dem som vanliga DOM-element.
- *
- * Vad som försvann: hela `maplibre-gl` (~800 kB JS), stilhämtningen, WebGL-
- * kontexten, IntersectionObservern som sköt upp starten och GL-fallerat-läget
- * med sin landfärgs-platta. Heron ritades tidigare TVÅ gånger — först kaklen,
- * sedan en GL-canvas ovanpå med samma bild.
- *
- * Positionerna räknas på servern (CityMapHero, samma projektion som kaklen)
- * och urvalet ligger i heroMarkers.ts — den här filen är bara utritning.
- *
- * FÖRE HYDRERING visas serverns statiska brickor (`children`), så heron är
- * komplett redan utan JavaScript. När det här lagret monterat tar det över,
- * eftersom bara det följer dag- och kategorifiltret.
- */
-export default function CityMapHeroCanvas({ markers, bigMapHref, children }: {
-    /** Stadens kommande event med färdiga px-offset (byggda i CityMapHero). */
+const HOUR_MS = 3_600_000;
+/** Min-avstånd i skärm-px mellan markörer + tak på antal (DOM-markörer är
+ *  inte gratis — 140 räcker gott i en hero-yta). */
+const MIN_DIST_PX = 40;
+const MAX_LIVE = 140;
+
+/** Ett event som kartan kan visa levande — byggt på servern i CityMapHero.
+ *  `hex` i stället för färdig gradient-CSS: gradienten byggs här (sparar
+ *  ~30 kB HTML på stora städer). `day` = 'YYYY-MM-DD' (svensk tid). `href`
+ *  = stora kartan med eventet uppslaget (?event=) — dit går brick-klicket. */
+export type HeroLiveEvent = {
+    id: string;
+    href: string;
+    lat: number;
+    lng: number;
+    emoji: string;
+    hex: string | null;
+    t: number;
+    hour: number | null;
+    day: string;
+    /** Kategorinyckeln — heron följer kategorichipsen precis som listan. */
+    category: string;
+};
+
+/** Samma "har varit"-trappa som daglistan och stora kartan: klockslag = 1 h
+ *  efter start; utan klockslag = kl NO_TIME_PAST_HOUR sin dag (lokal klocka,
+ *  precis som DayFilteredList.isPast). */
+function isPastEv(e: HeroLiveEvent, now: number): boolean {
+    if (e.hour !== null) return e.t < now - HOUR_MS;
+    return new Date(e.t).setHours(NO_TIME_PAST_HOUR, 0, 0, 0) <= now;
+}
+
+/** Webbmercator i MapLibre-skala (världen är 512·2^zoom px bred). */
+function worldPx(lat: number, lng: number, zoom: number) {
+    const scale = 512 * 2 ** zoom;
+    const x = ((lng + 180) / 360) * scale;
+    const s = Math.sin((lat * Math.PI) / 180);
+    const y = (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * scale;
+    return { x, y };
+}
+
+/** Markör-DOM: exakt samma nål-droppe som de statiska SSR-brickorna (och
+ *  GL-brickorna på stora kartan) — 0×0-rot med droppen transform-ankrad så
+ *  spetsen pekar på koordinaten. Grupp med >1 event får en antal-bubbla. */
+function buildBrickaEl(e: HeroLiveEvent, count: number, delayMs: number): HTMLDivElement {
+    const bg = e.hex ? sourceGradientCss(e.hex) : BRICKA_DARK_BG;
+    const root = document.createElement('div');
+    root.style.cssText = 'width:0;height:0;cursor:pointer';
+    root.innerHTML =
+        `<span class="hero-bricka" style="display:block;width:32px;height:32px;border-radius:9999px;border-bottom-right-radius:0;` +
+        `border:1.5px solid rgba(255,255,255,.3);box-shadow:0 4px 6px -1px rgb(0 0 0/.15),0 2px 4px -2px rgb(0 0 0/.15);` +
+        `background:${bg};transform:translate(-50%,-92%) rotate(45deg);animation-delay:${delayMs}ms">` +
+        `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;transform:rotate(-45deg);font-size:19px;line-height:1"></span>` +
+        `</span>` +
+        (count > 1
+            ? `<span style="position:absolute;left:8px;top:-40px;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;` +
+              `background:#fff;color:#0f172a;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;` +
+              `box-shadow:0 1px 3px rgb(0 0 0/.35)">${count}</span>`
+            : '');
+    // Emojin sätts som text (inte HTML) — titlarna rör aldrig innerHTML.
+    (root.querySelector('.hero-bricka > span') as HTMLElement).textContent = e.emoji || '📍';
+    return root;
+}
+
+type MapLibreMap = import('maplibre-gl').Map;
+type MapLibreMarker = import('maplibre-gl').Marker;
+
+export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref, children }: {
+    lat: number;
+    lng: number;
+    /** MapLibre-zoom, INTE kakel-zoom — se HERO_GL_ZOOM i CityMapHero. */
+    zoom: number;
+    /** Stadens kommande event, tidssorterade (byggda i CityMapHero). */
     markers: HeroLiveEvent[];
     /** Stora kartan centrerad på staden (cityMapHref) — dit går klick på
      *  kartbotten. */
     bigMapHref: string;
-    /** Serverns statiska brickor — visas tills det här lagret monterat. */
+    /** De statiska SSR-brickorna — visas bara i GL-fallerade reservläget. */
     children?: ReactNode;
 }) {
+    const holderRef = useRef<HTMLDivElement>(null);
+    const [ready, setReady] = useState(false);
+    // GL gick inte att starta (ingen WebGL / stilen onåbar) → släpp fram
+    // Voyager-kaklen under. Tills dess täcker landfärgs-plattan dem, så heron
+    // ser ut som kartan redan från server-HTML:en.
+    const [failed, setFailed] = useState(false);
     const { sel, setSel, category } = useDayFilter();
-    // Urvalet är klockberoende ("har varit") → får inte köras vid SSR, då
-    // skulle serverns och klientens HTML kunna skilja sig. Samma mönster som
-    // daglistans nowTs.
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => { setMounted(true); }, []);
 
-    const visible = useMemo(() => {
-        if (!mounted) return [];
-        return pickHeroMarkers(markers, {
-            dayKeys: sel.kind === 'period' ? periodKeys(sel.period) : [sel.key],
-            category,
-            now: Date.now(),
+    const mapRef = useRef<MapLibreMap | null>(null);
+    const markerCtorRef = useRef<(new (o: object) => MapLibreMarker) | null>(null);
+    const liveMarkersRef = useRef<MapLibreMarker[]>([]);
+
+    /** Riv och bygg om markörerna för aktuellt filter (zoomen är fast —
+     *  kartan är passiv). Läser sel/markers ur sin renders closure. */
+    const rebuild = () => {
+        const map = mapRef.current;
+        const Marker = markerCtorRef.current;
+        if (!map || !Marker) return;
+        for (const m of liveMarkersRef.current) m.remove();
+        liveMarkersRef.current = [];
+
+        const now = Date.now();
+        const keys = sel.kind === 'period' ? periodKeys(sel.period) : [sel.key];
+        const visible = markers.filter(e => {
+            if (isPastEv(e, now)) return false;
+            if (keys && !keys.includes(e.day)) return false;
+            // Kategorichipsen (Josef 2/9): heron och listan är ETT filter.
+            if (category !== null && e.category !== category) return false;
+            return true;
         });
-    }, [mounted, markers, sel, category]);
+
+        // Gruppera per koordinat (markers kommer tidssorterade → gruppens
+        // första event är det tidigaste och blir markörens ansikte).
+        const byCoord = new Map<string, HeroLiveEvent[]>();
+        for (const e of visible) {
+            const k = `${e.lat.toFixed(4)},${e.lng.toFixed(4)}`;
+            const g = byCoord.get(k);
+            if (g) g.push(e); else byCoord.set(k, [e]);
+        }
+
+        // Greedy gallring i skärm-px vid AKTUELL zoom — tidigast-först.
+        const z = map.getZoom();
+        const placed: { x: number; y: number }[] = [];
+        let i = 0;
+        for (const group of byCoord.values()) {
+            if (liveMarkersRef.current.length >= MAX_LIVE) break;
+            const rep = group[0];
+            const p = worldPx(rep.lat, rep.lng, z);
+            if (placed.some(q => (q.x - p.x) ** 2 + (q.y - p.y) ** 2 < MIN_DIST_PX ** 2)) continue;
+            placed.push(p);
+            const el = buildBrickaEl(rep, group.length, Math.min(i * 45, 500));
+            // Rakt till stora kartan med gruppens tidigaste event uppslaget —
+            // ligger fler event på koordinaten har stora kartan sin egen
+            // "3/7"-pager på kortet.
+            el.addEventListener('click', ev => {
+                ev.stopPropagation();
+                window.location.assign(rep.href);
+            });
+            const mk = new Marker({ element: el }).setLngLat([rep.lng, rep.lat]).addTo(map);
+            liveMarkersRef.current.push(mk);
+            i++;
+        }
+    };
+    useEffect(() => {
+        const el = holderRef.current;
+        if (!el) return;
+        let cancelled = false;
+
+        const start = async () => {
+            try {
+                const [{ Map, Marker }, { fetchAndTransformThemeParkStyle }] = await Promise.all([
+                    import('maplibre-gl'),
+                    import('@/components/v2/v2MapBaseStyles'),
+                ]);
+                const style = await fetchAndTransformThemeParkStyle();
+                if (cancelled) return;
+                const m = new Map({
+                    container: el,
+                    style,
+                    center: [lng, lat],
+                    zoom,
+                    // Heron har redan sin egen © OpenStreetMap © CARTO-rad.
+                    attributionControl: false,
+                });
+                // PASSIV karta: inga gester alls — en-finger-drag scrollar
+                // sidan, scroll zoomar inte. (interactive:false duger inte:
+                // då slutar även 'click'-eventen komma.) Handlers stängs av
+                // en och en i stället.
+                for (const h of [m.dragPan, m.dragRotate, m.scrollZoom, m.doubleClickZoom, m.touchZoomRotate, m.touchPitch, m.keyboard, m.boxZoom]) h.disable();
+                mapRef.current = m;
+                markerCtorRef.current = Marker as unknown as new (o: object) => MapLibreMarker;
+                m.on('load', () => { if (!cancelled) setReady(true); });
+                // Klick på kartbotten (inte på en markör) öppnar STORA kartan
+                // över staden — "missar man en bricka ska man se eventen på
+                // riktiga kartan" (Josef 24/8).
+                m.on('click', () => {
+                    if (cancelled) return;
+                    window.location.assign(bigMapHref);
+                });
+            } catch {
+                // Ingen WebGL eller ingen stil — göm plattan så de statiska
+                // kaklen under blir synliga igen.
+                if (!cancelled) setFailed(true);
+            }
+        };
+
+        // Starta först när heron faktiskt syns, och då med en kort fördröjning
+        // så hydreringen av eventlistan inte samsas med maplibre-chunken.
+        // (requestIdleCallback dög inte: i en dold/bakgrundsflik körs den
+        // aldrig, och då stod heron kvar på de grå kaklen.)
+        let timer = 0;
+        const arm = () => { if (!timer) timer = window.setTimeout(start, 250); };
+        const io = typeof IntersectionObserver === 'undefined' ? null
+            : new IntersectionObserver(entries => {
+                if (entries.some(en => en.isIntersecting)) { io?.disconnect(); arm(); }
+            }, { rootMargin: '200px' });
+        if (io) io.observe(el); else arm();
+
+        return () => {
+            cancelled = true;
+            io?.disconnect();
+            clearTimeout(timer);
+            for (const mk of liveMarkersRef.current) mk.remove();
+            liveMarkersRef.current = [];
+            mapRef.current?.remove();
+            mapRef.current = null;
+        };
+    }, [lat, lng, zoom, bigMapHref]);
+
+    // Filterbyte (eller GL-klart) → bygg om markörerna. Ren extern synk.
+    useEffect(() => {
+        if (!ready) return;
+        rebuild();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ready, sel, category, markers]);
 
     return (
         <>
-            {/* Kartbotten: klick utanför en bricka öppnar stora kartan över
-                staden — "missar man en bricka ska man se eventen på riktiga
-                kartan" (Josef 24/8). Knapp, inte länk, så den aldrig
-                konkurrerar med CTA-pillen om tangentbordsfokus. */}
-            <button
-                type="button"
-                aria-label="Öppna hela kartan"
-                tabIndex={-1}
-                onClick={() => { window.location.assign(bigMapHref); }}
-                className="absolute inset-0 z-0 cursor-pointer"
+            {/* Landfärgs-plattan: ligger ÖVER rastret från första server-
+                renderade rutan (inget Voyager-blink), och tas bara bort om GL
+                fallerar. GL-canvasen tonas in ovanpå. */}
+            <div
+                aria-hidden
+                className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${
+                    failed ? 'opacity-0' : 'opacity-100'
+                }`}
+                style={{ backgroundColor: THEMEPARK_LAND_COLOR_NEAR }}
             />
+            {/* Själva kartan — interaktiv (pointer-events-auto när GL är uppe).
+                .city-hero-map scopar maplibre-CSS:en i globals.css. */}
+            <div
+                ref={holderRef}
+                className={`city-hero-map absolute inset-0 overflow-hidden transition-opacity duration-500 [&_canvas]:absolute [&_canvas]:left-0 [&_canvas]:top-0 ${
+                    ready ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
+            />
+            {/* Statiska SSR-brickorna: BARA i reservläget (GL fallerade →
+                rasterkakel + byggtids-brickor). Annars gäller kartan-först-
+                eventen-sen: inga brickor förrän de levande markörerna poppar
+                på den riktiga kartan. */}
+            <div
+                aria-hidden
+                className={`absolute inset-0 pointer-events-none transition-opacity duration-500 ${
+                    failed ? 'opacity-100' : 'opacity-0'
+                }`}
+            >
+                {children}
+            </div>
 
-            {/* PERIODCHIPSEN — sidans ENDA periodfilter sedan listans egen
-                filterrad togs bort 20/9. De styr både brickorna här och
-                daglistan under (samma delade dayFilter-state), så de får inte
-                flyttas härifrån eller tas bort.
-                z-20: över brickorna. flex-wrap + right-2: fem chips ryms
+            {/* Dagchips — SAMMA filter som listan under (dayFilter). Ett
+                dagval i listans filterrad speglas alltså här och tvärtom. */}
+            {/* z-20: under toppnaven (z-40) — chipsen får inte rita över den
+                när heron scrollas upp bakom naven. */}
+            {/* flex-wrap + right-2: fem chips (I helgen tillbaka 10/9) ryms
                 knappt på en 320 px-telefon — hellre en rad till än klippt. */}
             <div className="absolute top-2 left-2 right-2 z-20 flex flex-wrap gap-1">
                 {PERIODS.map(p => {
@@ -94,42 +314,6 @@ export default function CityMapHeroCanvas({ markers, bigMapHref, children }: {
                     );
                 })}
             </div>
-
-            {/* Serverns statiska brickor tills filterlagret monterat. */}
-            {!mounted && children}
-
-            {visible.map(({ e, count }, i) => (
-                <button
-                    key={e.id}
-                    type="button"
-                    aria-label={`Visa eventet på kartan${count > 1 ? ` (${count} på platsen)` : ''}`}
-                    onClick={ev => { ev.stopPropagation(); window.location.assign(e.href); }}
-                    className="absolute z-10 w-0 h-0 cursor-pointer"
-                    style={{ left: `calc(50% + ${e.dx}px)`, top: `calc(50% + ${e.dy}px)` }}
-                >
-                    {/* Samma nål-droppe som kartan: tre runda hörn + spets
-                        nedåt via rotate, kategori-gradienten som kropp,
-                        emojin roterad tillbaka. Måtten speglar GL-brickans
-                        (makeBrickaImageData) — ändra inte den ena utan den andra. */}
-                    <span
-                        className="hero-bricka block w-[32px] h-[32px] rounded-full rounded-br-none border-[1.5px] border-white/30 shadow-md"
-                        style={{
-                            background: e.hex ? sourceGradientCss(e.hex) : BRICKA_DARK_BG,
-                            transform: 'translate(-50%, -92%) rotate(45deg)',
-                            animationDelay: `${Math.min(i * 45, 500)}ms`,
-                        }}
-                    >
-                        <span className="flex items-center justify-center w-full h-full -rotate-45 text-[19px] leading-none">
-                            {e.emoji || '📍'}
-                        </span>
-                    </span>
-                    {count > 1 && (
-                        <span className="absolute left-[8px] -top-[40px] min-w-[16px] h-[16px] px-1 rounded-full bg-white text-slate-900 text-[10px] font-black flex items-center justify-center shadow">
-                            {count}
-                        </span>
-                    )}
-                </button>
-            ))}
         </>
     );
 }
