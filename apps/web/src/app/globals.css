@@ -345,6 +345,39 @@
   .emerald-glow-pulse { animation: none; }
 }
 
+/* Stadssidornas KART-INGÅNG i toppnaven (TopNav): ren text, ingen bakgrund
+   och ingen ram (ägarbeslut 20/9 — knapp- och flikformerna prövades och
+   avvisades). Det som gör den levande i stället är färgen: en gradient i
+   VADKUL-paletten klipps till bokstäverna och vandrar långsamt i sidled,
+   så texten skiftar blått → guld → blått utan att något rör på sig.
+
+   Gradienten måste börja och sluta på SAMMA färg, annars hoppar den vid
+   varvets slut. background-size 200% + position 0 → 200% ger ett helt varv.
+
+   -webkit-background-clip behövs fortfarande för Safari/iOS. */
+@keyframes map-portal-sweep {
+  to { background-position: 200% center; }
+}
+.map-portal {
+  background-image: linear-gradient(90deg,
+    #006AA7 0%, #2b91cf 25%, #FECC02 50%, #2b91cf 75%, #006AA7 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: map-portal-sweep 7s linear infinite;
+}
+/* Mörkt läge: #006AA7 är för mörk mot zinc-950 — ljusare blå i botten. */
+.dark .map-portal {
+  background-image: linear-gradient(90deg,
+    #38bdf8 0%, #7dd3fc 25%, #FECC02 50%, #7dd3fc 75%, #38bdf8 100%);
+}
+/* Stillastående är gradienten fortfarande flerfärgad — texten blir aldrig
+   enfärgad eller osynlig av att animationen stängs av. */
+@media (prefers-reduced-motion: reduce) {
+  .map-portal { animation: none; }
+}
+
 /* Subtil pulserande guld-glöd för "Evenemang stad för stad"-knappen */
 @keyframes gold-glow-pulse {
   0%, 100% { box-shadow: 0 4px 16px rgba(0, 106, 167, 0.4), 0 0 0 0 rgba(254, 204, 2, 0.3); }
