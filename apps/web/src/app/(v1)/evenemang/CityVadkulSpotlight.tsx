@@ -407,7 +407,12 @@ export default function CityVadkulSpotlight(props: Props) {
             </div>
             <div
                 ref={listRef}
-                className={`mt-2 flex flex-col gap-2 ${capped ? 'overflow-y-auto overscroll-contain pr-0.5 [scrollbar-width:thin]' : ''}`}
+                // INGEN overscroll-contain här (borttagen 20/9): den stoppade
+                // scrollen död när listan nått sin botten, så sidan såg ut att
+                // ta slut mitt i. Webbläsarens default (overscroll-behavior:
+                // auto) låter scrollen gå vidare till sidan när listan är
+                // slut — det är precis vad vi vill. Lägg inte tillbaka den.
+                className={`mt-2 flex flex-col gap-2 ${capped ? 'overflow-y-auto pr-0.5 [scrollbar-width:thin]' : ''}`}
                 style={capped && capPx !== null ? { maxHeight: capPx } : undefined}
             >
                 {[...boosted, ...vadkul].map(e => (
