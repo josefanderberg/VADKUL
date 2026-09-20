@@ -33,13 +33,29 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
     return (
         <nav className="sticky top-0 z-40 bg-slate-50/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-slate-200/70 dark:border-zinc-800/70">
             <div className="max-w-2xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
+                {/* FLIKEN, inte en knapp (ägarbeslut 20/9). Den fyller navens
+                    HELA höjd (-my-3 äter containerns py-3, self-stretch
+                    sträcker den) och är rundad upptill men rak nedtill, utan
+                    underkant — så den vilar på navens egen bottenlinje och
+                    läses som en aktiv flik i en flikrad. Därför heller ingen
+                    hover:scale: en flik som växer lossnar från linjen den
+                    sitter fast i. Ljuset svepet (city-cta) kräver position +
+                    overflow-hidden — behåll båda. */}
                 <Link
                     href={ctaHref}
-                    className="city-cta gold-glow-pulse group relative overflow-hidden inline-flex min-w-0 items-center gap-2 pl-3.5 pr-3 py-2 rounded-full bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-[#FECC02] text-white shadow-md hover:scale-105 transition-all"
+                    className="city-cta gold-glow-pulse group relative overflow-hidden inline-flex min-w-0 items-center gap-2 self-stretch -my-3 px-4 rounded-t-xl bg-gradient-to-r from-[#006AA7] to-[#004B78] border-2 border-b-0 border-[#FECC02] text-white shadow-[0_-1px_6px_rgba(0,0,0,.18)] hover:brightness-110 transition-all"
                 >
+                    {/* Pilen pekar UT ur sidan, åt vänster: kartan är det man
+                        kommer tillbaka till, inte något man går vidare till. */}
+                    <span
+                        aria-hidden
+                        className="shrink-0 font-black text-[#FECC02] transition-transform group-hover:-translate-x-0.5"
+                    >
+                        ←
+                    </span>
                     <span aria-hidden className="text-sm leading-none">🗺️</span>
-                    {/* Siffran i guld = det som gör raden till en ingång: det
-                        finns FÖRTIOFEMTUSEN event bakom den här länken, inte
+                    {/* Siffran i guld = det som gör fliken till en ingång: det
+                        finns TRETTIOTVÅTUSEN event bakom den här länken, inte
                         bara "en karta". Utan siffra faller den tillbaka på
                         den gamla etiketten (indexsidan). */}
                     <span className="min-w-0 truncate font-black text-xs">
@@ -52,12 +68,6 @@ export default function TopNav({ backHref, backLabel, ctaLabel = 'Öppna kartan'
                                 event på kartan
                             </>
                         ) : ctaLabel}
-                    </span>
-                    <span
-                        aria-hidden
-                        className="shrink-0 font-black text-[#FECC02] transition-transform group-hover:translate-x-0.5"
-                    >
-                        →
                     </span>
                 </Link>
                 <div className="flex items-center gap-2 shrink-0">
