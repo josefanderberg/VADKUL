@@ -2,8 +2,13 @@ import Link from 'next/link';
 import { dayKey, hourOf, type City, type CityEvent } from './cityData';
 import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 import { sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
-import CityMapHeroCanvas, { type HeroLiveEvent } from './CityMapHeroCanvas';
+import { THEMEPARK_LAND_COLOR_NEAR } from '@/components/v2/v2MapBaseStyles';
+import CityMapHeroCanvas from './CityMapHeroCanvas';
+import CityMapHeroMarkers from './CityMapHeroMarkers';
+import type { HeroLiveEvent } from './heroMarkers';
 import { mapHref } from './EventList';
+import { existsSync } from 'fs';
+import path from 'path';
 
 // Kart-heron överst på stads-/kategorisidorna: en äkta, inzoomad kartbit över
 // staden med riktiga VADKUL-brickor på riktiga event-positioner. Sedan 24/8
@@ -42,6 +47,15 @@ const HERO_GL_ZOOM = HERO_ZOOM - 1;
  *  140 följer den högre heron (h-72/h-80 sedan 18/8, var h-52/h-60). */
 const HALF_W = 320;
 const HALF_H = 140;
+/** Den förrenderade kartbildens mått (CSS-px) = hero-ytan i sitt STÖRSTA läge:
+ *  sidcontainern är max-w-2xl (672) minus px-5 på vardera sidan = 632, minus
+ *  hero-rutans 1 px ram = 630 bred; h-80 (320) minus ramen = 318 hög. Smalare skärmar beskär bilden med
+ *  object-cover, vilket är rätt: brickornas px-offset räknas från MITTEN, så
+ *  de följer med beskärningen.
+ *  Bilden renderas i 2× för retina men deklareras i CSS-px här. Ändras måtten
+ *  måste bilderna renderas om — scripts/render-city-maps.mjs har samma siffror. */
+const HERO_IMG_W = 630;
+const HERO_IMG_H = 318;
 /** Max antal brickor + minsta inbördes avstånd (px) — kartan ska kännas
  *  levande, inte igenkorkad. */
 const MAX_BRICKS = 14;
@@ -54,6 +68,24 @@ function worldPx(lat: number, lng: number, zoom: number) {
     const s = Math.sin((lat * Math.PI) / 180);
     const y = (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * scale;
     return { x, y };
+}
+
+/**
+ * Den förrenderade kartbilden för en stad, eller null om den inte finns.
+ *
+ * Bilderna byggs av scripts/render-city-maps.mjs i EXAKT nöjesfälts-stilen
+ * (samma MapLibre, samma transform) och läggs i public/kartbilder/. Eftersom
+ * hero-kameran är låst per stad ser kartan alltid likadan ut — då finns ingen
+ * anledning att rita om den i varje besökares webbläsare.
+ *
+ * Kollas med existsSync vid BUILD (sidorna är force-static, så det körs en
+ * gång per stad och aldrig i drift). Saknas bilden returneras null och heron
+ * faller tillbaka på den riktiga GL-kartan — en nytillagd stad ser alltså rätt
+ * ut direkt, den är bara tyngre tills skriptet körts om.
+ */
+function cityMapImageSrc(slug: string): string | null {
+    const rel = `kartbilder/${slug}.webp`;
+    return existsSync(path.join(process.cwd(), 'public', rel)) ? `/${rel}` : null;
 }
 
 /** Länken hero:n (och stadssidornas kart-CTA:er) öppnar: kartan centrerad på
@@ -82,15 +114,22 @@ const MAX_LIVE_DATA = 350;
 /** Bygg den levande kartans eventdata (vid BUILD). Bara fälten markörerna
  *  behöver — titel/plats/klockslag åkte ut med hero-popupen 30/8 (mindre
  *  HTML-payload). */
-function buildLiveEvents(events: CityEvent[]): HeroLiveEvent[] {
+function buildLiveEvents(city: City, events: CityEvent[]): HeroLiveEvent[] {
+    const center = worldPx(city.lat, city.lng, HERO_ZOOM);
     return events
         .filter(e => e.lat && e.lng)
         .slice(0, MAX_LIVE_DATA)
         .map(e => {
             const cat = EVENT_CATEGORIES[e.category as EventCategoryType] as { markerHex?: string } | undefined;
+            // dx/dy = px från heronas mitt i KAKELRUTNÄTETS skala, alltså
+            // exakt samma projektion som den förrenderade kartbilden ritades
+            // i. Räknas här en gång i stället för i varje besökares webbläsare.
+            const p = worldPx(e.lat, e.lng, HERO_ZOOM);
             return {
                 id: e.id,
                 href: mapHref(e.id),
+                dx: Math.round(p.x - center.x),
+                dy: Math.round(p.y - center.y),
                 lat: e.lat,
                 lng: e.lng,
                 emoji: e.emoji || '📍',
@@ -164,7 +203,11 @@ export default function CityMapHero({ city, events, recommended }: {
     }
 
     const bricks = pickBricks(city, events, recommended);
-    const live = buildLiveEvents(events);
+    const live = buildLiveEvents(city, events);
+    // FÖRRENDERAD KARTBILD finns → ingen kartmotor behövs (se nedan).
+    // Kollas vid BUILD; saknas bilden faller staden tillbaka på GL-kartan, så
+    // en ny stad fungerar direkt även innan någon kört renderingsskriptet.
+    const mapImage = cityMapImageSrc(city.slug);
 
     return (
         <>
@@ -178,15 +221,35 @@ export default function CityMapHero({ city, events, recommended }: {
                 renderar dem först om GL faktiskt fallerat. Flytta inte
                 tillbaka dem hit. */}
 
-            {/* Riktiga kartan (passiv men klickbar — kartbotten-klick öppnar
-                stora kartan via bigMapHref) i huvudkartans stil, tonas in
-                ovanpå kaklen. De statiska SSR-brickorna skickas med som
-                children men visas BARA i GL-fallerade reservläget: samma
-                nål-droppe som kartan (tre runda hörn + spets nedåt via rotate)
-                med kategori-gradienten. Måtten speglar GL-brickans
-                (makeBrickaImageData): hörnradien är HALVA kroppen — droppen
-                ska se rund ut med ett enda spetsigt hörn — kanten är svagt
-                vit och emojin ~0,6 av kroppen. */}
+            {mapImage ? (
+                /* NORMALFALLET: kartan är en färdig bild. Ingen MapLibre, ingen
+                   stil-hämtning, inga vektorkakel — bilden ligger i HTML:en och
+                   ritas direkt. Brickorna läggs ovanpå som levande DOM
+                   (CityMapHeroMarkers) så de fortfarande följer filtret och
+                   visar dagens utbud, inte byggdagens.
+                   object-cover: heron är flytande bred (max ~672 px) men bilden
+                   har fast mått — den ska fylla ytan och beskäras, aldrig
+                   skalas ojämnt. Landfärgen under så inget vitt blinkar förbi. */
+                <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={mapImage}
+                        alt=""
+                        aria-hidden
+                        width={HERO_IMG_W}
+                        height={HERO_IMG_H}
+                        decoding="async"
+                        fetchPriority="high"
+                        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+                        style={{ backgroundColor: THEMEPARK_LAND_COLOR_NEAR }}
+                    />
+                    <CityMapHeroMarkers markers={live} bigMapHref={cityMapHref(city)} />
+                </>
+            ) : (
+            /* RESERVVÄGEN: ingen förrenderad bild för den här staden (t.ex.
+               nytillagd) → rita kartan på riktigt med MapLibre, precis som
+               före 20/9. Passiv men klickbar. De statiska SSR-brickorna
+               skickas med som children men visas BARA om GL fallerar. */
             <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} markers={live} bigMapHref={cityMapHref(city)} fallbackTiles={tiles} tileSize={TILE}>
                 {bricks.map((b, i) => (
                     <span
@@ -206,6 +269,7 @@ export default function CityMapHero({ city, events, recommended }: {
                     </span>
                 ))}
             </CityMapHeroCanvas>
+            )}
 
             {/* "Öppna kartan över {stad}"-pillen är BORTTAGEN 20/9
                 (ägarbeslut: "den behövs inte"). Vägen till stora kartan finns

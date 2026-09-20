@@ -5,8 +5,10 @@ import {
     THEMEPARK_LAND_COLOR_NEAR,
 } from '@/components/v2/v2MapBaseStyles';
 import { NO_TIME_PAST_HOUR, sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
-import { PERIODS, periodKeys } from './periods';
+import { periodKeys } from './periods';
 import { useDayFilter } from './dayFilter';
+import CityHeroPeriodChips from './CityHeroPeriodChips';
+import type { HeroLiveEvent } from './heroMarkers';
 
 // Den RIKTIGA VADKUL-kartan i stads-heron — PASSIV men klickbar (Josef 24/8).
 // 18/8-varianten var fullt interaktiv (zoom/panorering, cooperativeGestures),
@@ -49,19 +51,10 @@ const MAX_LIVE = 140;
  *  `hex` i stället för färdig gradient-CSS: gradienten byggs här (sparar
  *  ~30 kB HTML på stora städer). `day` = 'YYYY-MM-DD' (svensk tid). `href`
  *  = stora kartan med eventet uppslaget (?event=) — dit går brick-klicket. */
-export type HeroLiveEvent = {
-    id: string;
-    href: string;
-    lat: number;
-    lng: number;
-    emoji: string;
-    hex: string | null;
-    t: number;
-    hour: number | null;
-    day: string;
-    /** Kategorinyckeln — heron följer kategorichipsen precis som listan. */
-    category: string;
-};
+// Typen bor i heroMarkers.ts — EN definition som både den här
+// GL-reservvägen och bildvägen (CityMapHeroMarkers) delar, så de aldrig kan
+// glida isär om ett fält läggs till. Re-exporteras för befintliga importer.
+export type { HeroLiveEvent };
 
 /** Samma "har varit"-trappa som daglistan och stora kartan: klockslag = 1 h
  *  efter start; utan klockslag = kl NO_TIME_PAST_HOUR sin dag (lokal klocka,
@@ -130,7 +123,7 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
     // Voyager-kaklen under. Tills dess täcker landfärgs-plattan dem, så heron
     // ser ut som kartan redan från server-HTML:en.
     const [failed, setFailed] = useState(false);
-    const { sel, setSel, category } = useDayFilter();
+    const { sel, category } = useDayFilter();
 
     const mapRef = useRef<MapLibreMap | null>(null);
     const markerCtorRef = useRef<(new (o: object) => MapLibreMarker) | null>(null);
@@ -310,32 +303,8 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
                 {children}
             </div>
 
-            {/* Dagchips — SAMMA filter som listan under (dayFilter). Ett
-                dagval i listans filterrad speglas alltså här och tvärtom. */}
-            {/* z-20: under toppnaven (z-40) — chipsen får inte rita över den
-                när heron scrollas upp bakom naven. */}
-            {/* flex-wrap + right-2: fem chips (I helgen tillbaka 10/9) ryms
-                knappt på en 320 px-telefon — hellre en rad till än klippt. */}
-            <div className="absolute top-2 left-2 right-2 z-20 flex flex-wrap gap-1">
-                {PERIODS.map(p => {
-                    const active = sel.kind === 'period' && sel.period === p.key;
-                    return (
-                        <button
-                            key={p.key}
-                            type="button"
-                            onClick={() => setSel({ kind: 'period', period: p.key })}
-                            aria-pressed={active}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-black shadow-sm border transition-colors ${
-                                active
-                                    ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                                    : 'bg-white/85 backdrop-blur border-white/60 text-slate-700 hover:bg-white'
-                            }`}
-                        >
-                            {p.label}
-                        </button>
-                    );
-                })}
-            </div>
+            {/* Periodchipsen — delad komponent med bildvägen. */}
+            <CityHeroPeriodChips />
         </>
     );
 }
