@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
     CITIES,
-    categoryBySlug, getCityCategoryEvents, getCityEvents, getCityOptInEvents, getCityCategoryChips, countBySource, getCategoryCombos, dayLabel, cityTitle, categoryTitle,
+    categoryBySlug, getCityCategoryEvents, getCityEvents, getCityOptInEvents, getNationalUpcomingCount, getCityCategoryChips, countBySource, getCategoryCombos, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../../cityData';
 import CategoryChips from '../../CategoryChips';
@@ -84,6 +84,7 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
     // Samma regel som stadssidan: chips utan undersida länkar till stads-
     // sidan med ?kategori= och filtrerar där.
     const { events: allCityEvents } = await getCityEvents(city);
+    const nationalCount = await getNationalUpcomingCount();
     const cityCategoryChips = getCityCategoryChips(city, allCityEvents);
     // Fler-radens siffror: opt-in-källornas event i JUST den här kategorin
     // (kategorifiltret gäller även de hämtade raderna).
@@ -148,8 +149,8 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
             <TopNav
                 backHref={`/evenemang/${city.slug}`}
                 backLabel={`Alla evenemang i ${city.name}`}
-                ctaLabel="Se allt på kartan"
                 ctaHref={cityMapHref(city)}
+                ctaCount={nationalCount}
             />
             <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
                 <h1 className="text-3xl font-black text-[#006AA7] dark:text-sky-400 tracking-tight">

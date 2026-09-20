@@ -342,6 +342,29 @@ export function pickRecommended(events: CityEvent[], n = 8): CityEvent[] {
     return picks;
 }
 
+/**
+ * Antal kommande event i HELA landet — siffran i toppnavens kart-ingång
+ * ("Se alla N event på kartan").
+ *
+ * Räknas på samma två villkor som kartan visar som default: kommande (idag
+ * eller senare, samma dagnyckel-regel som stadssidorna) och INTE en
+ * opt-in-källa (Svenska kyrkan/PRO/Korpen är avstängda för alla utom
+ * inloggade 65+, så de vore ett löfte om event besökaren inte ser).
+ * Till skillnad från getCityCounts summeras inte städerna — radierna
+ * överlappar, så det hade dubbelräknat.
+ */
+export async function getNationalUpcomingCount(): Promise<number> {
+    const { dests } = await loadData();
+    const todayK = dayKey(new Date().toISOString());
+    let n = 0;
+    for (const e of dests) {
+        if (!e.lat || !e.lng) continue;        // null island syns inte på kartan
+        if (classifySource(e.id)) continue;    // opt-in-källa
+        if (dayKey(e.time) >= todayK) n++;
+    }
+    return n;
+}
+
 /** Antal kommande event per stad — för indexsidan och sitemapen. */
 export async function getCityCounts(): Promise<{ city: City; count: number }[]> {
     const counts = await Promise.all(
