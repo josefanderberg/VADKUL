@@ -1,7 +1,8 @@
 import { occurrencesForWeeks, seriesLastDate } from '../utils/weeklySeries';
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
-import { doc, collection, query, where, getDocs, addDoc, deleteDoc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, getCountFromServer, addDoc, deleteDoc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { decideUserEventPoll } from '../utils/userEventPoll';
 import { getAuthHeaders } from '../lib/authHeaders';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildCardIndex } from '../utils/eventKey';
@@ -137,13 +138,40 @@ async function fetchActiveBoosts(): Promise<Map<string, Date>> {
     return out;
 }
 
-async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
+/**
+ * ETT read oavsett hur många event som finns: Firestore debiterar en läsning
+ * per påbörjade 1 000 indexposter för count(). Probe:n som låter pollen slippa
+ * hämta hela listan var 30:e sekund — se utils/userEventPoll för hela bakgrunden.
+ *
+ * null = frågan gick inte fram ("vet inte"), ALDRIG "noll event".
+ */
+async function fetchUserCreatedCount(): Promise<number | null> {
     try {
-        if (!db) return [];
+        if (!db) return null;
+        const q = query(collection(db, 'linkEvents'), where('userCreated', '==', true));
+        const snap = await getCountFromServer(q);
+        return snap.data().count;
+    } catch (e) {
+        console.warn('Kunde inte räkna användarskapade event:', e);
+        return null;
+    }
+}
+
+/**
+ * `total` = antalet DOKUMENT frågan matchade — inte längden på `events`, som är
+ * både filtrerad och serie-expanderad. Det är `total` som count()-probe:n
+ * jämförs mot, så de två måste räkna exakt samma sak.
+ *
+ * `total: null` betyder att hämtningen misslyckades. Anroparen skiljer det från
+ * en tom databas (`total: 0`) och behåller då eventen den redan visar.
+ */
+async function fetchUserCreatedEvents(): Promise<{ events: LinkEvent[]; total: number | null }> {
+    try {
+        if (!db) return { events: [], total: null };
         const q = query(collection(db, 'linkEvents'), where('userCreated', '==', true));
         const snap = await getDocs(q);
         const cutoff = new Date(); cutoff.setHours(0, 0, 0, 0);
-        return snap.docs
+        const events = snap.docs
             .map((d) => {
                 const v: any = d.data();
                 const time = v.time instanceof Timestamp ? v.time.toDate() : new Date(v.time);
@@ -196,9 +224,10 @@ async function fetchUserCreatedEvents(): Promise<LinkEvent[]> {
             // kommande tillfälle. Engångsevent filtreras som förut.
             .filter((e) => e.title && !(e as any).hidden && (e.repeatWeekly || e.time >= cutoff))
             .flatMap((e) => (e.repeatWeekly ? expandWeekly(e, cutoff) : [e]));
+        return { events, total: snap.size };
     } catch (e) {
         console.warn('Kunde inte hämta användarskapade event:', e);
-        return [];
+        return { events: [], total: null };
     }
 }
 
@@ -1080,10 +1109,23 @@ export const linkEventService = {
         // med i samma poll: en nyss betald boost på ett skrapat event ska synas
         // inom ~30 s efter Stripe-återkomsten, och queryn är försumbar bredvid
         // user-event-hämtningen.
+        // Vad den senaste FULLA hämtningen såg. Styr count()-probe:n nedan.
+        let lastUserCount: number | null = null;
+        let lastUserFullFetchMs: number | null = null;
+        let userPollInFlight = false;
+
         async function loadUserEvents() {
             const [u, boosts] = await Promise.all([fetchUserCreatedEvents(), fetchActiveBoosts()]);
             if (!active) return;
-            userEvents = u;
+            // total === null = hämtningen gick inte fram. Behåll eventen vi
+            // redan visar (ett tappat nätvarv ska inte tömma kartan) och lämna
+            // räknaren okänd, så nästa varv hämtar om i stället för att tro
+            // att listan blivit tom.
+            if (u.total !== null) {
+                userEvents = u.events;
+                lastUserCount = u.total;
+                lastUserFullFetchMs = Date.now();
+            }
             boostOverlay = boosts;
             // Boost-löftet ("syns varje dag t.o.m. featuredUntil") får inte
             // klippas av fönstret: en betald boost på ett event bortom
@@ -1098,6 +1140,36 @@ export const linkEventService = {
             emit();
         }
 
+        /**
+         * Ett pollvarv. Kostar ETT read (count) i stället för ett per event,
+         * och hämtar hela listan bara när antalet faktiskt ändrats — alltså
+         * när någon skapat eller tagit bort ett event.
+         *
+         * Varför: den gamla pollen läste ALLA userCreated-event var 30:e
+         * sekund = ~6 400 reads i timmen per öppen flik, ~90 % av kontots
+         * 400 000 reads/dygn (mätt 20/9). Se utils/userEventPoll.
+         */
+        async function pollUserEvents() {
+            if (!active || userPollInFlight) return;
+            // Dold flik kostar ingenting alls. Utan den här raden pollade en
+            // glömd flik vidare i evighet — det var natt-golvet i mätningen.
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+            userPollInFlight = true;
+            try {
+                const probedCount = await fetchUserCreatedCount();
+                if (!active) return;
+                const decision = decideUserEventPoll({
+                    nowMs: Date.now(),
+                    lastFullFetchMs: lastUserFullFetchMs,
+                    lastCount: lastUserCount,
+                    probedCount,
+                });
+                if (decision === 'full') await loadUserEvents();
+            } finally {
+                userPollInFlight = false;
+            }
+        }
+
         // Initial: ladda allt direkt.
         loadAggregates();
         loadUserEvents();
@@ -1105,14 +1177,28 @@ export const linkEventService = {
         // Aggregaten ändras ~1×/dygn (efter scrape) → glesa pollen till 5 min;
         // index-doc-cachen gör dessutom oförändrade pollar nästan gratis.
         const aggregateInterval = setInterval(loadAggregates, 5 * 60 * 1000);
-        // Användarevent kan dyka upp när som helst → behåll snabb 30 s-poll.
-        const userInterval = setInterval(loadUserEvents, 30000);
+        // Användarevent kan dyka upp när som helst → behåll snabb 30 s-takt.
+        // Takten är kvar, det är KOSTNADEN per varv som är borta.
+        const userInterval = setInterval(pollUserEvents, 30000);
+
+        // Flik som kommer tillbaka i förgrunden ska visa färskt direkt i
+        // stället för att vänta ut nästa tick (och säkerhetsnätet i
+        // decideUserEventPoll ser till att en länge dold flik hämtar om helt).
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') void pollUserEvents();
+        };
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', onVisibilityChange);
+        }
 
         // Returnera avprenumerations-funktion för att stänga polling-intervallen vid unmount
         return () => {
             active = false;
             clearInterval(aggregateInterval);
             clearInterval(userInterval);
+            if (typeof document !== 'undefined') {
+                document.removeEventListener('visibilitychange', onVisibilityChange);
+            }
         };
     }
 };

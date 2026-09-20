@@ -230,7 +230,12 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
     };
 
     return (
-        <div className={`relative rounded-2xl overflow-hidden transition-colors ${frame.box}`}>
+        // shrink-0: raden är flex-barn i den maxHeight-kapade listan, och med
+        // overflow-hidden är dess automatiska min-höjd 0 — utan shrink-0
+        // klämde flexbox ihop ALLA rader i taket i stället för att scrolla
+        // (och ResizeObservern mätte om taket från de hopklämda raderna, så
+        // höjden spiralerade ner mot noll i städer med många rader).
+        <div className={`relative shrink-0 rounded-2xl overflow-hidden transition-colors ${frame.box}`}>
             {/* <a href=/?event=> står kvar för crawl + cmd/ctrl-klick (kartan i
                 ny flik) — vanligt klick fäller ut på plats, som listraderna. */}
             {hasImage ? (
@@ -402,7 +407,12 @@ export default function CityVadkulSpotlight(props: Props) {
             </div>
             <div
                 ref={listRef}
-                className={`mt-2 flex flex-col gap-2 ${capped ? 'overflow-y-auto overscroll-contain pr-0.5 [scrollbar-width:thin]' : ''}`}
+                // INGEN overscroll-contain här (borttagen 20/9): den stoppade
+                // scrollen död när listan nått sin botten, så sidan såg ut att
+                // ta slut mitt i. Webbläsarens default (overscroll-behavior:
+                // auto) låter scrollen gå vidare till sidan när listan är
+                // slut — det är precis vad vi vill. Lägg inte tillbaka den.
+                className={`mt-2 flex flex-col gap-2 ${capped ? 'overflow-y-auto pr-0.5 [scrollbar-width:thin]' : ''}`}
                 style={capped && capPx !== null ? { maxHeight: capPx } : undefined}
             >
                 {[...boosted, ...vadkul].map(e => (

@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
     CITIES, MIN_INDEXABLE_EVENTS, distKm,
-    getCityEvents, getCityOptInEvents, getCityCategoryChips, countBySource, pickRecommended, dayLabel, cityTitle, categoryTitle,
+    getCityEvents, getCityOptInEvents, getNationalUpcomingCount, getCityCategoryChips, countBySource, pickRecommended, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../cityData';
 import CategoryChips from '../CategoryChips';
@@ -93,6 +93,8 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
     // Fler-radens siffror per opt-in-källa (kyrkan/PRO/Korpen). Själva
     // eventen går ALDRIG in i sidan — de hämtas ur stadens opt-in.json.
     const sourceCounts = countBySource((await getCityOptInEvents(city)).events);
+    // Siffran i toppnavens kart-ingång — hela landet, inte staden.
+    const nationalCount = await getNationalUpcomingCount();
 
     // Kategorichips = FILTER (från 3 event, alla orter). hasPage säger om
     // kategorin också har en egen undersida (5 i storstad / 10 i småort) —
@@ -168,7 +170,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
-            <TopNav backHref="/evenemang" backLabel="Evenemang i Sverige" ctaLabel="Se allt på kartan" ctaHref={cityMapHref(city)} />
+            {/* Ingen tillbaka-länk: "Evenemang i Sverige" (listan med alla
+                städer) togs bort 20/9 — ägarbeslut, ingen vill dit. */}
+            <TopNav ctaHref={cityMapHref(city)} ctaCount={nationalCount} />
             <div className="max-w-2xl mx-auto px-5 pt-6 pb-10">
                 <h1 className="text-3xl font-black text-[#006AA7] dark:text-sky-400 tracking-tight">
                     Vad händer i {city.name}?

@@ -19,8 +19,6 @@ export type DaySel =
 type DayFilterState = {
     sel: DaySel;
     setSel: (s: DaySel) => void;
-    hours: number[];
-    setHours: (h: number[] | ((prev: number[]) => number[])) => void;
     /** KATEGORIN (Josef 2/9: "byte utan sidladdning") — datanyckeln
      *  ('family', 'music' …) eller null = alla. Sätts av CategoryChips ur
      *  URL:en; listan (och heron) filtrerar på den. På kategorisidan är
@@ -57,13 +55,12 @@ type DayFilterState = {
 
 /** Samma form som DayFilteredList:s ListedDay — typad löst här för att
  *  slippa en importcirkel (DayFilteredList importerar den här modulen). */
-export type OptInDay = { key: string; label: string; short: string; hourCounts: number[]; events: unknown[] };
+export type OptInDay = { key: string; label: string; short: string; events: unknown[] };
 
 const DayFilterCtx = createContext<DayFilterState | null>(null);
 
 export function DayFilterProvider({ children }: { children: ReactNode }) {
     const [sel, setSel] = useState<DaySel>({ kind: 'period', period: 'all' });
-    const [hours, setHours] = useState<number[]>([]);
     const [category, setCategory] = useState<string | null>(null);
     const [optInSources, setOptInSources] = useState<string[]>([]);
     const [optInDays, setOptInDays] = useState<OptInDay[] | null>(null);
@@ -73,7 +70,7 @@ export function DayFilterProvider({ children }: { children: ReactNode }) {
 
     return (
         <DayFilterCtx.Provider value={{
-            sel, setSel, hours, setHours, category, setCategory,
+            sel, setSel, category, setCategory,
             optInSources, setOptInSources, optInDays, setOptInDays, optInTotals, setOptInTotals,
             popularOnly, setPopularOnly, sourceOnly, setSourceOnly,
         }}>

@@ -50,13 +50,12 @@ export function cityOptInDefault(stored: string | null | undefined, loggedIn: bo
 // sammanslagningen behöver — typerna importeras inte (klientmodul med
 // 'use client'), och funktionerna ska kunna testas utan React.
 export type MergeRow = { coverImage?: string; t: number; hour: number | null; source?: string; dups?: MergeRow[] };
-export type MergeDay<R extends MergeRow> = { key: string; label: string; short: string; hourCounts: number[]; events: R[]; beyond?: boolean };
+export type MergeDay<R extends MergeRow> = { key: string; label: string; short: string; events: R[]; beyond?: boolean };
 
 /**
  * Behåll bara raderna från de VALDA källorna (rad-nivå: en grupprad följer
- * sin representant). Dagar utan kvarvarande rader faller bort och
- * timstaplarna räknas om ur de kvarvarande raderna — de bakade hourCounts
- * täcker alla tre källorna. Tom källista → tom lista.
+ * sin representant). Dagar utan kvarvarande rader faller bort.
+ * Tom källista → tom lista.
  */
 export function filterDaysBySource<R extends MergeRow, D extends MergeDay<R>>(days: D[], sources: readonly string[]): D[] {
     if (sources.length === 0) return [];
@@ -65,11 +64,7 @@ export function filterDaysBySource<R extends MergeRow, D extends MergeDay<R>>(da
     for (const d of days) {
         const events = d.events.filter(r => !!r.source && want.has(r.source));
         if (events.length === 0) continue;
-        const hourCounts = Array(24).fill(0) as number[];
-        for (const r of events) {
-            for (const x of [r, ...(r.dups ?? [])]) if (x.hour !== null) hourCounts[x.hour]++;
-        }
-        out.push({ ...d, events, hourCounts });
+        out.push({ ...d, events });
     }
     return out;
 }
@@ -77,7 +72,7 @@ export function filterDaysBySource<R extends MergeRow, D extends MergeDay<R>>(da
 /**
  * Sy in opt-in-dagarna i serverns daglista: samma dag → raderna slås ihop
  * och sorteras om enligt serverns regel (bildsatta rader först, tidsordning
- * inom varje grupp) och timstaplarna summeras; dagar som bara finns i
+ * inom varje grupp); dagar som bara finns i
  * opt-in-listan läggs till. Resultatet är sorterat på dagnyckel
  * ('YYYY-MM-DD'). Utan extra dagar returneras serverns lista orörd (samma
  * referens — inga onödiga omrenderingar).
@@ -98,12 +93,11 @@ export function mergeListedDays<R extends MergeRow, D extends MergeDay<R>>(base:
             ...rows.filter(r => !!r.coverImage).sort(byTime),
             ...rows.filter(r => !r.coverImage).sort(byTime),
         ];
-        const hourCounts = Array.from({ length: 24 }, (_, h) => (cur.hourCounts[h] ?? 0) + (x.hourCounts[h] ?? 0));
         // En dag är `beyond` (utanför 14-dagarsfönstret, bara i kategori-
         // läget) bara om BÅDA halvorna är det — listornas fönster kan sluta
         // olika dagar, och en riktig fönsterdag ska synas i Alla-vyn.
         const beyond = !!cur.beyond && !!x.beyond;
-        byKey.set(x.key, { ...cur, events: merged, hourCounts, ...(beyond ? { beyond: true } : { beyond: undefined }) });
+        byKey.set(x.key, { ...cur, events: merged, ...(beyond ? { beyond: true } : { beyond: undefined }) });
     }
     return [...byKey.values()].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 }
