@@ -9,6 +9,24 @@ import maplibregl from 'maplibre-gl';
 // transformera den (fetchAndTransformThemeParkStyle) — den här URL:en används
 // direkt bara som reservväg om transformen inte går att hämta, och av
 // outreach-konsolens minikarta.
+// VOYAGER-STILENS LICENSER — två stycken, med olika krav:
+//
+//   KODEN (style.json) är BSD 3-Clause:
+//     Copyright (c) 2018, CartoDB Inc. All rights reserved.
+//     Redistribution and use in source and binary forms, with or without
+//     modification, are permitted provided that the above copyright notice,
+//     this list of conditions and the following disclaimer are retained.
+//     Varken CartoDB:s namn eller dess bidragsgivares får användas för att
+//     rekommendera eller marknadsföra härledda produkter utan skriftligt
+//     tillstånd. Programvaran tillhandahålls "AS IS", utan garantier.
+//   Den notisen måste följa med i källkod/dokumentation — därav det här
+//   blocket. Den behöver INTE synas i gränssnittet.
+//
+//   DESIGNEN (själva utseendet) ligger separat under CC-BY 4.0 och kräver
+//   SYNLIG kredit till "CARTO" och "OpenMapTiles.org" i kartor som använder
+//   stilen. Det är därför kartkrediten namnger båda — även på stadssidorna,
+//   där vi sedan 20/9 renderar EGNA kakel och inte gör ett enda anrop till
+//   CARTO. Vi slutade använda deras servrar, inte deras formgivning.
 export const STREETS_STYLE_URL = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 
 // Nöjesfältets land-färger. Utzoomat (nationell vy) är landet EN mörk grön ton;
