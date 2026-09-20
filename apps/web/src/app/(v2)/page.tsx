@@ -1287,6 +1287,16 @@ export default function HomePage() {
     const eveningSwitchTriedRef = useRef(false);
     useEffect(() => {
         if (!eventsSettled || eveningSwitchTriedRef.current) return;
+        // CHANSEN BRÄNNS FÖRST NÄR DET FINNS DATA ATT BEDÖMA (20/9). Förr
+        // sattes flaggan direkt på eventsSettled — men det beskedet ges
+        // "oavsett om lagret var tomt eller ej" (se onInitialLoad), så en
+        // tom array i det ögonblicket förbrukade kvällslandningen. Effekten
+        // kördes visserligen om när eventen kom (events ligger i deps), men
+        // returnerade då direkt på flaggan, och kartan blev stående på en
+        // död dag med "allt har varit"-prompten i stället för att hoppa.
+        // events.length > 0 = lagret HAR landat; är det tomt på just idag
+        // faller vi ändå igenom nedan (tom dag byter inte dag, by design).
+        if (events.length === 0) return;
         eveningSwitchTriedRef.current = true; // en chans — aldrig igen
         if (dayOffset !== 0 || dayRangeDays !== 1) return;
         // Pågående platsval (?skapa=1/?onska=1 har redan hunnit strippas ur
