@@ -15,17 +15,20 @@ import { mapHref } from './EventList';
 // (?plats=lat,lng,zoom — läses i V2Maps init). Poängen är densamma: sidorna
 // ska kännas som sajten (kartan ÄR produkten), inte som ett textindex.
 //
-// Tre lager kartbotten, i den ordningen:
-//   1. Serverrenderade kakelbilder — Cartos raster-Voyager (samma kartografi
-//      som kartans vektor-Voyager, ingen API-nyckel) som vanliga <img>. Finns
-//      i HTML:en, kräver noll JS — men är numera RESERVVÄG, inte förstabild.
-//   2. CityMapHeroCanvas täcker kaklen med en platta i kartans landfärg redan
-//      från server-HTML:en (Voyagers grå-beige såg ut som "en annan produkt"
-//      den sekund den syntes) och släpper fram dem bara om GL fallerar.
-//   3. Samma komponents riktiga, passiva MapLibre-karta i huvudkartans
-//      "nöjesfälts"-stil tonas in ovanpå när den laddat.
-// Brickorna ligger överst och är absolut positionerade <span> vars offset
-// räknas ut vid BUILD med samma webbmercator som kartan.
+// KARTBOTTEN ÄR EN BILD — INGEN KARTMOTOR (ombyggt 20/9, ägarbeslut: "vi kan
+// ju ändå inte dra eller zooma på kartan. onödigt tungt att ladda en riktig
+// karta istället för en bild"). Två lager:
+//   1. Serverrenderade kakelbilder (OpenStreetMaps standardkakel) som vanliga
+//      <img>. Finns i HTML:en och kräver NOLL JavaScript — det här är
+//      förstabilden, inte längre en reservväg.
+//   2. CityMapHeroCanvas lägger brickorna ovanpå som absolut positionerade
+//      DOM-element. Serverns statiska brickor syns direkt; filterlagret tar
+//      över när det hydrerat.
+// Borta sedan 20/9: den passiva MapLibre-canvasen som ritade SAMMA bild en
+// gång till ovanpå kaklen (~800 kB JS + stilhämtning + WebGL-kontext), och
+// landfärgs-plattan som dolde kaklen tills den laddat. Återinför dem inte —
+// heron har aldrig kunnat dras eller zoomas.
+// Alla brickors offset räknas vid BUILD med samma webbmercator som kaklen.
 
 const TILE = 256;
 /** Kakel-zoom (256 px-kakel) för förhandsvisningen. 12 ≈ hela stadskärnan med
@@ -82,17 +85,26 @@ const MAX_LIVE_DATA = 350;
 /** Bygg den levande kartans eventdata (vid BUILD). Bara fälten markörerna
  *  behöver — titel/plats/klockslag åkte ut med hero-popupen 30/8 (mindre
  *  HTML-payload). */
-function buildLiveEvents(events: CityEvent[]): HeroLiveEvent[] {
+function buildLiveEvents(city: City, events: CityEvent[]): HeroLiveEvent[] {
+    const center = worldPx(city.lat, city.lng, HERO_ZOOM);
     return events
         .filter(e => e.lat && e.lng)
-        .slice(0, MAX_LIVE_DATA)
+        // Positionen räknas HÄR, i kakelrutnätets skala — klienten har ingen
+        // kartmotor som kan projicera lat/lng längre. Event utanför hero-ytan
+        // slängs direkt: de gick aldrig att se, och de kostade HTML.
         .map(e => {
+            const p = worldPx(e.lat, e.lng, HERO_ZOOM);
+            return { e, dx: Math.round(p.x - center.x), dy: Math.round(p.y - center.y) };
+        })
+        .filter(({ dx, dy }) => Math.abs(dx) <= HALF_W && Math.abs(dy) <= HALF_H)
+        .slice(0, MAX_LIVE_DATA)
+        .map(({ e, dx, dy }) => {
             const cat = EVENT_CATEGORIES[e.category as EventCategoryType] as { markerHex?: string } | undefined;
             return {
                 id: e.id,
                 href: mapHref(e.id),
-                lat: e.lat,
-                lng: e.lng,
+                dx,
+                dy,
                 emoji: e.emoji || '📍',
                 hex: cat?.markerHex ?? null,
                 t: Date.parse(e.time),
@@ -166,9 +178,10 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
     }
 
     const bricks = pickBricks(city, events, recommended);
-    const live = buildLiveEvents(events);
+    const live = buildLiveEvents(city, events);
 
     return (
+        <>
         <div className="group relative block mt-5 h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 transition-all">
             {/* Kartbotten: rena bild-tiles, absolut positionerade runt mitten. */}
             {tiles.map(t => (
@@ -195,7 +208,7 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
                 (makeBrickaImageData): hörnradien är HALVA kroppen — droppen
                 ska se rund ut med ett enda spetsigt hörn — kanten är svagt
                 vit och emojin ~0,6 av kroppen. */}
-            <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} markers={live} bigMapHref={cityMapHref(city)}>
+            <CityMapHeroCanvas markers={live} bigMapHref={cityMapHref(city)}>
                 {bricks.map((b, i) => (
                     <span
                         key={b.id}
@@ -230,10 +243,25 @@ export default function CityMapHero({ city, events, recommended, ctaLabel }: {
                 </span>
             </Link>
 
-            {/* Attribution — OSM täcker både vektorkartan (Carto) och reservkaklen. */}
-            <span className="absolute bottom-0 right-0 z-20 px-1.5 py-0.5 text-[8px] leading-none font-medium text-slate-600 dark:text-zinc-400 bg-white/70 dark:bg-zinc-900/70 rounded-tl pointer-events-none">
-                © OpenStreetMap © CARTO
-            </span>
         </div>
+        {/* KARTKREDITEN — flyttad UT ur kartrutan 20/9 (ägarbeslut: symbolen
+            i hörnet skulle bort). Den får inte försvinna helt: kaklen kommer
+            från OpenStreetMap, vars licens (ODbL) och kakelpolicy KRÄVER
+            synlig attribution. Samma lösning som stora kartan, där raden bor
+            i välkomstrutan i stället för på kartan. Tar du bort raden här
+            måste krediten tillbaka någon annanstans på sidan. */}
+        <p className="mt-1 text-right text-[10px] leading-none text-slate-400 dark:text-zinc-600">
+            Kartdata ©{' '}
+            <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noopener"
+                className="underline hover:text-slate-600 dark:hover:text-zinc-400"
+            >
+                OpenStreetMap
+            </a>
+            {' '}contributors
+        </p>
+        </>
     );
 }

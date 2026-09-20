@@ -25,16 +25,17 @@ import EventInfoRow from './EventInfoRow';
 // registreringsformuläret i sitt förstabundle.
 const AuthModal = dynamic(() => import('@/components/v2/AuthModal'), { ssr: false });
 
-// Klientdelen av stads-/kategorisidornas eventsektion. Filterraden ligger
-// ÖVERST och styr allt under den (kategorichipsen och daglistan).
-// Filter i två dimensioner:
-//  - DAG: Alla/Idag/Imorgon/I veckan (räknas mot användarens riktiga klocka,
-//    periods.ts) + en chip per listad dag ("Lör 11/7").
-//    ("Nästa timmen"-chippen borttagen 18/8, ägarbeslut: onödig.)
-//  - TID: stapeldiagram över när på dagen eventen börjar — staplarna är
-//    filterknappar (visar SANNA totaler per timme via hourCounts, inte bara
-//    de listade raderna).
-// Dessutom:
+// Klientdelen av stads-/kategorisidornas eventsektion.
+//
+// LISTAN HAR INGEN EGEN FILTERRAD sedan 20/9 (ägarbeslut). Borta är
+// period-chipsen (Alla/Idag/Imorgon/I helgen/I veckan), dag-chipsen och
+// stapeldiagrammet "När på dagen?". Perioden väljs i kart-heron ovanför —
+// samma delade dayFilter-state, och heron finns på både stads- och
+// kategorisidan — medan dagarna nås genom att scrolla: listan är ordnad dag
+// för dag med klistrade dagrubriker, och tid för tid inom dagen.
+// Timfiltret finns inte längre alls. Bygg inte tillbaka någon av dem.
+//
+// Kvar i sektionen:
 //  - FRÅN NU OCH FRAMÅT: event som redan varit (startade >1 h sedan; utan
 //    klockslag: efter kl 20 — samma gränser som kartans "har varit") göms
 //    bakom en "har redan varit"-knapp
@@ -137,8 +138,6 @@ export type ListedDay = {
     /** Chip-etikett, t.ex. "Lör 11/7". */
     short: string;
     events: ListedEvent[];
-    /** Antal event per starttimme 0–23 för dagen — histogrammets staplar. */
-    hourCounts: number[];
     /** Dag BORTOM listans 14-dagarsfönster med glesa kategoriers senare event
      *  (utils/listHorizon) — visas bara när en kategori är vald, aldrig i
      *  Alla-vyn och aldrig som dagchip. */
@@ -160,36 +159,6 @@ const countEvents = (rows: ListedEvent[]) => rows.reduce((sum, e) => sum + 1 + (
 const IMGLESS_SHOWN = 3;
 // Samma nyckel som kartan — hjärtan här hamnar i kartans Sparat-panel.
 const SAVED_KEY = 'vadkul_saved_events';
-
-/** "18–20, 22" — valda timmar med sammanhängande körningar ihopslagna. */
-function hourRanges(hours: number[]): string {
-    const hs = [...hours].sort((a, b) => a - b);
-    const parts: string[] = [];
-    for (let i = 0; i < hs.length; i++) {
-        let j = i;
-        while (j + 1 < hs.length && hs[j + 1] === hs[j] + 1) j++;
-        parts.push(i === j ? `${hs[i]}` : `${hs[i]}–${hs[j]}`);
-        i = j;
-    }
-    return parts.join(', ');
-}
-
-function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-pressed={active}
-            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-black transition-colors border ${
-                active
-                    ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400'
-            }`}
-        >
-            {label}
-        </button>
-    );
-}
 
 // Tidsstatus för en rad (samma trappa som eventkortets NearbyRow): beräknas
 // mot klientens klocka (nowTs) och får därför bara köras EFTER mount.
@@ -505,10 +474,12 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     /** Renderas mellan filterraden och daglistan (t.ex. kategorichips). */
     children?: ReactNode;
 }) {
-    // Urval + timstaplar bor i det DELADE dagfiltret (dayFilter.tsx) så att
-    // kart-heron ovanför visar samma dag som listan. Timvalen behålls när man
-    // byter dag — "kvällsfiltret" följer med.
-    const { sel, setSel, hours, setHours, category, optInSources, optInDays, popularOnly, setPopularOnly, sourceOnly } = useDayFilter();
+    // Urvalet bor i det DELADE dagfiltret (dayFilter.tsx) så att kart-heron
+    // ovanför visar samma dag som listan. Listan har sedan 20/9 INGEN egen
+    // filterrad — perioden väljs i heron, och listan är redan ordnad dag för
+    // dag och tid för tid (ägarbeslut: "onödig filtrering när det redan är i
+    // ordning"). setSel finns kvar för tomlägets "Visa alla"-knappar.
+    const { sel, setSel, category, optInSources, optInDays, popularOnly, setPopularOnly, sourceOnly } = useDayFilter();
     // OPT-IN-KÄLLORNA (Josef 2/9): de valda källornas rader ur stadens hämtade
     // opt-in-dagar sys in i serverns lista (samma radform; utils/cityOptIn).
     // Inget valt/ej hämtat → serverns lista orörd, samma referens.
@@ -631,21 +602,18 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     const horizonDays = category === null ? freshDays.filter(d => !d.beyond) : freshDays;
     const visDays = dayKeys ? horizonDays.filter(d => dayKeys.includes(d.key)) : horizonDays;
 
-    const hourMatch = (e: { hour: number | null }) =>
-        hours.length ? e.hour !== null && hours.includes(e.hour) : true;
     // KATEGORIN (CategoryChips → kontexten, Josef 2/9): stadssidans rader
     // bär alla kategorier och filtreras här på plats; på kategorisidan är
     // raderna redan servern-filtrerade och matchar alla.
     const catMatch = (e: { category?: string }) => category === null || e.category === category;
     // 🔥 POPULÄRA (Josef 10/9): en grupprad matchar om representanten ELLER
-    // någon dup är flaggad — samma "något tillfälle räcker"-regel som
-    // timfiltret. Av vid SSR (kontexten är alltid false där).
+    // någon dup är flaggad — "något tillfälle räcker". Av vid SSR (kontexten
+    // är alltid false där).
     const popMatch = (e: ListedEvent) =>
         !popularOnly || e.pop === true || (e.dups ?? []).some(d => d.pop === true);
-    // En grupprad (dups) matchar timfiltret om NÅGOT av tillfällena gör det,
-    // och räknas som "har varit" först när ALLA tillfällen passerat — annars
-    // försvinner kvällens sagostund för att morgonens redan varit.
-    const rowMatch = (e: ListedEvent) => catMatch(e) && popMatch(e) && (hourMatch(e) || (e.dups ?? []).some(hourMatch));
+    // En grupprad räknas som "har varit" först när ALLA tillfällen passerat —
+    // annars försvinner kvällens sagostund för att morgonens redan varit.
+    const rowMatch = (e: ListedEvent) => catMatch(e) && popMatch(e);
     const rowPast = (e: ListedEvent) => isPast(e) && (e.dups ?? []).every(isPast);
     // Från nu och framåt: passerade rader göms bakom "har redan varit".
     const shownDays = visDays
@@ -664,7 +632,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
 
     // Filterbyte → börja om från första dagen i det nya urvalet, och fäll
     // ihop det öppna eventet (raden kan ha filtrerats bort).
-    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, hours, category, sourceOnly]);
+    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, category, sourceOnly]);
 
     // NÄSTA DAG-PILEN i dagrubriken (Josef 31/8): hoppar/scrollar till nästa
     // dags rubrik. Nästa dag kan vara OAVTÄCKT (dag-för-dag-avtäckningen
@@ -708,25 +676,8 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
             window.removeEventListener('scroll', check);
             window.removeEventListener('resize', check);
         };
-    }, [revealed, hasMoreDays, sel, hours, category]);
+    }, [revealed, hasMoreDays, sel, category]);
 
-    // Histogram = summan av de visade dagarnas hourCounts (sanna totaler).
-    // Med en kategori vald räknas staplarna i stället ur radernas (och
-    // dupsens) timmar — hourCounts är förbyggda över ALLA kategorier.
-    const hist = category === null
-        ? Array.from({ length: 24 }, (_, h) => visDays.reduce((s, d) => s + (d.hourCounts[h] ?? 0), 0))
-        : Array.from({ length: 24 }, (_, h) => visDays.reduce((s, d) => s + d.events.reduce((t, e) =>
-            t + [e, ...(e.dups ?? [])].filter(x => x.category === category && x.hour === h).length, 0), 0));
-    const histMax = Math.max(...hist, 1);
-    let lo = 7, hi = 22;
-    for (let h = 0; h < 7; h++) if (hist[h] > 0) { lo = h; break; }
-    if (hist[23] > 0) hi = 23;
-    const barHours: number[] = [];
-    for (let h = lo; h <= hi; h++) barHours.push(h);
-    const showHist = hist.some(c => c > 0);
-
-    const toggleHour = (h: number) =>
-        startTransition(() => setHours(prev => (prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h])));
     const togglePast = (key: string) =>
         setOpenPast(prev => {
             const next = new Set(prev);
@@ -738,87 +689,21 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     const unit = sel.kind === 'period'
         ? (sel.period === 'all' ? 'just nu' : PERIODS.find(p => p.key === sel.period)!.unit)
         : '';
-    const emptyPhrase = `${hours.length ? `kl ${hourRanges(hours)} ` : ''}${selDayLabel ?? unit}`;
+    const emptyPhrase = selDayLabel ?? unit;
 
     return (
         <div className="mt-7">
-            {/* Dagval: perioder + en chip per listad dag. Dagchipsen hoppar
-                över de två första dagarna (= Idag/Imorgon vid färsk deploy —
-                dubbletter av period-chipsen). ("Nästa timmen"-chippen som låg
-                efter perioderna är borttagen 18/8, ägarbeslut: onödig.) */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                {PERIODS.map(p => (
-                    <Chip
-                        key={p.key}
-                        label={p.label}
-                        active={sel.kind === 'period' && sel.period === p.key}
-                        onClick={() => startTransition(() => setSel({ kind: 'period', period: p.key }))}
-                    />
-                ))}
-                <span className="shrink-0 mx-1 h-5 w-px bg-slate-200 dark:bg-zinc-800" aria-hidden />
-                {freshDays.filter(d => !d.beyond).slice(2).map(d => (
-                    <Chip
-                        key={d.key}
-                        label={d.short}
-                        active={sel.kind === 'day' && sel.key === d.key}
-                        onClick={() => startTransition(() => setSel({ kind: 'day', key: d.key }))}
-                    />
-                ))}
-            </div>
+            {/* FILTERRADEN ÄR BORTTAGEN 20/9 (ägarbeslut). Låg här: period-
+                chipsen (Alla/Idag/Imorgon/I helgen/I veckan), en chip per
+                listad dag, och timstaplarna "När på dagen?".
+                Skälet: perioderna är en dubblett av kart-heron ovanför (samma
+                delade dayFilter-state, och heron finns på BÅDE stads- och
+                kategorisidan), dagchipsen gör det klistrade dagrubrikerna
+                redan gör när man scrollar, och listan är ordnad dag för dag
+                och tid för tid — "onödig filtrering när det redan är i
+                ordning". Lägg inte tillbaka den; periodvalet hör hemma i
+                heron. (Timfiltret försvann helt i och med detta.) */}
 
-            {/* Timfilter: staplar = antal event per starttimme (vald dag/period). */}
-            {showHist && (
-                <div className="mt-4">
-                    <div className="flex items-baseline justify-between gap-2">
-                        <p className="text-[11px] font-bold text-slate-400 dark:text-zinc-500">
-                            När på dagen? Tryck på staplarna för att filtrera.
-                        </p>
-                        {hours.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => startTransition(() => setHours([]))}
-                                className="shrink-0 text-[11px] font-black text-[#006AA7] dark:text-sky-400 hover:underline"
-                            >
-                                kl {hourRanges(hours)} · Rensa ✕
-                            </button>
-                        )}
-                    </div>
-                    <div className="mt-1.5 flex items-end gap-[3px]">
-                        {barHours.map(h => {
-                            const c = hist[h];
-                            const on = hours.includes(h);
-                            return (
-                                <button
-                                    key={h}
-                                    type="button"
-                                    onClick={() => toggleHour(h)}
-                                    disabled={c === 0}
-                                    aria-pressed={on}
-                                    aria-label={`kl ${h}: ${c} event`}
-                                    title={`kl ${h}: ${c} event`}
-                                    className="flex-1 min-w-0 flex flex-col items-center gap-0.5 group disabled:cursor-default"
-                                >
-                                    <span
-                                        aria-hidden
-                                        className={`w-full rounded-t transition-colors ${
-                                            on ? 'bg-[#006AA7]'
-                                            : c > 0 ? 'bg-slate-300 dark:bg-zinc-700 group-hover:bg-[#006AA7]/50 dark:group-hover:bg-sky-400/50'
-                                            : 'bg-slate-100 dark:bg-zinc-800'
-                                        }`}
-                                        style={{ height: c > 0 ? Math.max(5, Math.round((c / histMax) * 44)) : 2 }}
-                                    />
-                                    <span
-                                        aria-hidden
-                                        className={`text-[9px] font-bold tabular-nums ${on ? 'text-[#006AA7] dark:text-sky-400' : 'text-slate-400 dark:text-zinc-500'}`}
-                                    >
-                                        {h % 3 === 0 ? String(h).padStart(2, '0') : ' '}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
             {children}
 
             <div className="mt-6 flex flex-col gap-10">
@@ -977,7 +862,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
 
             {/* Visas först när alla dagar är avtäckta — annars ser det ut som
                 att listan tar slut fast sentineln fyller på fler dagar. */}
-            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && category === null && !popularOnly && !sourceOnly && !hasMoreDays && restCount > 0 && (
+            {sel.kind === 'period' && sel.period === 'all' && category === null && !popularOnly && !sourceOnly && !hasMoreDays && restCount > 0 && (
                 <p className="mt-8 text-sm font-bold text-slate-500 dark:text-zinc-400">
                     …och {restCount} evenemang längre fram.{' '}
                     <Link href="/" className="text-[#006AA7] dark:text-sky-400">Utforska hela utbudet på kartan</Link>
@@ -986,7 +871,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
             {/* Kategoriläget: extra-raderna täcker det mesta (utils/listHorizon),
                 men slår taket till står resten här i stället för att tyst
                 saknas. */}
-            {sel.kind === 'period' && sel.period === 'all' && hours.length === 0 && category !== null && !popularOnly && !hasMoreDays && (restByCategory?.[category] ?? 0) > 0 && (
+            {sel.kind === 'period' && sel.period === 'all' && category !== null && !popularOnly && !hasMoreDays && (restByCategory?.[category] ?? 0) > 0 && (
                 <p className="mt-8 text-sm font-bold text-slate-500 dark:text-zinc-400">
                     …och {restByCategory![category]} till längre fram.{' '}
                     <Link href="/" className="text-[#006AA7] dark:text-sky-400">Utforska hela utbudet på kartan</Link>

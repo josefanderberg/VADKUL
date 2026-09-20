@@ -245,14 +245,10 @@ export function buildListedDays(events: CityEvent[], cityName: string): { days: 
         // bevaras inbördes.
         const groups = groupDayDuplicates(list);
         const shown = [...groups.filter(g => !!g.rep.coverImage), ...groups.filter(g => !g.rep.coverImage)];
-        // Timfördelning för dagen — klientens stapeldiagram.
-        const hourCounts = Array(24).fill(0) as number[];
-        for (const e of list) if (e.hasSpecificTime) hourCounts[hourOf(e.time)]++;
         return {
             key: k,
             label: dayLabel(list[0].time),
             short: shortDayLabel(list[0].time),
-            hourCounts,
             ...(beyond ? { beyond: true } : {}),
             events: shown.map(g => ({
                 ...toRow(g.rep, cityName),
