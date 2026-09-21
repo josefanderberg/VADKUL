@@ -42,8 +42,10 @@ export interface UserProfile {
   citySlug?: string;
   /** 'gps' = härledd ur kartpositionen (uppdateras automatiskt),
    *  'manual' = valt/rensat i profilen eller vid registrering — skrivs
-   *  aldrig över av GPS-vägen. */
-  citySource?: 'gps' | 'manual';
+   *  aldrig över av GPS-vägen.
+   *  'map' = kartans stad, sparad när notis-bannern slogs på och kontot
+   *  saknade stad (utils/notisBanner). Skrivs över av GPS-vägen som 'gps'. */
+  citySource?: 'gps' | 'manual' | 'map';
   /** "Jag har barn (0–13 år)" (kryssruta i registreringen/profilen). Styr
    *  STANDARDLÄGET för kartans kategorifilter: utan barn (vuxen 18+) göms
    *  Familj & barn bakom 🧸-opt-in-cirkeln, med barn syns kategorin som

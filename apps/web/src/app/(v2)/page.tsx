@@ -43,9 +43,11 @@ import { fitCamera, SWEDEN_BOUNDS, OVERVIEW_PADDING, SWEDEN_NUDGE_DELAY_MS, canO
 import PostCreateNudge from '@/components/v2/PostCreateNudge';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getNotisStatus, enableEventReminders } from '@/utils/fcm';
+import { NOTIS_BANNER_KEY, NOTIS_BANNER_DELAY_MS, parseNotisBannerMemory, recordNotisBannerDismissal, shouldOfferNotisBanner, notisBannerCity } from '@/utils/notisBanner';
+import { getCity, nearestCity } from '@/lib/cityUtils';
 import toast from 'react-hot-toast';
 
 // V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
@@ -468,6 +470,9 @@ export default function HomePage() {
     // Profilens hasChildren, sparad vid hydreringen — behövs (som age) för att
     // räkna fram standardläget igen utan att läsa om user-dokumentet.
     const profileHasChildrenRef = useRef<unknown>(undefined);
+    // Kontots sparade stad (users.citySlug), läst i samma hydrering - notis-
+    // bannern lovar helgtips för DEN staden, det är den helgtipset skickas för.
+    const [profileCitySlug, setProfileCitySlug] = useState<string | null>(null);
     // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
     const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
@@ -2549,6 +2554,98 @@ export default function HomePage() {
     const showSwedenOffer = !swedenNudgeDone && swedenTimerOver && userTouchedMap
         && promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn && !inCityJump
         && mapZoom !== null && canOfferOverview(mapZoom);
+
+    /**
+     * NOTIS-BANNERN (Josef 21/9): "Vill du få helgtipsen för Växjö?" - bara i
+     * appen på hemskärmen och bara när webbläsaren aldrig fått frågan (grinden
+     * i utils/notisBanner). Utvärderas EN gång, NOTIS_BANNER_DELAY_MS efter
+     * välkomstrutan, så den aldrig syns i första sekunden av besöket.
+     * Samma slot och tystnadsregler som de andra botten-prompterna:
+     * åtgärdsprompterna, översiktspillen och Sverige-tipset går före,
+     * nytt-sedan-sist får vika.
+     *
+     * Utloggad: knappen öppnar inloggningen, och efter den visas samma banner
+     * med "Slå på" - tillståndsfrågan måste komma från en EGEN tapp (en fråga
+     * direkt efter inloggningens asynkrona flöde avvisas på iOS).
+     */
+    const [notisBannerEligible, setNotisBannerEligible] = useState(false);
+    const [notisBannerHidden, setNotisBannerHidden] = useState(false);
+    const [notisBannerBusy, setNotisBannerBusy] = useState(false);
+    useEffect(() => {
+        if (!welcomeDone) return;
+        const t = setTimeout(() => {
+            let memoryRaw: string | null = null;
+            try { memoryRaw = localStorage.getItem(NOTIS_BANNER_KEY); } catch { /* privat läge */ }
+            const standalone = window.matchMedia?.('(display-mode: standalone)').matches
+                || (navigator as unknown as { standalone?: boolean }).standalone === true;
+            setNotisBannerEligible(shouldOfferNotisBanner({
+                standalone,
+                status: getNotisStatus(),
+                memory: parseNotisBannerMemory(memoryRaw),
+            }, Date.now()));
+        }, NOTIS_BANNER_DELAY_MS);
+        return () => clearTimeout(t);
+    }, [welcomeDone]);
+    const notisCity = useMemo(() => notisBannerCity(
+        user ? profileCitySlug : null,
+        getCity,
+        mapCenter ? nearestCity(mapCenter.lat, mapCenter.lng) : null,
+    ), [user, profileCitySlug, mapCenter]);
+    // Statusen kollas om SIST (billig, och bara när allt annat säger ja): slår
+    // man på notiserna via profilen eller gilla-nudgen mitt i besöket ska
+    // bannern försvinna direkt.
+    const showNotisBanner = notisBannerEligible && !notisBannerHidden && !authModal.open
+        && promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn && !showSwedenOffer && !inCityJump
+        && getNotisStatus() === 'default';
+    const dismissNotisBanner = useCallback(() => {
+        setNotisBannerHidden(true);
+        try {
+            const mem = parseNotisBannerMemory(localStorage.getItem(NOTIS_BANNER_KEY));
+            localStorage.setItem(NOTIS_BANNER_KEY, JSON.stringify(recordNotisBannerDismissal(mem, Date.now())));
+        } catch { /* privat läge - bannern kan komma tillbaka nästa besök */ }
+    }, []);
+    const acceptNotisBanner = useCallback(async () => {
+        if (!user) { openLogin('Logga in för att få helgtips och påminnelser'); return; }
+        setNotisBannerBusy(true);
+        const res = await enableEventReminders(user.uid);
+        setNotisBannerBusy(false);
+        // Oavsett utfall: bannern är klar för det här besöket. Efter 'on' och
+        // 'denied' är frågan besvarad och grinden släpper den aldrig igen.
+        setNotisBannerHidden(true);
+        if (res === 'on') {
+            // Helgtipset går bara till konton med stad - saknas den, spara
+            // kartans stad. Aldrig över en befintlig (manuell eller GPS):
+            // dokumentet läses om först, eftersom profilhydreringen kan vara
+            // ogjord om man tryckt direkt efter inloggningen.
+            let cityName = notisCity?.city.name ?? null;
+            if (notisCity && !notisCity.saved) {
+                try {
+                    const ref = doc(db, 'users', user.uid);
+                    const existing = (await getDoc(ref)).data()?.citySlug;
+                    if (typeof existing === 'string' && existing) {
+                        setProfileCitySlug(existing);
+                        cityName = getCity(existing)?.name ?? null;
+                    } else {
+                        await setDoc(ref, {
+                            city: notisCity.city.name,
+                            citySlug: notisCity.city.slug,
+                            citySource: 'map',
+                            cityUpdatedAt: serverTimestamp(),
+                        }, { merge: true });
+                        setProfileCitySlug(notisCity.city.slug);
+                    }
+                } catch (e) {
+                    console.warn('Kunde inte spara stad för helgtipset:', e);
+                }
+            }
+            toast.success(cityName ? `Notiser på! Helgtipsen för ${cityName} kommer på torsdagar.` : 'Notiser på!');
+        } else if (res === 'denied') {
+            toast.error('Notiser är blockerade - tillåt dem för vadkul.se i telefonens inställningar.');
+        } else {
+            toast.error('Kunde inte aktivera notiser. Försök igen via profilen.');
+        }
+    }, [user, openLogin, notisCity]);
+
     const dismissSwedenOffer = useCallback(() => {
         markSwedenNudgeDone();
         setSwedenNudgeDone(true);
@@ -3375,12 +3472,13 @@ export default function HomePage() {
             try {
                 const snap = await getDoc(doc(db, 'users', user.uid));
                 const data = snap.exists()
-                    ? snap.data() as { mapCategories?: unknown; hasChildren?: unknown; age?: unknown }
+                    ? snap.data() as { mapCategories?: unknown; hasChildren?: unknown; age?: unknown; citySlug?: unknown }
                     : null;
                 // Opt-in-läget följer alltid profilen — även när en inkommande
                 // ?kategori=-länk vinner över det sparade kategorivalet.
                 profileAgeRef.current = data?.age;
                 profileHasChildrenRef.current = data?.hasChildren;
+                if (!cancelled) setProfileCitySlug(typeof data?.citySlug === 'string' && data.citySlug ? data.citySlug : null);
                 if (!urlHadCategoriesRef.current) {
                     if (Array.isArray(data?.mapCategories)) {
                         const saved = data.mapCategories.filter((k): k is string =>
@@ -4625,7 +4723,7 @@ export default function HomePage() {
                 lägst prioritet i samma botten-slot som prompterna ovan, de kan
                 aldrig visas samtidigt). Ren hälsning, ingen åtgärdsprompt: ✕
                 tystar den för resten av besöket. */}
-            {showNewSince && !showOverviewReturn && (
+            {showNewSince && !showOverviewReturn && !showNotisBanner && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
                         <span className="text-2xl" aria-hidden>🎉</span>
@@ -4683,6 +4781,49 @@ export default function HomePage() {
                                 className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
                             >
                                 Visa hela Sverige 🗺️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Notis-bannern (Josef 21/9): bara i hemskärmsappen, bara när
+                webbläsaren aldrig fått frågan. Turordningen i showNotisBanner,
+                ✕ = "Inte nu" (14 dagars snooze, två nej = aldrig mer). */}
+            {showNotisBanner && (
+                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl" aria-hidden>🔔</span>
+                            <div className="min-w-0">
+                                <p className="text-sm font-bold text-slate-800">
+                                    {notisCity ? `Vill du få helgtipsen för ${notisCity.city.name}?` : 'Vill du få notiser från VADKUL?'}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    {!user
+                                        ? 'Logga in, så skickar vi helgens bästa event varje torsdag.'
+                                        : notisCity
+                                            ? 'En notis varje torsdag med helgens bästa event, och en påminnelse innan dina gillade event börjar.'
+                                            : 'En påminnelse innan dina gillade event börjar.'}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={dismissNotisBanner}
+                                aria-label="Inte nu"
+                                className="shrink-0 p-2 -m-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="mt-2.5 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={acceptNotisBanner}
+                                disabled={notisBannerBusy}
+                                className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors disabled:opacity-60"
+                            >
+                                {user ? 'Slå på notiser 🔔' : 'Logga in'}
                             </button>
                         </div>
                     </div>
