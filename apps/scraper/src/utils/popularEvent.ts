@@ -184,5 +184,18 @@ export function isVetoed(e: PopularInput): boolean {
 
 /** Hårda veton först, sedan poängribban. */
 export function isPopularEvent(e: PopularInput, repeatCount: number): boolean {
-    return !isVetoed(e) && popularScore(e, repeatCount) >= POPULAR_THRESHOLD;
+    return popularRank(e, repeatCount) !== undefined;
+}
+
+/**
+ * Poängen för ett POPULÄRT event, annars undefined (vetat eller under
+ * ribban). Aggregatet bakar den som `ps` bredvid pop-flaggan, så ytor som
+ * ska välja DET MEST populära (helgtipsets notis, Josef 21/9) kan rangordna
+ * i stället för att bara veta ja/nej. Samma veto och ribba som
+ * isPopularEvent - den ÄR den här funktionen.
+ */
+export function popularRank(e: PopularInput, repeatCount: number): number | undefined {
+    if (isVetoed(e)) return undefined;
+    const s = popularScore(e, repeatCount);
+    return s >= POPULAR_THRESHOLD ? s : undefined;
 }

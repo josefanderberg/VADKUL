@@ -22,6 +22,9 @@ export interface DigestEvent {
     category?: string;
     /** Populär-flaggan pipelinen bakar (tröskel 40). */
     pop?: boolean;
+    /** Popularitetspoängen bakom flaggan (scraperns popularRank) - bara på
+     *  pop-event. Saknas i aggregat byggda före 21/9. */
+    ps?: number;
 }
 
 export interface DigestCityPoint {
@@ -41,6 +44,12 @@ export const DIGEST_MIN_EVENTS = 3;
 const PICK_EXCLUDED_CATEGORIES = new Set(['family']);
 /** Max händelser som namnges i notiskroppen. */
 const MAX_PICKS = 3;
+/** Pipelinens POPULAR_THRESHOLD: ett pop-event utan poäng (aggregat från
+ *  före ps-fältet) räknas som precis på ribban, så ett event MED poäng
+ *  aldrig förlorar mot det. */
+const POP_SCORE_FLOOR = 40;
+
+const popScore = (e: DigestEvent): number => e.ps ?? (e.pop ? POP_SCORE_FLOOR : 0);
 
 /** Europe/Stockholm-offset (ms) vid en given tidpunkt — CET/CEST-säker. */
 export function stockholmOffsetMs(at: Date): number {
@@ -125,9 +134,12 @@ export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: numb
  * Stadens helgurval: totalantalet inom radien + topp-eventen till notistexten.
  * null = för tunn helg (under DIGEST_MIN_EVENTS) → ingen push till den staden.
  *
- * Rankning: populär-flaggan först, sedan event med riktigt klockslag, sedan
- * tidigast. En pick per dag (fre/lör/sön) så texten speglar HELA helgen; blir
- * det färre dagar med event fylls resten ur totalrankningen.
+ * Rankning: HÖGST popularitetspoäng först (ps; icke-populära = 0), sedan
+ * event med riktigt klockslag, sedan tidigast. Med bara pop-flaggan vann det
+ * tidigaste av de populära - Stockholms lördag 26/9 blev en bussresa till
+ * Lidingöloppet kl 05 (Josef 21/9: "välj det mest populära"). En pick per
+ * dag (fre/lör/sön) så texten speglar HELA helgen; blir det färre dagar med
+ * event fylls resten ur totalrankningen.
  */
 export function pickWeekendDigest(
     events: DigestEvent[],
@@ -148,7 +160,7 @@ export function pickWeekendDigest(
 
     const candidates = inCity.filter(e => !PICK_EXCLUDED_CATEGORIES.has(e.category ?? ''));
     const rank = (a: DigestEvent, b: DigestEvent) =>
-        (Number(!!b.pop) - Number(!!a.pop))
+        (popScore(b) - popScore(a))
         || (Number(b.hasSpecificTime !== false) - Number(a.hasSpecificTime !== false))
         || (Date.parse(a.time) - Date.parse(b.time));
 

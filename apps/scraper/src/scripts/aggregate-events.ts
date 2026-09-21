@@ -2,7 +2,7 @@ import { db } from '../config/firebase';
 import { publicUrl } from '../utils/affiliateUrl';
 import { sqlite } from '../utils/sqliteHelper';
 import { applyVenueFixInPlace } from '../data/venueFixes';
-import { buildTitleFreq, isPopularEvent, normTitlePop } from '../utils/popularEvent';
+import { buildTitleFreq, popularRank, normTitlePop } from '../utils/popularEvent';
 import { firstSeenExport } from '../utils/firstSeenExport';
 import { eventKey } from '../utils/eventKey';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
@@ -25,6 +25,10 @@ interface DestinationLayer {
     emoji?: string;
     /** true = 🔥 Populär (utils/popularEvent). Utelämnas annars (bytes × 30k event i aggregatet). */
     pop?: true;
+    /** Popularitetspoängen (utils/popularEvent, ≥ POPULAR_THRESHOLD) - BARA
+     *  på pop-event. Låter helgtipset välja det mest populära i stället för
+     *  det tidigaste bland de populära (Josef 21/9). */
+    ps?: number;
     /** Först sedd i pipelinen (YYYY-MM-DD, UTC) — BARA med för event yngre än
      *  14 dagar (utils/firstSeenExport; bytes × 30k event). Webbens "Nytt
      *  sedan sist"-banner jämför fältet mot besökarens förra besök. */
@@ -142,7 +146,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             ? row.hasSpecificTime === 1
             : !((t.getHours() === 0 && t.getMinutes() === 0) || (t.getUTCHours() === 0 && t.getUTCMinutes() === 0));
 
-        const pop = isPopularEvent(
+        const ps = popularRank(
             {
                 url: id,
                 title: row.title || '',
@@ -155,7 +159,8 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
                 locationName: row.locationName,
             },
             titleFreq.get(normTitlePop(row.title || '')) ?? 1,
-        ) ? true as const : undefined;
+        );
+        const pop = ps !== undefined ? true as const : undefined;
         if (pop) popCount++;
 
         const fsDay = firstSeenExport(row.createdAt, firstSeenNowMs);
@@ -175,6 +180,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             category: row.category || 'other',
             emoji: row.emoji || undefined,
             pop,
+            ps,
             fs: fsDay
         });
 

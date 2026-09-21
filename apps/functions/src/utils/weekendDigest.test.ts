@@ -92,6 +92,29 @@ describe('pickWeekendDigest', () => {
         expect(res.picks.map(p => p.id)).toEqual(['fre-pop', 'lor', 'son']);
     });
 
+    it('bland populära vinner HÖGST poäng, inte tidigast (bussresan kl 05)', () => {
+        const events = [
+            evt('lor-buss', '2026-09-19T03:00:00.000Z', { pop: true, ps: 41 }),
+            evt('lor-konsert', '2026-09-19T18:00:00.000Z', { pop: true, ps: 63 }),
+            evt('fre', '2026-09-18T18:00:00.000Z'),
+            evt('son', '2026-09-20T12:00:00.000Z'),
+        ];
+        const res = pickWeekendDigest(events, UPPSALA, range)!;
+        expect(res.picks.map(p => p.id)).toEqual(['fre', 'lor-konsert', 'son']);
+    });
+
+    it('pop utan poäng (aggregat före ps-fältet) räknas som ribban: förlorar mot poängsatt, slår icke-populärt', () => {
+        const events = [
+            evt('fre-gammal-pop', '2026-09-18T15:00:00.000Z', { pop: true }),
+            evt('fre-poang', '2026-09-18T19:00:00.000Z', { pop: true, ps: 44 }),
+            evt('lor-gammal-pop', '2026-09-19T19:00:00.000Z', { pop: true }),
+            evt('lor-vanlig', '2026-09-19T10:00:00.000Z'),
+            evt('son', '2026-09-20T12:00:00.000Z'),
+        ];
+        const res = pickWeekendDigest(events, UPPSALA, range)!;
+        expect(res.picks.map(p => p.id)).toEqual(['fre-poang', 'lor-gammal-pop', 'son']);
+    });
+
     it('familj räknas i totalen men lyfts inte i texten', () => {
         const events = [
             evt('familj', '2026-09-18T09:00:00.000Z', { category: 'family' }),

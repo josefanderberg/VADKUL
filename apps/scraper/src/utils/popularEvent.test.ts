@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    normTitlePop, buildTitleFreq, popularScore, isPopularEvent,
+    normTitlePop, buildTitleFreq, popularScore, isPopularEvent, popularRank,
     isSmallVenueHost, POPULAR_THRESHOLD, PopularInput,
 } from './popularEvent';
 
@@ -198,5 +198,26 @@ describe('isPopularEvent — ribban', () => {
         let rc = 1;
         while (popularScore(e, rc) >= POPULAR_THRESHOLD && rc < 10_000) rc *= 2;
         expect(isPopularEvent(e, rc)).toBe(false);
+    });
+});
+
+describe('popularRank (ps-fältet i aggregatet)', () => {
+    it('ger poängen för populära event - samma tal som popularScore', () => {
+        const e = base();
+        expect(popularRank(e, 1)).toBe(popularScore(e, 1));
+        expect(popularRank(e, 1)).toBeGreaterThanOrEqual(POPULAR_THRESHOLD);
+    });
+    it('undefined under ribban och vid veto, även med hög poäng', () => {
+        expect(popularRank(base({ title: 'Torsdagsdans', category: 'social', price: null }), 400)).toBeUndefined();
+        const vetoed = base({ url: 'https://www.svenskakyrkan.se/kalender/1' });
+        expect(popularScore(vetoed, 1)).toBeGreaterThanOrEqual(POPULAR_THRESHOLD);
+        expect(popularRank(vetoed, 1)).toBeUndefined();
+    });
+    it('går aldrig isär med isPopularEvent', () => {
+        for (const rc of [1, 2, 8, 64, 400]) {
+            for (const e of [base(), base({ title: 'Diskantkören' }), base({ category: 'learning', price: null })]) {
+                expect(popularRank(e, rc) !== undefined).toBe(isPopularEvent(e, rc));
+            }
+        }
     });
 });
