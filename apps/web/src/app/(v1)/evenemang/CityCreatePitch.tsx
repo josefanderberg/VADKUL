@@ -162,17 +162,17 @@ export default function CityCreatePitch({ cityName, createHref, collapsible, wis
                     <p className="mt-0.5 text-base font-black text-white">📌 Syns mer</p>
                     <p className="mt-1 text-xs font-medium leading-snug text-sky-100">Skapat på VADKUL — egen eventbricka som ligger UPPE på kartan hela tiden, och överst på den här sidan.</p>
                 </div>
-                {/* Nivå 3: VIT ram, glöd och text (Josef 22/9, gult bytt mot
-                    vitt; den gula bakgrunden blev dessutom grönaktig mot det
-                    blå). Bara stjärnan är kvar i guld. */}
-                <div className="w-full rounded-2xl bg-white/20 border-2 border-white px-4 py-5 sm:min-h-[216px] shadow-[0_14px_34px_-12px_rgba(255,255,255,0.45)]">
+                {/* Nivå 3: VIT ruta med mörkblå text (Josef 22/9, efter gult
+                    och sedan vit ram): den ska skilja sig tydligt från de två
+                    blå nivåerna. Bara stjärnan är kvar i guld. */}
+                <div className="w-full rounded-2xl bg-white px-4 py-5 sm:min-h-[216px] shadow-[0_14px_34px_-12px_rgba(255,255,255,0.45)]">
                     {/* Priset MED i trappan (tidigare stod nivån utan pris —
                         den som inte vet vad det kostar klickar inte). Beloppet
                         speglar BOOST_TIERS i services/boostService: ändras
                         priset i Stripe måste siffran här följa med. */}
-                    <p className="text-[11px] font-black uppercase tracking-wider text-white/85">Nivå 3 · Boost · 99 kr/vecka</p>
-                    <p className="mt-1 text-xl font-black text-white">⭐ Syns mest</p>
-                    <p className="mt-2 text-sm font-medium leading-snug text-sky-50">Guldbricka med stjärna som lyser på kartan varje dag fram till eventet, oavsett vilken dag man tittar på, och första plats här. 99 kr per vecka, direkt på eventet.</p>
+                    <p className="text-[11px] font-black uppercase tracking-wider text-[#006AA7]">Nivå 3 · Boost · 99 kr/vecka</p>
+                    <p className="mt-1 text-xl font-black text-[#052846]">⭐ Syns mest</p>
+                    <p className="mt-2 text-sm font-medium leading-snug text-[#052846]/80">Guldbricka med stjärna som lyser på kartan varje dag fram till eventet, oavsett vilken dag man tittar på, och första plats här. 99 kr per vecka, direkt på eventet.</p>
                 </div>
             </div>
             {/* Huvudknappen (Josef 22/9, vald bland fyra varianter): mörkblå
