@@ -3,8 +3,9 @@ import { EVENT_CATEGORIES, EventCategoryType } from '../utils/categories';
 import { db } from '../lib/firebase';
 import { addDoc, collection, deleteDoc, doc, getDocs, Timestamp, updateDoc } from 'firebase/firestore';
 
-/** En önskan lever så här länge — därefter filtreras den bort ur karthämtningen. */
-export const WISH_LIFETIME_DAYS = 14;
+/** En önskan lever så här länge, därefter filtreras den bort ur karthämtningen.
+ *  14 dagar t.o.m. 22/9, sedan 7 (Josef: "det räcker typ"). */
+export const WISH_LIFETIME_DAYS = 7;
 
 const toDate = (v: unknown): Date =>
     v instanceof Timestamp ? v.toDate() : new Date(v as string | number | Date);
@@ -18,7 +19,7 @@ const toDate = (v: unknown): Date =>
 export const wishService = {
     /**
      * Skapa en önskan (kräver inloggning — Firestore-reglerna verifierar
-     * uid == auth.uid). expiresAt = createdAt + 14 dagar sätts här på klienten.
+     * uid == auth.uid). expiresAt = createdAt + WISH_LIFETIME_DAYS sätts här på klienten.
      */
     async createWish(input: {
         title: string; category: EventCategoryType; description?: string;
@@ -73,7 +74,10 @@ export const wishService = {
                         fulfilled: v.fulfilled === true,
                     } as EventWish;
                 })
-                .filter((w) => w.title && !w.fulfilled && w.expiresAt.getTime() > now);
+                // Även createdAt-gränsen: önskningar skapade medan livslängden
+                // var 14 dagar bär ett expiresAt som ligger för långt fram.
+                .filter((w) => w.title && !w.fulfilled && w.expiresAt.getTime() > now
+                    && w.createdAt.getTime() + WISH_LIFETIME_DAYS * 86_400_000 > now);
         } catch (e) {
             console.warn('Kunde inte hämta önskningar:', e);
             return [];

@@ -739,23 +739,29 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                                 Första dagen har filterraden över sig i stället. */}
                             {di > 0 && <span aria-hidden className="block mb-3 h-px bg-slate-200 dark:bg-zinc-800" />}
                             <div className="sticky top-[57px] z-20 -mx-5 px-5 pt-2 pb-2.5 bg-slate-50/95 dark:bg-zinc-950/95 backdrop-blur-sm flex items-center gap-2">
-                                <h2 className="flex items-center gap-2 min-w-0">
-                                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#006AA7] text-white text-sm font-black shadow-sm">
-                                        {rel && (
-                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[#FECC02] text-[10px] font-black uppercase tracking-wider text-slate-900">
-                                                {rel}
-                                            </span>
-                                        )}
-                                        {/* first-letter, inte capitalize: svenska skriver
-                                            "lördag 8 augusti", inte "Lördag 8 Augusti". */}
-                                        <span className="first-letter:uppercase">{day.label}</span>
-                                    </span>
-                                    {day.upcoming.length > 0 && (
-                                        <span className="text-[11px] font-black text-slate-400 dark:text-zinc-500 tabular-nums">
-                                            {countEvents(day.upcoming)} event
+                                {/* En RUBRIK, inte en knapp (Josef 22/9: den blå pillen
+                                    med gul IDAG-bricka inuti såg ut att gå att klicka
+                                    på). Smalt streck + "Idag" stort i blått och datumet
+                                    dämpat efter; andra dagar bara datumet som rubrik.
+                                    Antalet står till höger, bredvid nästa dag-pilen. */}
+                                <h2 className="flex items-center gap-2.5 min-w-0">
+                                    <span aria-hidden className="shrink-0 h-5 w-1 rounded-full bg-[#006AA7] dark:bg-sky-400" />
+                                    {rel ? (
+                                        <span className="flex items-baseline gap-2 min-w-0">
+                                            <span className="text-lg font-black text-[#006AA7] dark:text-sky-400">{rel}</span>
+                                            <span className="truncate text-sm font-bold text-slate-500 dark:text-zinc-400">{day.label}</span>
                                         </span>
+                                    ) : (
+                                        // first-letter, inte capitalize: svenska skriver
+                                        // "lördag 8 augusti", inte "Lördag 8 Augusti".
+                                        <span className="truncate text-lg font-black text-slate-900 dark:text-zinc-100 first-letter:uppercase">{day.label}</span>
                                     )}
                                 </h2>
+                                {day.upcoming.length > 0 && (
+                                    <span className="ml-auto shrink-0 text-[11px] font-black text-slate-400 dark:text-zinc-500 tabular-nums">
+                                        {countEvents(day.upcoming)} event
+                                    </span>
+                                )}
                                 {/* NÄSTA DAG-PILEN (Josef 31/8): längst till höger i
                                     rubrikraden — hoppar till nästa dags rubrik. Sitter
                                     i den KLISTRADE rubriken, så den finns alltid till
@@ -775,7 +781,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                                         }}
                                         aria-label={`Hoppa till nästa dag — ${nextDay.label}`}
                                         title={`Nästa dag: ${nextDay.label}`}
-                                        className="ml-auto shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 shadow-sm hover:text-[#006AA7] dark:hover:text-sky-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 active:scale-95 transition-all"
+                                        className={`${day.upcoming.length > 0 ? '' : 'ml-auto '}shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 shadow-sm hover:text-[#006AA7] dark:hover:text-sky-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 active:scale-95 transition-all`}
                                     >
                                         <ChevronDown size={16} strokeWidth={2.5} />
                                     </button>

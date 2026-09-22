@@ -186,7 +186,8 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                         className={`${BASE} ${popularOnly ? POP_ON : POP_IDLE}`}
                     >
                         <span aria-hidden>🔥</span>
-                        Populära
+                        {/* Vandrande eldgradient som navbarens kartlänk (22/9). */}
+                        <span className={popularOnly ? '' : 'fire-sweep'}>Populära</span>
                         <span className={`font-black ${popularOnly ? 'text-white/75' : 'text-[#E8590C]/60'}`}>{popCount}</span>
                     </button>
                 )}

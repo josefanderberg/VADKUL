@@ -230,7 +230,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 {/* Samma pitch som i botten men HOPFÄLLD (Josef 4/9: "i
                     Stockholm tar det aslång tid att scrolla ner") — nyttan av
                     att skapa/boosta ska synas även i storstäder. */}
-                <CityCreatePitch cityName={city.name} createHref={`${cityMapHref(city)}&skapa=1`} collapsible />
+                <CityCreatePitch cityName={city.name} createHref={`${cityMapHref(city)}&skapa=1`} wishHref={`${cityMapHref(city)}&onska=1`} collapsible />
 
                 {/* Filterraden (Idag/Imorgon/I helgen + timstaplar) ligger överst
                     i sektionen och styr allt under: kategorichipsen (children)
@@ -300,6 +300,15 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                                 {c.name}
                             </Link>
                         ))}
+                        {/* Sista chipset: ut till kartan (Josef 22/9). Samma mål
+                            som navbarens "Se alla N event på kartan", ifyllt i
+                            blått så det skiljer sig från stadslänkarna. */}
+                        <Link
+                            href={cityMapHref(city)}
+                            className="px-3 py-1.5 rounded-full bg-[#006AA7] border border-[#006AA7] text-xs font-bold text-white hover:bg-[#00598c] transition-colors"
+                        >
+                            Se alla event →
+                        </Link>
                     </div>
                     <p className="mt-6 text-xs text-slate-400 dark:text-zinc-500 font-medium">
                         Eventen hämtas från öppna källor — arrangörers webbplatser, biljettplattformar och

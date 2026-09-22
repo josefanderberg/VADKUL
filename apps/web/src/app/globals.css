@@ -379,6 +379,26 @@
   .map-portal { animation: none; }
 }
 
+/* 🔥 Populära-chipset (Josef 22/9): samma vandrande gradient som .map-portal
+   i navbaren, i eldens färger. Bara i vilande läge; valt chip är vit text på
+   orange. */
+.fire-sweep {
+  background-image: linear-gradient(90deg,
+    #E8590C 0%, #F59E0B 50%, #E8590C 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: map-portal-sweep 7s linear infinite;
+}
+.dark .fire-sweep {
+  background-image: linear-gradient(90deg,
+    #fb923c 0%, #fcd34d 50%, #fb923c 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fire-sweep { animation: none; }
+}
+
 /* Subtil pulserande guld-glöd för "Evenemang stad för stad"-knappen */
 @keyframes gold-glow-pulse {
   0%, 100% { box-shadow: 0 4px 16px rgba(0, 106, 167, 0.4), 0 0 0 0 rgba(254, 204, 2, 0.3); }

@@ -14,7 +14,7 @@ import type { EventWish } from '@/types';
 // redan bett om eventet.
 //
 // Klientkomponent UTANFÖR server-HTML:n och siffrorna (samma SEO-beslut som
-// opt-in-källorna 1/9): önskningarna lever 14 dagar och är inget crawlfoder.
+// opt-in-källorna 1/9): önskningarna lever en vecka och är inget crawlfoder.
 // Hämtningen är samma eventWishes-läsning som kartans poll, fast EN gång per
 // sidvisning — collectionen är liten och reads är billiga.
 
