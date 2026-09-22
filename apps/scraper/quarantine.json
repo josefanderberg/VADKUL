@@ -61,6 +61,10 @@
       "since": "2026-09-15",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
+    "sb-kb-se": {
+      "since": "2026-09-22",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "sb-vastsverige-com": {
       "since": "2026-09-15",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
@@ -74,8 +78,8 @@
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-15",
-      "emptyRetries": 3
+      "lastRetry": "2026-09-22",
+      "emptyRetries": 4
     },
     "storsjoyran": {
       "since": "2026-09-18",
