@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { EventWish, LinkEvent } from '@/types';
-import { linkEventService, isBoostShownEveryDay, expandWeekly } from '@/services/linkEventService';
+import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
@@ -21,7 +21,7 @@ import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
 import { recordEventView } from '@/services/eventStatsService';
-import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw } from 'lucide-react';
+import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
@@ -52,7 +52,10 @@ import toast from 'react-hot-toast';
 
 // V2Map är klient-only (maplibre-gl kräver window), därför dynamisk import med ssr:false.
 import dynamic from 'next/dynamic';
-import { occurrencesLeftFrom, seriesEndDate, seriesLastDate, weeksForOccurrences } from '@/utils/weeklySeries';
+import {
+    occurrencesLeftFrom, seriesEndDate, weeksForOccurrences, seriesFieldsFor, lastOccurrenceFor,
+    expandSeries, isSeriesEvent, normalizeRepeatDays, dailySeriesStart, MAX_REPEAT_DAYS, type RepeatRhythm,
+} from '@/utils/weeklySeries';
 
 const V2MapDynamic = dynamic(() => import('@/components/v2/V2Map'), {
     ssr: false,
@@ -313,12 +316,16 @@ const pickNearestToPoint =(point: { lat: number; lng: number } | null, dayEvents
  * strängen rakt av (den är redan lokal tid); ogiltig sträng ger tom text så
  * etiketten aldrig visar "Invalid Date".
  */
-const weeklyLabelFor = (datetimeLocal: string, intervalWeeks: number = 1): string => {
+/** Idag kl 00:00 lokal tid: samma gräns som pollen vecklar ut serier från
+ *  (fetchUserCreatedEvents), så de optimistiska tillfällena får samma id:n. */
+const todayMidnight = (): Date => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const weeklyLabelFor = (datetimeLocal: string, rhythm: RepeatRhythm = 1): string => {
     const d = new Date(datetimeLocal);
     if (isNaN(d.getTime())) return '';
     const weekday = d.toLocaleDateString('sv-SE', { weekday: 'long' });
     const time = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-    return `${intervalWeeks === 2 ? 'Varannan' : 'Varje'} ${weekday} kl ${time}`;
+    if (rhythm === 'daily') return `Varje dag kl ${time}`;
+    return `${rhythm === 2 ? 'Varannan' : 'Varje'} ${weekday} kl ${time}`;
 };
 /**
  * Hur många GÅNGER en serie kan pågå (inkl. första tillfället). 2–12 styck
@@ -328,6 +335,9 @@ const weeklyLabelFor = (datetimeLocal: string, intervalWeeks: number = 1): strin
  * de högsta bort: reglernas tak är 52 VECKOR, alltså 26 gånger.
  */
 const REPEAT_TIMES_CHOICES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 20, 26, 52];
+/** Dagsseriens val: 2 till MAX_REPEAT_DAYS dagar, alla tal (en festival på 4
+ *  dagar är lika vanlig som en på 3). */
+const REPEAT_DAYS_CHOICES = Array.from({ length: MAX_REPEAT_DAYS - 1 }, (_, i) => i + 2);
 // Radie kring en SÖKT stads centrum när träfflistan räknar "X event den
 // närmaste veckan". 2,5 mil ≈ orten plus dess byar (Hudiksvall + Forsa/Hög/
 // Iggesund). Siffran är alltså en CIRKEL kring centrum, medan stadsrutan man
@@ -522,15 +532,18 @@ export default function HomePage() {
     // sett, och tips kräver inget konto — att landa i "Jag arrangerar" mötte
     // dem med en inloggningsspärr för ett läge de inte var ute efter.
     const [newEventRole, setNewEventRole] = useState<'host' | 'tip'>('tip');
-    const [newEventRepeatWeekly, setNewEventRepeatWeekly] = useState(false); // veckovis serie
-    // Rytm: 1 = varje vecka (default, skrivs aldrig), 2 = varannan vecka.
-    const [newEventRepeatInterval, setNewEventRepeatInterval] = useState<1 | 2>(1);
+    const [newEventRepeats, setNewEventRepeats] = useState(false); // serie: flera dagar eller veckovis
+    // Rytm: 1 = varje vecka (default, skrivs aldrig), 2 = varannan vecka,
+    // 'daily' = flera dagar i rad (22/9, lagras som repeatDays).
+    const [newEventRepeatInterval, setNewEventRepeatInterval] = useState<RepeatRhythm>(1);
     // Hur många GÅNGER serien ska hända (inkl. första gången). null = tills
     // vidare. Dokumentet lagrar fortfarande VECKOR (repeatWeeks) — omräkningen
     // sker vid spar (weeksForOccurrences). Frågan ställdes i veckor t.o.m.
     // 16/9, men med varannan vecka-rytmen gick den inte ihop: "4 veckor" var
     // 2 gånger och en tom slutvecka.
     const [newEventRepeatTimes, setNewEventRepeatTimes] = useState<number | null>(null);
+    // "Fler detaljer" i tips-läget är utfällt (se showDetailFields).
+    const [showMoreDetails, setShowMoreDetails] = useState(false);
     const [newEventUrl, setNewEventUrl] = useState('');   // tips: länk till källan (valfri)
     const [newEventHost, setNewEventHost] = useState('');  // tips: arrangörens namn (valfritt)
     // ── Önska-funktionen ✨ ──────────────────────────────────────────────────
@@ -578,9 +591,10 @@ export default function HomePage() {
         setNewEventImage(null);
         setNewEventImagePreview('');
         setNewEventRole('tip');
-        setNewEventRepeatWeekly(false);
+        setNewEventRepeats(false);
         setNewEventRepeatInterval(1);
         setNewEventRepeatTimes(null);
+        setShowMoreDetails(false);
         setNewEventUrl('');
         setNewEventHost('');
         setCreateKind('event');
@@ -623,7 +637,11 @@ export default function HomePage() {
         setRepicking(false);
         setNewEventRole(evt.isTip || !!evt.url ? 'tip' : 'host');
         setNewEventTitle(evt.title);
-        const t = evt.time;
+        // Dagsserie: formuläret visar HELA serien från första dagen, även om
+        // man redigerar från dag 2. Annars krympte "3 dagar" till de dagar
+        // som var kvar och första dagen föll bort vid Spara.
+        const repeatDays = normalizeRepeatDays(evt.repeatDays);
+        const t = (repeatDays !== null ? dailySeriesStart(evt) : null) ?? evt.time;
         const pad = (n: number) => String(n).padStart(2, '0');
         setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
         setNewEventCategory((evt.category && evt.category in EVENT_CATEGORIES ? evt.category : 'other') as EventCategoryType);
@@ -632,13 +650,16 @@ export default function HomePage() {
         setNewEventDescription(evt.description || '');
         setNewEventUrl(evt.url || '');
         setNewEventHost(evt.isTip || evt.url ? evt.hostName || '' : '');
-        setNewEventRepeatWeekly(!!evt.repeatWeekly);
-        setNewEventRepeatInterval(evt.repeatIntervalWeeks === 2 ? 2 : 1);
-        // Antalet gånger räknas från DET TILLFÄLLE man redigerar (dess tid blir
-        // seriens nya start) fram till seriens slut — annars förlängdes en
-        // begränsad serie varje gång den redigerades från ett senare tillfälle.
+        setNewEventRepeats(isSeriesEvent(evt));
+        setNewEventRepeatInterval(repeatDays !== null ? 'daily' : evt.repeatIntervalWeeks === 2 ? 2 : 1);
+        // Veckoserie: antalet gånger räknas från DET TILLFÄLLE man redigerar
+        // (dess tid blir seriens nya start) fram till seriens slut, annars
+        // förlängdes en begränsad serie varje gång den redigerades från ett
+        // senare tillfälle. Dagsserie: hela antalet, tiden är ju första dagen.
         const serieSlut = seriesEndDate(evt);
-        setNewEventRepeatTimes(serieSlut
+        setNewEventRepeatTimes(repeatDays !== null
+            ? repeatDays
+            : serieSlut
             ? occurrencesLeftFrom(evt.time, serieSlut, evt.repeatIntervalWeeks)
             : null);
         // Befintlig bild visas som förhandsvisning ("behåll"). Krysset tömmer
@@ -1655,6 +1676,8 @@ export default function HomePage() {
             // (inget fält skrivs alls). Samma normalisering som korten kör på
             // skrapade priser, gjord EN gång vid skapandet.
             const price = normalizePriceLabel(newEventPrice) ?? undefined;
+            // Upprepningen (dagar i rad / varje / varannan vecka) → fälten.
+            const seriesFields = seriesFieldsFor(newEventRepeats, newEventRepeatInterval, newEventRepeatTimes);
 
             // ── REDIGERING: samma formulär, men Spara uppdaterar dokumentet ──
             if (editingEventId) {
@@ -1679,10 +1702,7 @@ export default function HomePage() {
                     coverImage: editImage,
                     url: tipUrl ?? '',
                     isTip,
-                    repeatWeekly: newEventRepeatWeekly,
-                    repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
-                    repeatWeeks: newEventRepeatWeekly && newEventRepeatTimes
-                        ? weeksForOccurrences(newEventRepeatTimes, newEventRepeatInterval) : undefined,
+                    ...seriesFields,
                 });
                 const updated: LinkEvent = {
                     ...(orig ?? ({} as LinkEvent)),
@@ -1692,23 +1712,25 @@ export default function HomePage() {
                     hostName: editHostName, category: newEventCategory,
                     coverImage: editImage, description: newEventDescription.trim(), price,
                     userCreated: true, isTip,
-                    repeatWeekly: newEventRepeatWeekly,
-                    repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
-                    repeatWeeks: newEventRepeatWeekly && newEventRepeatTimes
-                        ? weeksForOccurrences(newEventRepeatTimes, newEventRepeatInterval) : undefined,
+                    repeatWeekly: undefined, repeatIntervalWeeks: undefined, repeatWeeks: undefined, repeatDays: undefined,
+                    seriesEndsAt: undefined,
+                    ...seriesFields,
                 } as LinkEvent;
                 // Optimistiskt: byt ut ALLA tillfällen som hör till dokumentet
-                // (en veckoserie ligger utvecklad i listan) mot de nya.
-                const occurrences = newEventRepeatWeekly ? expandWeekly(updated, new Date()) : [updated];
+                // (en serie ligger utvecklad i listan) mot de nya. Samma id:n
+                // som pollen ger, så ingenting dubbleras när den kommer.
+                const occurrences = isSeriesEvent(updated) ? expandSeries(updated, todayMidnight()) : [updated];
                 const belongsTo = (id: string) => id === editingEventId || id.startsWith(`${editingEventId}__`);
-                myCreatedRef.current = [...myCreatedRef.current.filter(e => !belongsTo(e.id)), updated];
+                myCreatedRef.current = [...myCreatedRef.current.filter(e => !belongsTo(e.id)), ...occurrences];
                 lastUserEventsRef.current = [...lastUserEventsRef.current.filter(e => !belongsTo(e.id)), ...occurrences];
                 setEvents(prev => [...prev.filter(e => !belongsTo(e.id)), ...occurrences]
                     .sort((a, b) => a.time.getTime() - b.time.getTime()));
                 // Följ eventet till dess (kanske nya) dag — annars redigerar man
                 // bort det ur den visade dagen och tror att det försvann.
                 const startToday0 = new Date(); startToday0.setHours(0, 0, 0, 0);
-                const startEvt0 = new Date(time); startEvt0.setHours(0, 0, 0, 0);
+                // Första KOMMANDE tillfället, inte formulärets tid: en dagsserie
+                // som redigeras på dag 2 har sin första dag igår.
+                const startEvt0 = new Date((occurrences[0] ?? updated).time); startEvt0.setHours(0, 0, 0, 0);
                 setDayOffset(Math.round((startEvt0.getTime() - startToday0.getTime()) / 86_400_000));
                 setDayRangeDays(1);
                 setSelectedEvent(occurrences[0] ?? updated);
@@ -1732,10 +1754,7 @@ export default function HomePage() {
                 url: tipUrl ?? '',
                 isTip,
                 anonTip: isAnonTip,
-                repeatWeekly: newEventRepeatWeekly,
-                repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
-                repeatWeeks: newEventRepeatWeekly && newEventRepeatTimes
-                    ? weeksForOccurrences(newEventRepeatTimes, newEventRepeatInterval) : undefined,
+                ...seriesFields,
             });
             const created: LinkEvent = {
                 id: docId, url: tipUrl ?? '', title: newEventTitle.trim(), time, createdAt: new Date(),
@@ -1743,15 +1762,16 @@ export default function HomePage() {
                 hostName,
                 category: newEventCategory, coverImage, description: newEventDescription.trim(), price, attendees: 0,
                 isLocationVerified: true, userCreated: true, isTip, anonTip: isAnonTip,
-                repeatWeekly: newEventRepeatWeekly,
-                repeatIntervalWeeks: newEventRepeatWeekly && newEventRepeatInterval === 2 ? 2 : undefined,
-                repeatWeeks: newEventRepeatWeekly && newEventRepeatTimes
-                    ? weeksForOccurrences(newEventRepeatTimes, newEventRepeatInterval) : undefined,
+                ...seriesFields,
                 hostUid: authorUid,
             } as LinkEvent;
+            // En serie läggs in UTVECKLAD (en bricka per dag/vecka) med samma
+            // id:n som pollen ger. Förr lades bara basdokumentet in, så en ny
+            // serie fick en dubbelbricka på första dagen när pollen kom.
+            const createdOccurrences = isSeriesEvent(created) ? expandSeries(created, todayMidnight()) : [created];
             // Behåll i sessions-listan så pollen inte rensar bort det (se myCreatedRef).
-            myCreatedRef.current = [...myCreatedRef.current, created];
-            setEvents(prev => [...prev, created].sort((a, b) => a.time.getTime() - b.time.getTime()));
+            myCreatedRef.current = [...myCreatedRef.current, ...createdOccurrences];
+            setEvents(prev => [...prev, ...createdOccurrences].sort((a, b) => a.time.getTime() - b.time.getTime()));
             // Hoppa till eventets dag så det garanterat ligger inom dag-filtret —
             // annars syns det inte om det skapades för en annan dag än den visade.
             const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
@@ -1759,7 +1779,7 @@ export default function HomePage() {
             const dayOffsetForEvent = Math.round((startEvt.getTime() - startToday.getTime()) / 86_400_000);
             setDayOffset(dayOffsetForEvent);
             setDayRangeDays(1);
-            setSelectedEvent(created);
+            setSelectedEvent(createdOccurrences[0] ?? created);
             // Skapades eventet AV EN ÖNSKAN → kvittera den (fulfilled=true) så
             // önske-brickan försvinner från kartan för alla. Optimistiskt lokalt
             // först; själva skrivningen är best-effort (eventet är redan skapat
@@ -1796,7 +1816,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeatWeekly, newEventRepeatInterval, newEventRepeatTimes, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeats, newEventRepeatInterval, newEventRepeatTimes, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -2884,12 +2904,18 @@ export default function HomePage() {
     // Formulärets "sista gången"-rad: vilket datum serien tar slut med valt
     // antal gånger och vald rytm. Utan den måste man räkna veckor i huvudet.
     const seriesEndPreview = useMemo(() => {
-        if (!newEventRepeatWeekly || !newEventRepeatTimes || !newEventTime) return null;
+        if (!newEventRepeats || !newEventRepeatTimes || !newEventTime) return null;
         const start = new Date(newEventTime);
         if (isNaN(start.getTime())) return null;
-        return seriesLastDate(start, newEventRepeatTimes, newEventRepeatInterval)
+        return lastOccurrenceFor(start, newEventRepeatTimes, newEventRepeatInterval)
             .toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
-    }, [newEventRepeatWeekly, newEventRepeatTimes, newEventRepeatInterval, newEventTime]);
+    }, [newEventRepeats, newEventRepeatTimes, newEventRepeatInterval, newEventTime]);
+
+    // "Fler detaljer": bara TIPS fäller ihop länk, arrangör och beskrivning.
+    // Arrangera, önska och redigera visar allt, och ifyllda fält fälls
+    // aldrig ihop (byter man från arrangera till tips ligger texten kvar synlig).
+    const showDetailFields = createKind === 'wish' || newEventRole === 'host' || !!editingEventId || showMoreDetails
+        || !!(newEventUrl.trim() || newEventHost.trim() || newEventDescription.trim());
 
     // Användarens egna skapade event — visas i profilpanelen.
     const myEvents = useMemo(
@@ -3147,13 +3173,19 @@ export default function HomePage() {
     // som ?skapa=1 men med önska-läget förvalt i arket, så flödet aldrig
     // tappas ("klickar man önska ska man direkt välja var man vill önska").
     const pendingDeepWishRef = useRef(false);
+    // ?titel= (22/9): stadssidans snabbönska (med ?onska=1). Det man skrev
+    // där står ifyllt när formuläret öppnas. Med ?skapa=1 blir det ett tips.
+    const pendingDeepTitleRef = useRef<string | null>(null);
     const [deepPlacing, setDeepPlacing] = useState(false);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const wish = params.has('onska');
         if (!params.has('skapa') && !wish) return;
+        const titel = params.get('titel')?.trim().slice(0, 120);
         params.delete('skapa');
         params.delete('onska');
+        params.delete('titel');
+        pendingDeepTitleRef.current = titel || null;
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
         pendingDeepCreateRef.current = true;
@@ -3163,9 +3195,15 @@ export default function HomePage() {
     useEffect(() => {
         if (!pendingDeepCreateRef.current || welcomeOpen) return;
         pendingDeepCreateRef.current = false;
-        if (pendingDeepWishRef.current) {
+        const deepWish = pendingDeepWishRef.current;
+        if (deepWish) {
             pendingDeepWishRef.current = false;
             setCreateKind('wish');
+        }
+        if (pendingDeepTitleRef.current) {
+            setNewEventTitle(pendingDeepTitleRef.current);
+            if (!deepWish) setNewEventRole('tip');
+            pendingDeepTitleRef.current = null;
         }
         setCreationMode('placing');
         setDeepPlacing(true);
@@ -4177,7 +4215,9 @@ export default function HomePage() {
                     // z-[1300] = modal-lagret (AuthModal) — måste ligga över
                     // eventkortet som numera är z-[1250]. (Grupplistan hör inte
                     // hit längre: den är en väljare på z-1149 sedan 31/8.)
-                    className="fixed inset-0 z-[1300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overscroll-none"
+                    // Mobil: ARK nerifrån (items-end, ingen kant runt om). Dator:
+                    // centrerad ruta som förut.
+                    className="fixed inset-0 z-[1300] flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm overscroll-none"
                     // Klick på bakgrunden stänger modalen (samma städning som
                     // Avbryt/Escape). Bara träffar PÅ överlägget självt räknas —
                     // klick inuti dialogen bubblar hit men filtreras bort här.
@@ -4187,15 +4227,22 @@ export default function HomePage() {
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="create-event-title"
-                        // Rullningen stannar I dialogen: overscroll-contain hindrar att
-                        // iOS gummibandar vidare på visuella viewporten när man nått
-                        // toppen/botten (det såg ut som att KARTAN scrollade bakom),
-                        // och touch-action:pan-y låser gesten till lodrätt.
-                        className="bg-card dark:border dark:border-white/10 rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4 max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain [touch-action:pan-y]"
+                        // Tre delar (22/9): rubrik, fälten (det enda som rullar) och
+                        // knapparna, som alltid syns längst ner. Förr låg Skapa i
+                        // botten av en rullande ruta och fick letas fram. Bredare på
+                        // dator (max-w-2xl) så korta fält kan stå två och två.
+                        className="bg-card dark:border dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl flex flex-col max-h-[94dvh] sm:max-h-[90vh] overflow-hidden motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-8 sm:motion-safe:slide-in-from-bottom-2 motion-safe:duration-300"
                     >
-                        <h2 id="create-event-title" className="text-xl font-bold text-slate-800 dark:text-white">
+                        <h2 id="create-event-title" className="shrink-0 px-5 pt-5 pb-3 sm:px-6 sm:pt-6 text-xl font-bold text-slate-800 dark:text-white">
                             {editingEventId ? 'Ändra event' : fulfillingWish ? 'Skapa eventet av önskan' : createKind === 'wish' ? 'Önska event' : 'Skapa event'}
                         </h2>
+                        <div
+                            // Rullningen stannar I fältdelen: overscroll-contain hindrar
+                            // att iOS gummibandar vidare på visuella viewporten när man
+                            // nått toppen/botten (det såg ut som att KARTAN scrollade
+                            // bakom), och touch-action:pan-y låser gesten till lodrätt.
+                            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain [touch-action:pan-y] px-5 pb-5 sm:px-6 flex flex-col gap-4"
+                        >
                         {/* Läge: skapa på riktigt eller önska. Gömd när modalen öppnats
                             från en önskan ("Skapa det här eventet") — då skapar man —
                             och vid redigering (ett event kan inte bli en önskan). */}
@@ -4232,26 +4279,34 @@ export default function HomePage() {
                             och visas som ett vanligt länk-event — tipsaren står
                             aldrig som arrangör eller värd. */}
                         {createKind === 'event' && (
-                            <div className="flex flex-col gap-2">
-                                <div className="flex rounded-full bg-slate-100 dark:bg-slate-800 p-1 text-xs font-bold" role="radiogroup" aria-label="Arrangerar du eller tipsar du?">
+                            <div className="flex flex-col gap-3">
+                                {/* Riktiga flikar, inte ett till pill-reglage (Josef 22/9:
+                                    två likadana reglage på rad såg ut som två toggles).
+                                    Markören glider mellan flikarna och byter färg:
+                                    grön = arrangera, gul = tips (samma som brickorna). */}
+                                <div className="relative flex border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="Arrangerar du eller tipsar du?">
                                     <button
                                         type="button"
-                                        role="radio"
-                                        aria-checked={newEventRole === 'host'}
+                                        role="tab"
+                                        aria-selected={newEventRole === 'host'}
                                         onClick={() => setNewEventRole('host')}
-                                        className={`flex-1 px-3 py-1.5 rounded-full transition-colors ${newEventRole === 'host' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                                        className={`flex-1 flex items-center justify-center px-3 pt-1 pb-2.5 text-sm font-bold rounded-t-lg transition-colors focus-visible:outline-none focus-visible:bg-slate-100 dark:focus-visible:bg-slate-800 ${newEventRole === 'host' ? 'text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}
                                     >
                                         Jag arrangerar
                                     </button>
                                     <button
                                         type="button"
-                                        role="radio"
-                                        aria-checked={newEventRole === 'tip'}
+                                        role="tab"
+                                        aria-selected={newEventRole === 'tip'}
                                         onClick={() => setNewEventRole('tip')}
-                                        className={`flex-1 px-3 py-1.5 rounded-full transition-colors ${newEventRole === 'tip' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                                        className={`flex-1 flex items-center justify-center px-3 pt-1 pb-2.5 text-sm font-bold rounded-t-lg transition-colors focus-visible:outline-none focus-visible:bg-slate-100 dark:focus-visible:bg-slate-800 ${newEventRole === 'tip' ? 'text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}
                                     >
-                                        💡 Jag tipsar bara
+                                        Jag tipsar bara
                                     </button>
+                                    <span
+                                        aria-hidden
+                                        className={`pointer-events-none absolute -bottom-px left-0 h-[3px] w-1/2 rounded-full transition-[transform,background-color] duration-300 ease-out ${newEventRole === 'tip' ? 'translate-x-full bg-amber-500' : 'translate-x-0 bg-green-600 dark:bg-green-500'}`}
+                                    />
                                 </div>
                                 {newEventRole === 'host' && (
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -4279,9 +4334,10 @@ export default function HomePage() {
                         <button
                             type="button"
                             onClick={() => setRepicking(true)}
-                            className="self-start text-xs font-bold text-[#006AA7] dark:text-sky-400 hover:underline"
+                            className="self-start inline-flex items-center gap-1 text-xs font-bold text-[#006AA7] dark:text-sky-400 hover:underline"
                         >
-                            📍 Ändra plats på kartan
+                            <MapPin size={13} aria-hidden />
+                            Ändra plats på kartan
                         </button>
                         <input
                             type="text"
@@ -4297,42 +4353,11 @@ export default function HomePage() {
                             maxLength={120}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-500 focus:outline-none"
                         />
-                        {/* Tips: länken till källan (VALFRI — de flesta tips som kommer
-                            in har ingen sida att peka på) + arrangörens namn (valfritt;
-                            annars visas länkens domän, eller "Okänd arrangör"). */}
-                        {createKind === 'event' && newEventRole === 'tip' && (
-                            <>
-                                <input
-                                    type="url"
-                                    value={newEventUrl}
-                                    onChange={e => setNewEventUrl(e.target.value)}
-                                    placeholder="Länk till eventet (valfritt)"
-                                    aria-label="Länk till eventet (valfritt)"
-                                    inputMode="url"
-                                    autoCapitalize="none"
-                                    autoCorrect="off"
-                                    spellCheck={false}
-                                    maxLength={500}
-                                    className={`w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none ${
-                                        newEventUrl.trim() && !normalizeTipUrl(newEventUrl)
-                                            ? 'border-amber-400 focus:border-amber-500'
-                                            : 'border-slate-200 dark:border-slate-700 focus:border-green-500'
-                                    }`}
-                                />
-                                <input
-                                    type="text"
-                                    value={newEventHost}
-                                    onChange={e => setNewEventHost(e.target.value)}
-                                    placeholder="Arrangör — t.ex. Borås Stad (valfritt)"
-                                    aria-label="Arrangör (valfritt)"
-                                    maxLength={80}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-500 focus:outline-none"
-                                />
-                            </>
-                        )}
-                        {/* En önskan har ingen tid — bara skapa-läget frågar När. */}
+                        {/* När + Kategori två och två på dator. En önskan har ingen
+                            tid: då tar kategorin hela bredden. */}
+                        <div className="grid gap-4 sm:grid-cols-2">
                         {createKind === 'event' && (
-                            <label className="flex flex-col gap-1 text-xs font-bold text-slate-500 dark:text-slate-400">
+                            <label className="flex flex-col gap-1 min-w-0 text-xs font-bold text-slate-500 dark:text-slate-400">
                                 När?
                                 {/* iOS ger datetime-local en egen inbyggd bredd som
                                     inte krymper med width:100% — den sköt ut ur
@@ -4347,86 +4372,7 @@ export default function HomePage() {
                                 />
                             </label>
                         )}
-                        {/* Veckovis serie. Veckodag och klockslag ärvs från "När?",
-                            så rutan visas först när en tid är vald — annars går det
-                            inte att säga vilken dag den återkommer. */}
-                        {createKind === 'event' && newEventTime && (
-                            <label className="flex items-start gap-2.5 cursor-pointer rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3">
-                                <input
-                                    type="checkbox"
-                                    checked={newEventRepeatWeekly}
-                                    onChange={e => setNewEventRepeatWeekly(e.target.checked)}
-                                    className="mt-0.5 h-4 w-4 accent-green-600 shrink-0"
-                                />
-                                <span className="min-w-0 flex-1">
-                                    <span className="block text-sm font-bold text-slate-800 dark:text-white">
-                                        Återkommer regelbundet
-                                    </span>
-                                    <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
-                                        {weeklyLabelFor(newEventTime, newEventRepeatInterval)} — t.ex.
-                                        pubquiz eller träningstider. Ändrar du tiden senare gäller
-                                        det alla kommande gånger.
-                                    </span>
-                                    {/* Rytmen: varje eller varannan vecka (15/9 — Stobirk-
-                                        besöken var varannan-lördag och gick inte att lägga
-                                        som serie). Varje vecka är default och skrivs aldrig
-                                        till dokumentet. */}
-                                    {newEventRepeatWeekly && (
-                                        <span className="mt-2 flex items-center gap-2 text-xs font-normal text-slate-600 dark:text-slate-300" onClick={e => e.preventDefault()}>
-                                            Hur ofta?
-                                            <select
-                                                value={newEventRepeatInterval}
-                                                onChange={e => {
-                                                    const next = Number(e.target.value) === 2 ? 2 : 1;
-                                                    setNewEventRepeatInterval(next);
-                                                    // 52 gånger ryms varje vecka men inte varannan
-                                                    // (reglernas tak är 52 veckor) — klipp valet i
-                                                    // stället för att skriva ett repeatWeeks som
-                                                    // reglerna kastar tillbaka.
-                                                    setNewEventRepeatTimes(prev =>
-                                                        prev && weeksForOccurrences(prev, next) > 52 ? 26 : prev);
-                                                }}
-                                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-xs text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white focus:border-green-500 focus:outline-none"
-                                            >
-                                                <option value={1}>Varje vecka</option>
-                                                <option value={2}>Varannan vecka</option>
-                                            </select>
-                                        </span>
-                                    )}
-                                    {/* Hur många GÅNGER serien ska hända. Frågan ställdes i
-                                        veckor t.o.m. 16/9 men blev obegriplig med varannan
-                                        vecka-rytmen (bara ojämna veckotal gick jämnt ut, och
-                                        "8 veckor" var 4 gånger). Gånger betyder samma sak i
-                                        båda rytmerna. Tills vidare är kvar som förval — det
-                                        är beteendet serier alltid haft. Väljs ett antal slutar
-                                        serien efter sista tillfället och försvinner då från
-                                        kartan av sig själv. */}
-                                    {newEventRepeatWeekly && (
-                                        <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-normal text-slate-600 dark:text-slate-300" onClick={e => e.preventDefault()}>
-                                            Hur många gånger?
-                                            <select
-                                                value={newEventRepeatTimes ?? ''}
-                                                onChange={e => setNewEventRepeatTimes(e.target.value ? Number(e.target.value) : null)}
-                                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-xs text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white focus:border-green-500 focus:outline-none"
-                                            >
-                                                <option value="">Tills vidare</option>
-                                                {REPEAT_TIMES_CHOICES
-                                                    .filter(n => weeksForOccurrences(n, newEventRepeatInterval) <= 52)
-                                                    .map(n => (
-                                                        <option key={n} value={n}>{n} gånger</option>
-                                                    ))}
-                                            </select>
-                                            {seriesEndPreview && (
-                                                <span className="text-slate-500 dark:text-slate-400">
-                                                    sista gången {seriesEndPreview}
-                                                </span>
-                                            )}
-                                        </span>
-                                    )}
-                                </span>
-                            </label>
-                        )}
-                        <label className="flex flex-col gap-1 text-xs font-bold text-slate-500 dark:text-slate-400">
+                        <label className={`flex flex-col gap-1 min-w-0 text-xs font-bold text-slate-500 dark:text-slate-400 ${createKind === 'wish' ? 'sm:col-span-2' : ''}`}>
                             Kategori
                             <select
                                 value={newEventCategory}
@@ -4438,32 +4384,215 @@ export default function HomePage() {
                                 ))}
                             </select>
                         </label>
+                        </div>
+                        {/* Serie: flera dagar i rad (22/9, Växjö Konstrunda lör+sön
+                            lades som två event) eller varje/varannan vecka. Klockslag
+                            och veckodag ärvs från "När?", så rutan visas först när en
+                            tid är vald. */}
+                        {createKind === 'event' && newEventTime && (
+                            <label className="flex items-start gap-2.5 cursor-pointer rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3">
+                                <input
+                                    type="checkbox"
+                                    checked={newEventRepeats}
+                                    onChange={e => setNewEventRepeats(e.target.checked)}
+                                    className="mt-0.5 h-4 w-4 accent-green-600 shrink-0"
+                                />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block text-sm font-bold text-slate-800 dark:text-white">
+                                        Flera dagar eller återkommande
+                                    </span>
+                                    <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
+                                        {!newEventRepeats
+                                            ? 'T.ex. en konstrunda över helgen eller en pubquiz varje vecka.'
+                                            : newEventRepeatInterval === 'daily'
+                                            ? `${weeklyLabelFor(newEventTime, 'daily')}. Det blir ett event som syns på kartan alla dagarna.`
+                                            : `${weeklyLabelFor(newEventTime, newEventRepeatInterval)}. Ändrar du tiden senare gäller det alla kommande gånger.`}
+                                    </span>
+                                    {/* Rytmen. Varje vecka är default och skrivs aldrig till
+                                        dokumentet; varannan vecka kom 15/9 (Stobirk), varje
+                                        dag 22/9. */}
+                                    {newEventRepeats && (
+                                        <span className="mt-2 flex items-center gap-2 text-xs font-normal text-slate-600 dark:text-slate-300" onClick={e => e.preventDefault()}>
+                                            Hur ofta?
+                                            <select
+                                                value={String(newEventRepeatInterval)}
+                                                onChange={e => {
+                                                    const v = e.target.value;
+                                                    const next: RepeatRhythm = v === 'daily' ? 'daily' : Number(v) === 2 ? 2 : 1;
+                                                    const prevRhythm = newEventRepeatInterval;
+                                                    setNewEventRepeatInterval(next);
+                                                    setNewEventRepeatTimes(prev => {
+                                                        // Dagar har alltid ett antal (ingen "tills
+                                                        // vidare") och ett lågt tak.
+                                                        if (next === 'daily') return prev && prev >= 2 && prev <= MAX_REPEAT_DAYS ? prev : 2;
+                                                        // Från dagar till veckor: börja om på tills
+                                                        // vidare, "3 dagar" betyder inget i veckor.
+                                                        if (prevRhythm === 'daily') return null;
+                                                        // 52 gånger ryms varje vecka men inte varannan
+                                                        // (reglernas tak är 52 veckor): klipp valet i
+                                                        // stället för att skriva ett repeatWeeks som
+                                                        // reglerna kastar tillbaka.
+                                                        return prev && weeksForOccurrences(prev, next) > 52 ? 26 : prev;
+                                                    });
+                                                }}
+                                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-xs text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white focus:border-green-500 focus:outline-none"
+                                            >
+                                                <option value="daily">Varje dag</option>
+                                                <option value="1">Varje vecka</option>
+                                                <option value="2">Varannan vecka</option>
+                                            </select>
+                                        </span>
+                                    )}
+                                    {/* Hur många DAGAR eller GÅNGER. Veckor frågas i gånger
+                                        sedan 16/9 (varannan vecka gjorde veckotal obegripliga),
+                                        med tills vidare som förval. Dagar har inget tills
+                                        vidare och stannar vid MAX_REPEAT_DAYS (Josef 22/9:
+                                        "oftast inte så många dagar efter varandra"). En
+                                        begränsad serie försvinner från kartan av sig själv
+                                        efter sista tillfället. */}
+                                    {newEventRepeats && (
+                                        <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-normal text-slate-600 dark:text-slate-300" onClick={e => e.preventDefault()}>
+                                            {newEventRepeatInterval === 'daily' ? 'Hur många dagar?' : 'Hur många gånger?'}
+                                            <select
+                                                value={newEventRepeatTimes ?? ''}
+                                                onChange={e => setNewEventRepeatTimes(e.target.value ? Number(e.target.value) : null)}
+                                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-xs text-slate-800 dark:text-white dark:[&>option]:bg-slate-800 dark:[&>option]:text-white focus:border-green-500 focus:outline-none"
+                                            >
+                                                {newEventRepeatInterval === 'daily'
+                                                    ? REPEAT_DAYS_CHOICES.map(n => (
+                                                        <option key={n} value={n}>{n} dagar</option>
+                                                    ))
+                                                    : (
+                                                        <>
+                                                            <option value="">Tills vidare</option>
+                                                            {REPEAT_TIMES_CHOICES
+                                                                .filter(n => weeksForOccurrences(n, newEventRepeatInterval) <= 52)
+                                                                .map(n => (
+                                                                    <option key={n} value={n}>{n} gånger</option>
+                                                                ))}
+                                                        </>
+                                                    )}
+                                            </select>
+                                            {seriesEndPreview && (
+                                                <span className="text-slate-500 dark:text-slate-400">
+                                                    {newEventRepeatInterval === 'daily' ? 'sista dagen' : 'sista gången'} {seriesEndPreview}
+                                                </span>
+                                            )}
+                                        </span>
+                                    )}
+                                </span>
+                            </label>
+                        )}
+                        {/* Plats (hela bredden), sedan Pris + Bild två och två. */}
                         {createKind === 'event' && (
+                        <div className="grid gap-4 sm:grid-cols-2">
                             <input
                                 type="text"
                                 value={newEventPlace}
                                 onChange={e => setNewEventPlace(e.target.value)}
-                                placeholder="Plats — t.ex. Vasaparken (valfritt)"
+                                placeholder="Plats, t.ex. Vasaparken (valfritt)"
                                 aria-label="Plats (valfritt)"
                                 maxLength={120}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-500 focus:outline-none"
+                                className="sm:col-span-2 w-full min-w-0 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-500 focus:outline-none"
                             />
-                        )}
                         {/* Entré/pris (valfritt). Fritext med flit: källorna
                             levererar allt från "Gratis" till "20-50" och
                             "Medlemmar halva priset", och normalizePriceLabel
                             städar båda vägarna. Lämnas rutan tom sparas inget
                             pris — kortet visar då inget pris-chip. */}
-                        {createKind === 'event' && (
                             <input
                                 type="text"
                                 value={newEventPrice}
                                 onChange={e => setNewEventPrice(e.target.value)}
-                                placeholder="Pris — t.ex. 120 kr eller Gratis (valfritt)"
+                                placeholder="Pris, t.ex. 120 kr (valfritt)"
                                 aria-label="Pris (valfritt)"
                                 maxLength={40}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-500 focus:outline-none"
+                                className="w-full min-w-0 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-500 focus:outline-none"
                             />
+                            {/* Bild (valfritt), laddas upp till Storage vid Skapa. Ett
+                                fält i SAMMA storlek som Pris bredvid (Josef 22/9: stora
+                                bildrutan tog för mycket plats, en länk vid "Ändra plats"
+                                blev för gömd, en egen hög rad blev för stor). Vald bild
+                                = liten miniatyr + Byt bild + kryss. */}
+                            <div className="flex items-center gap-2 w-full min-w-0 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus-within:border-green-500 hover:border-green-500 transition-colors">
+                                <input
+                                    id="new-event-image"
+                                    type="file"
+                                    accept="image/*"
+                                    className="sr-only"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        e.target.value = '';
+                                        if (!file) return;
+                                        if (!file.type.startsWith('image/')) { toast.error('Välj en bildfil.'); return; }
+                                        setNewEventImage(file);
+                                        setNewEventImagePreview(URL.createObjectURL(file));
+                                    }}
+                                />
+                                <label htmlFor="new-event-image" className="flex flex-1 min-w-0 items-center gap-2 cursor-pointer text-base">
+                                    {newEventImagePreview ? (
+                                        <img src={newEventImagePreview} alt="Vald bild" className="h-6 w-8 shrink-0 object-cover rounded" />
+                                    ) : (
+                                        <ImagePlus size={18} className="shrink-0 text-slate-400 dark:text-slate-500" aria-hidden />
+                                    )}
+                                    <span className={`truncate ${newEventImagePreview ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                                        {newEventImagePreview ? 'Byt bild' : 'Lägg till bild (valfritt)'}
+                                    </span>
+                                </label>
+                                {newEventImagePreview && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setNewEventImage(null); setNewEventImagePreview(''); }}
+                                        aria-label="Ta bort bild"
+                                        title="Ta bort bild"
+                                        className="shrink-0 -my-1 -mr-1 w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        )}
+                        {/* FLER DETALJER (22/9): när man TIPSAR fälls länk, arrangör
+                            och beskrivning ihop bakom en knapp som säger vad som finns
+                            där, så ett snabbt tips är några få fält. Arrangera, önska
+                            och redigera visar allt direkt, och har man redan fyllt i
+                            något fälls det aldrig ihop över innehållet. (Bildfältet ligger
+                            bredvid Pris och syns alltid.) */}
+                        {showDetailFields ? (
+                        <>
+                        {/* Tips: länken till källan (VALFRI: de flesta tips som kommer
+                            in har ingen sida att peka på) + arrangörens namn (valfritt;
+                            annars visas länkens domän, eller "Okänd arrangör"). */}
+                        {createKind === 'event' && newEventRole === 'tip' && (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <input
+                                    type="url"
+                                    value={newEventUrl}
+                                    onChange={e => setNewEventUrl(e.target.value)}
+                                    placeholder="Länk till eventet (valfritt)"
+                                    aria-label="Länk till eventet (valfritt)"
+                                    inputMode="url"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
+                                    spellCheck={false}
+                                    maxLength={500}
+                                    className={`w-full min-w-0 px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none ${
+                                        newEventUrl.trim() && !normalizeTipUrl(newEventUrl)
+                                            ? 'border-amber-400 focus:border-amber-500'
+                                            : 'border-slate-200 dark:border-slate-700 focus:border-green-500'
+                                    }`}
+                                />
+                                <input
+                                    type="text"
+                                    value={newEventHost}
+                                    onChange={e => setNewEventHost(e.target.value)}
+                                    placeholder="Arrangör, t.ex. Borås Stad (valfritt)"
+                                    aria-label="Arrangör (valfritt)"
+                                    maxLength={80}
+                                    className="w-full min-w-0 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-500 focus:outline-none"
+                                />
+                            </div>
                         )}
                         <textarea
                             value={newEventDescription}
@@ -4477,64 +4606,33 @@ export default function HomePage() {
                             // ihop rutan på mobil. field-sizing:content låter den
                             // växa med texten i webbläsare som stödjer det —
                             // taket är max-h, och resize-y funkar som reserv.
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-relaxed focus:border-green-500 focus:outline-none resize-y shrink-0 min-h-[9.5rem] max-h-[50vh] [field-sizing:content]"
+                            className="w-full min-w-0 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-relaxed focus:border-green-500 focus:outline-none resize-y shrink-0 min-h-[9.5rem] sm:min-h-[7rem] max-h-[50vh] [field-sizing:content]"
                         />
-                        {/* Bild på eventet (valfritt) — laddas upp till Storage vid Skapa.
-                            En önskan har ingen bild. */}
-                        {createKind === 'event' && (
-                        <div>
-                            <input
-                                id="new-event-image"
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    e.target.value = '';
-                                    if (!file) return;
-                                    if (!file.type.startsWith('image/')) { toast.error('Välj en bildfil.'); return; }
-                                    setNewEventImage(file);
-                                    setNewEventImagePreview(URL.createObjectURL(file));
-                                }}
-                            />
-                            {newEventImagePreview ? (
-                                <div className="relative">
-                                    <img src={newEventImagePreview} alt="Förhandsvisning" className="w-full h-36 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
-                                    <button
-                                        type="button"
-                                        onClick={() => { setNewEventImage(null); setNewEventImagePreview(''); }}
-                                        aria-label="Ta bort bild"
-                                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                                    >
-                                        <X size={15} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <label
-                                    htmlFor="new-event-image"
-                                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-sm font-semibold cursor-pointer hover:border-green-500 hover:text-green-600 transition-colors"
-                                >
-                                    <ImagePlus size={18} /> Lägg till bild (valfritt)
-                                </label>
-                            )}
+                        </>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setShowMoreDetails(true)}
+                                className="group flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-left hover:border-green-500 transition-colors"
+                            >
+                                <Plus size={18} className="shrink-0 text-slate-400 group-hover:text-green-600 transition-colors" aria-hidden />
+                                <span className="min-w-0">
+                                    <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Fler detaljer</span>
+                                    <span className="block text-xs text-slate-500 dark:text-slate-400">Länk, arrangör och beskrivning</span>
+                                </span>
+                            </button>
+                        )}
+                        {/* Tips går utan konto: en lugnande rad, för Tipsa-knappen
+                            säger inget om inloggning. Den gula "du behöver logga in"-
+                            rutan för skapa/önska är BORTTAGEN (Josef 22/9): knappen
+                            säger redan "Logga in & skapa" / "Logga in & önska". */}
+                        {!user && createKind === 'event' && newEventRole === 'tip' && (
+                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3 py-2">
+                                Du behöver inget konto för att tipsa.
+                            </p>
+                        )}
                         </div>
-                        )}
-                        {/* Tips går utan konto — då är detta en lugnande upplysning
-                            i stället för en spärr, och tonas ner därefter. */}
-                        {!user && (
-                            createKind === 'event' && newEventRole === 'tip' ? (
-                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3 py-2">
-                                    Du behöver inget konto för att tipsa. 💡
-                                </p>
-                            ) : (
-                                <p className="text-xs font-semibold text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-3 py-2">
-                                    {createKind === 'wish'
-                                        ? 'Du behöver logga in för att önska — det fixar vi i nästa steg.'
-                                        : 'Du behöver logga in för att skapa eventet — det fixar vi i nästa steg.'}
-                                </p>
-                            )
-                        )}
-                        <div className="flex justify-end gap-2 mt-2">
+                        <div className="shrink-0 flex justify-end gap-2 border-t border-slate-100 dark:border-white/10 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-5">
                             <button
                                 type="button"
                                 onClick={resetCreateFlow}
@@ -4552,7 +4650,8 @@ export default function HomePage() {
                                         && !!newEventUrl.trim() && !normalizeTipUrl(newEventUrl))
                                     || creatingEvent}
                                 onClick={createKind === 'wish' ? handleCreateWish : handleCreateEvent}
-                                className={`px-5 py-2 rounded-full text-white font-bold disabled:opacity-40 transition-colors ${createKind === 'wish' ? 'bg-violet-600 hover:bg-violet-500' : 'bg-green-600 hover:bg-green-500'}`}
+                                // Mobil: stor knapp för tummen; dator: som förut.
+                                className={`flex-1 sm:flex-none px-5 py-2.5 sm:py-2 rounded-full text-white font-bold disabled:opacity-40 transition-colors ${createKind === 'wish' ? 'bg-violet-600 hover:bg-violet-500' : 'bg-green-600 hover:bg-green-500'}`}
                             >
                                 {/* Tips kräver inget konto → aldrig "Logga in &"-varianten
                                     där. Önska och arrangera gör det fortfarande. */}
@@ -4561,7 +4660,7 @@ export default function HomePage() {
                                     : editingEventId
                                     ? 'Spara ändringar'
                                     : createKind === 'event' && newEventRole === 'tip'
-                                    ? 'Tipsa 💡'
+                                    ? 'Tipsa'
                                     : user
                                     ? (createKind === 'wish' ? 'Önska ✨' : 'Skapa')
                                     : (createKind === 'wish' ? 'Logga in & önska' : 'Logga in & skapa')}
@@ -4780,7 +4879,7 @@ export default function HomePage() {
                                 onClick={showSwedenOverview}
                                 className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
                             >
-                                Visa hela Sverige 🗺️
+                                Visa hela Sverige
                             </button>
                         </div>
                     </div>
