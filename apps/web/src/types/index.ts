@@ -260,6 +260,14 @@ export interface LinkEvent {
    */
   repeatIntervalWeeks?: number;
   /**
+   * DAGSSERIE (22/9): eventet pågår så här många dagar i rad, inklusive
+   * första dagen, med samma klockslag som `time`. En konstrunda lör+sön är
+   * 2. Lagras som EN regel på dokumentet precis som veckoserierna och
+   * vecklas ut av expandSeries. 2-14 (MAX_REPEAT_DAYS). Utesluter
+   * repeatWeekly: finns båda vinner dagsserien.
+   */
+  repeatDays?: number;
+  /**
    * Sätts BARA på utvecklade tillfällen av en veckoserie: id:t på dokumentet
    * tillfället kommer från. Tillfällena har egna id ("<docId>__2026-08-13")
    * eftersom kartan, dedupen i emit() och React-nycklarna kräver unika id —

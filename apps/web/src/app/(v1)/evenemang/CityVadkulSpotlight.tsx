@@ -9,8 +9,10 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import {
     composeSpotlightRows, spotDistKm, spotWhen, spotFrame, SPOTLIGHT_VISIBLE_ROWS,
+    spotRangeWhen, spotRangeDayLabel, spotSpanTag,
     type SpotEvent, type SpotRow, type SpotFrame,
 } from '@/utils/citySpotlight';
+import { expandSeries, isSeriesEvent, normalizeRepeatDays, seriesRhythmLabel } from '@/utils/weeklySeries';
 import { isVadkulHostedEvent } from '@/types';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { writeEventSeed } from '@/utils/eventSeed';
@@ -61,6 +63,11 @@ async function fetchCityRows(p: Props): Promise<{ boosted: SpotRow[]; vadkul: Sp
         if (typeof id === 'string' && id) boostedIds.add(id);
     }
     const userCreated: SpotEvent[] = [];
+    // Serier vecklas ut med SAMMA regler som kartan (expandSeries, från idag
+    // 00:00) och slås sedan ihop till en rad av composeSpotlightRows. Förr
+    // visades bara basdokumentet: en veckoserie som startat förra veckan
+    // föll bort helt, och en dagsserie hade bara visat första dagen.
+    const today0 = new Date(); today0.setHours(0, 0, 0, 0);
     for (const d of userSnap.docs) {
         const v = d.data() as Record<string, unknown>;
         if (v.hidden === true) continue;
@@ -68,10 +75,24 @@ async function fetchCityRows(p: Props): Promise<{ boosted: SpotRow[]; vadkul: Sp
         const lat = Number(v.lat), lng = Number(v.lng);
         if (isNaN(time.getTime()) || !lat || !lng) continue;
         if (spotDistKm(lat, lng, p.cityLat, p.cityLng) > p.radiusKm) continue;
-        userCreated.push({
+        const rule = {
             id: d.id,
+            time,
+            repeatWeekly: v.repeatWeekly === true,
+            repeatWeeks: typeof v.repeatWeeks === 'number' ? v.repeatWeeks : undefined,
+            repeatIntervalWeeks: typeof v.repeatIntervalWeeks === 'number' ? v.repeatIntervalWeeks : undefined,
+            repeatDays: normalizeRepeatDays(typeof v.repeatDays === 'number' ? v.repeatDays : undefined) ?? undefined,
+        };
+        const series = isSeriesEvent(rule);
+        const occurrences = series ? expandSeries(rule, today0) : [rule];
+        // Veckoserier bär sin rytm som chip; dagsserier grupperas som "N dagar".
+        const rhythm = series && rule.repeatDays === undefined ? seriesRhythmLabel(rule) : undefined;
+        for (const o of occurrences) userCreated.push({
+            id: o.id,
+            seriesId: series ? d.id : undefined,
+            rhythm,
             title: String(v.title ?? ''),
-            time: time.toISOString(),
+            time: o.time.toISOString(),
             emoji: typeof v.emoji === 'string' ? v.emoji : undefined,
             locationName: typeof v.locationName === 'string' ? v.locationName : undefined,
             lat, lng,
@@ -206,8 +227,19 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
             <Heart size={16} fill={isSaved ? 'currentColor' : 'none'} />
         </button>
     );
-    const catChip = e.category && (
+    // "2 dagar" / "Varje vecka" på en sammanslagen rad (22/9). Kategorin
+    // viker undan på smala skärmar när chippet finns: emojin säger redan
+    // kategorin, och titeln ska inte klämmas av tre chip.
+    const spanTag = spotSpanTag(e);
+    const spanChip = spanTag && (
         <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+            hasImage ? 'bg-white text-[#006AA7] shadow' : 'bg-[#006AA7]/10 text-[#006AA7] dark:bg-sky-400/15 dark:text-sky-300'
+        }`}>
+            {spanTag}
+        </span>
+    );
+    const catChip = e.category && (
+        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${spanTag ? 'hidden sm:inline' : ''} ${
             hasImage ? 'bg-white/25 backdrop-blur-sm text-white' : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
         }`}>
             {categoryLabel(e.category)}
@@ -218,7 +250,7 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
     const infoRow = (
         <EventInfoRow
             place={e.locationName || cityName}
-            when={spotWhen(e.time) || null}
+            when={(e.days && e.lastTime ? spotRangeWhen(e.time, e.lastTime) : spotWhen(e.time)) || null}
             price={normalizePriceLabel(e.price)}
             attendees={e.attendees ?? 0}
         />
@@ -259,6 +291,7 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
                             <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
                                 <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>{gold ? '⭐' : spotEmoji(e)}</span>
                                 <h4 className="flex-1 min-w-0 font-black text-sm text-white truncate [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{e.title}</h4>
+                                {spanChip}
                                 {catChip}
                             </div>
                         </div>
@@ -277,6 +310,7 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
                                 <span className="text-sm font-bold text-slate-900 dark:text-zinc-100 leading-snug truncate">
                                     {gold && <span aria-hidden className="mr-1">⭐</span>}{e.title}
                                 </span>
+                                {spanChip}
                                 {catChip}
                                 {badge}
                             </span>
@@ -301,7 +335,7 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
             {expanded && (
                 <EventExpanded
                     e={toExpanded(e, cityName)}
-                    dayLabel={DAY_LABEL_FMT.format(new Date(e.time))}
+                    dayLabel={e.days && e.lastTime ? spotRangeDayLabel(e.time, e.lastTime) : DAY_LABEL_FMT.format(new Date(e.time))}
                     onClose={onToggle}
                     onMapClick={() => seedMap(e)}
                     hosted={!!e.hosted}
@@ -401,6 +435,8 @@ export default function CityVadkulSpotlight(props: Props) {
                 <h2 className="text-xs font-black tracking-widest text-[#006AA7] dark:text-sky-400 uppercase">
                     Skapade på VADKUL
                 </h2>
+                {/* Ingen vandrande gradient här (prövad och backad 22/9: "för
+                    mycket"), den bor bara på navbarens kartlänk och Populära. */}
                 <Link href={props.createHref} className="text-xs font-bold text-[#006AA7] dark:text-sky-400 hover:underline">
                     Skapa ditt →
                 </Link>

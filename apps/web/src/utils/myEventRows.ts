@@ -1,12 +1,13 @@
 import type { LinkEvent } from '@/types';
-import { seriesRhythmLabel } from './weeklySeries';
+import { isSeriesEvent, seriesRhythmLabel } from './weeklySeries';
 
 /**
  * Profilens "Mina event": EN rad per sak man skapat, inte per tillfälle.
  *
  * Två sorters upprepning slås ihop:
- *  1. VECKOSERIER — ett dokument med repeatWeekly, utvecklat till tillfällen
- *     av expandWeekly (Josef 14/9: "nu blir det en jättelång lista").
+ *  1. SERIER: ett dokument med repeatWeekly eller repeatDays, utvecklat
+ *     till tillfällen av expandSeries (Josef 14/9: "nu blir det en jättelång
+ *     lista").
  *  2. SAMMA EVENT INLAGT FLERA GÅNGER — separata dokument med samma titel på
  *     samma plats (Josef 16/9, destilleribesöken på Stobirk: fyra datum som
  *     inte kunde läggas som serie eftersom de har oregelbunden rytm och olika
@@ -35,7 +36,7 @@ function docIdOf(evt: LinkEvent): string {
 
 /** Serienyckel — samma stam som raderingen redan går på. Null = ingen serie. */
 function seriesKeyOf(evt: LinkEvent): string | null {
-    return evt.seriesId ?? (evt.repeatWeekly ? evt.id.split('__')[0] : null);
+    return evt.seriesId ?? (isSeriesEvent(evt) ? evt.id.split('__')[0] : null);
 }
 
 /**

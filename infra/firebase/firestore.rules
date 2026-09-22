@@ -235,7 +235,11 @@ service cloud.firestore {
           // rytmer utan ny rules-deploy.
           && (!d.keys().hasAny(['repeatIntervalWeeks'])
               || (d.repeatIntervalWeeks is int
-                  && d.repeatIntervalWeeks >= 2 && d.repeatIntervalWeeks <= 4));
+                  && d.repeatIntervalWeeks >= 2 && d.repeatIntervalWeeks <= 4))
+          // Dagsserie (22/9): antal dagar i rad, inklusive första. Taket 14
+          // speglar MAX_REPEAT_DAYS i apps/web/src/utils/weeklySeries.ts.
+          && (!d.keys().hasAny(['repeatDays'])
+              || (d.repeatDays is int && d.repeatDays >= 2 && d.repeatDays <= 14));
       }
 
       allow create: if isAuthenticated()
@@ -262,7 +266,7 @@ service cloud.firestore {
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
             'description', 'createdAt', 'isLocationVerified', 'coverImage',
             'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks',
-            'repeatIntervalWeeks', 'price'
+            'repeatIntervalWeeks', 'repeatDays', 'price'
         ]);
 
       // Uppdatera: bara sitt eget användarskapade event — OCH aldrig de
@@ -291,7 +295,7 @@ service cloud.firestore {
             'hostName', 'hostUid', 'userCreated', 'status', 'hidden', 'url',
             'description', 'createdAt', 'isLocationVerified', 'coverImage',
             'isTip', 'anonTip', 'repeatWeekly', 'repeatWeeks',
-            'repeatIntervalWeeks', 'price',
+            'repeatIntervalWeeks', 'repeatDays', 'price',
             'featuredUntil', 'featuredPaymentId', 'updatedAt'
         ])
         // Identitets- och härkomstfälten är oföränderliga: ägarskap ska inte

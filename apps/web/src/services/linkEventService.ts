@@ -1,4 +1,4 @@
-import { occurrencesForWeeks, seriesLastDate } from '../utils/weeklySeries';
+import { expandSeries, isSeriesEvent, normalizeRepeatDays } from '../utils/weeklySeries';
 import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
 import { doc, collection, query, where, getDocs, getCountFromServer, addDoc, deleteDoc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
@@ -44,66 +44,6 @@ export interface RsvpAttendee {
     uid: string;
     name: string;
     photoURL?: string | null;
-}
-
-/**
- * Hur långt fram en veckoserie vecklas ut. Måste täcka hur långt man kan
- * bläddra framåt i dagvyn utan att bli absurt — tolv veckor är ett kvartals
- * pubquiz, vilket räcker gott och håller nere antalet brickor på kartan.
- */
-const WEEKLY_HORIZON_WEEKS = 12;
-
-/**
- * Veckla ut ett veckovis återkommande event till konkreta tillfällen.
- *
- * Serien lagras som EN regel (repeatWeekly på dokumentet); veckodag och
- * klockslag kommer från basens `time`. Här produceras tillfällena från och med
- * dagens datum och WEEKLY_HORIZON_WEEKS framåt.
- *
- * Varje tillfälle får ett EGET id ("<docId>__2026-08-13"): kartan, dedupen i
- * emit() och React-nycklarna kräver unika id, och med delat id hade bara ett
- * enda tillfälle ritats ut. Kopplingen tillbaka till dokumentet bär `seriesId`.
- */
-export function expandWeekly(base: LinkEvent, from: Date): LinkEvent[] {
-    const out: LinkEvent[] = [];
-    const horizon = new Date(from);
-    horizon.setDate(horizon.getDate() + WEEKLY_HORIZON_WEEKS * 7);
-
-    // Begränsad serie (repeatWeeks): serien tar slut vid sista TILLFÄLLET, som
-    // med varannan vecka-rytm kan ligga före sista veckan (8 veckor varannan
-    // vecka = fjärde gången i vecka 7). Utan fältet rullar serien tills vidare,
-    // som alla serier gjorde innan valet fanns. En färdigspelad serie ger []
-    // och försvinner från kartan.
-    const times = occurrencesForWeeks(base.repeatWeeks, base.repeatIntervalWeeks);
-    const seriesEnd = times === null ? null : seriesLastDate(base.time, times, base.repeatIntervalWeeks);
-    if (seriesEnd && seriesEnd < horizon) horizon.setTime(seriesEnd.getTime());
-
-    // Starta på basens tid och stega en period i taget fram till `from` —
-    // serier som startade i våras ska börja vid nästa kommande tillfälle,
-    // inte spamma kartan med varje passerat datum. Rytmen (repeatIntervalWeeks
-    // 2 = varannan vecka) styr steget; stegning från BASEN bevarar pariteten,
-    // så en varannan vecka-serie hamnar aldrig på "fel" vecka. Utelämnad/
-    // ogiltig rytm = varje vecka (alla serier före 15/9).
-    const stepDays = 7 * (Number.isInteger(base.repeatIntervalWeeks) && base.repeatIntervalWeeks! >= 2
-        ? base.repeatIntervalWeeks!
-        : 1);
-    const cursor = new Date(base.time);
-    while (cursor < from) cursor.setDate(cursor.getDate() + stepDays);
-
-    while (cursor <= horizon) {
-        const y = cursor.getFullYear();
-        const m = String(cursor.getMonth() + 1).padStart(2, '0');
-        const d = String(cursor.getDate()).padStart(2, '0');
-        out.push({
-            ...base,
-            id: `${base.id}__${y}-${m}-${d}`,
-            seriesId: base.id,
-            seriesEndsAt: seriesEnd ?? undefined,
-            time: new Date(cursor),
-        });
-        cursor.setDate(cursor.getDate() + stepDays);
-    }
-    return out;
 }
 
 /**
@@ -210,6 +150,9 @@ async function fetchUserCreatedEvents(): Promise<{ events: LinkEvent[]; total: n
                     // vecklades ut VARJE vecka så fort sidan laddades om.
                     repeatIntervalWeeks: typeof v.repeatIntervalWeeks === 'number' && v.repeatIntervalWeeks >= 2
                         ? Math.floor(v.repeatIntervalWeeks) : undefined,
+                    // Dagsserie (22/9). Samma lärdom som rytmen ovan: ett fält
+                    // som skrivs men inte mappas in här finns inte för kartan.
+                    repeatDays: normalizeRepeatDays(v.repeatDays) ?? undefined,
                     hostUid: v.hostUid || undefined,
                     featuredUntil,
                     // Utan den här raden är hidden-filtret nedan verkningslöst:
@@ -220,10 +163,11 @@ async function fetchUserCreatedEvents(): Promise<{ events: LinkEvent[]; total: n
             })
             // Serier filtreras INTE på cutoff här: en veckoserie som startade
             // för ett halvår sedan är fortfarande aktuell, det är bara basens
-            // datum som ligger bakåt. expandWeekly hoppar fram till nästa
-            // kommande tillfälle. Engångsevent filtreras som förut.
-            .filter((e) => e.title && !(e as any).hidden && (e.repeatWeekly || e.time >= cutoff))
-            .flatMap((e) => (e.repeatWeekly ? expandWeekly(e, cutoff) : [e]));
+            // datum som ligger bakåt. expandSeries hoppar fram till nästa
+            // kommande tillfälle (en dagsserie vars första dag var igår har
+            // kvar resten av dagarna). Engångsevent filtreras som förut.
+            .filter((e) => e.title && !(e as any).hidden && (isSeriesEvent(e) || e.time >= cutoff))
+            .flatMap((e) => (isSeriesEvent(e) ? expandSeries(e, cutoff) : [e]));
         return { events, total: snap.size };
     } catch (e) {
         console.warn('Kunde inte hämta användarskapade event:', e);
@@ -619,6 +563,8 @@ export const linkEventService = {
         repeatWeeks?: number;
         /** 2 = varannan vecka; utelämnad/1 = varje vecka. */
         repeatIntervalWeeks?: number;
+        /** Dagsserie: antal dagar i rad (2-14). Vinner över repeatWeekly. */
+        repeatDays?: number;
     }): Promise<string> {
         if (!db) throw new Error('Firestore ej initierad');
         const payload: Record<string, unknown> = {
@@ -652,7 +598,12 @@ export const linkEventService = {
         // mot sign_in_provider och avvisar skrivningen om de inte stämmer.
         // Det är märkningen som gör tipset raderbart för vem som helst.
         if (input.anonTip) payload.anonTip = true;
-        if (input.repeatWeekly) {
+        // Dagsserie: bara antalet dagar skrivs. Den utesluter veckoserien, så
+        // ett dokument bär aldrig båda.
+        const repeatDays = normalizeRepeatDays(input.repeatDays);
+        if (repeatDays !== null) {
+            payload.repeatDays = repeatDays;
+        } else if (input.repeatWeekly) {
             payload.repeatWeekly = true;
             // Bara med när ägaren valt en begränsning — utelämnat = tills
             // vidare, och gamla Firestore-regler (utan repeatWeeks i hasOnly)
@@ -738,7 +689,13 @@ export const linkEventService = {
         isTip?: boolean; repeatWeekly?: boolean; repeatWeeks?: number;
         /** 2 = varannan vecka; utelämnad/1 = varje vecka. */
         repeatIntervalWeeks?: number;
+        /** Dagsserie: antal dagar i rad (2-14). Vinner över repeatWeekly. */
+        repeatDays?: number;
     }): Promise<void> {
+        const repeatDays = normalizeRepeatDays(input.repeatDays);
+        // En dagsserie städar bort veckoseriens fält (och tvärtom) så att ett
+        // event som byter rytm aldrig bär båda.
+        const weekly = repeatDays === null && !!input.repeatWeekly;
         if (!db) throw new Error('Firestore ej initierad');
         const payload: Record<string, unknown> = {
             title: input.title.trim(),
@@ -753,13 +710,14 @@ export const linkEventService = {
             price: input.price ? input.price.slice(0, 40) : deleteField(),
             coverImage: input.coverImage || deleteField(),
             isTip: input.isTip ? true : deleteField(),
-            repeatWeekly: input.repeatWeekly ? true : deleteField(),
-            repeatWeeks: input.repeatWeekly && input.repeatWeeks && input.repeatWeeks >= 1
+            repeatWeekly: weekly ? true : deleteField(),
+            repeatWeeks: weekly && input.repeatWeeks && input.repeatWeeks >= 1
                 ? Math.floor(input.repeatWeeks)
                 : deleteField(),
-            repeatIntervalWeeks: input.repeatWeekly && input.repeatIntervalWeeks === 2
+            repeatIntervalWeeks: weekly && input.repeatIntervalWeeks === 2
                 ? 2
                 : deleteField(),
+            repeatDays: repeatDays ?? deleteField(),
             updatedAt: serverTimestamp(),
         };
         await updateDoc(doc(db, 'linkEvents', id), payload);

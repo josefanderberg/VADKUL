@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LinkEvent } from '@/types';
 import { buildMyEventRows } from '@/utils/myEventRows';
+import { isSeriesEvent } from '@/utils/weeklySeries';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
@@ -672,7 +673,7 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                         // samma event. Tar man bara det visade tillfället
                                         // ligger resten kvar utan rad att radera dem från.
                                         const flera = row.docIds.length > 1;
-                                        const titel = row.evt.repeatWeekly
+                                        const titel = isSeriesEvent(row.evt)
                                             ? 'Ta bort hela serien'
                                             : flera
                                                 ? `Ta bort alla ${row.docIds.length} tillfällen`
@@ -687,7 +688,7 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        const fraga = row.evt.repeatWeekly
+                                                        const fraga = isSeriesEvent(row.evt)
                                                             ? `Ta bort "${row.evt.title}" och alla kommande tillfällen permanent?`
                                                             : flera
                                                                 ? `Ta bort alla ${row.docIds.length} tillfällen av "${row.evt.title}" permanent?`
