@@ -7,8 +7,7 @@ import maplibregl from 'maplibre-gl';
 
 // Voyager, den ljusa vektor-basen. Nöjesfälts-stilen byggs genom att
 // transformera den (fetchAndTransformThemeParkStyle) — den här URL:en används
-// direkt bara som reservväg om transformen inte går att hämta, och av
-// outreach-konsolens minikarta.
+// direkt bara som reservväg om transformen inte går att hämta.
 // VOYAGER-STILENS LICENSER — två stycken, med olika krav:
 //
 //   KODEN (style.json) är BSD 3-Clause:

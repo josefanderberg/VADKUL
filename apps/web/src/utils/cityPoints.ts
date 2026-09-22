@@ -363,10 +363,6 @@ const INDEX = CITY_POINTS.map((city, order) => ({
  * Exakt uppslag på ortnamn (eller alias), normaliserat på samma sätt som
  * sökrutan. Till skillnad från searchCities gissar den ALDRIG — "kar" ger
  * null, inte Karlstad.
- *
- * Finns för att lib/outreach/geo.ts ska kunna slå upp orten ur ett
- * facebookgruppnamn utan att skriva en egen å/ä/ö-normalisering som sedan
- * glider isär från den här.
  */
 export const findCityPoint = (name: string): CityPoint | null => {
     const key = searchKey(name);

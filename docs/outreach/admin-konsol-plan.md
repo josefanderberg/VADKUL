@@ -1,5 +1,10 @@
 # PUBLICERINGSKONSOL /admin/outreach — implementationsplan
 
+> **BORTTAGEN 22/9 (ägarbeslut):** konsolen, dess API-routes (`/api/admin/outreach/*`)
+> och `lib/outreach/*` utom besöksräknaren är raderade. Vad kul-studion (`vadkulyt/`,
+> nås via `/admin`) är den enda admin-ytan. Bygg inte upp konsolen igen; dokumentet
+> ligger kvar som historik.
+
 ## 0. Ramar som planen är byggd inom (ur Facebook-faktan)
 
 Dessa fem beslut styr hela arkitekturen och får inte förhandlas bort senare:

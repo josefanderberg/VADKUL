@@ -1,7 +1,7 @@
 'use client';
 
-// Egen dagsbesöks-räknare — matar "Besök idag" i publiceringskonsolen
-// (/admin/outreach). EN ping per webbläsare och dag (localStorage-dedupe),
+// Egen dagsbesöks-räknare (intern statistik; visades i outreach-konsolen som
+// togs bort 22/9). EN ping per webbläsare och dag (localStorage-dedupe),
 // aldrig på /admin-sidor. Datat: outreachStats/siteVisits, server-only.
 
 import { useEffect } from 'react';

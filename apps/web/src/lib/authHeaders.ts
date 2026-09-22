@@ -1,9 +1,8 @@
 /**
- * authHeaders.ts — klient-hjälp för att autentisera anrop till admin-API:er.
+ * authHeaders.ts - klient-hjälp för att autentisera anrop till våra API-routes.
  *
  * Hämtar den inloggade användarens Firebase ID-token och bygger en
- * Authorization-header. Server-side verifierar token + users/{uid}.isAdmin
- * (se requireAdmin i firestore-admin.ts).
+ * Authorization-header som routen kan verifiera med Admin SDK:n.
  */
 
 import { auth } from './firebase';

@@ -11,7 +11,6 @@
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
-import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 
@@ -72,52 +71,4 @@ export function getAdminAuth(): Auth | null {
         console.error('[firestore-admin] getAuth:', e);
         return null;
     }
-}
-
-/**
- * Vakt för admin-routes. Verifierar Firebase ID-token från
- * `Authorization: Bearer <token>` och kollar att användaren har
- * `users/{uid}.isAdmin == true` i Firestore.
- *
- * @returns `null` om anroparen är admin (fortsätt), annars en `NextResponse`
- *          (401/403/503) som routen ska returnera direkt.
- */
-export async function requireAdmin(request: Request): Promise<NextResponse | null> {
-    const auth = getAdminAuth();
-    const db = getAdminDb();
-    if (!auth || !db) {
-        return NextResponse.json({ error: 'Auth unavailable' }, { status: 503 });
-    }
-
-    const header = request.headers.get('authorization') || request.headers.get('Authorization');
-    const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : null;
-    if (!token) {
-        return NextResponse.json({ error: 'Unauthorized: missing bearer token' }, { status: 401 });
-    }
-
-    let uid: string;
-    let email = '';
-    try {
-        const decoded = await auth.verifyIdToken(token);
-        uid = decoded.uid;
-        email = decoded.email ?? '';
-    } catch {
-        return NextResponse.json({ error: 'Unauthorized: invalid token' }, { status: 401 });
-    }
-
-    // Samma dubbla väg som firestore.rules isAdmin(): ägar-kontot admin@admin.com
-    // kortsluter (behöver aldrig isAdmin-fältet), övriga admins via users-fältet.
-    if (email === 'admin@admin.com') return null;
-
-    try {
-        const userSnap = await db.collection('users').doc(uid).get();
-        if (!userSnap.exists || userSnap.data()?.isAdmin !== true) {
-            return NextResponse.json({ error: 'Forbidden: admin only' }, { status: 403 });
-        }
-    } catch (e) {
-        console.error('[requireAdmin] isAdmin lookup failed:', e);
-        return NextResponse.json({ error: 'Auth check failed' }, { status: 503 });
-    }
-
-    return null; // authorized
 }

@@ -47,10 +47,12 @@ const nextConfig = {
             { source: '/shop', destination: '/', permanent: false },
             { source: '/login', destination: '/', permanent: false },
             // /admin är Vad kul-studion (klippverktyget, eget repo i vadkulyt/). Den kör
-            // på Mac minin bakom Tailscale Funnel med egen lösenordsinloggning. Den gamla
-            // admin-sidan (feedback/rapporter) är borttagen 17/9. Outreach-konsolen
-            // ligger kvar på /admin/outreach och berörs inte av den här regeln.
+            // på Mac minin bakom Tailscale Funnel med egen lösenordsinloggning. Studion
+            // är den ENDA admin-ytan (ägarbeslut 22/9): gamla admin-sidan (feedback/
+            // rapporter) togs bort 17/9 och outreach-konsolen (/admin/outreach) 22/9.
+            // Undersökvägarna går också till studion så gamla bokmärken inte 404:ar.
             { source: '/admin', destination: 'https://mac-mini-som-tillhr-ai.tailba7cb9.ts.net/', permanent: false },
+            { source: '/admin/:path*', destination: 'https://mac-mini-som-tillhr-ai.tailba7cb9.ts.net/', permanent: false },
             // Webbläsare OCH Googles favicon-crawler frågar alltid efter
             // /favicon.ico — skicka dem till BLÅ plattan (192 = Googles
             // önskade 48-multipel). Pekade på gamla vita favicon.png t.o.m.

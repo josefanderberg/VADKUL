@@ -19,8 +19,8 @@ import { periodKeys, todayKey, weekKeys } from './periods';
 // mellan städer på en blick.
 //
 // INGA BESÖKSSIFFROR (Josef 29/8): besökskolumnen + "Flest besök"-sorteringen
-// från 26/8 är BORTTAGNA på ägarbeslut — trafiksiffror är interna
-// (outreach-konsolen), inte publika. Insamlingen (CityVisitBeacon →
+// från 26/8 är BORTTAGNA på ägarbeslut — trafiksiffror är interna, inte
+// publika. Insamlingen (CityVisitBeacon →
 // outreachStats/cityVisits) är kvar; det publika läs-API:et
 // /api/stats/city-visits är raderat. Lägg inte tillbaka kolumnen.
 //
