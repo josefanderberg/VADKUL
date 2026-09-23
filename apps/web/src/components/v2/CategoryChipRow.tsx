@@ -33,6 +33,10 @@ interface CategoryChipRowProps {
     selectedSource: string | null;
     /** null = släpp källvalet. */
     onSelectSource: (source: string | null) => void;
+    /** 🔥 POPULÄRA som FÖRSTA chip (ägarbeslut 24/9 — ersätter 🔥-knappen i
+     *  botten-dockans högra hörn). Ett eget läge som kan kombineras med en
+     *  kategori; utelämnad = inget chip (inga pop-flaggor i lagret). */
+    popular?: { on: boolean; count: number; onToggle: () => void };
 }
 
 /**
@@ -42,6 +46,11 @@ interface CategoryChipRowProps {
  * fort sökfältet är öppet. EN sak åt gången: tryck = bara den, tryck igen =
  * alla. Kortnamnen är samma ord som under kartans markörer.
  * Vald = vit platta med mörk text — guld betyder boost på kartan.
+ *
+ * 🔥 POPULÄRA står FÖRST (ägarbeslut 24/9): 🔥-knappen i kartans nedre högra
+ * hörn är riven och filtret bor här. Det är ett eget läge (popularOnly i
+ * sidan), inte en kategori — det går att kombinera med en kategori, men ett
+ * källval under Fler släpper det (källorna är aldrig populära).
  *
  * FLER längst till höger (Josef 16/9, som stadssidornas Fler-chip): fäller
  * ut Svenska kyrkan, PRO och Korpen i samma rad. Ett källval betyder "visa
@@ -54,7 +63,7 @@ interface CategoryChipRowProps {
  * Själva rullningen bor i HScrollRow (delad med eventkortets rader).
  */
 export default function CategoryChipRow({
-    counts, selected, onSelect, sourceCounts, selectedSource, onSelectSource,
+    counts, selected, onSelect, sourceCounts, selectedSource, onSelectSource, popular,
 }: CategoryChipRowProps) {
     const chips = useMemo(() => planMapCategoryChips(KEYS, counts, selected), [counts, selected]);
     // Fler är utfälld när man själv öppnat den — ELLER när en källa är vald,
@@ -83,7 +92,19 @@ export default function CategoryChipRow({
             </span>
             {/* -mx-4/px-4: raden rullar ända ut till panelens kanter. */}
             <HScrollRow ref={scrollRef} wheel className="-mx-4 px-4 gap-2">
-                {chips.length === 0 && (
+                {popular && (
+                    <button
+                        type="button"
+                        aria-pressed={popular.on}
+                        onClick={popular.onToggle}
+                        className={`${CHIP} ${popular.on ? 'bg-white text-[#c2410c]' : CHIP_IDLE}`}
+                    >
+                        <span aria-hidden>🔥</span>
+                        Populära
+                        <span className={`tabular-nums ${popular.on ? 'text-slate-500' : 'text-white/45'}`}>{popular.count}</span>
+                    </button>
+                )}
+                {chips.length === 0 && !popular && (
                     <span className="shrink-0 text-xs text-white/55">Inga kategorier i vyn</span>
                 )}
                 {chips.map(({ key, count }) => {

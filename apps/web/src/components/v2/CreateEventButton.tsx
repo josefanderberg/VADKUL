@@ -16,12 +16,12 @@ interface CreateEventButtonProps {
 }
 
 /**
- * Skapa/tipsa/önska — kartnål-med-plus i BOTTEN-DOCKANS VÄNSTRA HÖRN (ägarbeslut
- * 15/9: "en meny längst ner med knappen för skapa event"; 🔥 står i högra
- * hörnet, dagväljaren mellan dem ovanför). Bodde 14/8–15/9 under profilen uppe
- * till vänster. Formspråket är oförändrat: blå gradient, gul kant,
- * gold-glow-pulse. 44 px med 16 px luft — samma storlek som profil, sök och 🔥
- * (Josef 15/9: alla hörnknappar lika stora).
+ * Skapa/tipsa/önska — kartnål-med-plus DIREKT UNDER PROFILKNAPPEN uppe till
+ * vänster (ägarbeslut 24/9: "den att man skapar event den kan vara under
+ * profilknappen"). Bodde där 14/8–15/9 också, och i botten-dockans vänstra
+ * hörn 15/9–24/9 (🔥-knappen i högra hörnet revs samma dag — 🔥 är ett chip
+ * i sökpanelen). Formspråket är oförändrat: blå gradient, gul kant,
+ * gold-glow-pulse. 44 px — samma storlek som profil och sök.
  *
  * z-[1090] = samma som dagväljaren → hamnar under eventkortet (1250) när ett
  * kort är uppe, precis som väljaren. I placerings-läget är knappen bekräfta-
@@ -85,10 +85,10 @@ export default function CreateEventButton({
     const label = creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska';
 
     return (
-        // Samma kolumn som toppraden (FloatingNavbar: px-4 + max-w-[1400px]
-        // mx-auto) så + står i lod under profilknappen även på bred skärm
-        // (Josef 16/9) — inte ute i skärmens hörn.
-        <div className={`fixed inset-x-0 bottom-9 px-4 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} pointer-events-none`}>
+        // Samma kolumn som toppraden (FloatingNavbar: top-6 + px-4 +
+        // max-w-[1400px] mx-auto) så + står i lod under profilknappen även på
+        // bred skärm. top-[80px] = profilens 24 + 44 px + 12 px luft.
+        <div className={`fixed inset-x-0 top-[80px] px-4 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} pointer-events-none`}>
             <div className="max-w-[1400px] mx-auto flex items-center gap-2">
                 <button
                     ref={plusBtnRef}
