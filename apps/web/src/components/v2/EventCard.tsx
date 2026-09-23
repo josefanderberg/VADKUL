@@ -12,8 +12,14 @@ import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, takeRows } from '@/utils/popularList';
+import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
+
+/** Listflikarnas horisont (Josef 24/9: "vi fokuserar mest på kommande
+ *  månaden"). Kartan laddar bara tidsfönstret (14 dagar, utils/timelineWindow);
+ *  resten hämtas när man scrollar förbi det (requestFullTimeline). */
+const LIST_HORIZON_DAYS = 30;
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
@@ -215,7 +221,8 @@ interface NearbyEventsListProps {
      *  localStorage). Ignoreras i bildflödes-läget (imagesOnly). */
     showImages: boolean;
     onToggleImages: () => void;
-    /** FLIKARNA (Josef 23/9, 24/9): "Alla" = alla event i kartans ruta,
+    /** FLIKARNA (Josef 23/9, 24/9): "Närmsta månaden" = alla event i kartans
+     *  ruta de närmaste 30 dagarna (hette "Alla"/"2 veckor" en stund 24/9),
      *  "🔥 Populärt" = de populära av dem — båda från den visade dagen och
      *  framåt, dag för dag. Den gamla "I närheten"-listan (närmast det valda
      *  eventet) ersattes 24/9: siffran och ordningen stämde inte med "i
@@ -229,6 +236,9 @@ interface NearbyEventsListProps {
     days?: { dayOffset: number; rows: NearbyItem[] }[];
     daysHasMore?: boolean;
     onLoadMoreDays?: () => void;
+    /** Slut på laddade rader men kartan har bara tidsfönstret inne — listans
+     *  botten hämtar resten av tidslinjen i stället för att säga "slut". */
+    onLoadLaterDays?: () => void;
 }
 
 type ListTab = 'all' | 'popular';
@@ -236,7 +246,7 @@ type ListTab = 'all' | 'popular';
 /** Laddar nästa sida automatiskt när den skymtar fram (rootMargin = lite
  *  före botten) — flikarnas daglistor ska bara fortsätta framåt i dagarna
  *  när man scrollar. Knappen under är reserv för webbläsare utan observern. */
-function AutoLoadMore({ onLoadMore }: { onLoadMore: () => void }) {
+function AutoLoadMore({ onLoadMore, label = 'Visa fler' }: { onLoadMore: () => void; label?: string }) {
     const ref = useRef<HTMLDivElement>(null);
     const cbRef = useRef(onLoadMore);
     cbRef.current = onLoadMore;
@@ -257,7 +267,7 @@ function AutoLoadMore({ onLoadMore }: { onLoadMore: () => void }) {
                 onClick={onLoadMore}
                 className="text-[11px] font-black uppercase tracking-widest text-[#006AA7] hover:text-[#005590] px-4 py-2"
             >
-                Visa fler
+                {label}
             </button>
         </div>
     );
@@ -537,7 +547,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], daysHasMore = false, onLoadMoreDays }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], daysHasMore = false, onLoadMoreDays, onLoadLaterDays }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const effectiveShowImages = imagesOnly || showImages;
@@ -549,9 +559,11 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
         <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
             <div className={`px-4 md:px-6 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'py-2' : 'py-3'}`}>
                 {onTabChange ? (
-                    <div role="tablist" aria-label="Lista" className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 min-w-0">
+                    <div role="tablist" aria-label="Lista" className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 min-w-0 overflow-x-auto no-scrollbar">
                         {([
-                            ['all', 'Alla', allCount],
+                            // "Närmsta månaden" fick inte plats bredvid Populärt
+                            // + bildknappen på mobil (173 px) — slutraden säger det.
+                            ['all', 'Månaden', allCount],
                             ['popular', '🔥 Populärt', popularCount],
                         ] as const).map(([key, label, count]) => (
                             <button
@@ -560,7 +572,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                                 role="tab"
                                 aria-selected={tab === key}
                                 onClick={() => onTabChange(key)}
-                                className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${
+                                className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-colors ${
                                     tab === key
                                         ? key === 'popular'
                                             ? 'bg-white dark:bg-zinc-700 text-[#c2410c] dark:text-orange-300 shadow-sm'
@@ -590,7 +602,8 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                         }`}
                     >
                         {showImages ? <ImageIcon size={12} /> : <ImageOff size={12} />}
-                        Bilder
+                        {/* Med flikraden får bara ikonen plats på mobil. */}
+                        {onTabChange ? <span className="sr-only">Bilder</span> : 'Bilder'}
                     </button>
                 )}
             </div>
@@ -626,6 +639,12 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                         );
                     })}
                     {daysHasMore && onLoadMoreDays && <AutoLoadMore onLoadMore={onLoadMoreDays} />}
+                    {!daysHasMore && onLoadLaterDays && <AutoLoadMore onLoadMore={onLoadLaterDays} label="Hämtar fler dagar…" />}
+                    {!daysHasMore && !onLoadLaterDays && days.length > 0 && (
+                        <p className="px-4 md:px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-t border-border">
+                            Det var den närmaste månaden
+                        </p>
+                    )}
                 </>
             ) : (<>
             <ul className="divide-y divide-border">
@@ -1681,7 +1700,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     dayOffset: day.dayOffset,
                     rows: groupNearby(imagesOnlyList ? items.filter(n => !!n.evt.coverImage) : items).rows,
                 };
-            }).filter(day => day.rows.length > 0);
+            // Fliken heter "Närmsta månaden" (Josef 24/9: hinta att vi
+            // fokuserar på närtid) — samma horisont för båda flikarna.
+            }).filter(day => day.rows.length > 0 && day.dayOffset < LIST_HORIZON_DAYS);
             const count = days.reduce((n, d) => n + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0), 0);
             return { days, count };
         };
@@ -2803,6 +2824,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             days={visibleTabDays}
                             daysHasMore={daysVisibleCount < activeTabRowTotal}
                             onLoadMoreDays={() => setDaysVisibleCount(c => c + NEARBY_PAGE_SIZE)}
+                            // Bara tidsfönstret inne → listans botten hämtar resten
+                            // (bara för den som faktiskt scrollar dit — egress).
+                            onLoadLaterDays={linkEventService.timelineHorizonMs() !== null ? () => linkEventService.requestFullTimeline() : undefined}
                         />
                     )}
                     </>)}
