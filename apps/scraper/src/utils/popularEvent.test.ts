@@ -179,6 +179,25 @@ describe('isPopularEvent — Växjö-arketyperna 10/9', () => {
         expect(kommun('Kulturnatt på stadsmuseet')).toBe(false);
         expect(kommun('Rio under Kulturnatten')).toBe(false);
     });
+    it('skördefestens byevent lyfts över ribban (Öland 23/9)', () => {
+        // Verkliga skordefest.nu-raden: marknad, bild, ingen biljett, ingen tid på dygnet som hjälper.
+        const byevent = (title: string) => ({
+            url: 'https://skordefest.nu/aktivitet/kopingsvik-2026/',
+            title, time: '2026-09-23T14:00:00', category: 'market', hasSpecificTime: true,
+            coverImage: 'https://skordefest.nu/bild.jpg', price: null, attendees: 0,
+            locationName: 'Köpingsvik',
+        });
+        expect(isPopularEvent(byevent('Skördefest: Köpingsvik'), 1)).toBe(true);
+        expect(isPopularEvent(byevent('Löttorps Skördeyra'), 1)).toBe(true);
+        // Samma rad utan festord når inte ribban — det är ordet som bär.
+        expect(isPopularEvent(byevent('Köpingsvik'), 1)).toBe(false);
+    });
+    it('folkfestbonusen matchar å/ä/ö-ord, men inte pubarnas oktoberfest', () => {
+        const plain = popularScore(base({ title: 'Lördag i byn' }), 1);
+        expect(popularScore(base({ title: 'Äppeldagen i Kivik' }), 1)).toBe(plain + 8);
+        expect(popularScore(base({ title: 'Skördemarknad på gården' }), 1)).toBe(plain + 8);
+        expect(popularScore(base({ title: 'Oktoberfest på puben' }), 1)).toBe(plain);
+    });
     it('arena i platsnamnet ger bonus, "hallen" gör det inte', () => {
         const atArena = popularScore(base({ locationName: 'Vida Arena' }), 1);
         const atHall = popularScore(base({ locationName: 'Folkets hus-hallen' }), 1);
