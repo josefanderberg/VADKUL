@@ -26,8 +26,8 @@ interface FloatingNavbarProps {
     /* (Skylt-knappen och dess signsOn/onToggleSigns låg här. Borttagna 14/8 —
        Josef: "we don't need that anymore".) */
     /* (Skapa-knappen och dess creationMode/onStartCreate/onConfirmPlacement/
-       createHint låg här t.o.m. 15/9. Den bor nu i botten-dockans vänstra
-       hörn — components/v2/CreateEventButton.) */
+       createHint låg här t.o.m. 15/9. Den bor nu i en egen fast kolumn
+       direkt under profilknappen (24/9) — components/v2/CreateEventButton.) */
 }
 
 /** Etiketten för vald dag/period ("Idag", "Imorgon", "Hela veckan", "3–9 aug").
@@ -55,8 +55,9 @@ export const getDayLabel = (offset: number, days = 1) => {
 
 /**
  * Toppraden på kartan (ägarbeslut 15/9): BARA profil till vänster och sök till
- * höger — dagplattan står mellan dem (renderas i sidan). Skapa-knappen och 🔥
- * bor i botten-dockan; kategorikolumnen och zoomknapparna är rivna.
+ * höger — dagplattan står mellan dem (renderas i sidan). Skapa-knappen står
+ * under profilen (egen komponent, 24/9); 🔥 är ett chip i sökpanelens
+ * kategorirad. Kategorikolumnen och zoomknapparna är rivna.
  */
 export default function FloatingNavbar({
     searchQuery,
@@ -132,8 +133,8 @@ export default function FloatingNavbar({
                                 onClick={handleProfileClick}
                                 // hover:scale-105 som skapa-knappen (Josef 10/9:
                                 // "så fattar man att de går att klicka på").
-                                // h-11 w-11: ALLA FYRA hörnknappar (profil, sök, +, 🔥)
-                                // är lika stora, 44 px (Josef 15/9).
+                                // h-11 w-11: profil, sök och + är lika stora, 44 px
+                                // (Josef 15/9).
                                 className={`peer pointer-events-auto h-11 w-11 flex items-center justify-center bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200 relative ${user?.photoURL ? 'p-0.5' : ''}`}
                                 aria-label={user ? 'Min profil' : 'Logga in'}
                             >

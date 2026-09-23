@@ -7,7 +7,6 @@ import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CreateEventButton from '@/components/v2/CreateEventButton';
-import PopularButton from '@/components/v2/PopularButton';
 import CategoryChipRow, { SOURCE_EMOJI } from '@/components/v2/CategoryChipRow';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import HoverLabel from '@/components/v2/HoverLabel';
@@ -962,8 +961,9 @@ export default function HomePage() {
     const weekPulsePainted = weekShown != null && paintRoundNonce > weekShown.paintBase;
 
     // STEG 4 — VISNINGSRUNDAN (Josef 10/9): 1 s efter att veckan visats
-    // "hovras" 🔥-knappen (lite större + etiketten) i 4 s, och 1 s efter det
-    // skapa-knappen lika länge — så man ser vad de gör utan att leta. EN gång
+    // "hovras" skapa-knappen (lite större + etiketten) i 4 s — så man ser vad
+    // den gör utan att leta. (🔥-steget som gick först revs 24/9 med 🔥-
+    // knappen; filtret bor numera i sökpanelens kategorirad.) EN gång
     // per sidladdning, och bara efter en veckoblink som fick gå klart (rör man
     // kartan mitt i pulsen rivs den och rundan uteblir).
     // Tredje steget ('toggle', Josef 10/9): 1 s efter skapa-knappen blir
@@ -972,7 +972,7 @@ export default function HomePage() {
     // Fjärde och sista ('city'): 1 s senare står stadsknappen överst i sitt
     // hover-läge i 4 s, med pillen "Gå till stadssidan" under (Josef 15/9 —
     // steget var bara en effekt utan text fram till dess).
-    const [tourHint, setTourHint] = useState<'popular' | 'create' | 'toggle' | 'city' | null>(null);
+    const [tourHint, setTourHint] = useState<'create' | 'toggle' | 'city' | null>(null);
     const tourHintPlayedRef = useRef(false);
     const tourHintTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const playTourHints = useCallback(() => {
@@ -980,14 +980,12 @@ export default function HomePage() {
         tourHintPlayedRef.current = true;
         tourHintTimersRef.current = [
             // 4 s per text (Josef 10/9: 2 s var för kort), 1 s paus emellan.
-            setTimeout(() => setTourHint('popular'), 1000),
+            setTimeout(() => setTourHint('create'), 1000),
             setTimeout(() => setTourHint(null), 5000),
-            setTimeout(() => setTourHint('create'), 6000),
+            setTimeout(() => setTourHint('toggle'), 6000),
             setTimeout(() => setTourHint(null), 10000),
-            setTimeout(() => setTourHint('toggle'), 11000),
+            setTimeout(() => setTourHint('city'), 11000),
             setTimeout(() => setTourHint(null), 15000),
-            setTimeout(() => setTourHint('city'), 16000),
-            setTimeout(() => setTourHint(null), 20000),
         ];
     }, []);
     useEffect(() => () => tourHintTimersRef.current.forEach(clearTimeout), []);
@@ -2738,6 +2736,9 @@ export default function HomePage() {
     // snapshoten, 5-min-API-cachen) saknar fältet helt — då döljs cirkeln i
     // stället för att erbjuda ett filter som tömmer kartan.
     const popularAvailable = useMemo(() => events.some(e => e.pop), [events]);
+    // 🔥-chippets siffra: pop-flaggade i kartans ruta (det 🔥-knappens badge
+    // räknade t.o.m. 24/9).
+    const popularChipCount = useMemo(() => viewEvents.reduce((n, e) => n + (e.pop ? 1 : 0), 0), [viewEvents]);
 
     // Dag-/kategori-/eventval renderar om stora träd (kortet, listorna) och
     // triggar kartans GL-uppdateringar — som transitions är omrenderingen
@@ -3714,12 +3715,11 @@ export default function HomePage() {
             />
             )}
 
-            {/* 1b. BOTTEN-DOCKAN (ägarbeslut 15/9): skapa-knappen i nedre vänstra
-                hörnet, 🔥 i nedre högra, dagväljaren (1b1b) mellan dem ovanför.
-                Båda ligger under eventkortet (z-1090, som väljaren). Kategori-
-                kolumnen som stod här (lagerknapp + cirklar, 10/8–15/9) är RIVEN —
-                opt-in-källorna (kyrkan/PRO/🧸) kryssas i profilpanelen, och
-                vanliga kategorier filtrerar inte längre kartan. */}
+            {/* 1b. SKAPA-KNAPPEN under profilen uppe till vänster (ägarbeslut
+                24/9 — bodde i botten-dockans vänstra hörn 15/9–24/9). 🔥-knappen
+                i nedre högra hörnet är RIVEN samma dag: 🔥 Populära är första
+                chippet i sökpanelens kategorirad. Ligger under eventkortet
+                (z-1090, som väljaren). */}
             {!chromeHidden && (
             <CreateEventButton
                 creationMode={creationMode}
@@ -3727,15 +3727,6 @@ export default function HomePage() {
                 onStartCreate={() => setCreationMode('placing')}
                 onConfirmPlacement={openCreateFormHere}
                 hint={tourHint === 'create'}
-            />
-            )}
-            {!chromeHidden && (
-            <PopularButton
-                events={viewEvents}
-                popularOnly={popularOnly}
-                onToggle={handleTogglePopular}
-                available={popularAvailable}
-                hint={tourHint === 'popular'}
             />
             )}
 
@@ -3810,9 +3801,23 @@ export default function HomePage() {
             15/9: "skriva gå till stadssida typ") — samma pill som skapa- och
             🔥-stegen, och på desktop även vid hover (peer på länken). */}
         <HoverLabel show={tourHint === 'city'}>Gå till stadssidan</HoverLabel>
-        {/* FILTRET PÅ (16/9) — kategori eller Fler-källa: alltid synligt
+        {/* FILTRET PÅ (16/9) — kategori, Fler-källa eller 🔥 (24/9): alltid synligt
             under plattan, ett filter får aldrig vara osynligt när sökpanelen
             är stängd. Tryck = släpp filtret. */}
+        {(mapCategory || mapSource || popularOnly) && (
+        <div className="flex items-center gap-1.5">
+        {popularOnly && (
+            <button
+                type="button"
+                onClick={handleTogglePopular}
+                aria-label="Visar bara populära - tryck för att visa alla"
+                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-[#c2410c] shadow-lg border border-white/50 hover:bg-white active:scale-95 transition animate-in fade-in duration-200"
+            >
+                <span aria-hidden>🔥</span>
+                Populära
+                <X size={13} strokeWidth={3} className="text-slate-400" aria-hidden />
+            </button>
+        )}
         {(mapCategory || mapSource) && (
             <button
                 type="button"
@@ -3824,6 +3829,8 @@ export default function HomePage() {
                 {mapCategory ? categoryLabel(mapCategory) : sourceLabel}
                 <X size={13} strokeWidth={3} className="text-slate-400" aria-hidden />
             </button>
+        )}
+        </div>
         )}
     </div>
 )}
@@ -4106,6 +4113,7 @@ export default function HomePage() {
                         sourceCounts={sourceChipCounts}
                         selectedSource={mapSource}
                         onSelectSource={handleSelectMapSource}
+                        popular={popularAvailable || popularOnly ? { on: popularOnly, count: popularChipCount, onToggle: handleTogglePopular } : undefined}
                     />
                 }
                 cityName={searchCity?.name}
