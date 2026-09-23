@@ -1,5 +1,6 @@
 /**
- * popularList.ts — eventkortets 🔥 POPULÄRT-flik (Josef 23/9: "visa de
+ * popularList.ts — eventkortets listflikar: 🔥 POPULÄRT och ALLA (båda
+ * dag för dag i kartans ruta, Josef 24/9). Ursprungligen Populärt-fliken (Josef 23/9: "visa de
  * populära där man är och kollar på kartan just nu … scrollar man vidare
  * nedåt ska den gå framåt till dagarna som kommer efter").
  *
@@ -29,20 +30,21 @@ export interface PopularDay<T> {
 }
 
 /**
- * Populära event från `fromDayOffset` och framåt, en post per dag (bara dagar
- * som har något), dagarna i ordning och eventen i tidsordning inom dagen.
- * Passerade (`isPast`) sorteras bort — listan är "vad kan jag gå på".
+ * Event från `fromDayOffset` och framåt, en post per dag (bara dagar som har
+ * något), dagarna i ordning och eventen i tidsordning inom dagen. Passerade
+ * (`isPast`) sorteras bort — listan är "vad kan jag gå på". `include` smalnar
+ * urvalet (Populärt-fliken); utelämnad = alla (Alla-fliken, Josef 24/9).
  */
-export function popularDays<T extends PopularListCandidate>(
+export function eventDays<T extends { time: Date }>(
     events: readonly T[],
     fromDayOffset: number,
     now: Date,
     isPast: (e: T) => boolean,
+    include: (e: T) => boolean = () => true,
 ): PopularDay<T>[] {
-    const nowMs = now.getTime();
     const byDay = new Map<number, T[]>();
     for (const e of events) {
-        if (!isPopularListed(e, nowMs) || isPast(e)) continue;
+        if (!include(e) || isPast(e)) continue;
         const d = dayOffsetOf(e.time, now);
         if (d < fromDayOffset) continue;
         const list = byDay.get(d);
@@ -55,6 +57,17 @@ export function popularDays<T extends PopularListCandidate>(
             dayOffset,
             events: list.sort((a, b) => a.time.getTime() - b.time.getTime()),
         }));
+}
+
+/** Populärt-fliken: eventDays smalnad till pop-flaggade/boostade. */
+export function popularDays<T extends PopularListCandidate>(
+    events: readonly T[],
+    fromDayOffset: number,
+    now: Date,
+    isPast: (e: T) => boolean,
+): PopularDay<T>[] {
+    const nowMs = now.getTime();
+    return eventDays(events, fromDayOffset, now, isPast, e => isPopularListed(e, nowMs));
 }
 
 /** Kapar dagarna till de första `limit` raderna (pagineringen) — dagar som

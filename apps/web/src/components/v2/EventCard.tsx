@@ -11,7 +11,7 @@ import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
-import { popularDays, takeRows } from '@/utils/popularList';
+import { eventDays, isPopularListed, takeRows } from '@/utils/popularList';
 import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
 
@@ -215,24 +215,27 @@ interface NearbyEventsListProps {
      *  localStorage). Ignoreras i bildflödes-läget (imagesOnly). */
     showImages: boolean;
     onToggleImages: () => void;
-    /** FLIKARNA (Josef 23/9): "I närheten" = listan ovan, "🔥 Populärt" =
-     *  populära event i kartans ruta från den visade dagen och framåt, dag
-     *  för dag. Utelämnad onTabChange = ingen flikrad (bara närhetsrubriken). */
+    /** FLIKARNA (Josef 23/9, 24/9): "Alla" = alla event i kartans ruta,
+     *  "🔥 Populärt" = de populära av dem — båda från den visade dagen och
+     *  framåt, dag för dag. Den gamla "I närheten"-listan (närmast det valda
+     *  eventet) ersattes 24/9: siffran och ordningen stämde inte med "i
+     *  närheten". Utelämnad onTabChange = gamla närhetslistan utan flikrad. */
     tab?: ListTab;
     onTabChange?: (tab: ListTab) => void;
-    /** Antal populära EVENT (alla dagar) — flikens siffra. */
+    /** Antal EVENT per flik (alla dagar från den visade) — flikarnas siffror. */
+    allCount?: number;
     popularCount?: number;
-    /** Populärt-fliken, redan kapad till synligt antal rader. */
-    popularDays?: { dayOffset: number; rows: NearbyItem[] }[];
-    popularHasMore?: boolean;
-    onLoadMorePopular?: () => void;
+    /** Aktiva flikens dagar, redan kapade till synligt antal rader. */
+    days?: { dayOffset: number; rows: NearbyItem[] }[];
+    daysHasMore?: boolean;
+    onLoadMoreDays?: () => void;
 }
 
-type ListTab = 'nearby' | 'popular';
+type ListTab = 'all' | 'popular';
 
 /** Laddar nästa sida automatiskt när den skymtar fram (rootMargin = lite
- *  före botten) — Populärt-fliken ska bara fortsätta framåt i dagarna när
- *  man scrollar. Knappen under är reserv för webbläsare utan observern. */
+ *  före botten) — flikarnas daglistor ska bara fortsätta framåt i dagarna
+ *  när man scrollar. Knappen under är reserv för webbläsare utan observern. */
 function AutoLoadMore({ onLoadMore }: { onLoadMore: () => void }) {
     const ref = useRef<HTMLDivElement>(null);
     const cbRef = useRef(onLoadMore);
@@ -534,7 +537,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'nearby', onTabChange, popularCount = 0, popularDays = [], popularHasMore = false, onLoadMorePopular }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], daysHasMore = false, onLoadMoreDays }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const effectiveShowImages = imagesOnly || showImages;
@@ -548,7 +551,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                 {onTabChange ? (
                     <div role="tablist" aria-label="Lista" className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 min-w-0">
                         {([
-                            ['nearby', 'I närheten', upcomingCount],
+                            ['all', 'Alla', allCount],
                             ['popular', '🔥 Populärt', popularCount],
                         ] as const).map(([key, label, count]) => (
                             <button
@@ -592,26 +595,37 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                 )}
             </div>
 
-            {tab === 'popular' && onTabChange ? (
+            {onTabChange ? (
                 <>
-                    {popularDays.length === 0 && (
+                    {days.length === 0 && (
                         <p className="px-4 md:px-6 py-6 text-center text-xs font-bold text-slate-500">
-                            Inga populära event i kartans vy just nu — zooma ut eller flytta kartan.
+                            {tab === 'popular'
+                                ? 'Inga populära event i kartans vy just nu. Zooma ut eller flytta kartan.'
+                                : 'Inga fler event i kartans vy just nu. Zooma ut eller flytta kartan.'}
                         </p>
                     )}
-                    {popularDays.map(day => (
-                        <section key={day.dayOffset}>
-                            <h3 className="px-4 md:px-6 pt-4 pb-1.5 text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-zinc-300 border-b border-border">
-                                {getDayLabel(day.dayOffset)}
-                            </h3>
-                            <ul className="divide-y divide-border">
-                                {day.rows.map(({ evt, distanceKm, dups }) => (
-                                    <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
-                                ))}
-                            </ul>
-                        </section>
-                    ))}
-                    {popularHasMore && onLoadMorePopular && <AutoLoadMore onLoadMore={onLoadMorePopular} />}
+                    {days.map((day, di) => {
+                        // Coach-ankaret efter 4:e raden i hela listan (över dagsgränser).
+                        const before = days.slice(0, di).reduce((n, d) => n + d.rows.length, 0);
+                        return (
+                            <section key={day.dayOffset}>
+                                <h3 className="px-4 md:px-6 pt-4 pb-1.5 text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-zinc-300 border-b border-border">
+                                    {getDayLabel(day.dayOffset)}
+                                </h3>
+                                <ul className="divide-y divide-border">
+                                    {day.rows.map(({ evt, distanceKm, dups }, i) => (
+                                        <Fragment key={evt.id}>
+                                            <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
+                                            {before + i === 3 && coachMarkerRef && (
+                                                <li ref={coachMarkerRef} aria-hidden className="h-px" />
+                                            )}
+                                        </Fragment>
+                                    ))}
+                                </ul>
+                            </section>
+                        );
+                    })}
+                    {daysHasMore && onLoadMoreDays && <AutoLoadMore onLoadMore={onLoadMoreDays} />}
                 </>
             ) : (<>
             <ul className="divide-y divide-border">
@@ -800,14 +814,14 @@ interface EventCardProps {
      *  stadssida ska se hela eventet direkt, ovanpå välkomstrutan
      *  (Josef 29/8). Förbrukas per bump; vanliga kartklick påverkas inte. */
     fullOpenNonce?: number;
-    /** Underlaget till listans 🔥 POPULÄRT-flik: eventen i KARTANS RUTA som
-     *  passerar kartans filter, ALLA dagar inom datahorisonten (sidan äger
-     *  vyn). Kortet plockar de populära från den visade dagen och framåt
-     *  (utils/popularList). Utelämnad = ingen flikrad. */
-    popularEvents?: LinkEvent[];
+    /** Underlaget till listans flikar (Alla · 🔥 Populärt): eventen i KARTANS
+     *  RUTA som passerar kartans filter, ALLA dagar inom datahorisonten (sidan
+     *  äger vyn). Kortet delar dem i dagar från den visade dagen och framåt
+     *  (utils/popularList). Utelämnad = gamla närhetslistan utan flikrad. */
+    viewEvents?: LinkEvent[];
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, popularEvents }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -955,8 +969,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const [nearbyVisibleCount, setNearbyVisibleCount] = useState(NEARBY_PAGE_SIZE);
     // Listans flik (Josef 23/9). Följer med mellan event — väljer man något
     // ur Populärt ska listan under det nya kortet fortfarande vara Populärt.
-    const [listTab, setListTab] = useState<ListTab>('nearby');
-    const [popularVisibleCount, setPopularVisibleCount] = useState(NEARBY_PAGE_SIZE);
+    const [listTab, setListTab] = useState<ListTab>('all');
+    const [daysVisibleCount, setDaysVisibleCount] = useState(NEARBY_PAGE_SIZE);
     const [now, setNow] = useState(() => Date.now());
     const [scrollNudgeActive, setScrollNudgeActive] = useState(false);
     const scrollNudgeTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -1450,7 +1464,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // det användaren själv dragit till.
     useEffect(() => {
         setNearbyVisibleCount(NEARBY_PAGE_SIZE);
-        setPopularVisibleCount(NEARBY_PAGE_SIZE);
+        setDaysVisibleCount(NEARBY_PAGE_SIZE);
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
         updateDragX(0);
         setIsAnimating(true);
@@ -1646,34 +1660,40 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         [pastNearby, imagesOnlyList]
     );
 
-    // 🔥 POPULÄRT-fliken: populära i kartans ruta från den visade dagen och
+    // Listans FLIKAR (Josef 23/9 + 24/9): Alla = alla event i kartans ruta,
+    // 🔥 Populärt = de populära av dem — båda från den visade dagen och
     // framåt, dag för dag. Avståndet på raderna räknas från användaren när
     // positionen är känd (listan är "vad händer där jag tittar", inte "nära
-    // det här eventet"), annars från det valda eventet som närhetslistan.
-    const popularListed = useMemo(() => {
-        if (!popularEvents) return { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0 };
+    // det här eventet"), annars från det valda eventet.
+    const tabDays = useMemo(() => {
+        const empty = { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0 };
+        if (!viewEvents) return { all: empty, popular: empty };
         const nowDate = new Date(now);
         const from = userPos ?? (selectedEvent && hasValidCoords(selectedEvent) ? { lat: selectedEvent.lat, lng: selectedEvent.lng } : null);
-        const kept = popularEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id);
-        const days = popularDays(kept, Math.max(0, dayOffset), nowDate, e => isEventPast(e, now)).map(day => {
-            const items = day.events.map(evt => ({
-                evt,
-                distanceKm: from && hasValidCoords(evt) ? haversineKm(from.lat, from.lng, evt.lat, evt.lng) : null,
-            }));
-            return {
-                dayOffset: day.dayOffset,
-                rows: groupNearby(imagesOnlyList ? items.filter(n => !!n.evt.coverImage) : items).rows,
-            };
-        }).filter(day => day.rows.length > 0);
-        const count = days.reduce((n, d) => n + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0), 0);
-        return { days, count };
+        const kept = viewEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id);
+        const build = (include?: (e: LinkEvent) => boolean) => {
+            const days = eventDays(kept, Math.max(0, dayOffset), nowDate, e => isEventPast(e, now), include).map(day => {
+                const items = day.events.map(evt => ({
+                    evt,
+                    distanceKm: from && hasValidCoords(evt) ? haversineKm(from.lat, from.lng, evt.lat, evt.lng) : null,
+                }));
+                return {
+                    dayOffset: day.dayOffset,
+                    rows: groupNearby(imagesOnlyList ? items.filter(n => !!n.evt.coverImage) : items).rows,
+                };
+            }).filter(day => day.rows.length > 0);
+            const count = days.reduce((n, d) => n + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0), 0);
+            return { days, count };
+        };
+        return { all: build(), popular: build(e => isPopularListed(e, now)) };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [popularEvents, discardedEventIds, selectedEvent, dayOffset, now, userPos, imagesOnlyList]);
-    const popularRowTotal = useMemo(() => popularListed.days.reduce((n, d) => n + d.rows.length, 0), [popularListed]);
-    const visiblePopularDays = useMemo(() => takeRows(popularListed.days, popularVisibleCount), [popularListed, popularVisibleCount]);
+    }, [viewEvents, discardedEventIds, selectedEvent, dayOffset, now, userPos, imagesOnlyList]);
+    const activeTabDays = tabDays[listTab].days;
+    const activeTabRowTotal = useMemo(() => activeTabDays.reduce((n, d) => n + d.rows.length, 0), [activeTabDays]);
+    const visibleTabDays = useMemo(() => takeRows(activeTabDays, daysVisibleCount), [activeTabDays, daysVisibleCount]);
     const handleListTab = (tab: ListTab) => {
         setListTab(tab);
-        setPopularVisibleCount(NEARBY_PAGE_SIZE);
+        setDaysVisibleCount(NEARBY_PAGE_SIZE);
     };
 
     // Scroll-coachens "nått fram"-observer: separat från nudge-fasen så att
@@ -1692,7 +1712,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         io.observe(marker);
         return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEvent?.id, nearbyEvents.length]);
+    }, [selectedEvent?.id, nearbyEvents.length, listTab, tabDays.all.count]);
 
     // Event på EXAKT samma plats (koordinat) som det valda — multi-event-högen.
     // Driver pagern ("3/7") på kortets platsrad. Ordnad efter tid för stabil numrering.
@@ -2724,7 +2744,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         onBackToGroup={cardView === 'info' ? onBackToGroup : undefined}
                         backToGroupCount={backToGroupCount}
                         nearbyView={cardView === 'nearby'}
-                        onToggleNearbyView={nearbyEvents.length > 0 ? () => handleToggleView('nearby') : undefined}
+                        onToggleNearbyView={nearbyEvents.length > 0 || tabDays.all.count > 0 ? () => handleToggleView('nearby') : undefined}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
                         // Passerade event kan inte stjärnmärkas — stjärnan vore
                         // förbrukad direkt (den lyser bara tills eventet varit).
@@ -2758,12 +2778,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             <div className="px-4 md:px-6 py-3 flex items-center gap-2.5">
                                 <span aria-hidden className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 dark:border-zinc-600 border-t-[#006AA7] dark:border-t-sky-400 animate-spin" />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                    Letar event i närheten…
+                                    Letar fler event…
                                 </span>
                             </div>
                         </div>
                     )}
-                    {cardView !== 'chat' && nearbyEvents.length > 0 && (
+                    {cardView !== 'chat' && (nearbyEvents.length > 0 || tabDays.all.count > 0) && (
                         <NearbyEventsList
                             upcomingItems={listedUpcoming.rows.slice(0, nearbyVisibleCount)}
                             upcomingTotal={listedUpcoming.rows.length}
@@ -2776,12 +2796,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             imagesOnly={imagesOnlyList}
                             showImages={showImages}
                             onToggleImages={toggleImages}
-                            tab={popularEvents ? listTab : 'nearby'}
-                            onTabChange={popularEvents ? handleListTab : undefined}
-                            popularCount={popularListed.count}
-                            popularDays={visiblePopularDays}
-                            popularHasMore={popularVisibleCount < popularRowTotal}
-                            onLoadMorePopular={() => setPopularVisibleCount(c => c + NEARBY_PAGE_SIZE)}
+                            tab={listTab}
+                            onTabChange={viewEvents ? handleListTab : undefined}
+                            allCount={tabDays.all.count}
+                            popularCount={tabDays.popular.count}
+                            days={visibleTabDays}
+                            daysHasMore={daysVisibleCount < activeTabRowTotal}
+                            onLoadMoreDays={() => setDaysVisibleCount(c => c + NEARBY_PAGE_SIZE)}
                         />
                     )}
                     </>)}
@@ -2806,7 +2827,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onClick={() => coachMarkerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                             className="city-cta gold-glow-pulse pointer-events-auto relative overflow-hidden flex items-center gap-2 rounded-full bg-gradient-to-r from-[#006AA7] via-[#005590] to-[#003C66] border-2 border-[#FECC02] text-white text-xs font-black px-4 py-2 shadow-xl hover:scale-105 active:scale-95 transition-all duration-200"
                         >
-                            <span>Scrolla ner — fler event i närheten</span>
+                            <span>Scrolla ner för fler event</span>
                             <ChevronDown size={15} className="animate-bounce text-[#FECC02]" />
                         </button>
                     </div>

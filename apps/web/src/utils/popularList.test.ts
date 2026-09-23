@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isPopularListed, popularDays, takeRows } from './popularList';
+import { eventDays, isPopularListed, popularDays, takeRows } from './popularList';
 
 // Fast "nu": onsdag 23/9 kl 12 lokal tid.
 const NOW = new Date(2026, 8, 23, 12, 0);
@@ -63,5 +63,27 @@ describe('takeRows', () => {
     });
     it('gränsen större än allt → allt', () => {
         expect(takeRows(days, 99)).toEqual(days);
+    });
+});
+
+describe('eventDays', () => {
+    it('tar med alla event (inte bara populära), dag för dag i tidsordning', () => {
+        const evts = [
+            { id: 'b', time: at(0, 20) },
+            { id: 'a', time: at(0, 18), pop: true },
+            { id: 'c', time: at(2, 10) },
+        ];
+        const days = eventDays(evts, 0, NOW, never);
+        expect(days.map(d => d.dayOffset)).toEqual([0, 2]);
+        expect(days[0].events.map(e => e.id)).toEqual(['a', 'b']);
+    });
+    it('släpper passerade och dagar före den visade', () => {
+        const evts = [
+            { id: 'igar', time: at(-1, 18) },
+            { id: 'passerat', time: at(0, 9) },
+            { id: 'ikvall', time: at(0, 19) },
+        ];
+        const days = eventDays(evts, 0, NOW, e => e.id === 'passerat');
+        expect(days.flatMap(d => d.events).map(e => e.id)).toEqual(['ikvall']);
     });
 });

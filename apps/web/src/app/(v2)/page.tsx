@@ -2702,11 +2702,11 @@ export default function HomePage() {
         () => searchFilteredEvents.filter(e => inMapView(e) && passesPopularFilter(e, popularOnly)),
         [searchFilteredEvents, inMapView, popularOnly],
     );
-    // Eventkortets 🔥 POPULÄRT-flik (Josef 23/9): eventen i KARTANS RUTA som
-    // passerar kartans filter, ALLA dagar — inte bara den visade — så listan
-    // kan fortsätta framåt i dagarna när man scrollar. Kortet väljer ut de
-    // populära och delar i dagar (utils/popularList).
-    const popularListEvents = useMemo(
+    // Eventkortets listflikar Alla · 🔥 Populärt (Josef 23/9, 24/9): eventen
+    // i KARTANS RUTA som passerar kartans filter, ALLA dagar — inte bara den
+    // visade — så listan kan fortsätta framåt i dagarna när man scrollar.
+    // Kortet delar i dagar och väljer ut de populära (utils/popularList).
+    const listViewEvents = useMemo(
         () => events.filter(e => inMapView(e) && matchesFilter(e)),
         [events, inMapView, matchesFilter],
     );
@@ -5200,7 +5200,7 @@ export default function HomePage() {
                 canPlaceStar={starsAvailable > 0}
                 onPlaceStar={handlePlaceStar}
                 fullOpenNonce={fullOpenNonce}
-                popularEvents={popularListEvents}
+                viewEvents={listViewEvents}
             />
 
         </main>
