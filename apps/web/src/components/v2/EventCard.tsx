@@ -11,6 +11,7 @@ import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
+import { popularDays, takeRows } from '@/utils/popularList';
 import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
 
@@ -214,6 +215,49 @@ interface NearbyEventsListProps {
      *  localStorage). Ignoreras i bildflödes-läget (imagesOnly). */
     showImages: boolean;
     onToggleImages: () => void;
+    /** FLIKARNA (Josef 23/9): "I närheten" = listan ovan, "🔥 Populärt" =
+     *  populära event i kartans ruta från den visade dagen och framåt, dag
+     *  för dag. Utelämnad onTabChange = ingen flikrad (bara närhetsrubriken). */
+    tab?: ListTab;
+    onTabChange?: (tab: ListTab) => void;
+    /** Antal populära EVENT (alla dagar) — flikens siffra. */
+    popularCount?: number;
+    /** Populärt-fliken, redan kapad till synligt antal rader. */
+    popularDays?: { dayOffset: number; rows: NearbyItem[] }[];
+    popularHasMore?: boolean;
+    onLoadMorePopular?: () => void;
+}
+
+type ListTab = 'nearby' | 'popular';
+
+/** Laddar nästa sida automatiskt när den skymtar fram (rootMargin = lite
+ *  före botten) — Populärt-fliken ska bara fortsätta framåt i dagarna när
+ *  man scrollar. Knappen under är reserv för webbläsare utan observern. */
+function AutoLoadMore({ onLoadMore }: { onLoadMore: () => void }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const cbRef = useRef(onLoadMore);
+    cbRef.current = onLoadMore;
+    useEffect(() => {
+        const el = ref.current;
+        if (!el || typeof IntersectionObserver === 'undefined') return;
+        const io = new IntersectionObserver(
+            entries => { if (entries.some(e => e.isIntersecting)) cbRef.current(); },
+            { rootMargin: '300px' },
+        );
+        io.observe(el);
+        return () => io.disconnect();
+    }, []);
+    return (
+        <div ref={ref} className="px-4 md:px-6 py-3 flex justify-center border-t border-border">
+            <button
+                type="button"
+                onClick={onLoadMore}
+                className="text-[11px] font-black uppercase tracking-widest text-[#006AA7] hover:text-[#005590] px-4 py-2"
+            >
+                Visa fler
+            </button>
+        </div>
+    );
 }
 
 function StatusBadge({ status }: { status: EventStatus }) {
@@ -490,7 +534,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'nearby', onTabChange, popularCount = 0, popularDays = [], popularHasMore = false, onLoadMorePopular }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const effectiveShowImages = imagesOnly || showImages;
@@ -500,10 +544,36 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
     const markerIdx = Math.min(3, upcomingItems.length - 1);
     return (
         <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
-            <div className="px-4 md:px-6 py-3 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    Fler event i närheten · {upcomingCount}
-                </span>
+            <div className={`px-4 md:px-6 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'py-2' : 'py-3'}`}>
+                {onTabChange ? (
+                    <div role="tablist" aria-label="Lista" className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 min-w-0">
+                        {([
+                            ['nearby', 'I närheten', upcomingCount],
+                            ['popular', '🔥 Populärt', popularCount],
+                        ] as const).map(([key, label, count]) => (
+                            <button
+                                key={key}
+                                type="button"
+                                role="tab"
+                                aria-selected={tab === key}
+                                onClick={() => onTabChange(key)}
+                                className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${
+                                    tab === key
+                                        ? key === 'popular'
+                                            ? 'bg-white dark:bg-zinc-700 text-[#c2410c] dark:text-orange-300 shadow-sm'
+                                            : 'bg-white dark:bg-zinc-700 text-slate-800 dark:text-white shadow-sm'
+                                        : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200'
+                                }`}
+                            >
+                                {label} · {count}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        Fler event i närheten · {upcomingCount}
+                    </span>
+                )}
                 {!imagesOnly && (
                     <button
                         type="button"
@@ -522,6 +592,28 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                 )}
             </div>
 
+            {tab === 'popular' && onTabChange ? (
+                <>
+                    {popularDays.length === 0 && (
+                        <p className="px-4 md:px-6 py-6 text-center text-xs font-bold text-slate-500">
+                            Inga populära event i kartans vy just nu — zooma ut eller flytta kartan.
+                        </p>
+                    )}
+                    {popularDays.map(day => (
+                        <section key={day.dayOffset}>
+                            <h3 className="px-4 md:px-6 pt-4 pb-1.5 text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-zinc-300 border-b border-border">
+                                {getDayLabel(day.dayOffset)}
+                            </h3>
+                            <ul className="divide-y divide-border">
+                                {day.rows.map(({ evt, distanceKm, dups }) => (
+                                    <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
+                                ))}
+                            </ul>
+                        </section>
+                    ))}
+                    {popularHasMore && onLoadMorePopular && <AutoLoadMore onLoadMore={onLoadMorePopular} />}
+                </>
+            ) : (<>
             <ul className="divide-y divide-border">
                 {upcomingItems.map(({ evt, distanceKm, dups }, i) => (
                     <Fragment key={evt.id}>
@@ -571,6 +663,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                     )}
                 </div>
             )}
+            </>)}
         </div>
     );
 }
@@ -707,9 +800,14 @@ interface EventCardProps {
      *  stadssida ska se hela eventet direkt, ovanpå välkomstrutan
      *  (Josef 29/8). Förbrukas per bump; vanliga kartklick påverkas inte. */
     fullOpenNonce?: number;
+    /** Underlaget till listans 🔥 POPULÄRT-flik: eventen i KARTANS RUTA som
+     *  passerar kartans filter, ALLA dagar inom datahorisonten (sidan äger
+     *  vyn). Kortet plockar de populära från den visade dagen och framåt
+     *  (utils/popularList). Utelämnad = ingen flikrad. */
+    popularEvents?: LinkEvent[];
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0 }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, popularEvents }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -855,6 +953,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const [anchorId, setAnchorId] = useState<string | null>(null);
     const [visitedEventIds, setVisitedEventIds] = useState<Set<string>>(new Set());
     const [nearbyVisibleCount, setNearbyVisibleCount] = useState(NEARBY_PAGE_SIZE);
+    // Listans flik (Josef 23/9). Följer med mellan event — väljer man något
+    // ur Populärt ska listan under det nya kortet fortfarande vara Populärt.
+    const [listTab, setListTab] = useState<ListTab>('nearby');
+    const [popularVisibleCount, setPopularVisibleCount] = useState(NEARBY_PAGE_SIZE);
     const [now, setNow] = useState(() => Date.now());
     const [scrollNudgeActive, setScrollNudgeActive] = useState(false);
     const scrollNudgeTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -1348,6 +1450,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // det användaren själv dragit till.
     useEffect(() => {
         setNearbyVisibleCount(NEARBY_PAGE_SIZE);
+        setPopularVisibleCount(NEARBY_PAGE_SIZE);
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
         updateDragX(0);
         setIsAnimating(true);
@@ -1542,6 +1645,36 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [pastNearby, imagesOnlyList]
     );
+
+    // 🔥 POPULÄRT-fliken: populära i kartans ruta från den visade dagen och
+    // framåt, dag för dag. Avståndet på raderna räknas från användaren när
+    // positionen är känd (listan är "vad händer där jag tittar", inte "nära
+    // det här eventet"), annars från det valda eventet som närhetslistan.
+    const popularListed = useMemo(() => {
+        if (!popularEvents) return { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0 };
+        const nowDate = new Date(now);
+        const from = userPos ?? (selectedEvent && hasValidCoords(selectedEvent) ? { lat: selectedEvent.lat, lng: selectedEvent.lng } : null);
+        const kept = popularEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id);
+        const days = popularDays(kept, Math.max(0, dayOffset), nowDate, e => isEventPast(e, now)).map(day => {
+            const items = day.events.map(evt => ({
+                evt,
+                distanceKm: from && hasValidCoords(evt) ? haversineKm(from.lat, from.lng, evt.lat, evt.lng) : null,
+            }));
+            return {
+                dayOffset: day.dayOffset,
+                rows: groupNearby(imagesOnlyList ? items.filter(n => !!n.evt.coverImage) : items).rows,
+            };
+        }).filter(day => day.rows.length > 0);
+        const count = days.reduce((n, d) => n + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0), 0);
+        return { days, count };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [popularEvents, discardedEventIds, selectedEvent, dayOffset, now, userPos, imagesOnlyList]);
+    const popularRowTotal = useMemo(() => popularListed.days.reduce((n, d) => n + d.rows.length, 0), [popularListed]);
+    const visiblePopularDays = useMemo(() => takeRows(popularListed.days, popularVisibleCount), [popularListed, popularVisibleCount]);
+    const handleListTab = (tab: ListTab) => {
+        setListTab(tab);
+        setPopularVisibleCount(NEARBY_PAGE_SIZE);
+    };
 
     // Scroll-coachens "nått fram"-observer: separat från nudge-fasen så att
     // listuppdateringar ("Visa fler"/ny data) inte nollställer coachen. Ligger
@@ -2643,6 +2776,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             imagesOnly={imagesOnlyList}
                             showImages={showImages}
                             onToggleImages={toggleImages}
+                            tab={popularEvents ? listTab : 'nearby'}
+                            onTabChange={popularEvents ? handleListTab : undefined}
+                            popularCount={popularListed.count}
+                            popularDays={visiblePopularDays}
+                            popularHasMore={popularVisibleCount < popularRowTotal}
+                            onLoadMorePopular={() => setPopularVisibleCount(c => c + NEARBY_PAGE_SIZE)}
                         />
                     )}
                     </>)}
