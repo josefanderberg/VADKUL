@@ -1,6 +1,10 @@
 {
   "version": 1,
   "sources": {
+    "bastad": {
+      "since": "2026-09-24",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -16,34 +20,38 @@
     "folk-goteborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-15",
-      "emptyRetries": 3
+      "lastRetry": "2026-09-24",
+      "emptyRetries": 4
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-17",
-      "emptyRetries": 4
+      "lastRetry": "2026-09-24",
+      "emptyRetries": 5
     },
     "hockeyallsvenskan": {
       "since": "2026-09-17",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-24",
+      "emptyRetries": 1
     },
     "karlsborg": {
       "since": "2026-09-17",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-24",
+      "emptyRetries": 1
     },
     "nordmaling": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-15",
-      "emptyRetries": 3
+      "lastRetry": "2026-09-24",
+      "emptyRetries": 4
     },
     "nybro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-17",
-      "emptyRetries": 4
+      "lastRetry": "2026-09-24",
+      "emptyRetries": 5
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -67,7 +75,9 @@
     },
     "sb-vastsverige-com": {
       "since": "2026-09-15",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-24",
+      "emptyRetries": 1
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
@@ -88,12 +98,8 @@
     "tingsryd": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-15",
-      "emptyRetries": 3
-    },
-    "tjorn": {
-      "since": "2026-09-15",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "lastRetry": "2026-09-24",
+      "emptyRetries": 4
     },
     "turteatern": {
       "since": "2026-09-23",
