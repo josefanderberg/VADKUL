@@ -1116,15 +1116,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (!sc) return OPEN_HEIGHT_VH;
         // VÄLJARLISTAN (multievent): ingen peek-markör — öppna på
         // CHOOSER_DEFAULT_PX, så kortet står lika högt som ett vanligt event
-        // (Josef 2/9 + 16/9). Kortare lista → kortet slutar vid listans botten.
-        const groupList = sc.querySelector('[data-group-list]') as HTMLElement | null;
-        if (groupList) {
-            const scRect = sc.getBoundingClientRect();
-            // Innehållets topp i viewport-koordinater (oberoende av scroll).
-            const contentTop = scRect.top - sc.scrollTop;
-            const contentHeight = groupList.getBoundingClientRect().bottom - contentTop;
-            const targetPx = Math.min(contentHeight, CHOOSER_DEFAULT_PX);
-            const vh = (targetPx / window.innerHeight) * 100;
+        // (Josef 2/9 + 16/9). Gäller även korta listor (2 rader, eller 1 kvar
+        // när de andra har varit) - Josef 24/9: "ska alltid öppnas lika högt
+        // som ett vanligt event". Kortet krymper alltså INTE till listans botten.
+        if (sc.querySelector('[data-group-list]')) {
+            const vh = (CHOOSER_DEFAULT_PX / window.innerHeight) * 100;
             return Math.max(PEEK_HEIGHT_VH, Math.min(80, Math.round(vh)));
         }
         const peek = sc.querySelector('[data-peek-boundary]') as HTMLElement | null;
