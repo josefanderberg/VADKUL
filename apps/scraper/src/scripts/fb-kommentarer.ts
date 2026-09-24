@@ -169,9 +169,28 @@ const LAS_KOMMENTARER = `(() => {
   return { kommentarer, grupp };
 })()`;
 
-async function hamtaInlagg(page: Page, lank: string): Promise<{ grupp: string; rader: KommentarRad[] }> {
+// Körs i sidan: finns det kommentarer alls? (en kommentar, "Visa fler kommentarer" eller "3 kommentarer")
+const HAR_KOMMENTARER = `(() => {
+  if (document.querySelector('div[role="article"][aria-label]')
+      && [...document.querySelectorAll('div[role="article"][aria-label]')]
+        .some((a) => /^(kommentar|svar|comment|reply) (av|by|från|from) /i.test(a.getAttribute('aria-label')))) return true;
+  return [...document.querySelectorAll('div[role="button"], span[role="button"], span')]
+    .some((e) => /^\\d+\\s+(kommentar|kommentarer|comments?)$|^(visa|view) (fler|mer|more|previous|tidigare)? ?(kommentarer|comments)/i.test((e.innerText || '').trim()));
+})()`;
+
+async function hamtaInlagg(page: Page, lank: string): Promise<{ grupp: string; rader: KommentarRad[]; tom: boolean }> {
     await page.goto(lank, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await vanta(4000);
+    // Vänta tills kommentarerna syns (högst ~5 s). Syns inga är inlägget tomt: hoppa vidare direkt.
+    let har = false;
+    for (let t = 0; t < 10 && !har; t++) {
+        await vanta(500);
+        har = Boolean(await page.evaluate(HAR_KOMMENTARER).catch(() => false));
+    }
+    if (!har) {
+        const res = (await page.evaluate(LAS_KOMMENTARER)) as { kommentarer: FbKommentar[]; grupp: string };
+        return { grupp: res.grupp, rader: [], tom: true };
+    }
+    await vanta(1000);
     try {
         if (await page.evaluate(OPPNA_SORTERING)) {
             await vanta(1200);
@@ -185,7 +204,7 @@ async function hamtaInlagg(page: Page, lank: string): Promise<{ grupp: string; r
         await vanta(1800);
     }
     const res = (await page.evaluate(LAS_KOMMENTARER)) as { kommentarer: FbKommentar[]; grupp: string };
-    return { grupp: res.grupp, rader: byggRader(res.kommentarer, res.grupp, lank, EGEN_SIDA) };
+    return { grupp: res.grupp, rader: byggRader(res.kommentarer, res.grupp, lank, EGEN_SIDA), tom: false };
 }
 
 // Fliken kan försvinna under körningen (stängd, omdirigerad, Facebook byter ut ramen) -
@@ -219,6 +238,7 @@ async function main() {
         const alla: KommentarRad[] = [];
         for (const [i, lank] of lankar.entries()) {
             const nr = `[${FRAN + i}/${FRAN - 1 + lankar.length}]`;
+            let tom = false;
             try {
                 let res;
                 try {
@@ -229,6 +249,7 @@ async function main() {
                     res = await hamtaInlagg(page, lank);
                 }
                 alla.push(...res.rader);
+                tom = res.tom;
                 const ja = res.rader.filter((r) => r.positiv === 'ja').length;
                 console.log(`${nr} ${res.grupp || lank}: ${res.rader.length} kommentarer, ${ja} positiva`);
             } catch (e) {
@@ -236,7 +257,8 @@ async function main() {
             }
             // Spara efter varje inlägg, så att inget går förlorat om körningen avbryts.
             fs.writeFileSync(UT, tillCsv(alla));
-            if (i < lankar.length - 1) await lugnt();
+            // Kort paus efter tomma inlägg, längre efter de med kommentarer (fler anrop mot Facebook).
+            if (i < lankar.length - 1) await (tom ? vanta(1000 + Math.random() * 1500) : lugnt());
         }
 
         const antal = (p: string) => alla.filter((r) => r.positiv === p).length;
