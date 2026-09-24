@@ -9,6 +9,7 @@
  *   npm run fb-kommentarer -w vadkul-scraper
  *   npm run fb-kommentarer -w vadkul-scraper -- --lankar min-lista.txt   (en länk per rad)
  *   npm run fb-kommentarer -w vadkul-scraper -- --ut ~/Desktop/kommentarer.csv --max 20
+ *   npm run fb-kommentarer -w vadkul-scraper -- --fran 88      (fortsätt en avbruten körning)
  *
  * Så går det till:
  *   1. Chrome öppnas. Logga in och byt till Vad kul-profilen (som när du postar).
@@ -40,7 +41,10 @@ function arg(namn: string): string | undefined {
 }
 
 const PROFIL = path.join(os.homedir(), '.vadkul-fb-kommentarer');
-const UT = path.resolve(arg('ut') || 'fb-kommentarer.csv');
+// --fran 88 fortsätter en avbruten körning från inlägg 88 och skriver då till en egen fil,
+// så att den förra CSV:n finns kvar (studions import hoppar över dubbletter).
+const FRAN = Math.max(1, Number(arg('fran') || 1));
+const UT = path.resolve(arg('ut') || (FRAN > 1 ? `fb-kommentarer-fran-${FRAN}.csv` : 'fb-kommentarer.csv'));
 const LANKFIL = path.resolve(arg('lankar') || 'fb-kommentarer-lankar.txt');
 const MAX = Number(arg('max') || 0);
 const EGEN_SIDA = arg('sida') || 'Vadkul';
@@ -71,7 +75,8 @@ async function samlaLankar(browser: Browser): Promise<string[]> {
 👉 Logga in i Chrome-fönstret och byt till Vad kul-profilen om det behövs.
    Öppna sedan aktivitetsloggen (profilbilden → Inställningar → Aktivitetslogg)
    och välj gruppinläggen, eller öppna inläggen ett och ett. Scrolla så långt bak du vill.
-   Tryck Enter här när du är klar.
+   Tryck Enter här när du är klar (länkarna från förra gången finns redan med).
+   Klicka inte i fönstret när hämtningen har börjat.
 `);
     let klar = false;
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -151,13 +156,20 @@ const LAS_KOMMENTARER = `(() => {
     const text = [...new Set(delar)].join('\\n');
     return { id, namn, text, svar: /^(svar|reply)/i.test(label), relativTid };
   });
+  // Gruppens namn: länken till själva gruppen (/groups/<id>/), inte aviseringar och
+  // andra länkar som också pekar in i gruppen ("Oläst: X har kommenterat ditt inlägg i ...").
+  const gid = (location.pathname.match(/^\\/groups\\/([^/]+)/) || [])[1] || '';
+  const brus = (t) => !t || t.length < 4 || t.length > 120 || /\\n/.test(t)
+    || /^(grupper|groups)$/i.test(t) || /^(oläst|unread)|har kommenterat|commented on|nämnde dig|mentioned you/i.test(t);
   const gruppLank = [...document.querySelectorAll('a[href*="/groups/"]')]
-    .map((l) => l.innerText.trim()).find((t) => t && t.length > 3 && !/^(grupper|groups)$/i.test(t));
-  const grupp = gruppLank || document.title.replace(/^\\(\\d+\\)\\s*/, '').replace(/\\s*\\|\\s*Facebook$/, '');
+    .filter((l) => { try { return new URL(l.href).pathname.replace(/\\/$/, '') === '/groups/' + gid; } catch (e) { return false; } })
+    .map((l) => l.innerText.trim()).find((t) => !brus(t));
+  const titel = document.title.replace(/^\\(\\d+\\)\\s*/, '').replace(/\\s*\\|\\s*Facebook$/, '');
+  const grupp = gruppLank || (brus(titel) ? '' : titel);
   return { kommentarer, grupp };
 })()`;
 
-async function hamtaInlagg(page: Page, lank: string): Promise<KommentarRad[]> {
+async function hamtaInlagg(page: Page, lank: string): Promise<{ grupp: string; rader: KommentarRad[] }> {
     await page.goto(lank, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await vanta(4000);
     try {
@@ -173,8 +185,14 @@ async function hamtaInlagg(page: Page, lank: string): Promise<KommentarRad[]> {
         await vanta(1800);
     }
     const res = (await page.evaluate(LAS_KOMMENTARER)) as { kommentarer: FbKommentar[]; grupp: string };
-    return byggRader(res.kommentarer, res.grupp, lank, EGEN_SIDA);
+    return { grupp: res.grupp, rader: byggRader(res.kommentarer, res.grupp, lank, EGEN_SIDA) };
 }
+
+// Fliken kan försvinna under körningen (stängd, omdirigerad, Facebook byter ut ramen) -
+// då blir varje senare inlägg "detached Frame". Öppna en ny flik och försök igen en gång.
+const fliken_borta = (e: unknown) =>
+    /detached|Target closed|Session closed|has been closed|Execution context was destroyed/i
+        .test((e as Error)?.message || '');
 
 // --- huvudflöde ---------------------------------------------------------------------------
 
@@ -187,10 +205,11 @@ async function main() {
     });
     try {
         const [forsta] = await browser.pages();
-        const page = forsta || await browser.newPage();
+        let page = forsta || await browser.newPage();
         await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
 
         let lankar = await samlaLankar(browser);
+        if (FRAN > 1) lankar = lankar.slice(FRAN - 1);
         if (MAX > 0) lankar = lankar.slice(0, MAX);
         if (!lankar.length) {
             console.log('Inga gruppinlägg hittade - inget att hämta.');
@@ -199,13 +218,21 @@ async function main() {
 
         const alla: KommentarRad[] = [];
         for (const [i, lank] of lankar.entries()) {
+            const nr = `[${FRAN + i}/${FRAN - 1 + lankar.length}]`;
             try {
-                const rader = await hamtaInlagg(page, lank);
-                alla.push(...rader);
-                const ja = rader.filter((r) => r.positiv === 'ja').length;
-                console.log(`[${i + 1}/${lankar.length}] ${rader[0]?.grupp || lank}: ${rader.length} kommentarer, ${ja} positiva`);
+                let res;
+                try {
+                    res = await hamtaInlagg(page, lank);
+                } catch (e) {
+                    if (!fliken_borta(e)) throw e;
+                    page = await browser.newPage();
+                    res = await hamtaInlagg(page, lank);
+                }
+                alla.push(...res.rader);
+                const ja = res.rader.filter((r) => r.positiv === 'ja').length;
+                console.log(`${nr} ${res.grupp || lank}: ${res.rader.length} kommentarer, ${ja} positiva`);
             } catch (e) {
-                console.log(`[${i + 1}/${lankar.length}] ⚠️ ${lank}: ${(e as Error).message}`);
+                console.log(`${nr} ⚠️ ${lank}: ${(e as Error).message}`);
             }
             // Spara efter varje inlägg, så att inget går förlorat om körningen avbryts.
             fs.writeFileSync(UT, tillCsv(alla));
