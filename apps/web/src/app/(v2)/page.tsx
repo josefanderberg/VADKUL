@@ -36,7 +36,7 @@ import { readStartCity, writeStartCity } from '@/utils/startCity';
 import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
-import { shouldLandOnTomorrow } from '@/utils/eveningLanding';
+import { shouldAutoBumpDay } from '@/utils/autoDayBump';
 import { isNewSince, readAndStampVisit, NEW_SINCE_MIN_COUNT } from '@/utils/newSinceLastVisit';
 import { fitCamera, SWEDEN_BOUNDS, OVERVIEW_PADDING, SWEDEN_NUDGE_DELAY_MS, canOfferOverview, hasLeftOverview, readSwedenNudgeDone, markSwedenNudgeDone } from '@/utils/swedenOverview';
 import PostCreateNudge from '@/components/v2/PostCreateNudge';
@@ -1297,46 +1297,8 @@ export default function HomePage() {
         return () => { unsubscribe(); clearTimeout(hangGuard); };
     }, []);
 
-    // KVÄLLSLANDNINGEN (13/9): landar man sent på kvällen när dagens ALLA
-    // event har varit öppnar kartan på IMORGON — förstaintrycket ska aldrig
-    // vara en död dag (samma princip som stadssidornas gårdagsfix). Prövas
-    // EXAKT EN gång, vid första definitiva laddningen (eventsSettled), och
-    // avstår om användaren/djuplänken redan valt dag eller period:
-    //   • ?event= sätter sin egen dag (djuplänks-snabbstarten), ?skapa=1 är
-    //     ett skapa-ärende — båda lämnas ifred;
-    //   • dayOffset ≠ 0 eller veckovy = någon har redan bestämt sig.
-    // Helt tomma dagar byter INTE dag (tom-promptens jobb), och gränsen är
-    // den delade isEventPast — se utils/eveningLanding. Bara dayOffset sätts:
-    // kameran, väljaren och dagblinken (kortets egen) rörs ALDRIG härifrån.
-    const eveningSwitchTriedRef = useRef(false);
-    useEffect(() => {
-        if (!eventsSettled || eveningSwitchTriedRef.current) return;
-        // CHANSEN BRÄNNS FÖRST NÄR DET FINNS DATA ATT BEDÖMA (20/9). Förr
-        // sattes flaggan direkt på eventsSettled — men det beskedet ges
-        // "oavsett om lagret var tomt eller ej" (se onInitialLoad), så en
-        // tom array i det ögonblicket förbrukade kvällslandningen. Effekten
-        // kördes visserligen om när eventen kom (events ligger i deps), men
-        // returnerade då direkt på flaggan, och kartan blev stående på en
-        // död dag med "allt har varit"-prompten i stället för att hoppa.
-        // events.length > 0 = lagret HAR landat; är det tomt på just idag
-        // faller vi ändå igenom nedan (tom dag byter inte dag, by design).
-        if (events.length === 0) return;
-        eveningSwitchTriedRef.current = true; // en chans — aldrig igen
-        if (dayOffset !== 0 || dayRangeDays !== 1) return;
-        // Pågående platsval (?skapa=1/?onska=1 har redan hunnit strippas ur
-        // URL:en när events settlar — därför grindas på creationMode också):
-        // ett dagbyte + toast mitt i "välj plats" är bara störande.
-        if (creationMode !== 'idle') return;
-        try {
-            const params = new URLSearchParams(window.location.search);
-            if (params.has('event') || params.has('skapa') || params.has('onska')) return;
-        } catch { /* ingen söksträng — kör vidare */ }
-        if (!shouldLandOnTomorrow(events, new Date())) return;
-        setDayOffset(1);
-        // Kvittot är för återvändaren (välkomstrutans förstagångare ser
-        // plattans IMORGON när rutan stängts — det räcker där).
-        toast('Kvällens event har varit — kartan visar imorgon. ↺ tar dig tillbaka.', { icon: '🌙', duration: 6000 });
-    }, [eventsSettled, dayOffset, dayRangeDays, events, creationMode]);
+    // (KVÄLLSLANDNINGEN 13/9 låg här - ersatt 24/9 av auto-hoppet till
+    // Imorgon längre ner, som mäter KARTANS RUTA i stället för hela landet.)
 
     // Önskningarna: EGEN poll (samma mönster som användarevent-hämtningen i
     // linkEventService — de bor bara i Firestore). Servicen filtrerar redan
@@ -3609,33 +3571,80 @@ export default function HomePage() {
         return () => clearTimeout(t);
     }, [selectedCategories, user, catPrefsUid]);
 
-    // ── Auto-hopp till Imorgon när dagens tidssatta utbud redan varit ────────
-    // Sent på kvällen är nästan alla "Idag"-event släckta (past-dämpade 50 %-
-    // brickor): allt med klockslag startade för över en timme sedan och kvar
-    // finns bara heldagsposter utan specifik tid. Då är Imorgon en vettigare
-    // startvy än en karta full av släckta brickor. Beslutet tas EN gång, när
-    // aggregaten landat (dayCountReady), och bara i orört default-läge:
-    // aldrig när en delad länk styrt dag/event, användaren hunnit byta dag
-    // eller redan har ett event öppet.
-    const autoDayBumped = useRef(false);
+    // ── Auto-hopp till Imorgon när dagen är slut I KARTANS RUTA ─────────────
+    // Kommer man till en stad sent när allt redan varit ska kartan själv stå
+    // på Imorgon - ingen ska behöva klicka till nästa dag som det första man
+    // gör (Josef 24/9, efter flera varv). Tidigare togs beslutet EN gång vid
+    // laddning över HELA landets event: någon storstad har nästan alltid något
+    // på kvällen, så Växjö stod kvar på en död "Idag" och man fick dra i
+    // kartan tills allt-har-varit-bannern kom. Nu mäts samma ruta som
+    // stadsrutan (matchesFilter + inMapView), och frågan ställs om vid VARJE
+    // stadslandning (cityTourTarget.key) - först när rutan mätts under den
+    // staden (areaCounts !== null) och aggregaten landat helt (eventsSettled).
+    //
+    // Aldrig över användaren: bara från orörd Idag (eller vårt eget Imorgon,
+    // som backas om nästa stad har något kvar ikväll). Byter man dag själv är
+    // autoläget släppt. Delade länkar (?event=/?dag=), öppet kort, veckovyn och
+    // bildspelet rörs inte. Regeln bor i utils/autoDayBump (testad).
+    // Samma fråga används av ↺: har man bläddrat fram några dagar och
+    // nollställer tar ↺ en till HEMMADAGEN - Imorgon om idag är slut här, annars
+    // Idag (Josef 24/9). Svaret beror på klockan, så en minutpuls håller det
+    // färskt; samma värde ⇒ React bailar ur.
+    const computeBumpHere = useCallback(() => {
+        const nowMs = Date.now();
+        const dayStart = (offset: number) => {
+            const d = new Date(nowMs);
+            d.setDate(d.getDate() + offset);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        };
+        const inDay = (offset: number) => {
+            const from = dayStart(offset);
+            const to = dayStart(offset + 1);
+            return events.filter(e => e.time >= from && e.time < to && matchesFilter(e) && inMapView(e));
+        };
+        return shouldAutoBumpDay(inDay(0), inDay(1), nowMs);
+    }, [events, matchesFilter, inMapView]);
+    const [todaySpentHere, setTodaySpentHere] = useState(false);
     useEffect(() => {
-        if (autoDayBumped.current || !dayCountReady) return;
-        // Landar aggregaten mitt i bildspelets vecko-fas är dayRangeDays 7 just
-        // då — vänta på nästa blink (dag-fasen) i stället för att bränna det
-        // enda beslutstillfället på ett läge som inte är användarens.
-        if (tourPlayingRef.current && dayRangeDays !== 1) return;
-        autoDayBumped.current = true;
-        if (deepLinkedRef.current || dayOffset !== 0 || dayRangeDays !== 1 || selectedEvent) return;
-        const now = Date.now();
-        const start = new Date(); start.setHours(0, 0, 0, 0);
-        const end = new Date(); end.setHours(23, 59, 59, 999);
-        const liveSpecificToday = events.some(e =>
-            e.time >= start && e.time <= end &&
-            e.hasSpecificTime !== false &&
-            !isEventPast(e, now),
-        );
-        if (!liveSpecificToday) setDayOffset(1);
-    }, [dayCountReady, events, dayOffset, dayRangeDays, selectedEvent]);
+        const evaluate = () => setTodaySpentHere(computeBumpHere());
+        evaluate();
+        const iv = setInterval(evaluate, 60_000);
+        return () => clearInterval(iv);
+    }, [computeBumpHere]);
+    const homeDayOffset = dayRangeDays === 1 && todaySpentHere ? 1 : 0;
+
+    const autoDayKeyRef = useRef<number | 'start' | null>(null);
+    const autoDayBumpedRef = useRef(false);
+    useEffect(() => {
+        if (autoDayBumpedRef.current && dayOffset !== 1) autoDayBumpedRef.current = false;
+    }, [dayOffset]);
+    useEffect(() => {
+        if (!eventsSettled || !areaCounts) return;
+        // Landningspulsens vecko-fas (tourPlaying + vecka) är tillfällig - vänta
+        // ut den i stället för att bränna stadens enda chans på den. tourPlaying
+        // i sig är INGEN grind: auto-starten slår på den vid varje besök och den
+        // står kvar efter pulsen (det var 24/9-felet: Växjö blev kvar på Idag).
+        if (tourPlaying && dayRangeDays !== 1) return;
+        const key = cityTourTarget?.key ?? 'start';
+        if (autoDayKeyRef.current === key) return;
+        autoDayKeyRef.current = key;
+        if (deepLinkedRef.current || selectedEvent || dayRangeDays !== 1) return;
+        // Pågående platsval (?skapa=1/?onska=1): ett dagbyte mitt i "välj
+        // plats" är bara störande.
+        if (creationMode !== 'idle') return;
+        const ours = autoDayBumpedRef.current && dayOffset === 1;
+        if (dayOffset !== 0 && !ours) return;
+        const bump = computeBumpHere();
+        if (bump && dayOffset === 0) {
+            autoDayBumpedRef.current = true;
+            setDayOffset(1);
+            toast('Inget kvar här ikväll - kartan visar imorgon.', { icon: '🌙', duration: 5000 });
+        } else if (!bump && ours) {
+            autoDayBumpedRef.current = false;
+            setDayOffset(0);
+        }
+    }, [eventsSettled, areaCounts, tourPlaying, cityTourTarget, selectedEvent, dayRangeDays, dayOffset, creationMode, computeBumpHere]);
 
     // ── Visningsräknare ──────────────────────────────────────────────────────
     // Ett "visat event" = kortet öppnas, oavsett väg hit: kartklick, sök,
@@ -4067,12 +4076,16 @@ export default function HomePage() {
                             <CalendarDays size={22} strokeWidth={2.5} />
                         </span>
                     </>
-                ) : (
+                ) : dayOffset !== homeDayOffset && (
+                    // ↺ tar en till HEMMADAGEN (Josef 24/9): Imorgon när idag
+                    // är slut i kartans ruta, annars Idag. Står man redan där
+                    // finns inget att nollställa - då göms knappen.
                     <button
                         type="button"
                         onClick={() => {
                             setPulseSuppressed(true);
-                            startTransition(() => setDayOffset(0));
+                            const home = computeBumpHere() && dayRangeDays === 1 ? 1 : 0;
+                            startTransition(() => setDayOffset(home));
                         }}
                         aria-label="Tillbaka till idag"
                         title="Tillbaka till idag"
