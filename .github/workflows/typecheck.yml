@@ -27,6 +27,31 @@ jobs:
       # allt IO mockas.
       - run: npm test
 
+  typecheck-kontrakt-functions:
+    name: Kontrakt + Functions (tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      # Root-lockfilen täcker både packages/kontrakt och apps/functions
+      # (workspaces) — functions egen lockfil är Mac-deployens standalone-spår.
+      - run: npm ci
+      # Delade kontraktspaketet: typer + GULDTESTET (eventShareSlug).
+      - run: npx tsc --noEmit
+        working-directory: packages/kontrakt
+      - run: npm test
+        working-directory: packages/kontrakt
+      # Functions: build = tsc --noEmit + esbuild-bundling (kontraktet bakas
+      # in i lib/ — workspace-deps löser inte i Cloud Build, se planen §5).
+      - run: npm run build
+        working-directory: apps/functions
+      - run: npm test
+        working-directory: apps/functions
+
   typecheck-web:
     name: Web (tsc)
     runs-on: ubuntu-latest

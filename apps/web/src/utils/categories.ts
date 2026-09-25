@@ -1,4 +1,5 @@
 // src/utils/categories.ts
+import type { EventCategoryType, SpecialCategoryType } from '@vadkul/kontrakt';
 import mingleImage from '../assets/categories/mingle.png';
 import cultureImage from '../assets/categories/culture.png';
 import servicesImage from '../assets/categories/services.png';
@@ -165,9 +166,12 @@ export const EVENT_CATEGORIES = {
     description: 'Allt som inte passar in ovan',
     defaultImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=500&q=80',
   },
-} as const;
+} as const satisfies Record<EventCategoryType, object>;
+// ^ Nyckellistan ÄGS av @vadkul/kontrakt (fas 0) — satisfies-vakten ger
+//   tsc-fel både om en nyckel saknas här och om en okänd läggs till.
+//   Ny kategori: lägg nyckeln i packages/kontrakt/src/categories.ts först.
 
-export type EventCategoryType = keyof typeof EVENT_CATEGORIES;
+export type { EventCategoryType };
 
 /**
  * Opt-in-"kategorier" som INTE är LLM-kategorier utan KÄLLOR med väldigt många
@@ -205,9 +209,10 @@ export const SPECIAL_CATEGORIES = {
     color: 'bg-pink-100 text-pink-700',
     description: 'PRO — pensionärernas riksorganisation',
   },
-} as const;
+} as const satisfies Record<SpecialCategoryType, object>;
+// ^ Samma vakt som EVENT_CATEGORIES — nycklarna ägs av @vadkul/kontrakt.
 
-export type SpecialCategoryType = keyof typeof SPECIAL_CATEGORIES;
+export type { SpecialCategoryType };
 
 /** Ordnad lista (Svenska kyrkan, PRO) för opt-in-raderna i filtret. */
 export const SPECIAL_CATEGORY_LIST = Object.values(SPECIAL_CATEGORIES);

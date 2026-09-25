@@ -6,6 +6,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const nextConfig = {
+    // @vadkul/kontrakt skeppas som TS-källa från packages/ — Next måste
+    // transpilera det (fas 0 i plattformsplanen).
+    transpilePackages: ['@vadkul/kontrakt'],
     reactStrictMode: false, // Sometimes helpful to disable for map/ref issues dev mode
     serverExternalPackages: ['better-sqlite3', 'firebase-admin'],
     images: {
