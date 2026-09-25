@@ -14,8 +14,8 @@
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-18",
-      "emptyRetries": 4
+      "lastRetry": "2026-09-25",
+      "emptyRetries": 5
     },
     "folk-goteborg": {
       "since": "2026-08-19",
@@ -59,6 +59,10 @@
       "lastRetry": "2026-09-19",
       "emptyRetries": 4
     },
+    "prins-eugens-waldemarsudde": {
+      "since": "2026-09-25",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -93,7 +97,9 @@
     },
     "storsjoyran": {
       "since": "2026-09-18",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-09-25",
+      "emptyRetries": 1
     },
     "tingsryd": {
       "since": "2026-08-19",
@@ -103,6 +109,10 @@
     },
     "turteatern": {
       "since": "2026-09-23",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "visitisabergsregionen": {
+      "since": "2026-09-25",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
