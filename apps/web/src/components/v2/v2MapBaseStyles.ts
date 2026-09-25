@@ -14,10 +14,16 @@ import * as maplibregl from 'maplibre-gl';
 // (kopierad ur dist, versionsstämplat filnamn = cache-bust per uppgradering)
 // och pekar maplibre dit INNAN första Map-instansen skapas — den här modulen
 // importeras av båda kartvägarna (V2Map + CityMapHeroCanvas), så anropet här
-// täcker allt. maplibreWorker.test.ts låser att filen i public/ är identisk
+// täcker allt.
+//
+// OBS KATALOG, inte ensam fil: workern importerar "./maplibre-gl-shared.mjs"
+// RELATIVT — båda filerna måste ligga bredvid varandra under sina RIKTIGA
+// namn (fällde första fixförsöket 25/9 kväll). Versionen bärs av mappnamnet
+// i stället, så immutable-cachen förblir säker. maplibreWorker.test.ts låser
+// att mappnamnet är paketets version och att BÅDA filerna är byte-identiska
 // med paketets — en maplibre-bump utan ny kopia blir rött test, inte död
 // karta i prod.
-export const MAPLIBRE_WORKER_URL = '/maplibre-gl-worker-6.11.2.mjs';
+export const MAPLIBRE_WORKER_URL = '/maplibre/6.11.2/maplibre-gl-worker.mjs';
 if (typeof window !== 'undefined') {
     maplibregl.setWorkerUrl(MAPLIBRE_WORKER_URL);
 }
