@@ -254,7 +254,7 @@ ingen API-yta står och skräpar utan anropare.
 |---|---|---|
 | **0. Kontrakt** ✅ 25/9 | `packages/kontrakt`, typflytt, functions-styckning (esbuild-bundling) | allt grönt, webben oförändrad i beteende ✓ |
 | **1. App-flödet** ✅ 25/9 | slimmat per-region-flöde som blobbar i befintliga nattkedjan + `/api/events/app-<region>` (se §3.4) | uppmätt lokalt: alla regioner < 200 kB br ✓ — curl mot prod kvitteras efter merge + deploy + nästa nattaggregat |
-| **2. App-MVP** | vadkul-app-repot: karta + flöde + eventkort + djuplänkar (`/e/`-slugs via `@vadkul/kontrakt`; AASA/assetlinks.json upp på vadkul.se — finns inte idag) | intern TestFlight |
+| **2. App-MVP** 🔨 | vadkul-app-repot: karta + flöde + eventkort + djuplänkar (`/e/`-slugs via `@vadkul/kontrakt`; AASA/assetlinks.json upp på vadkul.se — finns inte idag). **Byggt 25/9:** repot uppe (github.com/josefanderberg/vadkul-app), regionval + flödesklient + karta, nöjesfälts-transformen portad (testad), teardrop-brickor som förbakade kategori-PNG:er i symbol-lager (MapLibre kan inte rendera färg-emoji som text; eventets fria emoji kräver runtime-bakning — senare steg), GPS-regionval via MapLibre RN:s LocationManager, eventkort med `/e/`-utlänk. **Kvar:** kontraktspubliceringen (§9.1 — `file:../packages/kontrakt` löser INTE i EAS-molnbyggen), EAS dev build på riktig enhet, AASA/assetlinks, Crashlytics/Sentry | intern TestFlight |
 | **3. API + Konton** | Hono-skelettet, `api.vadkul.se`, App Check (monitor→enforce); auth, stjärnor, påminnelser, user-events, push-tokens, kontoradering | funktionsparitet med inloggad webb (minus boost) |
 | **4. Lansering** | butiksmaterial, App Privacy/Data Safety-deklarationer, granskning, mejlet "ditt event är ute → boosta på webben" | live i App Store + Play |
 | **5. Webbmigrering** | web-services → API:t, callables pensioneras | lågprio, städfas |
@@ -283,15 +283,20 @@ Beslut som prövats mot alternativ och HÅLLIT — så resonemangen inte tappas 
 
 ## 9. Öppna frågor (avgörs innan respektive fas)
 
-1. **Kontraktsdelningen — beslutspunkt SKÄRPT under fas 0 (25/9):** GitHub Packages
-   kräver att npm-scopet matchar repo-ägaren — `@vadkul/kontrakt` kan alltså INTE
-   publiceras dit utan att döpas om till `@josefanderberg/kontrakt`. Tre vägar:
-   (a) **publikt npmjs under gratis `@vadkul`-org** — rekommenderas: innehållet är
+1. **Kontraktsdelningen — ✅ BESLUTAD 25/9 kväll (Josef: "jaaa kör vidare"):
+   publikt npmjs under gratis `@vadkul`-org** (väg a). Skälen höll: innehållet är
    inte hemligt (slug-algoritmen ligger redan i webbens publika bundle), namnet
-   behålls, EAS behöver ingen auth alls; (b) GitHub Packages med ägar-scope
-   (namnbyte + läs-PAT i EAS); (c) codegen-synk från OpenAPI-specen. Josef väljer
-   inför fas 2 — koden är opåverkad tills dess (workspace-namnet funkar internt
-   oavsett).
+   behålls, EAS behöver ingen auth alls. Paketet publiceras som **TS-källa**
+   (main → `src/index.ts`) — enda registry-konsumenten är Expo-appen, vars Metro
+   transpilerar TS i node_modules precis som den redan gör via `file:`-länken;
+   web/functions fortsätter läsa workspace-källan. Ingen dist-/build-kedja =
+   inget stale-dist-fotgevär. package.json är publiceringsklar (`files`,
+   `publishConfig.access: public`, `license: UNLICENSED` — publik att installera,
+   inga rättigheter utdelade; byt om annan licens önskas). **Publicering:** Josef
+   skapar `vadkul`-orgen på npmjs.com; sedan `cd packages/kontrakt && npm publish`
+   (inloggad, eller med NPM_TOKEN). Därefter byter appen `file:../packages/kontrakt`
+   → `^0.1.0`. Ny kontraktsändring = versionsbump + publish; web/functions märker
+   inget.
 2. **CARTO-villkoren för mobil** — verifiera innan fas 2 att direktvisning i app
    ryms i basemap-villkoren (webbens §9.c.i-fall). Reservvägen (egna Sverige-kakel)
    finns redan, se §6.
