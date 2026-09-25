@@ -25,6 +25,33 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 21.47594,
         note: 'Bio 3:an, Hamngatan 52 (Småstaden), Piteå — rapport 27/8, Saga-salongen låg i skogen',
     },
+    {
+        // Speglar scraper-raden 10/9 (saknades här tills 25/9).
+        names: [
+            'Kollektivet Livet', 'Kollektivet Livet, Stockholm',
+            'Kollektivet Livet Bar & Scen',
+            'Kollektivet Livet (Lilla Scen)', 'Lilla Scen, Kollektivet Livet',
+            'Kollektivet Livet (Stora scen)', 'Stora Scen, Kollektivet Livet',
+            'Stora scen, Kollektivet Livet',
+            'Kollektivet Livet (KL Terrassen)', 'KL Terrassen, Kollektivet Livet',
+            'Hallen, Kollektivet Livet',
+        ],
+        city: 'Stockholm',
+        lat: 59.31931,
+        lng: 18.07831,
+        note: 'Kollektivet Livet, Stadsgårdsleden 19 (OSM-POI) — rapport 10/9, tre källor spretade Slussen↔Fotografiska',
+    },
+    {
+        // Kulturhuset Väven i Umeå. FB-rapport 25/9 (Skönsmon-gruppen): "Väven"
+        // ur Sundsvalls sök-kö geokodades till en namne i Sundsvall (62.4067,
+        // 17.3348) och "Program i Väven" till Karlstads mittpunkt. Bara
+        // Umeå-huset heter så.
+        names: ['Väven', 'Program i Väven'],
+        city: 'Umeå',
+        lat: 63.8256568,
+        lng: 20.2630745,
+        note: 'Kulturhuset Väven, Umeå — FB-rapport 25/9 (Skönsmon), "Väven" ur Sundsvalls-kön fick en namne i Sundsvall',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */

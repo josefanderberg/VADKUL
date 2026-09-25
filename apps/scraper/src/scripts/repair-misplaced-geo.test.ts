@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveExpectedCity } from './repair-misplaced-geo';
+import { deriveExpectedCity, deriveExpectedCityWithSource } from './repair-misplaced-geo';
 
 describe('deriveExpectedCity', () => {
     it('församlings-mönstret vinner: "kyrka, X församling" → ort', () => {
@@ -55,5 +55,38 @@ describe('deriveExpectedCity', () => {
         expect(deriveExpectedCity('Sandviken 130, 832 93 Frösön, Sweden', null, null)).toBeNull();
         // …men "Storgatan 5, Sandviken" pekar på staden.
         expect(deriveExpectedCity('Storgatan 5, Sandviken', null, null)).toBe('Sandviken');
+    });
+});
+
+describe('deriveExpectedCityWithSource (titeln som sista utväg — FB-turnéklassen)', () => {
+    it('fältvägarna vinner alltid; titeln flaggas fromTitle', () => {
+        // Skönsmon-rapporten 25/9: "Umeå, Väven" felplacerad i Sundsvall.
+        expect(deriveExpectedCityWithSource(
+            'Väven', null, 'Väven', 'Christoffer Nyqvist - Lejonet Från Norden - Umeå, Väven',
+        )).toEqual({ city: 'Umeå', fromTitle: true });
+        // locationName-stad slår titeln (och flaggas inte).
+        expect(deriveExpectedCityWithSource(
+            'Stadsparken, Örebro', null, null, 'Konsert – Umeå',
+        )).toEqual({ city: 'Örebro', fromTitle: false });
+    });
+
+    it('två städer i titeln = tvetydigt, ingen titel = fältvägarna avgör', () => {
+        expect(deriveExpectedCityWithSource(null, null, 'Uppsamlingsplats', 'Buss Göteborg – Malmö')).toBeNull();
+        expect(deriveExpectedCityWithSource('Sockenstugan', null, null, null)).toBeNull();
+    });
+
+    it('församlingssegment behåller sin "aldrig vidare till svagare signal"-regel', () => {
+        // Okänd småorts-församling → avbrott, även när titeln nämner en stad.
+        expect(deriveExpectedCityWithSource(
+            'Skärhamns kyrka, Stenkyrka församling', null, null, 'Utflykt till Göteborg',
+        )).toBeNull();
+    });
+
+    it('bortalagstitlar ger kandidat — huvudloopens korroborering är skyddet', () => {
+        // "Timrå IK – Skellefteå AIK" (SCA Arena, Timrå): Skellefteå blir
+        // kandidat men fromTitle=true tvingar reverse-korroborering + no-zero.
+        expect(deriveExpectedCityWithSource(
+            'SCA Arena', null, 'SCA Arena', 'Timrå IK – Skellefteå AIK',
+        )).toEqual({ city: 'Skellefteå', fromTitle: true });
     });
 });
