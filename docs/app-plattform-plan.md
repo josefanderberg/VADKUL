@@ -105,8 +105,10 @@ faserna): <https://claude.ai/artifact/2kqp9fZWjCuuLQ9kwao4pn>.
   Edge-portabel — flyttar vi till Cloud Run senare följer koden med orörd.
 - **Firebase Auth** (finns redan) — appen och webben skickar ID-token i
   `Authorization: Bearer`. Middleware verifierar med Admin SDK.
-- **Firebase App Check** med enforcement — Play Integrity (Android), App Attest (iOS),
-  reCAPTCHA Enterprise (web). Strimlar bort skriptad missbrukstrafik.
+- **Firebase App Check** — Play Integrity (Android), App Attest (iOS), reCAPTCHA
+  Enterprise (web). Körs i **monitor-läge först** (metrics utan block) och slås
+  över till enforcement när riktiga klienter bevisat passerar — enforcement dag 1
+  låser ute varje felkonfigurerad klient utan felmeddelande.
 
 ### 3.3 Endpoints (v1)
 
@@ -144,7 +146,7 @@ aggregat. Appen laddar sin region + delta-uppdaterar. Ingen ändring i skrapning
 | API1/API5 (BOLA/BFLA) | Ägarskapskontroll i domänlagret på varje objekt-endpoint (`uid === resource.ownerUid`), aldrig bara i Firestore rules. Admin-roller via custom claims, inte mejllistor i klientkod. |
 | API2 (broken auth) | Enbart Firebase ID-token-verifiering server-side; ingen egen sessionshantering. Korta token-TTL:er sköts av SDK:t. |
 | API3 (excessive data) | Svar byggs ur zod-**output**-scheman — fält som inte står i schemat lämnar aldrig servern. Inga PII i aggregat (publika filer!). |
-| API4 (rate limiting) | App Check-enforcement + per-uid rate limit i middleware (Firestore-fri räknare: in-memory per instans + max-instances-tak; hårdare gräns på skriv-endpoints). |
+| API4 (rate limiting) | App Check + per-uid rate limit i middleware (Firestore-fri räknare: in-memory per instans + `maxInstances`-tak; hårdare gräns på skriv-endpoints). ÄRLIGT TALAT en mjuk gräns — per instans, nollas vid omstart. Medvetet vald: Firestore-räknare bryter egress-regeln och Memorystore är ny infra. Räcker ihop med App Check för v1; omprövas om missbruk syns i loggarna. |
 | API8 (injection) | zod-validering av all input; inga strängbyggda queries (Admin SDK är parametriserat); URL-fält valideras mot scheman (returnUrl-allowlisten i boost behålls). |
 | Secrets | Som idag: Functions `secrets: [...]`, aldrig i repo. App-repot har **inga** hemligheter alls — bara publika Firebase-configvärden. |
 | Mobil (MASVS) | Ingen känslig data i AsyncStorage okrypterat (expo-secure-store för tokens), certifikatspinning bedöms i fas 2, inga API-nycklar med skrivbehörighet i bundlen. |
@@ -162,6 +164,15 @@ Stegvis, aldrig big-bang — varje steg grönt (test + tsc) innan nästa:
 1. **`packages/contract` + `packages/core` skapas.** Typerna i `apps/web/src/types/index.ts`
    och de rena utils som appen behöver flyttar in; web importerar från paketen.
    `eventShareSlug.test.ts` flyttar med och ska vara grönt utan ändrade testvärden.
+   `typecheck.yml` får ett packages-steg i samma veva.
+   **DEPLOY-GOTCHA (verifierad mot firebase.json):** functions deployas med
+   `source: apps/functions` och packas ensam med egen lockfil — Cloud Build kan
+   ALDRIG lösa en workspace-dependency på `packages/contract` (`npm ci` ser inte
+   `../../packages`). Lösningen är att **bundla**: functions-bygget byter tsc →
+   esbuild så contract/core kompileras IN i `lib/` och aldrig står i runtime-
+   package.json. (Alternativet `isolate-package` prövas bara om bundlingen
+   krånglar.) Webben berörs inte — rotens lockfil täcker workspace-paket och
+   Next transpilerar dem med `transpilePackages`.
 2. **`apps/functions/src/index.ts` (~1000 rader) styckas:**
    `boost/`, `stars/`, `notifications/`, `digest/`, `api/` — `index.ts` blir bara exports.
    Ren refaktor, ingen beteendeändring; befintliga vitest-sviter låser beteendet.
@@ -177,16 +188,29 @@ inget annat i infra ändras.
 
 ## 6. App-repot (`vadkul-app`)
 
-- **Expo (managed) + TypeScript + expo-router.** EAS Build/Submit; `development`/
+- **Expo + TypeScript + expo-router.** EAS Build/Submit; `development`/
   `preview`/`production`-kanaler. OTA-uppdateringar via EAS Update för JS-fixar.
-- **Karta:** `@rnmapbox/maps` (samma Mapbox-konto/stilar som webben). Kart-UI-besluten i
-  `.claude/skills/kart-ui/` gäller även appen — borttagna features återuppstår inte där.
+  OBS: kartan, App Check och FCM är native-moduler → appen körs i en **EAS dev
+  build (custom dev client)**, aldrig i Expo Go.
+- **Karta: `@maplibre/maplibre-react-native`** — INTE Mapbox. Webben kör maplibre-gl
+  mot CARTO:s Voyager-kakel med vår nöjesfälts-transform (CLAUDE.md:s "Mapbox-karta"
+  är historisk formulering); appen använder samma transformerade stil-JSON via
+  `packages/core`. MapLibre RN är gratis — ingen MAU-prissättning alls. Direktvisning
+  av CARTO-kakel för besökare är samma §9.c.i-fall som webben; skulle mobilvillkor
+  eller volym bli ett problem finns reservvägen redan byggd: egna Sverige-kakel
+  (`sweden.pmtiles`, se docs/kartbilder.md) bakom en kakel-endpoint. Kart-UI-besluten
+  i `.claude/skills/kart-ui/` gäller även appen — borttagna features återuppstår inte.
 - **State/data:** TanStack Query mot CDN-aggregaten + API:t; favoriter/stjärnor cacheas
   lokalt (offlineläge = appens mervärde). Ingen Firestore-SDK i appen — allt via API:t
   (mindre bundle, ingen rules-yta att underhålla, egress-kontrollen kvar på servern).
-- **Auth:** Firebase Auth (Apple/Google-inloggning krävs av butikerna om inloggning finns).
-- **Push:** FCM/APNs via befintliga `sendPushNotification`/digest-funktionerna;
-  token-registrering via `/v1/me/push-tokens`.
+- **Auth:** Firebase Auth via `@react-native-firebase/auth`; Sign in with Apple är
+  OBLIGATORISK på iOS så fort Google-inloggning finns (App Store-regel 4.8).
+- **Push: `@react-native-firebase/messaging`** — appens tokens landar i samma
+  `fcmTokens`-samling som webbens, så hela befintliga sändkedjan
+  (`sendPushToUser`/digest, `admin.messaging().sendEachForMulticast`) funkar orörd
+  för båda klienterna. Registrering via `/v1/me/push-tokens`. Expos egen push-tjänst
+  (expo-notifications-tokens) valdes bort: den hade gett en ANDRA sändväg att
+  underhålla parallellt med FCM.
 - **Butiksgranskning (regel 4.2):** appens egenvärde = push nära dig, offline-favoriter,
   native karta — inte ett webbskal. Ingen köpyta, inga priser, ingen "boost"-text.
 - **CI:** typecheck + vitest på ren logik + EAS-bygge på tag. Egen `CLAUDE.md` med
@@ -209,12 +233,30 @@ Fas 0–1 är rena PR:ar i det här repot och kan börja direkt. App-repot skapa
 
 ---
 
-## 8. Öppna frågor (avgörs innan respektive fas)
+## 8. Övervägda alternativ (granskningsrundan 25/9)
 
-1. **Mapbox-kostnad i app** — mobile SDK har egen prissättning (MAU-baserad); räkna på
-   det innan fas 2, annars MapLibre + egna tiles som fallback.
-2. **GitHub Packages vs. enklare delning** — om privat npm känns tungt för en person:
-   alternativet är att appen vendorerar en genererad klient från OpenAPI-specen.
-   Beslut i fas 0.
+Beslut som prövats mot alternativ och HÅLLIT — så resonemangen inte tappas bort:
+
+| Beslut | Alternativ som vägdes | Varför alternativet föll |
+|---|---|---|
+| Två repon | Allt-i-ett-monorepo (Expo stöder workspaces numera) | Går tekniskt, men nattdatapusharna/CI-filtren, butiksreleasetakten och vadkulyt-precedensen väger tyngre än bekvämare delning; delningskostnaden är begränsad till kontraktspaketen. |
+| Hono på Functions v2 | Next.js route handlers (`app/api` finns redan) | Kopplar appens API till webbens deploy och den ömtåliga firebase-frameworks-bundlen (sharp-incidenten 23–26/8 i CLAUDE.md), tunga cold starts. |
+| — | Cloud Run direkt | Functions v2 ÄR Cloud Run under huven; Hono gör koden flyttbar den dagen det behövs. Ingen ny deploy-pipeline nu. |
+| REST + zod/OpenAPI | tRPC | Trevlig DX men låser varje framtida klient till TS + tRPC-runtime; REST med genererad spec åldras bättre. |
+| FCM i appen | Expos push-tjänst | Expo-tokens hade krävt en andra sändväg bredvid befintliga FCM-kedjan. |
+| MapLibre RN | `@rnmapbox/maps` | Ursprungsplanen antog fel att webben körde Mapbox — det gör den inte. MapLibre RN är gratis och tar vår befintliga stil rakt av. |
+
+## 9. Öppna frågor (avgörs innan respektive fas)
+
+1. **Kontraktsdelningen — BESLUT: GitHub Packages** (privat npm, semver). EAS-byggen
+   behöver då en `.npmrc` + läs-PAT som EAS-secret — litet engångskrångel, men
+   versionerad delning är grunden som håller. Dokumenterad reservväg om det skaver:
+   generera klienten ur OpenAPI-specen (`openapi-typescript`) med ett synk-skript i
+   app-repot. Omprövas tidigast efter fas 2.
+2. **CARTO-villkoren för mobil** — verifiera innan fas 2 att direktvisning i app
+   ryms i basemap-villkoren (webbens §9.c.i-fall). Reservvägen (egna Sverige-kakel)
+   finns redan, se §6.
 3. **Domän:** `api.vadkul.se` som eget Hosting-site eller rewrite på huvudsajten.
-4. **Android-push-nivå** — bara FCM via Expo, eller notifee för rikare notiser. Fas 3.
+   Avgörs i fas 1 — eget site ger renare cache-regler.
+4. **Android-push-nivå** — räcker FCM-notiser rakt av, eller behövs notifee för
+   rikare notiser. Fas 3.
