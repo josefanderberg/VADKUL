@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Lock, Users, Flag, Map as MapIcon } from 'lucide-react';
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
@@ -2331,7 +2331,10 @@ export default function V2Map({
         if (!map || !symbolsPainted || !chromeHidden) return;
         const wait = AMBIENT_SLOW_MIN_MS - (performance.now() - ambientStartRef.current.at);
         const timer = setTimeout(() => {
-            if (!ambientZoomActiveRef.current || !map.isEasing()) return;
+            // v6: isEasing() vidarebefordras inte längre av Map — isZooming()
+            // täcker ambient-fallet (rörelsen ÄR en zoom-ease, och en
+            // användargest har redan släckt ambientZoomActiveRef).
+            if (!ambientZoomActiveRef.current || !map.isZooming()) return;
             const dz = ambientStartRef.current.target - map.getZoom();
             const r1 = AMBIENT_ZOOM_IN / (AMBIENT_SLOW_MS / 1000);   // zoom/s nu
             const r2 = AMBIENT_ZOOM_IN / (AMBIENT_FAST_MS / 1000);   // zoom/s efter rampen
@@ -2747,9 +2750,12 @@ export default function V2Map({
         // Skyddsnät: pekar en feature i källan på en bild som aldrig bakats
         // (t.ex. en push vars bakning avbröts i skarven) bakar vi den på
         // begäran i stället för att brickan blir osynlig med etiketten kvar.
-        map.on('styleimagemissing', (e) => {
+        // v6: 'styleimagemissing'-EVENTET är numera notify-only och fyrar
+        // först när det redan är för sent — resolvern är den enda vägen att
+        // leverera bilden till den pågående requesten.
+        map.setMissingStyleImageResolver((id) => {
             const m = mapRef.current;
-            if (m) bakeSingleIconRef.current(m, e.id);
+            if (m) bakeSingleIconRef.current(m, id);
         });
         // Dev-handtag för felsökning i konsolen (aldrig i produktion).
         if (process.env.NODE_ENV === 'development') {

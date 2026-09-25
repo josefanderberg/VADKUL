@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 
 // useLayoutEffect varnar vid SSR — komponenten är klient-only, men Next
 // pre-renderar ändå trädet en gång. Faller tillbaka på useEffect på servern.
