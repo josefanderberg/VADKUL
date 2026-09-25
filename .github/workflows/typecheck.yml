@@ -52,6 +52,29 @@ jobs:
       - run: npm test
         working-directory: apps/functions
 
+  # RÖKTEST (efter prodstoppet 25/9: maplibre 6-workern skeppades aldrig av
+  # webpack — tsc/tester/bygget var gröna men kartan död i prod). Bygger
+  # sajten, startar den och låter riktig Chromium ladda kartan: worker-filerna
+  # ska svara 200 med JS-MIME, inga kartfel i konsolen, canvas i DOM.
+  # Fångar hela klassen "grönt bygge, död sida" FÖRE merge.
+  roktest-karta:
+    name: Röktest karta (Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run build
+        working-directory: apps/web
+      - run: node scripts/roktest-karta.mjs
+        working-directory: apps/web
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+
   typecheck-web:
     name: Web (tsc)
     runs-on: ubuntu-latest
