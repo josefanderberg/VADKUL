@@ -343,3 +343,41 @@ export interface EventWish {
   expiresAt: Date;
   fulfilled?: boolean;
 }
+// ─── APP-FLÖDET (plattformsplanen fas 1) ────────────────────────────────────
+
+/**
+ * Ett event i appens per-region-flöde — serveras CDN-cachat av
+ * /api/events/app-<region> (blob-only, byggt nattligen av scrapern).
+ *
+ * SPEGEL av apps/scraper/src/utils/appFeed.ts (scrapern kan inte importera
+ * workspace-paket — dess CI kör npm ci standalone). Ändras fälten där MÅSTE
+ * den här följa med.
+ */
+export interface AppFeedEvent {
+    /** Käll-URL:en — primärnyckel OCH utlänken (som destinations `id`). */
+    id: string;
+    title: string;
+    time: string;
+    endDate?: string;
+    hasSpecificTime: boolean;
+    lat: number;
+    lng: number;
+    locationName?: string;
+    category: EventCategoryType | string;
+    emoji?: string;
+    pop?: true;
+    /** Omslagsbild (joinad från cards-lagret). */
+    img?: string;
+    /** Bara när länken skrivits om (~2 % av eventen) — annars ÄR id länken. */
+    url?: string;
+}
+
+/** Svarskroppen från /api/events/app-<region>. */
+export interface AppFeedPayload {
+    updatedAt: string;
+    /** Län-slug ur CITIES (cityUtils) — t.ex. 'stockholm', 'skane'. */
+    region: string;
+    /** Flödets horisont i dagar (14 — samma fönster som kartan laddar). */
+    days: number;
+    events: AppFeedEvent[];
+}

@@ -6,6 +6,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { getAdminDb } from '@/lib/firestore-admin';
 import { applyVenueFixInPlace } from '@/data/venueFixes';
+import { CITIES } from '@/lib/cityUtils';
 
 /**
  * CDN-cachad utlämning av event-aggregaten (destinations/cards/descriptions).
@@ -25,6 +26,15 @@ import { applyVenueFixInPlace } from '@/data/venueFixes';
 export const dynamic = 'force-dynamic';
 
 const LAYERS = new Set(['destinations', 'cards', 'descriptions']);
+
+/**
+ * APP-FLÖDETS lager (plattformsplanen fas 1): app-<region> för varje län i
+ * CITIES — slimmade per-region-payloader som appen hämtar i stället för hela
+ * destinations. BLOB-ONLY: scrapern laddar upp förpackade blobbar nattligen
+ * (utils/appFeed i scrapern); indexdokumentet bär bara metadata, så det finns
+ * ingen JSON-byggväg — saknas blobben svarar vi 503 och nästa natt läker.
+ */
+const APP_LAYERS = new Set(CITIES.map(c => `app-${c.region}`));
 
 const CACHE_HEADERS = {
     'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
@@ -169,7 +179,7 @@ export async function GET(
     { params }: { params: Promise<{ layer: string }> },
 ) {
     const { layer } = await params;
-    if (!LAYERS.has(layer)) {
+    if (!LAYERS.has(layer) && !APP_LAYERS.has(layer)) {
         return NextResponse.json({ error: 'Okänt lager' }, { status: 404 });
     }
     // Tidsfönster-slice: bara för destinations och bara när BÅDA gränserna är
@@ -229,6 +239,17 @@ export async function GET(
                     writeFile(diskPath(layer, updatedAt, e), enc[e]).catch(() => { /* cache är bara en genväg */ });
                 }
             }
+        }
+
+        // App-lagren är blob-only: indexdokumentet bär bara metadata (ingen
+        // events-array), så bygg-vägen nedan hade serverat metadatat som
+        // payload. Utan blob → 503 utan cache; klienten försöker igen och
+        // nästa nattaggregat läker.
+        if (!entry && APP_LAYERS.has(layer)) {
+            return NextResponse.json(
+                { error: 'App-flödet är inte byggt ännu' },
+                { status: 503, headers: { 'Cache-Control': 'no-store' } },
+            );
         }
 
         if (!entry) {

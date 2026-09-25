@@ -139,13 +139,28 @@ Data Safety-deklaration. Den byggs i fas 3, inte som eftertanke i granskningskö
 Befintliga callables (`placeStar`, `redeemCode`, …) lever parallellt tills webben
 migrerats; inga dubbla sanningar — callablen och endpointen delar domänfunktion.
 
-### 3.4 Aggregat: en app-brygga, inte en ombyggnad
+### 3.4 Aggregat: en app-brygga, inte en ombyggnad — ✅ BYGGD (fas 1, 25/9)
 
-`events-cards.json` är 11 MB — okej för webben (cachas, streamas), för tungt som
-mobil-payload. Nytt steg i befintliga aggregatjobbet (scraper-repot, samma nattkedja):
-**`events-app-feed.json` per stad/region**, slimmad fältlista (id, titel, tid, plats,
-koordinater, bild-thumb, boost-flagga). Skrivs till samma whitelist-mapp som övriga
-aggregat. Appen laddar sin region + delta-uppdaterar. Ingen ändring i skrapningen själv.
+Destinations-lagret är 21 MB — okej för webben (cachas, streamas), för tungt som
+mobil-payload. **Byggt så här** (viktig kurskorrigering under implementationen:
+statiska filer i `public/` når prod bara vid DEPLOY — nattens data når produktionen
+via blob-vägen, så flödet går samma väg som huvudlagren):
+
+- **`utils/appFeed.ts` i scrapern**: per-region-payloader (län-slug ur CITIES,
+  region = närmaste stadens län, haversine utan radietak). Fält: id, titel, tid,
+  ev. slutdatum, koordinater, plats, kategori, emoji, pop, bild (joinad ur cards
+  via eventKey). **Horisont 14 dagar** — samma fönster som kartan laddar; 30 dagar
+  sprängde 200 kB-målet för storstadsregionerna (Sthlm 277 kB br), 14 klarar det.
+- **Nattkedjans `aggregate` laddar upp dem som förpackade blobbar** (brotli q11 +
+  gzip, `uploadPrepackedBlobs`) + ett metadatadokument per region. Inga statiska
+  filer, ingen git-churn, inga workflow-ändringar — minin behöver bara `git pull`.
+- **`/api/events/app-<region>`**: befintliga CDN-routen utökad med app-lagren,
+  BLOB-ONLY (utan blob → 503 no-store; nästa natt läker). Regionlistan härleds ur
+  CITIES — ingen egen sanning.
+- **Uppmätt på skarpa datat 25/9**: 23 430 event i 20 regioner, största regionen
+  (Västra Götaland) **198 kB brotli** — alla under 200 kB-målet. ✓
+- Boost-flagga ingår INTE (aggregatet bär inte boost och nattens fil hade missat
+  dagens köp) — appen får boost via API:t i fas 3. Beskrivningar hämtas per event.
 
 ---
 
@@ -237,8 +252,8 @@ ingen API-yta står och skräpar utan anropare.
 
 | Fas | Innehåll | Klart när |
 |---|---|---|
-| **0. Kontrakt** | `packages/kontrakt`, typflytt, functions-styckning (esbuild-bundling) | allt grönt, webben oförändrad i beteende |
-| **1. App-flödet** | slimmat per-region-aggregat i befintliga nattkedjan (+ minins whitelist + deploy.yml-ignore) | curl mot prod-CDN ger regionflöde < 200 kB |
+| **0. Kontrakt** ✅ 25/9 | `packages/kontrakt`, typflytt, functions-styckning (esbuild-bundling) | allt grönt, webben oförändrad i beteende ✓ |
+| **1. App-flödet** ✅ 25/9 | slimmat per-region-flöde som blobbar i befintliga nattkedjan + `/api/events/app-<region>` (se §3.4) | uppmätt lokalt: alla regioner < 200 kB br ✓ — curl mot prod kvitteras efter merge + deploy + nästa nattaggregat |
 | **2. App-MVP** | vadkul-app-repot: karta + flöde + eventkort + djuplänkar (`/e/`-slugs via `@vadkul/kontrakt`; AASA/assetlinks.json upp på vadkul.se — finns inte idag) | intern TestFlight |
 | **3. API + Konton** | Hono-skelettet, `api.vadkul.se`, App Check (monitor→enforce); auth, stjärnor, påminnelser, user-events, push-tokens, kontoradering | funktionsparitet med inloggad webb (minus boost) |
 | **4. Lansering** | butiksmaterial, App Privacy/Data Safety-deklarationer, granskning, mejlet "ditt event är ute → boosta på webben" | live i App Store + Play |
