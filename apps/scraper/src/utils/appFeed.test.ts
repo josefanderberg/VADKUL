@@ -4,8 +4,8 @@ import * as path from 'path';
 import { eventKey } from './eventKey';
 import { parseCities, nearestRegion, buildAppFeeds } from './appFeed';
 
-describe('parseCities mot RIKTIGA cityUtils.ts', () => {
-    const src = fs.readFileSync(path.resolve(__dirname, '../../../web/src/lib/cityUtils.ts'), 'utf-8');
+describe('parseCities mot RIKTIGA kontrakt/cities.ts', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../../../packages/kontrakt/src/cities.ts'), 'utf-8');
     const cities = parseCities(src);
 
     it('läser hela stadslistan (formatdrift ger färre)', () => {

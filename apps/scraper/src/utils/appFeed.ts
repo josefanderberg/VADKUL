@@ -54,8 +54,8 @@ export interface AppFeedEvent {
 export const APP_FEED_DAYS = 14;
 
 /**
- * Läs CITIES ur webbens cityUtils.ts som TEXT — samma regex-över-paketgränsen-
- * trick som seed-venues-overpass/schedule-city-posts. cityUtils förblir enda
+ * Läs CITIES ur kontraktets cities.ts som TEXT — samma regex-över-paketgränsen-
+ * trick som seed-venues-overpass/schedule-city-posts. cities.ts förblir enda
  * sanningskällan; testet mot riktiga filen fångar formatdrift. Läser bara
  * raderna i CITIES-arrayen (fram till dess avslutande `];`).
  */
@@ -76,7 +76,7 @@ export function parseCities(srcText: string): AppFeedCity[] {
 /** Webbens ortlista, läst från källfilen. Kastar om formatet driftat (hellre
  *  ett tydligt nattloggs-fel än ett tomt appflöde i produktion). */
 export function loadCities(): AppFeedCity[] {
-    const p = path.resolve(__dirname, '../../../web/src/lib/cityUtils.ts');
+    const p = path.resolve(__dirname, '../../../../packages/kontrakt/src/cities.ts');
     const cities = parseCities(fs.readFileSync(p, 'utf-8'));
     if (cities.length < 30) {
         throw new Error(`appFeed: bara ${cities.length} städer lästa ur cityUtils.ts — formatdrift?`);

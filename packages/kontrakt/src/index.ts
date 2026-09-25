@@ -11,5 +11,6 @@
  * Native. Firestores Timestamp speglas strukturellt (se types.ts).
  */
 export * from './types';
+export * from './cities';
 export * from './categories';
 export * from './eventShareSlug';
