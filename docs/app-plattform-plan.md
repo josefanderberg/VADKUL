@@ -283,11 +283,15 @@ Beslut som prövats mot alternativ och HÅLLIT — så resonemangen inte tappas 
 
 ## 9. Öppna frågor (avgörs innan respektive fas)
 
-1. **Kontraktsdelningen — BESLUT: GitHub Packages** (privat npm, semver). EAS-byggen
-   behöver då en `.npmrc` + läs-PAT som EAS-secret — litet engångskrångel, men
-   versionerad delning är grunden som håller. Dokumenterad reservväg om det skaver:
-   generera klienten ur OpenAPI-specen (`openapi-typescript`) med ett synk-skript i
-   app-repot. Omprövas tidigast efter fas 2.
+1. **Kontraktsdelningen — beslutspunkt SKÄRPT under fas 0 (25/9):** GitHub Packages
+   kräver att npm-scopet matchar repo-ägaren — `@vadkul/kontrakt` kan alltså INTE
+   publiceras dit utan att döpas om till `@josefanderberg/kontrakt`. Tre vägar:
+   (a) **publikt npmjs under gratis `@vadkul`-org** — rekommenderas: innehållet är
+   inte hemligt (slug-algoritmen ligger redan i webbens publika bundle), namnet
+   behålls, EAS behöver ingen auth alls; (b) GitHub Packages med ägar-scope
+   (namnbyte + läs-PAT i EAS); (c) codegen-synk från OpenAPI-specen. Josef väljer
+   inför fas 2 — koden är opåverkad tills dess (workspace-namnet funkar internt
+   oavsett).
 2. **CARTO-villkoren för mobil** — verifiera innan fas 2 att direktvisning i app
    ryms i basemap-villkoren (webbens §9.c.i-fall). Reservvägen (egna Sverige-kakel)
    finns redan, se §6.
