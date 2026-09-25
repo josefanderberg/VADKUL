@@ -261,6 +261,7 @@ Beslut som prövats mot alternativ och HÅLLIT — så resonemangen inte tappas 
 | — | Cloud Run direkt | Functions v2 ÄR Cloud Run under huven; Hono gör koden flyttbar den dagen det behövs. Ingen ny deploy-pipeline nu. |
 | REST + zod/OpenAPI | tRPC | Trevlig DX men låser varje framtida klient till TS + tRPC-runtime; REST med genererad spec åldras bättre. |
 | FCM i appen | Expos push-tjänst | Expo-tokens hade krävt en andra sändväg bredvid befintliga FCM-kedjan. |
+| React Native (Expo) | Swift/SwiftUI native | Swift är bara iOS — Sverige är ~hälften Android, så native betyder TVÅ kodbaser (Swift + Kotlin) i språk vi inte skriver, noll återanvändning av kontraktet/zod/React-tänket. Kartmotorn är native C++ i BÅDA fallen (MapLibre RN wrappar maplibre-native), så prestandan där är samma. Native blir rätt först om appen behöver det RN inte når (widgets som huvudfeature, AR, extrema animationer) — inget av det är på kartan. |
 | MapLibre RN | `@rnmapbox/maps` | Ursprungsplanen antog fel att webben körde Mapbox — det gör den inte. MapLibre RN är gratis och tar vår befintliga stil rakt av. |
 | Ett kontraktspaket | Två (`contract` + `core`) | Båda klienterna behövde båda; ett paket = en version, en publish, en `.npmrc`-rad. Delas först när ett beroende faktiskt skiljer dem. |
 | API:t byggs i fas 3 | API-läs som fas 1 | MVP:n läser CDN — feed-endpoints hade varit en andra väg till samma data, och API-ytan hade stått utan konsument tills kontona kom. |
