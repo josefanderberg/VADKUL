@@ -33,7 +33,7 @@ mobilappen (React Native/Expo), och det här repot som fortsatt hem för webben 
 
 | Repo | Innehåll | Deploy |
 |---|---|---|
-| `josefanderberg/VADKUL` (detta) | `apps/web`, `apps/scraper`, `apps/functions` (inkl. nya API:t), `packages/contract`, `packages/core`, `infra/` | Firebase Hosting + Functions, som idag |
+| `josefanderberg/VADKUL` (detta) | `apps/web`, `apps/scraper`, `apps/functions` (inkl. nya API:t), `packages/kontrakt`, `infra/` | Firebase Hosting + Functions, som idag |
 | `josefanderberg/vadkul-app` (nytt) | Expo-appen | EAS Build → TestFlight / Play Console |
 
 **Varför inte allt i ett monorepo?** Expo/Metro i npm-workspaces är känt hoisting-krångel,
@@ -41,16 +41,20 @@ appens releasetakt är butiksgranskningens (dagar), inte webbens (minuter), och 
 nattliga data-pushar + GitHub Actions ska inte trigga app-CI. Precedens finns redan:
 `vadkulyt/` är ett eget repo av samma skäl.
 
-**Hur delas kod då?** Via `packages/` i det här repot (workspaces-fältet pekar redan på
-`packages/*`, mappen har bara aldrig skapats):
+**Hur delas kod då?** Via **ETT paket** i det här repot (workspaces-fältet pekar redan
+på `packages/*`, mappen har bara aldrig skapats):
 
-- **`packages/contract`** — API-kontraktet: TypeScript-typer + zod-scheman för varje
-  endpoint och för aggregatformaten (events-cards m.fl.). Publiceras som
-  `@vadkul/contract` till GitHub Packages (privat npm) med semver. Appen installerar den
-  som vanligt beroende; web/functions använder den via workspace.
-- **`packages/core`** — ren, React-fri logik som båda klienterna behöver:
-  `eventShareSlug` (GULDTESTET flyttar med), datum-/stadslogik, feed-filtrering.
-  Samma publiceringsväg.
+- **`packages/kontrakt`** (`@vadkul/kontrakt`) — allt som är kontrakt mellan
+  klienterna: TypeScript-typer + zod-scheman för endpoints och aggregatformat, OCH
+  den rena React-fria logik båda klienterna behöver (`eventShareSlug` — GULDTESTET
+  flyttar med — datum-/stadslogik, feed-filtrering). Slug-formatet och datumreglerna
+  ÄR kontrakt, precis som schemana. Publiceras till GitHub Packages (privat npm)
+  med semver; appen installerar det som vanligt beroende, web/functions använder
+  det via workspace. Subpath-exports (`@vadkul/kontrakt/core`) om det växer.
+
+  *(Granskningsrundan 25/9 slog ihop de ursprungliga två paketen contract + core:
+  båda klienterna behövde båda, och ett paket = en version att bumpa, en publish,
+  en rad i .npmrc. Dela först den dag ett beroende faktiskt skiljer dem åt.)*
 
 Kontraktspaketet är **enda** kopplingen mellan repona. Ingen kod kopieras för hand,
 inga git-submoduler.
@@ -66,13 +70,12 @@ inga git-submoduler.
 │   │       ├── routes/v1/  middleware/  domain/
 │   └── scraper/                   pipelinen, orörd              [detta repo]
 ├── packages/                      NYTT — delningsytan
-│   ├── contract/                  API-typer + zod-scheman
-│   └── core/                      ren logik (eventShareSlug m.m.)
+│   └── kontrakt/                  API-typer + zod-scheman + ren logik (eventShareSlug m.m.)
 ├── docs/  infra/  scripts/                                      [detta repo]
 ├── vadkulyt/                      eget repo, git-ignorerat (som idag)
 └── vadkul-app/                    NYTT eget repo, git-ignoreras likadant
     ├── app/                       expo-router-skärmar
-    └── src/ (features/ api/ ui/)  installerar @vadkul/contract + @vadkul/core
+    └── src/ (features/ api/ ui/)  installerar @vadkul/kontrakt
 ```
 
 Samma upplägg som `vadkulyt/` alltså: appen ligger *i* projektmappen för enkel åtkomst
@@ -87,12 +90,12 @@ faserna): <https://claude.ai/artifact/2kqp9fZWjCuuLQ9kwao4pn>.
 ### 3.1 Principer
 
 1. **Läsning är CDN, skrivning är API.** Kartan/flödet i appen läser samma aggregat-
-   JSON:er som webben, via Hosting/CDN (`vadkul.se/events-cards.json` → på sikt
-   `api.vadkul.se/v1/feed/...` med CDN-cache framför). Noll Firestore-reads per klient
-   för flödet — det är det som gör driftkostnaden överlevbar (se CLAUDE.md).
+   JSON:er som webben, via Hosting/CDN — de statiska filerna ÄR läskontraktet och
+   får aldrig en API-spegel (se 3.3). Noll Firestore-reads per klient för flödet —
+   det är det som gör driftkostnaden överlevbar (se CLAUDE.md).
 2. **Versionerat från dag 1:** allt under `/v1/`. Appbutiksklienter kan inte tvångs-
    uppdateras; `/v1` fryses i beteende, brytande ändringar blir `/v2`.
-3. **Ett kontrakt, en sanning:** varje endpoint har zod-schema i `packages/contract`.
+3. **Ett kontrakt, en sanning:** varje endpoint har zod-schema i `packages/kontrakt`.
    Servern validerar in/ut med samma schema som klienten typar mot. OpenAPI-spec
    genereras ur zod-schemana (`zod-openapi`) — dokumentation kan aldrig ljuga.
 4. **Tunna handlers, tjock domän.** HTTP-lagret parsar/validerar/svarar; logiken bor i
@@ -112,19 +115,26 @@ faserna): <https://claude.ai/artifact/2kqp9fZWjCuuLQ9kwao4pn>.
 
 ### 3.3 Endpoints (v1)
 
-```
-GET  /v1/feed/cards           aggregat, CDN-cachad, publik (idag events-cards.json)
-GET  /v1/feed/descriptions    aggregat, CDN-cachad, publik
-GET  /v1/events/:id           ett event (för deep links/push-landning)
+**Läsdatan har inga API-endpoints alls** (granskningsrundan 25/9 strök dem):
+aggregat-JSON:erna på CDN:et ÄR läskontraktet, för webben idag och appen imorgon —
+deras format zod-schemas i `@vadkul/kontrakt` precis som API-svaren. Att spegla dem
+bakom `/v1/feed/*` hade varit en andra väg till samma data. API:t är enbart det
+autentiserade:
 
+```
 POST /v1/user-events          skapa användarevent          [auth]
 PATCH/DELETE /v1/user-events/:id  ägarens redigering        [auth, ägarskap]
 GET  /v1/me                   profil, stjärnor, egna event  [auth]
+DELETE /v1/me                 kontoradering + dataradering  [auth]  ← App Store-KRAV (5.1.1)
 PUT  /v1/me/stars/:eventId    stjärnmärk / av               [auth]
 PUT  /v1/me/reminders/:eventId påminnelse                   [auth]
-POST /v1/me/push-tokens       registrera FCM/APNs-token     [auth]
+POST /v1/me/push-tokens       registrera FCM-token          [auth]
 POST /v1/boost/checkout       wrappar createBoostCheckout   [auth]  ← anropas ENDAST av webben
 ```
+
+Kontoraderingen är inte valfri: App Store-regel 5.1.1(v) kräver radering inifrån
+appen så fort konton kan skapas, och Google Play kräver en raderingsväg i sin
+Data Safety-deklaration. Den byggs i fas 3, inte som eftertanke i granskningskön.
 
 Befintliga callables (`placeStar`, `redeemCode`, …) lever parallellt tills webben
 migrerats; inga dubbla sanningar — callablen och endpointen delar domänfunktion.
@@ -161,15 +171,15 @@ aggregat. Appen laddar sin region + delta-uppdaterar. Ingen ändring i skrapning
 
 Stegvis, aldrig big-bang — varje steg grönt (test + tsc) innan nästa:
 
-1. **`packages/contract` + `packages/core` skapas.** Typerna i `apps/web/src/types/index.ts`
-   och de rena utils som appen behöver flyttar in; web importerar från paketen.
+1. **`packages/kontrakt` skapas.** Typerna i `apps/web/src/types/index.ts`
+   och de rena utils som appen behöver flyttar in; web importerar från paketet.
    `eventShareSlug.test.ts` flyttar med och ska vara grönt utan ändrade testvärden.
    `typecheck.yml` får ett packages-steg i samma veva.
    **DEPLOY-GOTCHA (verifierad mot firebase.json):** functions deployas med
    `source: apps/functions` och packas ensam med egen lockfil — Cloud Build kan
-   ALDRIG lösa en workspace-dependency på `packages/contract` (`npm ci` ser inte
+   ALDRIG lösa en workspace-dependency på `packages/kontrakt` (`npm ci` ser inte
    `../../packages`). Lösningen är att **bundla**: functions-bygget byter tsc →
-   esbuild så contract/core kompileras IN i `lib/` och aldrig står i runtime-
+   esbuild så kontrakt-paketet kompileras IN i `lib/` och aldrig står i runtime-
    package.json. (Alternativet `isolate-package` prövas bara om bundlingen
    krånglar.) Webben berörs inte — rotens lockfil täcker workspace-paket och
    Next transpilerar dem med `transpilePackages`.
@@ -181,8 +191,8 @@ Stegvis, aldrig big-bang — varje steg grönt (test + tsc) innan nästa:
 4. **Web migrerar service för service** (`starService`, `linkEventService`, …) till API:t
    när det är stabilt — lågprio, callables funkar under tiden.
 
-Deploy-skillens whitelist och `deploy.yml` ses över i steg 3 (nya functions-exporten),
-inget annat i infra ändras.
+Minins push-whitelist och `deploy.yml`-ignoren uppdateras i fas 1 (nya aggregatfilerna);
+deploy-skillen ses över i fas 3 (nya functions-exporten). Inget annat i infra ändras.
 
 ---
 
@@ -195,7 +205,7 @@ inget annat i infra ändras.
 - **Karta: `@maplibre/maplibre-react-native`** — INTE Mapbox. Webben kör maplibre-gl
   mot CARTO:s Voyager-kakel med vår nöjesfälts-transform (CLAUDE.md:s "Mapbox-karta"
   är historisk formulering); appen använder samma transformerade stil-JSON via
-  `packages/core`. MapLibre RN är gratis — ingen MAU-prissättning alls. Direktvisning
+  `packages/kontrakt`. MapLibre RN är gratis — ingen MAU-prissättning alls. Direktvisning
   av CARTO-kakel för besökare är samma §9.c.i-fall som webben; skulle mobilvillkor
   eller volym bli ett problem finns reservvägen redan byggd: egna Sverige-kakel
   (`sweden.pmtiles`, se docs/kartbilder.md) bakom en kakel-endpoint. Kart-UI-besluten
@@ -220,16 +230,23 @@ inget annat i infra ändras.
 
 ## 7. Faser & ordning
 
+Granskningsrundan 25/9 flyttade API-bygget: **app-MVP:n behöver inget API alls**
+(den läser CDN-aggregat), så API:t byggs när dess första konsument kommer —
+kontona i fas 3 — inte en säsong i förväg. Det kortar vägen till TestFlight och
+ingen API-yta står och skräpar utan anropare.
+
 | Fas | Innehåll | Klart när |
 |---|---|---|
-| **0. Kontrakt** | `packages/contract` + `packages/core`, typflytt, functions-styckning | allt grönt, webben oförändrad i beteende |
-| **1. API-läs** | Hono-skelett, `api.vadkul.se`, feed-endpoints + app-aggregatet, App Check | curl mot prod ger regionflöde < 200 kB |
-| **2. App-MVP** | vadkul-app-repot, karta + flöde + eventkort + deep links (`/e/`-slugs via `packages/core`) | intern TestFlight |
-| **3. Konton** | auth i app, stjärnor/påminnelser/user-events via API, push-tokens | funktionsparitet med inloggad webb (minus boost) |
-| **4. Lansering** | butiksmaterial, granskning, mejlet "ditt event är ute → boosta på webben" | live i App Store + Play |
+| **0. Kontrakt** | `packages/kontrakt`, typflytt, functions-styckning (esbuild-bundling) | allt grönt, webben oförändrad i beteende |
+| **1. App-flödet** | slimmat per-region-aggregat i befintliga nattkedjan (+ minins whitelist + deploy.yml-ignore) | curl mot prod-CDN ger regionflöde < 200 kB |
+| **2. App-MVP** | vadkul-app-repot: karta + flöde + eventkort + djuplänkar (`/e/`-slugs via `@vadkul/kontrakt`; AASA/assetlinks.json upp på vadkul.se — finns inte idag) | intern TestFlight |
+| **3. API + Konton** | Hono-skelettet, `api.vadkul.se`, App Check (monitor→enforce); auth, stjärnor, påminnelser, user-events, push-tokens, kontoradering | funktionsparitet med inloggad webb (minus boost) |
+| **4. Lansering** | butiksmaterial, App Privacy/Data Safety-deklarationer, granskning, mejlet "ditt event är ute → boosta på webben" | live i App Store + Play |
 | **5. Webbmigrering** | web-services → API:t, callables pensioneras | lågprio, städfas |
 
-Fas 0–1 är rena PR:ar i det här repot och kan börja direkt. App-repot skapas i fas 2.
+Fas 0–1 är rena PR:ar i det här repot och kan börja direkt. App-repot skapas i
+fas 2. Krascher och API-fel ska synas: Crashlytics (eller Sentry) in i appen från
+fas 2, strukturerade fel-loggar i API:t från fas 3 — inga tysta haverier.
 
 ---
 
@@ -245,6 +262,8 @@ Beslut som prövats mot alternativ och HÅLLIT — så resonemangen inte tappas 
 | REST + zod/OpenAPI | tRPC | Trevlig DX men låser varje framtida klient till TS + tRPC-runtime; REST med genererad spec åldras bättre. |
 | FCM i appen | Expos push-tjänst | Expo-tokens hade krävt en andra sändväg bredvid befintliga FCM-kedjan. |
 | MapLibre RN | `@rnmapbox/maps` | Ursprungsplanen antog fel att webben körde Mapbox — det gör den inte. MapLibre RN är gratis och tar vår befintliga stil rakt av. |
+| Ett kontraktspaket | Två (`contract` + `core`) | Båda klienterna behövde båda; ett paket = en version, en publish, en `.npmrc`-rad. Delas först när ett beroende faktiskt skiljer dem. |
+| API:t byggs i fas 3 | API-läs som fas 1 | MVP:n läser CDN — feed-endpoints hade varit en andra väg till samma data, och API-ytan hade stått utan konsument tills kontona kom. |
 
 ## 9. Öppna frågor (avgörs innan respektive fas)
 
