@@ -1,0 +1,41 @@
+# Manuell functions-deploy (workflow_dispatch) — så att functions kan deployas
+# utan en lokalt firebase-inloggad maskin (t.ex. av en Claude-session via
+# API:t, eller från Actions-fliken). Samma servicekonto och firebase-tools-
+# version som hosting-deployen i deploy.yml.
+#
+# BARA functions — hosting ägs av deploy.yml, och firestore-regler deployas
+# fortsatt medvetet för hand (deploy-skillens varning: rules-filen bär ofta
+# ändringar för ännu inte deployade features).
+name: Deploya functions
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy-functions:
+    name: Functions (firebase deploy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      # Root-lockfilen täcker functions beroenden (workspaces) — samma
+      # mönster som typecheck-jobbet Kontrakt + Functions.
+      - run: npm ci
+      # Bygg = tsc --noEmit + esbuild-bundling (kontraktet bakas in i lib/).
+      # Körs explicit här; firebase.json:s predeploy kör om det — idempotent.
+      - run: npm --prefix apps/functions run build
+      - name: Deploya
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          npx firebase-tools@15.22.4 deploy --only functions --project vadkul-f2cb2 --force
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
