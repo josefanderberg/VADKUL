@@ -31,3 +31,13 @@ Hoppar man över syncen aggregerar man gammal data och undrar var de nya eventen
 - Kedjan är schemalagd 00:30 via launchd, men `StartCalendarInterval` väcker **inte** en sovande Mac — jobbet körs först vid uppvaknande. Fixen är en pmset-väckning 00:25 på minin.
 - Saknas färsk data på morgonen: kolla först om minin sov, inte koden.
 - Efter ändringar i scrapern: minin behöver `git pull` (och `npm install` vid nya beroenden) innan nästa körning — den kör sin egen kopia från `main`.
+
+## App-flödet (plattformsplanen fas 1, 25/9)
+
+`aggregate` bygger även APPENS per-region-flöde: `utils/appFeed.ts` delar upp
+destinations per län (region = närmaste stadens län ur webbens CITIES, som
+regex-läses ur `cityUtils.ts`), joinar bilder ur cards via eventKey och laddar
+upp som blobbar (`app-<region>`) + metadatadok. 14-dagarshorisont — samma
+fönster som kartan. Serveras BLOB-ONLY av `/api/events/app-<region>`; utan
+blob svarar routen 503 och nästa nattaggregat läker. Ändras fälten MÅSTE
+spegeln i `packages/kontrakt` (AppFeedEvent) följa med.

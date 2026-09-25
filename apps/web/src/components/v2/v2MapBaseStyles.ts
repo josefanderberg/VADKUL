@@ -3,7 +3,7 @@
 // stil-specar och idempotenta på/av-hjälpare som V2Map kallar. Ingen React,
 // inget komponent-state — bara MapLibre-konfiguration.
 
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 
 // Voyager, den ljusa vektor-basen. Nöjesfälts-stilen byggs genom att
 // transformera den (fetchAndTransformThemeParkStyle) — den här URL:en används
