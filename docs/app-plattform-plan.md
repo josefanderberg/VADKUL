@@ -283,15 +283,20 @@ Beslut som prövats mot alternativ och HÅLLIT — så resonemangen inte tappas 
 
 ## 9. Öppna frågor (avgörs innan respektive fas)
 
-1. **Kontraktsdelningen — beslutspunkt SKÄRPT under fas 0 (25/9):** GitHub Packages
-   kräver att npm-scopet matchar repo-ägaren — `@vadkul/kontrakt` kan alltså INTE
-   publiceras dit utan att döpas om till `@josefanderberg/kontrakt`. Tre vägar:
-   (a) **publikt npmjs under gratis `@vadkul`-org** — rekommenderas: innehållet är
+1. **Kontraktsdelningen — ✅ BESLUTAD 25/9 kväll (Josef: "jaaa kör vidare"):
+   publikt npmjs under gratis `@vadkul`-org** (väg a). Skälen höll: innehållet är
    inte hemligt (slug-algoritmen ligger redan i webbens publika bundle), namnet
-   behålls, EAS behöver ingen auth alls; (b) GitHub Packages med ägar-scope
-   (namnbyte + läs-PAT i EAS); (c) codegen-synk från OpenAPI-specen. Josef väljer
-   inför fas 2 — koden är opåverkad tills dess (workspace-namnet funkar internt
-   oavsett).
+   behålls, EAS behöver ingen auth alls. Paketet publiceras som **TS-källa**
+   (main → `src/index.ts`) — enda registry-konsumenten är Expo-appen, vars Metro
+   transpilerar TS i node_modules precis som den redan gör via `file:`-länken;
+   web/functions fortsätter läsa workspace-källan. Ingen dist-/build-kedja =
+   inget stale-dist-fotgevär. package.json är publiceringsklar (`files`,
+   `publishConfig.access: public`, `license: UNLICENSED` — publik att installera,
+   inga rättigheter utdelade; byt om annan licens önskas). **Publicering:** Josef
+   skapar `vadkul`-orgen på npmjs.com; sedan `cd packages/kontrakt && npm publish`
+   (inloggad, eller med NPM_TOKEN). Därefter byter appen `file:../packages/kontrakt`
+   → `^0.1.0`. Ny kontraktsändring = versionsbump + publish; web/functions märker
+   inget.
 2. **CARTO-villkoren för mobil** — verifiera innan fas 2 att direktvisning i app
    ryms i basemap-villkoren (webbens §9.c.i-fall). Reservvägen (egna Sverige-kakel)
    finns redan, se §6.
