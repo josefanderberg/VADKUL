@@ -55,6 +55,31 @@ nattliga data-pushar + GitHub Actions ska inte trigga app-CI. Precedens finns re
 Kontraktspaketet är **enda** kopplingen mellan repona. Ingen kod kopieras för hand,
 inga git-submoduler.
 
+### Så ser det ut på disk (allt i samma projektmapp)
+
+```
+~/VADKUL/                          ← EN mapp, som idag
+├── apps/
+│   ├── web/                       Next.js (vadkul.se)           [detta repo]
+│   ├── functions/                 Cloud Functions + API:t       [detta repo]
+│   │   └── src/api/               ← api.vadkul.se/v1
+│   │       ├── routes/v1/  middleware/  domain/
+│   └── scraper/                   pipelinen, orörd              [detta repo]
+├── packages/                      NYTT — delningsytan
+│   ├── contract/                  API-typer + zod-scheman
+│   └── core/                      ren logik (eventShareSlug m.m.)
+├── docs/  infra/  scripts/                                      [detta repo]
+├── vadkulyt/                      eget repo, git-ignorerat (som idag)
+└── vadkul-app/                    NYTT eget repo, git-ignoreras likadant
+    ├── app/                       expo-router-skärmar
+    └── src/ (features/ api/ ui/)  installerar @vadkul/contract + @vadkul/core
+```
+
+Samma upplägg som `vadkulyt/` alltså: appen ligger *i* projektmappen för enkel åtkomst
+(en `vadkul-app/`-rad till i huvudrepots `.gitignore`), men har egen git-historik,
+egen CI och egen releasetakt. Visuell version av hela strukturen (repona, dataflödet,
+faserna): <https://claude.ai/artifact/2kqp9fZWjCuuLQ9kwao4pn>.
+
 ---
 
 ## 3. API-design
