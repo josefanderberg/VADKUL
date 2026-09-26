@@ -20,6 +20,7 @@
     "dashboard:test": "DB_TARGET=3 ts-node src/scripts/dashboard.ts",
     "create": "ts-node src/scripts/create-event.ts",
     "publish-fb": "ts-node src/scripts/publish-fb.ts",
+    "fb-kommentarer": "ts-node src/scripts/fb-kommentarer.ts",
     "digest": "ts-node src/scripts/publish-digest.ts",
     "ig-ko": "ts-node src/scripts/publish-ig-queue.ts",
     "scrape-fb": "ts-node src/scrapers/facebook.ts",
