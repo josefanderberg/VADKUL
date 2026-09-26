@@ -54,10 +54,19 @@ export function buildTitleFreq(rows: { title: string | null }[]): Map<string, nu
 const SPECIAL_WORDS = /festival|premiär|vernissage|invigning|turné|mässa|stand.?up|konsert|final|release|cirkus|opera|musikal|nationaldag|midsommar|utställning|föreställning/;
 const ROUTINE_WORDS = /gudstjänst|morgonbön|middagsbön|aftonbön|vägkyrka|sommarkyrka|öppen kyrka|sommarcafé|drop.?in|öppen förskola|språkcafé|stickcafé|promenadgrupp|bokcirkel/;
 
+/** SÄSONGSFOLKFESTER (Ölands Skördefest-fyndet 23/9): byarnas skördefester,
+ *  skördemarknader och äppeldagar drar hela bygder men saknar biljett/arena
+ *  och fastnade på 32–37 — Öland hade 0 skördefest-event bland Populära
+ *  helgen den största skördefesten pågick. Mätt på aggregatet 22/9: 23 event
+ *  lyfts över ribban, nästan alla riktiga skördefester. Oktoberfest (mest
+ *  pubernas AW-temakvällar) och höstfest (föreningsträffar) är MEDVETET
+ *  ute. Inga \b — JS-regexens \b ser inte å/ä/ö som ordtecken. */
+const FOLKFEST_WORDS = 'skördefest|skördemarknad|skördeyra|äppelfest|äppeldag|byafest|hamnfest';
+
 /** EGNA dragord utöver spegel-listan (INTE en spegel av cityData — kamp-
  *  sport/galor saknas där): FCR30-fallet 10/9, MMA-galan på Fortnox Arena
  *  hade inga andra signaler än titeln och arenan. */
-const EXTRA_DRAW_WORDS = /\bgala\b|\bderby\b|boxning|\bmma\b|fight club|fight night|kulturnatt|stadsfest|karneval/;
+const EXTRA_DRAW_WORDS = new RegExp(String.raw`\bgala\b|\bderby\b|boxning|\bmma\b|fight club|fight night|kulturnatt|stadsfest|karneval|` + FOLKFEST_WORDS);
 
 /** STADSFESTENS HUVUDEVENT (Eskilstuna-fyndet 10/9): "Kulturnatten" från
  *  kommunguiden har inga starka signaler (ingen biljett/arena) men fyller
