@@ -56,8 +56,8 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-19",
-      "emptyRetries": 4
+      "lastRetry": "2026-09-26",
+      "emptyRetries": 5
     },
     "prins-eugens-waldemarsudde": {
       "since": "2026-09-25",
@@ -66,12 +66,8 @@
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-19",
-      "emptyRetries": 4
-    },
-    "sater": {
-      "since": "2026-09-15",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "lastRetry": "2026-09-26",
+      "emptyRetries": 5
     },
     "sb-kb-se": {
       "since": "2026-09-22",
