@@ -10,6 +10,7 @@
  *   npm run fb-kommentarer -w vadkul-scraper -- --lankar min-lista.txt   (en länk per rad)
  *   npm run fb-kommentarer -w vadkul-scraper -- --ut ~/Desktop/kommentarer.csv --max 20
  *   npm run fb-kommentarer -w vadkul-scraper -- --fran 88      (fortsätt en avbruten körning)
+ *   npm run fb-kommentarer -w vadkul-scraper -- --auto --dold  (över ssh på minin, efter första inloggningen)
  *
  * Så går det till:
  *   1. Chrome öppnas. Logga in och byt till Vad kul-profilen (som när du postar).
@@ -48,6 +49,10 @@ const UT = path.resolve(arg('ut') || (FRAN > 1 ? `fb-kommentarer-fran-${FRAN}.cs
 const LANKFIL = path.resolve(arg('lankar') || 'fb-kommentarer-lankar.txt');
 const MAX = Number(arg('max') || 0);
 const EGEN_SIDA = arg('sida') || 'Vadkul';
+// --auto: ingen fråga, bara länkarna i länkfilen (för minin, över ssh). Kräver att någon
+// loggat in i profilen en gång. --dold kör dessutom utan fönster.
+const AUTO = process.argv.includes('--auto');
+const DOLD = process.argv.includes('--dold');
 
 const vanta = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const lugnt = () => vanta(3000 + Math.random() * 4000);   // snällt mot Facebook
@@ -71,6 +76,10 @@ function lasLankfil(): string[] {
 async function samlaLankar(browser: Browser): Promise<string[]> {
     const lankar = new Set(lasLankfil());
     if (lankar.size) console.log(`📄 ${lankar.size} länkar från ${path.basename(LANKFIL)}`);
+    if (AUTO) {
+        if (!lankar.size) throw new Error(`--auto kräver länkar i ${LANKFIL}`);
+        return [...lankar];
+    }
     console.log(`
 👉 Logga in i Chrome-fönstret och byt till Vad kul-profilen om det behövs.
    Öppna sedan aktivitetsloggen (profilbilden → Inställningar → Aktivitetslogg)
@@ -227,7 +236,7 @@ const fliken_borta = (e: unknown) =>
 
 async function main() {
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: DOLD,
         userDataDir: PROFIL,
         defaultViewport: null,
         args: ['--disable-notifications', '--window-size=1280,1000'],
@@ -236,6 +245,15 @@ async function main() {
         const [forsta] = await browser.pages();
         let page = forsta || await browser.newPage();
         await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
+        if (AUTO) {
+            await vanta(3000);
+            const utloggad = /\/login/.test(page.url())
+                || Boolean(await page.$('input[name="email"], input[name="pass"]'));
+            if (utloggad) {
+                throw new Error('Inte inloggad på Facebook i ' + PROFIL + '. Kör skriptet en gång utan --auto '
+                    + '(på minin via Skärmdelning) och logga in som Vad kul.');
+            }
+        }
 
         let lankar = await samlaLankar(browser);
         if (FRAN > 1) lankar = lankar.slice(FRAN - 1);
