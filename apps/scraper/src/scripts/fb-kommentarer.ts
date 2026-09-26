@@ -151,8 +151,18 @@ const LAS_KOMMENTARER = `(() => {
     }
     const namnEl = lankar.find((l) => l.innerText.trim() && !/comment_id/.test(l.href));
     const namn = namnEl ? namnEl.innerText.trim() : label.replace(/^\\S+ \\S+ /, '').split(/ för | about | \\d/)[0];
+    // Facebook ritar emojis som <img alt="😍">, så innerText tappar dem. Gå igenom noderna
+    // och ta med bildernas alt-text (annars blir t.ex. en kommentar som bara är ❤️ tom).
+    const medEmoji = (el) => [...el.childNodes].map((n) => {
+      if (n.nodeType === 3) return n.textContent;
+      if (n.nodeName === 'IMG') return n.getAttribute('alt') || '';
+      if (n.nodeName === 'BR') return '\\n';
+      if (n.nodeType !== 1) return '';
+      const s = medEmoji(n);
+      return /^(DIV|P)$/.test(n.nodeName) ? '\\n' + s : s;
+    }).join('');
     const delar = [...a.querySelectorAll('div[dir="auto"]')].filter(egen)
-      .map((d) => d.innerText.trim()).filter(Boolean);
+      .map((d) => medEmoji(d).replace(/\\n{2,}/g, '\\n').trim()).filter(Boolean);
     const text = [...new Set(delar)].join('\\n');
     return { id, namn, text, svar: /^(svar|reply)/i.test(label), relativTid };
   });
