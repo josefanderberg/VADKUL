@@ -9,6 +9,7 @@
     "sources": "ts-node src/scripts/run-sources.ts",
     "scrape-ticketmaster": "ts-node src/scripts/run-ticketmaster.ts",
     "probe-wp": "ts-node src/scripts/probe-wordpress.ts",
+    "discover-axiell": "ts-node src/scripts/discover-axiell.ts",
     "probe-ical": "ts-node src/scripts/probe-ical.ts",
     "probe-sitevision": "ts-node src/scripts/probe-sitevision.ts",
     "probe-drupal": "ts-node src/scripts/probe-drupal.ts",
