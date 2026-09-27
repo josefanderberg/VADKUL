@@ -16,3 +16,7 @@ keyword_test_results.json
 
 # IG-schemakön (inläggstexter i utkastform, maskin-lokal — se utils/igQueue.ts)
 ig-queue.json
+
+# Export av kommentarer i Facebookgrupperna (scripts/fb-kommentarer.ts) — innehåller namn, stannar lokalt
+fb-kommentarer*.csv
+fb-kommentarer-lankar.txt
