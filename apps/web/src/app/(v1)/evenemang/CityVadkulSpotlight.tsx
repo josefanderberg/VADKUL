@@ -19,8 +19,9 @@ import { writeEventSeed } from '@/utils/eventSeed';
 import { isPlainClick } from '@/utils/eventExpand';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import { emojiForCategory } from '@/utils/categories';
-import { recordEventLike } from '@/services/eventStatsService';
+import { recordEventLike, getEventLikesBatch } from '@/services/eventStatsService';
 import { userService } from '@/services/userService';
+import { displayedLikeCount } from '@/utils/likeCount';
 import EventExpanded from './EventExpanded';
 import EventInfoRow from './EventInfoRow';
 
@@ -195,9 +196,13 @@ const FRAME: Record<SpotFrame, { box: string; bubble: string; badge: string; bad
     },
 };
 
-function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
+function Row({ e, cityName, expanded, onToggle, isSaved, likeCount = 0, onToggleSave }: {
     e: SpotRow; cityName: string; expanded: boolean; onToggle: () => void;
-    isSaved: boolean; onToggleSave: (id: string) => void;
+    isSaved: boolean;
+    /** Gilla-siffran vid hjärtat (klumpläst ur eventStats + egna tryck
+     *  justerade av föräldern). 0 = visa bara hjärtat. */
+    likeCount?: number;
+    onToggleSave: (id: string) => void;
 }) {
     // Bildvakt som listradernas: trasig bild → kompakta emoji-raden.
     const [imgFailed, setImgFailed] = useState(false);
@@ -214,19 +219,25 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
             {e.isTip ? 'Tipsat' : 'Skapat'}
         </span>
     );
-    // Spara-hjärtat: samma knapp och regler som listans rader.
+    // Spara-hjärtat: samma knapp och regler som listans rader, med
+    // gilla-siffran bredvid när den finns.
     const heartOverlay = (
         <button
             type="button"
             onClick={() => onToggleSave(e.id)}
             aria-pressed={isSaved}
             aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
-            title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
-            className={`absolute top-2 right-2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow transition-colors ${
+            title={likeCount ? `${likeCount} har gillat det här eventet` : (isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet')}
+            className={`absolute top-2 right-2 z-10 flex items-center justify-center h-8 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow transition-colors ${
+                likeCount ? 'px-2.5 gap-1' : 'w-8'
+            } ${
                 isSaved ? 'text-rose-500' : 'text-slate-400 dark:text-zinc-500 hover:text-rose-400'
             }`}
         >
             <Heart size={16} fill={isSaved ? 'currentColor' : 'none'} />
+            {likeCount ? (
+                <span className="text-[11px] font-black tabular-nums leading-none">{likeCount}</span>
+            ) : null}
         </button>
     );
     // "2 dagar" / "Varje vecka" på en sammanslagen rad (22/9). Kategorin
@@ -325,12 +336,15 @@ function Row({ e, cityName, expanded, onToggle, isSaved, onToggleSave }: {
                         onClick={() => onToggleSave(e.id)}
                         aria-pressed={isSaved}
                         aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
-                        title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
-                        className={`shrink-0 flex items-center px-3.5 rounded-r-2xl transition-colors ${
+                        title={likeCount ? `${likeCount} har gillat det här eventet` : (isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet')}
+                        className={`shrink-0 flex items-center gap-1 px-3.5 rounded-r-2xl transition-colors ${
                             isSaved ? 'text-rose-500' : 'text-slate-300 dark:text-zinc-600 hover:text-rose-400'
                         }`}
                     >
                         <Heart size={17} fill={isSaved ? 'currentColor' : 'none'} />
+                        {likeCount ? (
+                            <span className="text-[11px] font-black tabular-nums leading-none">{likeCount}</span>
+                        ) : null}
                     </button>
                 </div>
             )}
@@ -418,6 +432,27 @@ export default function CityVadkulSpotlight(props: Props) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Gilla-siffrorna för spotlightens rader: raderna läses live ur linkEvents
+    // och står utanför aggregatets bakade siffror (daglistan får sina därifrån
+    // i stället) - EN klumpläsning för en handfull rader (getEventLikesBatch).
+    // savedAtFetch = gillat-läget när siffrorna hämtades; egna tryck efteråt
+    // justeras med samma formel som kartkortet (utils/likeCount).
+    const [likesFetch, setLikesFetch] = useState<{ byId: Map<string, number>; savedAtFetch: Set<string> } | null>(null);
+    const savedNowRef = useRef(saved);
+    savedNowRef.current = saved;
+    useEffect(() => {
+        if (!rows) return;
+        let active = true;
+        const ids = [...rows.boosted, ...rows.vadkul].map(e => e.id);
+        getEventLikesBatch(ids).then(byId => {
+            if (active) setLikesFetch({ byId, savedAtFetch: new Set(savedNowRef.current) });
+        });
+        return () => { active = false; };
+    }, [rows]);
+    const rowLikes = (id: string) => likesFetch === null
+        ? 0
+        : displayedLikeCount(likesFetch.byId.get(id) ?? 0, likesFetch.savedAtFetch.has(id), saved.has(id));
+
     // Innan svaret landat: rendera ingenting (sidan är läsbar ändå, och en
     // skeleton här skulle knuffa listan för de flesta städer som saknar rader).
     if (!rows) return null;
@@ -465,7 +500,7 @@ export default function CityVadkulSpotlight(props: Props) {
                 style={capped && capPx !== null ? { maxHeight: capPx } : undefined}
             >
                 {[...boosted, ...vadkul].map(e => (
-                    <Row key={e.id} e={e} cityName={props.cityName} expanded={expandedId === e.id} onToggle={() => toggle(e.id)} isSaved={saved.has(e.id)} onToggleSave={toggleSave} />
+                    <Row key={e.id} e={e} cityName={props.cityName} expanded={expandedId === e.id} onToggle={() => toggle(e.id)} isSaved={saved.has(e.id)} likeCount={rowLikes(e.id)} onToggleSave={toggleSave} />
                 ))}
             </div>
             <p className="mt-1.5 text-[11px] font-medium text-slate-400 dark:text-zinc-500">

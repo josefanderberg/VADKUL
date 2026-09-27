@@ -1,5 +1,5 @@
 // src/services/eventStatsService.ts
-import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, increment, collection, query, where, documentId, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { eventShareSlug } from '../utils/eventShareSlug';
 
@@ -101,6 +101,38 @@ export async function getEventLikes(eventId: string): Promise<number | null> {
     } catch {
         return null;
     }
+}
+
+/**
+ * Läs gilla-antal för FLERA event i klump - stadssidornas spotlight, vars
+ * rader läses live ur linkEvents och därför står utanför aggregatets bakade
+ * siffror (daglistan får sina ur events-destinations.json i stället, noll
+ * läsningar). documentId()-in-frågor i bitar om 30 (Firestores tak); event
+ * utan eventStats-dokument kostar ingenting och utelämnas (= 0). Fel →
+ * tom mapp, så siffrorna döljs i stället för att ljuga.
+ */
+export async function getEventLikesBatch(eventIds: string[]): Promise<Map<string, number>> {
+    const out = new Map<string, number>();
+    if (eventIds.length === 0) return out;
+    try {
+        const bySlug = new Map<string, string>();
+        for (const id of eventIds) bySlug.set(eventShareSlug(id), id);
+        const slugs = [...bySlug.keys()];
+        const chunks: string[][] = [];
+        for (let i = 0; i < slugs.length; i += 30) chunks.push(slugs.slice(i, i + 30));
+        const snaps = await Promise.all(chunks.map(c =>
+            getDocs(query(collection(db, 'eventStats'), where(documentId(), 'in', c)))));
+        for (const snap of snaps) {
+            for (const d of snap.docs) {
+                const likes = d.data()?.likes;
+                const id = bySlug.get(d.id);
+                if (id && typeof likes === 'number' && likes > 0) out.set(id, likes);
+            }
+        }
+    } catch {
+        /* offline/regler nere → siffrorna döljs */
+    }
+    return out;
 }
 
 /**

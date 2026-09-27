@@ -63,6 +63,10 @@ export type CityEvent = {
      *  biljettevent där klicket ger provision (utils/ticketmasterEvent.
      *  isAffiliateUrl). Stadssidornas BOKA-knapp + guldkant (Josef 10/9). */
     bookUrl?: string;
+    /** Gilla-antal (eventStats.likes) bakat i aggregatet - bara på event med
+     *  minst en gillning. Upp till ett dygn gammalt; radernas hjärtan
+     *  justerar egna tryck optimistiskt (utils/likeCount). */
+    likes?: number;
 };
 
 type RawDest = {
@@ -70,6 +74,8 @@ type RawDest = {
     lat: number; lng: number; locationName: string; category: string;
     /** 🔥-flaggan ur aggregatet — bara på flaggade event. */
     pop?: boolean;
+    /** Gilla-antalet ur aggregatet - bara på event med minst en gillning. */
+    likes?: number;
     /** FINNS INTE i events-destinations.json — bara i kartans min-lager, där en
      *  LLM valt en fri emoji per event. Stod som `emoji: string` fram till 1/9,
      *  vilket dolde att stadssidorna visade 📍 på varje rad. Optional nu, och
@@ -249,6 +255,7 @@ async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>):
                 repeatCount: titleFreq.get(normTitle(e.title)) ?? 1,
                 pop: e.pop || undefined,
                 bookUrl: isAffiliateUrl(href) ? href : undefined,
+                likes: e.likes || undefined,
             };
         });
     return { events, updatedAt };

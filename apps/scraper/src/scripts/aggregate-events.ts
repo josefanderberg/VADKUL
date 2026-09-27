@@ -34,6 +34,11 @@ interface DestinationLayer {
      *  14 dagar (utils/firstSeenExport; bytes × 30k event). Webbens "Nytt
      *  sedan sist"-banner jämför fältet mot besökarens förra besök. */
     fs?: string;
+    /** Gilla-antal (eventStats.likes) - BARA på event med minst en gillning
+     *  (bytes × 30k event). Bakas in här så stadssidornas rader visar siffran
+     *  utan en Firestore-läsning per rad; kartkortet läser live i stället.
+     *  Upp till ett dygn gammal - webben justerar egna tryck optimistiskt. */
+    likes?: number;
 }
 
 /**
@@ -93,6 +98,34 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     `).all(nowIso) as any[];
 
     console.log(`   Found ${rows.length} active events to aggregate.`);
+
+    // Gilla-siffrorna (eventStats.likes, skrivna av webbens hjärtan) bakas in
+    // i destinations-lagret. EN filtrerad, fältmaskad query per körning - bara
+    // dokument med likes > 0 (inte hela kollektionen) - i stället för att
+    // stadssidorna läser Firestore per rad. eventId-fältet är kartans råa id
+    // (url för skrapade event) = destinations `id`, så joinen är direkt.
+    const likesByEventId = new Map<string, number>();
+    try {
+        // db är null när Firebase-init saknas (samma vakt som uppladdningarna
+        // längre ner) - då byggs aggregatet utan siffror i stället för krasch.
+        if (!db) throw new Error('Firestore är inte initierad');
+        const likesSnap = await db.collection('eventStats')
+            .where('likes', '>', 0)
+            .select('likes', 'eventId')
+            .get();
+        for (const d of likesSnap.docs) {
+            const eventId = d.get('eventId');
+            const likes = d.get('likes');
+            if (typeof eventId === 'string' && eventId && typeof likes === 'number' && likes > 0) {
+                likesByEventId.set(eventId, likes);
+            }
+        }
+        console.log(`   ❤️  ${likesByEventId.size} event bär gilla-siffror (eventStats.likes > 0)`);
+    } catch (e) {
+        // Aggregatet får ALDRIG falla på gilla-siffrorna - bygg utan dem
+        // (raderna tappar siffran tills nästa lyckade körning, inget mer).
+        console.warn('   ⚠️  Kunde inte läsa gilla-siffrorna ur eventStats - aggregatet byggs utan dem.', e);
+    }
 
     const updatedAt = new Date().toISOString();
 
@@ -182,7 +215,8 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             emoji: row.emoji || undefined,
             pop,
             ps,
-            fs: fsDay
+            fs: fsDay,
+            likes: likesByEventId.get(id)
         });
 
         // Bara det destinations INTE redan bär. Tomma värden utelämnas — webben

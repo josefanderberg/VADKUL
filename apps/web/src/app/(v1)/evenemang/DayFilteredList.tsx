@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { anchorScrollDelta, isPlainClick } from '@/utils/eventExpand';
 import { recordEventClick, recordEventLike } from '@/services/eventStatsService';
 import { userService } from '@/services/userService';
+import { displayedLikeCount } from '@/utils/likeCount';
 // Kartans ettords-kategorietiketter (Musik, Sport, Familj …) — kategori-
 // chipet nere till höger på raden (Josef 2/9), vänster om statusbadgen.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
@@ -103,6 +104,11 @@ export type ListedEvent = {
      *  mer synliga") — bara på biljettevent med provisionslänk (cityData,
      *  isAffiliateUrl). Raden får guldkant + BOKA i guld vänster om hjärtat. */
     bookUrl?: string;
+    /** Gilla-antal ur nattens aggregat (eventStats.likes bakat i
+     *  events-destinations.json) - bara på event med minst en gillning.
+     *  Visas vid radens hjärta; egna tryck justeras optimistiskt i klienten
+     *  (utils/likeCount) eftersom bakningen är upp till ett dygn gammal. */
+    likes?: number;
     /** Dagens dubbletter (samma titel eller omslagsbild — groupDups): ÖVRIGA tillfällen utöver
      *  radens representant. Det som skiljer (tid & plats) radas upp bakom
      *  radens utfällning; representanten bär bild, status och hjärta. */
@@ -291,10 +297,13 @@ function DupList({ dups, repTitle, onPick, activeId }: {
     );
 }
 
-function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggleExpand, dayLabel }: {
+function EventRow({ e, dimmed, isSaved, likeCount = 0, onToggleSave, nowTs, expandedId, onToggleExpand, dayLabel }: {
     e: ListedEvent;
     dimmed?: boolean;
     isSaved: boolean;
+    /** Gilla-siffran vid hjärtat - nattens bakade antal, redan justerat för
+     *  egna tryck av föräldern (rowLikes). 0 = visa bara hjärtat. */
+    likeCount?: number;
     onToggleSave: (id: string) => void;
     nowTs: number;
     /** Id:t på det UTFÄLLDA eventet i listan (ett i taget) — radens eget
@@ -413,12 +422,17 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggl
                     onClick={() => onToggleSave(e.id)}
                     aria-pressed={isSaved}
                     aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
-                    title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
-                    className={`absolute top-2 right-2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow transition-colors ${
+                    title={likeCount ? `${likeCount} har gillat det här eventet` : (isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet')}
+                    className={`absolute top-2 right-2 z-10 flex items-center justify-center h-8 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow transition-colors ${
+                        likeCount ? 'px-2.5 gap-1' : 'w-8'
+                    } ${
                         isSaved ? 'text-rose-500' : 'text-slate-400 dark:text-zinc-500 hover:text-rose-400'
                     }`}
                 >
                     <Heart size={16} fill={isSaved ? 'currentColor' : 'none'} />
+                    {likeCount ? (
+                        <span className="text-[11px] font-black tabular-nums leading-none">{likeCount}</span>
+                    ) : null}
                 </button>
             </li>
         );
@@ -458,12 +472,15 @@ function EventRow({ e, dimmed, isSaved, onToggleSave, nowTs, expandedId, onToggl
                     onClick={() => onToggleSave(e.id)}
                     aria-pressed={isSaved}
                     aria-label={isSaved ? 'Ta bort från sparade' : 'Spara eventet'}
-                    title={isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet'}
-                    className={`shrink-0 flex items-center px-3.5 rounded-r-xl transition-colors ${
+                    title={likeCount ? `${likeCount} har gillat det här eventet` : (isSaved ? 'Sparat — finns under Sparade i din profil' : 'Spara eventet')}
+                    className={`shrink-0 flex items-center gap-1 px-3.5 rounded-r-xl transition-colors ${
                         isSaved ? 'text-rose-500' : 'text-slate-300 dark:text-zinc-600 hover:text-rose-400'
                     }`}
                 >
                     <Heart size={17} fill={isSaved ? 'currentColor' : 'none'} />
+                    {likeCount ? (
+                        <span className="text-[11px] font-black tabular-nums leading-none">{likeCount}</span>
+                    ) : null}
                 </button>
             </div>
             {dups.length > 0 && <div className="pl-16 pr-4 pb-3 -mt-1"><DupList dups={dups} repTitle={e.title} onPick={pick} activeId={expandedId} /></div>}
@@ -551,7 +568,12 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
 
     useEffect(() => {
         try {
-            setSaved(new Set(JSON.parse(localStorage.getItem(SAVED_KEY) ?? '[]') as string[]));
+            const initialSaved = new Set(JSON.parse(localStorage.getItem(SAVED_KEY) ?? '[]') as string[]);
+            // Gilla-siffrornas baslinje: läget när sidan laddades. Nattens
+            // bakade antal antas inkludera dessa - bara tryck gjorda EFTER
+            // laddningen justerar siffran (rowLikes nedan).
+            savedAtMountRef.current = initialSaved;
+            setSaved(initialSaved);
         } catch { /* trasig post — börja med tom lista */ }
         // Kollapsen från SSR:ens ALLA dagar (kan vara 1000+ rader) till
         // dag-för-dag-avtäckningen är sidans tyngsta omrendering — körd som
@@ -566,6 +588,14 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
             if (next.has(key)) next.delete(key); else next.add(key);
             return next;
         });
+
+    // Gilla-siffran vid radens hjärta: nattens bakade antal (e.likes) +-1 för
+    // tryck gjorda efter sidladdningen - samma formel som kartkortet
+    // (utils/likeCount). Vid SSR är båda seten tomma → serverns siffra rakt
+    // av, så hydreringen aldrig spricker.
+    const savedAtMountRef = useRef<Set<string> | null>(null);
+    const rowLikes = (e: ListedEvent) =>
+        displayedLikeCount(e.likes ?? 0, savedAtMountRef.current?.has(e.id) ?? false, saved.has(e.id));
 
     const toggleSave = (id: string) => {
         // Gilla kräver konto (Josef 22/8) — samma regel som på kartan. Redan
@@ -823,13 +853,13 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                             )}
                             <ul className="flex flex-col gap-2">
                                 {pastOpen && day.past.map(e => (
-                                    <EventRow key={e.id} e={e} dimmed isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
+                                    <EventRow key={e.id} e={e} dimmed isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
                                 ))}
                                 {withImg.map(e => (
-                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
+                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
                                 ))}
                                 {shownImgless.map(e => (
-                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
+                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
                                 ))}
                                 {nowTs !== 0 && imglessMore > 0 && (
                                     <li>

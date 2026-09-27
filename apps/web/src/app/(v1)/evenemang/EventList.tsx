@@ -234,6 +234,8 @@ export function buildListedDays(events: CityEvent[], cityName: string): { days: 
         ...(e.pop ? { pop: true } : {}),
         // Affiliatelänken (BOKA + guldkant) — bara på provisionsraderna.
         ...(e.bookUrl ? { bookUrl: e.bookUrl } : {}),
+        // Gilla-antalet bara när det finns - samma mindre-HTML-mönster.
+        ...(e.likes ? { likes: e.likes } : {}),
     });
     const buildDay = (k: string, list: CityEvent[], beyond: boolean): ListedDay => {
         // ALLA dagens event listas (ingen budget). Dagens dubbletter
