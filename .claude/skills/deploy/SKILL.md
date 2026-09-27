@@ -50,3 +50,12 @@ Före push:
 - `firebase deploy --only functions` respektive `--only firestore:rules` — körs separat och manuellt.
 - **VARNING innan rules-deploy:** `firestore.rules` i repot bär ofta ändringar för features som ännu inte är deployade (flera features har historiskt väntat på rules-deploy). Läs igenom diffen mot vad som är live och bekräfta med Josef att allt i filen får gå ut.
 - Functions har en egen KOPIA av `eventShareSlug`-logiken — om slug-logiken ändrats i webben måste kopian i functions synkas före functions-deploy.
+
+## Functions via Actions (25/9)
+
+`firebase deploy --only functions` kan numera också köras via workflown
+**`deploy-functions.yml`** (workflow_dispatch — Actions-fliken eller API:t):
+samma servicekonto (`secrets.FIREBASE_SERVICE_ACCOUNT`) och firebase-tools-
+version som hosting-deployen. En cloud-session utan lokala credentials
+deployar functions genom att trigga den. Rules deployas FORTFARANDE bara
+för hand, med diffgranskningen ovan.

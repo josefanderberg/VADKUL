@@ -121,11 +121,10 @@ const BORGHOLM_ARCHIVE = `
 const CATALOG_SEL = { itemSelector: 'article', linkSelector: 'a.read-more', dateSelector: '.dateoftheitem' };
 
 describe('extractCatalogDates', () => {
-    // findFirstDateInText bedömer fixturdatumen mot dagens datum (publish-
-    // datum-vakten hoppar över "idag") — 2026-09-25, exakt intervallstarten
-    // i Fårets Dagar-fixturen, valde motorn därför 27:e och testet slog rött.
-    // Pinna klockan före fixturens datum, som systerblocken längre ner.
-    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 8, 1, 10, 0)); });
+    // Pinna klockan: findFirstDateInText hoppar över datum som är IDAG
+    // (build-datum-skyddet), så testet gick rött just 2026-09-25 när
+    // verkligheten hann ikapp Fårets Dagar-fixturens startdatum.
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 7, 31, 10, 0)); });
     afterAll(() => { vi.useRealTimers(); });
 
     it('läser datum per kort och nycklar på absolut URL utan avslutande slash', () => {

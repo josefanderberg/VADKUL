@@ -6,7 +6,8 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 
 - `apps/web` — Next.js-appen (kartan, stadssidor, outreach-konsolen). Deployas till Firebase Hosting.
 - `apps/scraper` — event-pipelinen: skrapning → Firestore (`linkEvents`) → lokal SQLite-spegel (`events.db`) → aggregat-JSON:er i `apps/web/public/`.
-- `apps/functions` — Cloud Functions (boost, notiser, digest).
+- `apps/functions` — Cloud Functions (boost, notiser, digest). `index.ts` är bara exports — logiken bor i en modul per område (`boost.ts`, `stars.ts`, …) med delat fundament i `shared.ts`. Bygget bundlar med esbuild (inte tsc-emit): `@vadkul/kontrakt` bakas in i `lib/`, eftersom Cloud Build aldrig kan lösa workspace-deps.
+- `packages/kontrakt` — det delade kontraktet (`@vadkul/kontrakt`): typer, kategori-nycklarna och ren logik som `eventShareSlug`. Får ALDRIG bero på firebase/react/node — ska importeras oförändrat i web, functions och appen. Webben når det via shims i `src/types/` och `src/utils/`.
 - `infra/launchd` — schemalagda jobb (nattkedjan 00:30, digest 07:00, audit-daemon).
 - `docs/` — arbetsdokument per område.
 - `vadkulyt/` — Vad kul-studion, lokalt klippverktyg för marknadsföringsvideor. **Eget git-repo** (`github.com/josefanderberg/vadkulyt`) som det här repot ignorerar; ingår inte i deploy eller CI. Jobba i den mappen med dess egen `CLAUDE.md` och `README.md`.
@@ -39,6 +40,6 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 - Scraper: `cd apps/scraper && npm test` (vitest, 300+ tester).
 - Web: `cd apps/web && npm test` (vitest, rena funktioner — inget nät/Firebase i tester) + `npx tsc --noEmit`.
 - **Kör alltid berörd apps tester + typecheck efter kodändringar, innan du rapporterar klart.** Ny ren logik (utils/, lib/, React-fria moduler) ska få tester i samma veva.
-- `eventShareSlug.test.ts` är ett GULDTEST — går det rött har du brutit alla delade /e/-länkar; backa ändringen i stället för att uppdatera testvärdena.
-- CI (`.github/workflows/typecheck.yml`) kör tsc för båda apparna + webbens tester på varje push till main.
+- `eventShareSlug.test.ts` (i `packages/kontrakt`, kör `npm test` där) är ett GULDTEST — går det rött har du brutit alla delade /e/-länkar; backa ändringen i stället för att uppdatera testvärdena.
+- CI (`.github/workflows/typecheck.yml`) kör tsc + tester för scraper, web, kontrakt-paketet och functions (inkl. esbuild-bygget) på varje push till main.
 - Kod som rör kartan granskas hellre statiskt än via preview (WebGL degraderar vid reload).

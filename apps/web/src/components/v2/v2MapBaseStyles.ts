@@ -3,7 +3,30 @@
 // stil-specar och idempotenta på/av-hjälpare som V2Map kallar. Ingen React,
 // inget komponent-state — bara MapLibre-konfiguration.
 
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+
+// ── WORKER-FIXEN (prodstoppet 25/9 kväll) ───────────────────────────────────
+// maplibre 6 laddar sin worker som en RIKTIG modulfil (maplibre-gl-worker.mjs,
+// new Worker(new URL(..., import.meta.url))). Webpack/Next emitterar ALDRIG
+// den filen ur node_modules-bundlen → webbläsaren 404:ar → Next svarar med
+// HTML-sidan → "non-JavaScript MIME type text/html" + "Worker failed to load"
+// → kartan kan inte tolka kakel. Därför hostar vi workern själva i public/
+// (kopierad ur dist, versionsstämplat filnamn = cache-bust per uppgradering)
+// och pekar maplibre dit INNAN första Map-instansen skapas — den här modulen
+// importeras av båda kartvägarna (V2Map + CityMapHeroCanvas), så anropet här
+// täcker allt.
+//
+// OBS KATALOG, inte ensam fil: workern importerar "./maplibre-gl-shared.mjs"
+// RELATIVT — båda filerna måste ligga bredvid varandra under sina RIKTIGA
+// namn (fällde första fixförsöket 25/9 kväll). Versionen bärs av mappnamnet
+// i stället, så immutable-cachen förblir säker. maplibreWorker.test.ts låser
+// att mappnamnet är paketets version och att BÅDA filerna är byte-identiska
+// med paketets — en maplibre-bump utan ny kopia blir rött test, inte död
+// karta i prod.
+export const MAPLIBRE_WORKER_URL = '/maplibre/6.11.2/maplibre-gl-worker.mjs';
+if (typeof window !== 'undefined') {
+    maplibregl.setWorkerUrl(MAPLIBRE_WORKER_URL);
+}
 
 // Voyager, den ljusa vektor-basen. Nöjesfälts-stilen byggs genom att
 // transformera den (fetchAndTransformThemeParkStyle) — den här URL:en används
