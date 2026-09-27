@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { showForFunOnCategoryPage, showForFunOnCityPage, FORFUN_CITY_SLUGS } from './partnerLinks';
+import { forFunHref, showForFunOnCategoryPage, showForFunOnCityPage, FORFUN_CITY_SLUGS } from './partnerLinks';
+
+describe('forFunHref', () => {
+    it('djuplänkar till stadens guide med utm-taggning', () => {
+        expect(forFunHref('eskilstuna')).toBe('https://forfun.info/att-gora-med-barn/eskilstuna?utm_source=vadkul&utm_medium=referral');
+    });
+
+    it('bygger en giltig adress för alla länkbytets städer', () => {
+        for (const slug of FORFUN_CITY_SLUGS) {
+            expect(forFunHref(slug)).toContain(`/att-gora-med-barn/${slug}?`);
+        }
+    });
+});
 
 describe('showForFunOnCategoryPage', () => {
     it('visar raden på barn-sidan i länkbytets städer', () => {

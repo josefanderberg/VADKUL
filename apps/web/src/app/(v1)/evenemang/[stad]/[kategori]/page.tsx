@@ -232,7 +232,7 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                     under vanliga frågor (Josef 27/9: "längst ner" var för
                     långt ner), inte som FAQ-post: FAQ:n går in i JSON-LD:n
                     och partnerlänkar hör inte hemma i schema-datat. */}
-                {showForFunOnCategoryPage(city.slug, cat.slug) && <ForFunTips cityName={city.name} />}
+                {showForFunOnCategoryPage(city.slug, cat.slug) && <ForFunTips cityName={city.name} citySlug={city.slug} />}
 
                 {siblingCategories.length > 0 && (
                     <div className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">

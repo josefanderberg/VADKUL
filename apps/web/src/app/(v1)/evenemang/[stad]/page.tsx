@@ -279,7 +279,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                     säsongströskeln — annars bor raden där. Direkt under
                     vanliga frågor, samma läge som på kategorisidorna. */}
                 {showForFunOnCityPage(city.slug, cityCategories.some(c => c.cat.slug === 'barn' && c.hasPage))
-                    && <ForFunTips cityName={city.name} />}
+                    && <ForFunTips cityName={city.name} citySlug={city.slug} />}
 
                 {/* Önskningarna som AVSLUT (Josef 14/9: "ingen vill byta till
                     en annan stad — bättre att ha önskningar där"): synlig
