@@ -28,6 +28,11 @@ import toast from 'react-hot-toast';
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
 const ADDRESS_FALLBACKS = new Set(['växjö', 'vaxjo', 'stockholm', 'sverige', 'sweden', '']);
 
+// Sessionscache för gilla-siffran (eventStats.likes): högst EN Firestore-
+// läsning per event och besök, oavsett hur många gånger kortet återöppnas.
+// savedAtFetch-baslinjen sparas med så egna tryck justeras rätt vid återbesök.
+const likeCache = new Map<string, { base: number; savedAtFetch: boolean }>();
+
 function isSpecificAddress(addr: string | undefined | null): boolean {
     if (!addr) return false;
     const trimmed = addr.trim();
@@ -296,22 +301,36 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     };
 
     // Gilla-siffran vid hjärtat (Josef 27/9: "vid varje like-knapp ska man se
-    // hur många som klickat på like") - eventStats.likes läses en gång per
-    // kortöppning, som visningarna en gång gjorde. Ens eget tryck ska synas
-    // direkt: hämtningen bär med sig gillat-läget den gjordes i, och
-    // displayedLikeCount justerar +-1 när läget flippats sedan dess (serverns
-    // increment är fire-and-forget från föräldern och hinner inte alltid fram).
-    const [likeFetch, setLikeFetch] = useState<{ base: number; savedAtFetch: boolean } | null>(null);
+    // hur många som klickat på like") - eventStats.likes, HÖGST EN läsning
+    // per event och besök: sessionscachen (modulnivå, som visningsräknarens
+    // dedupe i page.tsx) svarar direkt vid återbesök, och hämtningen väntar
+    // 400 ms så snabb Nästa-bläddring inte eldar en läsning per steg - bara
+    // event man faktiskt stannar på läses. Ens eget tryck ska synas direkt:
+    // posten bär gillat-läget när den hämtades, och displayedLikeCount
+    // justerar +-1 när läget flippats sedan dess (serverns increment är
+    // fire-and-forget från föräldern och hinner inte alltid fram) - därför
+    // förblir cachade poster korrekta även efter egna tryck.
+    const [likeFetch, setLikeFetch] = useState<{ base: number; savedAtFetch: boolean } | null>(
+        () => likeCache.get(linkEvent.id) ?? null,
+    );
     const savedNowRef = useRef(saved);
     savedNowRef.current = saved;
     useEffect(() => {
+        const id = linkEvent.id;
+        const cached = likeCache.get(id);
+        setLikeFetch(cached ?? null);
+        if (cached) return;
         let mounted = true;
-        setLikeFetch(null);
-        getEventLikes(linkEvent.id).then(n => {
-            // null = offline/regler nere → ingen siffra i stället för att ljuga "0".
-            if (mounted && n !== null) setLikeFetch({ base: n, savedAtFetch: savedNowRef.current });
-        });
-        return () => { mounted = false; };
+        const timer = setTimeout(() => {
+            getEventLikes(id).then(n => {
+                // null = offline/regler nere → ingen siffra i stället för att ljuga "0".
+                if (n === null) return;
+                const entry = { base: n, savedAtFetch: savedNowRef.current };
+                likeCache.set(id, entry);
+                if (mounted) setLikeFetch(entry);
+            });
+        }, 400);
+        return () => { mounted = false; clearTimeout(timer); };
     }, [linkEvent.id]);
     const likeCount = likeFetch === null
         ? null
