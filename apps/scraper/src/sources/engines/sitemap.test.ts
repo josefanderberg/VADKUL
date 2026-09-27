@@ -121,6 +121,12 @@ const BORGHOLM_ARCHIVE = `
 const CATALOG_SEL = { itemSelector: 'article', linkSelector: 'a.read-more', dateSelector: '.dateoftheitem' };
 
 describe('extractCatalogDates', () => {
+    // Pinna klockan: findFirstDateInText hoppar över datum som är IDAG
+    // (build-datum-skyddet), så testet gick rött just 2026-09-25 när
+    // verkligheten hann ikapp Fårets Dagar-fixturens startdatum.
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 7, 31, 10, 0)); });
+    afterAll(() => { vi.useRealTimers(); });
+
     it('läser datum per kort och nycklar på absolut URL utan avslutande slash', () => {
         const m = extractCatalogDates(BORGHOLM_ARCHIVE, 'https://www.borgholmsslott.se/evenemang/', CATALOG_SEL);
         const d = m.get('https://www.borgholmsslott.se/evenemang/specialguidning-slottets-baksida');

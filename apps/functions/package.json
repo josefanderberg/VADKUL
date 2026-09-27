@@ -1,7 +1,7 @@
 {
     "name": "functions",
     "scripts": {
-        "build": "tsc",
+        "build": "tsc --noEmit && esbuild src/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=lib/index.js --packages=external \"--alias:@vadkul/kontrakt=../../packages/kontrakt/src/index.ts\" --log-level=warning",
         "build:watch": "tsc --watch",
         "test": "vitest run",
         "serve": "npm run build && firebase emulators:start --only functions",
@@ -22,6 +22,7 @@
     },
     "devDependencies": {
         "@types/node": "^22.0.0",
+        "esbuild": "^0.28.2",
         "typescript": "^5.0.0",
         "vitest": "^3.0.0"
     },

@@ -6,6 +6,7 @@ import { buildTitleFreq, popularRank, normTitlePop } from '../utils/popularEvent
 import { firstSeenExport } from '../utils/firstSeenExport';
 import { eventKey } from '../utils/eventKey';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
+import { buildAppFeeds, loadCities, APP_FEED_DAYS } from '../utils/appFeed';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -278,6 +279,26 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         } catch (e) {
             console.error(`      ⚠️ Blob "${layer}" misslyckades (routen packar q6 själv):`, (e as Error).message);
         }
+    }
+
+    // APP-FLÖDET (plattformsplanen fas 1): slimmade per-region-payloader för
+    // appen, BLOB-ONLY — indexdokumentet app-<region> bär bara updatedAt
+    // (ingen JSON-fallback: /api/events/app-<region> svarar 503 utan blob,
+    // och nästa natt läker). Ett fel här får aldrig stoppa huvudlagren.
+    try {
+        const cities = loadCities();
+        const appFeeds = buildAppFeeds(destinations, cards, cities, new Date());
+        let appEventCount = 0;
+        for (const [region, events] of [...appFeeds.entries()].sort()) {
+            const layer = `app-${region}`;
+            const payload = { updatedAt, region, days: APP_FEED_DAYS, events };
+            await uploadPrepackedBlobs(db, layer, updatedAt, Buffer.from(JSON.stringify(payload)));
+            await db.collection('aggregatedEvents').doc(layer).set({ updatedAt, region, days: APP_FEED_DAYS, count: events.length });
+            appEventCount += events.length;
+        }
+        console.log(`   📱 App-flödet: ${appEventCount} event i ${appFeeds.size} regioner (${APP_FEED_DAYS} dagar)`);
+    } catch (e) {
+        console.error('      ⚠️ App-flödet misslyckades (huvudlagren opåverkade):', (e as Error).message);
     }
 
     // Varje upload försöker separat — en stor doc ska inte stoppa de andra.

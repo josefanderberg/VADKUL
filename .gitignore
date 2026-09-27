@@ -86,3 +86,9 @@ medlemmar-*.csv
 # (github.com/josefanderberg/vadkulyt). Mappen ligger här för närhet till
 # sajten men hör inte till monorepots deploy eller CI. Se vadkulyt/README.md.
 vadkulyt/
+
+# Mobilappen (React Native/Expo) är ETT EGET GIT-REPO
+# (github.com/josefanderberg/vadkul-app, skapas i plattformsplanens fas 2).
+# Mappen ligger här för närhet — samma upplägg som vadkulyt/. Se
+# docs/app-plattform-plan.md §2 och docs/app-repo-bootstrap.md.
+vadkul-app/

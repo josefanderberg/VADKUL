@@ -11,7 +11,9 @@
  * Per event (hidden=0, framtida, koordinater satta):
  *   1. Härled FÖRVÄNTAD STAD: "…, X församling/pastorat"-mönstret i locationName/
  *      hostName (deriveTown — samma logik som SvK-scrapern), annars känd stad
- *      inbäddad i locationName/geocodedQuery (genitiv-s hanterat).
+ *      inbäddad i locationName/geocodedQuery (genitiv-s hanterat). För FB-event
+ *      dessutom TITELN som sista utväg (turnéklassen, Skönsmon 25/9) — bakom
+ *      extra vakter och utan nollning, se deriveExpectedCityWithSource.
  *   2. Geokoda stadens centroid (cachad "city:"-nyckel). Ingen centroid → hoppa.
  *   3. Ligger eventet ≤60 km från staden → korrekt placerat, hoppa.
  *   4. Annars FELPLACERAT: re-geokoda locationName med { nearCity: stad }.
@@ -29,8 +31,9 @@ import { sqlite, setEventCoords } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import {
     geocodeVenueSweden, geocodeCityCentroid, distanceKm, reverseGeocode,
-    SWEDISH_GEO_CITIES, NEAR_CITY_MAX_KM, knownGeoCity,
+    NEAR_CITY_MAX_KM, knownGeoCity,
 } from '../utils/venueCoordinates';
+import { cityMentioned, findKnownCity, findKnownCities } from '../utils/cityInText';
 import { deriveTown } from '../scrapers/svenskakyrkan';
 
 const APPLY = process.argv.includes('--apply');
@@ -61,36 +64,10 @@ interface Row {
     lng: number;
 }
 
-/** Väderstrecks-/storleksprefix som gör ortnamnet till en ANNAN ort. */
-const COMPOUND_PREFIX = /(östra|västra|norra|södra|gamla|nya|stora|lilla|övre|nedre)\s*$/i;
-
-/**
- * Nämns orten (ordgräns, genitiv ok, ej bindestreck) i en textsträng?
- * "<Ortnamn> <siffra>" avvisas — det är en BYADRESS ("Sandviken 130" = gård på
- * Frösön, inte staden Sandviken); lookahead kräver att whitespace efter namnet
- * INTE följs av en siffra.
- */
-export function cityMentioned(text: string, city: string): boolean {
-    const esc = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`(^|[\\s,])${esc}s?(?=$|[,.!:)]|\\s+(?!\\d))`, 'i');
-    const m = re.exec(text || '');
-    if (!m) return false;
-    return !COMPOUND_PREFIX.test((text || '').slice(0, m.index + m[1].length));
-}
-
-/**
- * Känd stad i en textsträng. Ordgränser är space/komma/punkt — INTE bindestreck:
- * "Vinberg-Ljungby" (Falkenberg), "Nora-Skogs" (Ångermanland) är egna orter och
- * får inte matcha Ljungby/Nora. Prefix-vakten stoppar "Östra Ljungby" (Skåne)
- * och "Västra Sandviken" (Grums) — dry-run 2026-07-02 visade att de annars
- * "repareras" till fel landsdel.
- */
-export function findKnownCity(text: string): string | null {
-    for (const c of SWEDISH_GEO_CITIES) {
-        if (cityMentioned(text, c)) return c;
-    }
-    return null;
-}
+// cityMentioned/findKnownCity (kompound-, genitiv- och byadress-vakterna)
+// bor sedan 25/9 i utils/cityInText.ts — FB-scraperns ankarstads-logik delar
+// dem. Reglerna och testerna är oförändrade.
+export { cityMentioned, findKnownCity } from '../utils/cityInText';
 
 /**
  * Härled förväntad stad för ett event. Exporterad för test (ren funktion).
@@ -136,6 +113,40 @@ export function deriveExpectedCity(
     return null;
 }
 
+export interface DerivedCity {
+    city: string;
+    /** true = staden kom ur TITELN — svagaste signalen ("Timrå IK – Skellefteå
+     *  AIK" nämner bortalagets stad). Anroparen MÅSTE korroborera mot reverse-
+     *  geokodningen och får aldrig nolla koordinater vid miss. */
+    fromTitle: boolean;
+}
+
+/**
+ * deriveExpectedCity + titeln som SISTA utväg (Skönsmon-rapporten 25/9):
+ * FB-turnéshower korspostas i andra städers sök-köer och ankras på fel stad —
+ * "Christoffer Nyqvist – Umeå, Väven" (Sundsvalls-kön) fick en Väven-namne i
+ * Sundsvall, Betnér/Skellefteå låg i Karlstad, Månegarm/Umeå i Stockholm.
+ * locationName/geocodedQuery saknar stad för dem; titeln är enda ledtråden.
+ *
+ * Titeln används BARA när: fältvägarna gav inget, inget församlingssegment
+ * finns (dess "aldrig vidare till svagare signal"-regel gäller fortfarande),
+ * och titeln nämner exakt EN känd stad (två = tvetydigt). Skicka bara in
+ * FB-titlar — andra källor har riktiga platsfält och turnéklassen är FB:s.
+ */
+export function deriveExpectedCityWithSource(
+    locationName: string | null, hostName: string | null, geocodedQuery: string | null,
+    title: string | null,
+): DerivedCity | null {
+    const viaFields = deriveExpectedCity(locationName, hostName, geocodedQuery);
+    if (viaFields) return { city: viaFields, fromTitle: false };
+    if (!title) return null;
+    const hasParish = [locationName, hostName].some(src =>
+        (src ?? '').split(',').some(part => PARISH_SUFFIX.test(part.trim())));
+    if (hasParish) return null;
+    const inTitle = findKnownCities(title);
+    return inTitle.length === 1 ? { city: inTitle[0], fromTitle: true } : null;
+}
+
 async function applyCoords(r: Row, lat: number, lng: number, query: string, verified: boolean): Promise<void> {
     setEventCoords(r.url, lat, lng, query);
     if (db && r.firestoreId) {
@@ -158,7 +169,7 @@ async function main() {
     `).all() as Row[];
     console.log(`${rows.length} framtida event med koordinater`);
 
-    let derivable = 0, checked = 0, misplaced = 0, repaired = 0, zeroed = 0, ambiguous = 0;
+    let derivable = 0, checked = 0, misplaced = 0, repaired = 0, zeroed = 0, ambiguous = 0, titleLeft = 0;
     let nominatimBudget = LIMIT;
     const centroidFail = new Set<string>();
 
@@ -168,8 +179,13 @@ async function main() {
         // och käll-API:t levererar korrekta tur-koordinater. Rör aldrig dessa.
         if (/^friluftsfrämjandet/i.test(r.locationName || '') || /^friluftsfrämjandet/i.test(r.hostName || '')) continue;
 
-        const city = deriveExpectedCity(r.locationName, r.hostName, r.geocodedQuery);
-        if (!city || centroidFail.has(city)) continue;
+        // Titel-härledningen är enbart för FB (turnéklassen) — andra källor
+        // har riktiga platsfält och ska inte gissas utifrån showtitlar.
+        const isFb = /facebook\.com\/events\//.test(r.url);
+        const derived = deriveExpectedCityWithSource(
+            r.locationName, r.hostName, r.geocodedQuery, isFb ? r.title : null);
+        if (!derived || centroidFail.has(derived.city)) continue;
+        const { city, fromTitle } = derived;
         derivable++;
         if (nominatimBudget <= 0) continue;
 
@@ -192,6 +208,19 @@ async function main() {
             continue;
         }
 
+        // Titel-härledd stad: kräv dessutom att originalplaceringen INTE stöds
+        // av eventets egen text. Nämner texten orten där eventet redan står
+        // ("Timrå IK – …" står i Timrå) är originalet troligen rätt — och utan
+        // reverse-svar går det inte att avgöra. Rör inget i båda fallen.
+        if (fromTitle) {
+            const ownText = [r.title, r.locationName, r.hostName].filter(Boolean).join('\n');
+            if (!rev?.city || cityMentioned(ownText, rev.city)) {
+                ambiguous++;
+                console.log(`\n⚖️  TVETYDIG (titel-stad ${city}): ${r.title.slice(0, 40)} | originalort ${rev?.city ?? 'okänd'}${rev?.city ? ' nämns i eventtexten' : ' — kan inte korroborera'} — hoppar`);
+                continue;
+            }
+        }
+
         misplaced++;
         console.log(`\n📍 FEL: ${r.title.slice(0, 45).padEnd(45)} | ${String(r.locationName).slice(0, 45)}`);
         console.log(`   ${Math.round(dist)} km från ${city} [${r.lat.toFixed(3)},${r.lng.toFixed(3)}]`);
@@ -204,6 +233,12 @@ async function main() {
             console.log(`   → reparerad: [${hit[0].toFixed(4)},${hit[1].toFixed(4)}] ("${loc}", nära ${city})`);
             repaired++;
             if (APPLY) await applyCoords(r, hit[0], hit[1], `${loc}, ${city} (repair)`, true);
+        } else if (fromTitle) {
+            // Titel-härledd stad är en HEURISTIK — miss betyder "kunde inte
+            // bekräfta", inte "platsen finns inte". Att nolla här hade kunnat
+            // släcka korrekt placerade event i stor skala. Lämna orört.
+            console.log(`   → ingen träff nära ${city} — titel-härledd stad, lämnas orörd`);
+            titleLeft++;
         } else {
             console.log(`   → ingen träff nära ${city} — ${APPLY ? 'NOLLAR (döljs på kartan)' : 'skulle nollas'}`);
             zeroed++;
@@ -218,6 +253,7 @@ async function main() {
     console.log(`  ⚖️ Tvetydiga:     ${ambiguous} (samma ortnamn vid originalet — orörda)`);
     console.log(`  ✅ Reparerade:    ${repaired}`);
     console.log(`  ⭕ Nollade:       ${zeroed}`);
+    if (titleLeft) console.log(`  ✋ Titel-miss:    ${titleLeft} (härledd ur titel, ingen träff — orörda)`);
     if (centroidFail.size) console.log(`  Ogeokodbara städer: ${[...centroidFail].join(', ')}`);
     if (!APPLY) console.log('\n(dry-run — kör med --apply för att skriva)');
     process.exit(0);

@@ -19,6 +19,19 @@ describe('venueFixes (webbspegeln)', () => {
         expect(applyVenueFixInPlace({ locationName: 'Annan plats' })).toBe(false);
     });
 
+    it('Väven hör hemma i Umeå (Skönsmon-rapporten 25/9)', () => {
+        // "Väven" ur Sundsvalls-kön geokodades till en namne i Sundsvall —
+        // läsvakten ska flytta hem den tills pipelinens data är läkt.
+        const e = { locationName: 'Väven', lat: 62.4066957, lng: 17.3347606 };
+        expect(applyVenueFixInPlace(e)).toBe(true);
+        expect(e.lat).toBe(63.8256568);
+        expect(e.lng).toBe(20.2630745);
+        expect(matchVenueFix('Program i Väven')?.city).toBe('Umeå');
+        // Exakt matchning: scennamnen med egna (korrekta) koordinater berörs inte.
+        expect(matchVenueFix('Vävenscenen')).toBeNull();
+        expect(matchVenueFix('Kajen, Väven')).toBeNull();
+    });
+
     it('skarpa listan ligger i Sverige med ifyllda fält', () => {
         for (const f of VENUE_FIXES) {
             expect(f.names.length).toBeGreaterThan(0);

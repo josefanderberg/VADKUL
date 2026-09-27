@@ -198,9 +198,17 @@ function StatusBadge({ status }: { status: RowStatus }) {
     );
 }
 
-/** Omslagsbild som laddas FÖRST när raden scrollats fram (IntersectionObserver)
- *  — samma lata beteende som eventkortets närhetslista. Fast höjd via className
- *  så inget hoppar; trasig länk rapporteras via onFailed (→ bildlös layout). */
+/** Omslagsbild som laddas när raden närmar sig (IntersectionObserver). Fast
+ *  höjd via className så inget hoppar; trasig länk rapporteras via onFailed
+ *  (→ bildlös layout).
+ *
+ *  FÖRHÄMTNING ~8 RADER FRAM (Josef 24/9: "de flesta scrollar och får vänta
+ *  hela tiden"): IO:n tänder bilden 1200 px under skärmkanten (en bildrad är
+ *  ~180 px, en bildlös ~70) - förut 150 px, så bilden började hämtas först när
+ *  raden redan var på väg in. Inget `loading="lazy"` på <img>: IO:n ÄR
+ *  latheten, och Safaris egen lazy väntade tills bilden nästan syntes och åt
+ *  upp hela förhämtningen. Marginalen gäller bara nedåt - uppåt är redan läst. */
+const ROW_IMAGE_PREFETCH_MARGIN = '0px 0px 1200px 0px';
 function LazyRowImage({ src, className, onFailed }: {
     src: string; className?: string; onFailed?: () => void;
 }) {
@@ -211,7 +219,7 @@ function LazyRowImage({ src, className, onFailed }: {
         if (!el || typeof IntersectionObserver === 'undefined') return;
         const io = new IntersectionObserver(entries => {
             if (entries.some(en => en.isIntersecting)) { setInView(true); io.disconnect(); }
-        }, { rootMargin: '150px' });
+        }, { rootMargin: ROW_IMAGE_PREFETCH_MARGIN });
         io.observe(el);
         return () => io.disconnect();
     }, []);
@@ -222,7 +230,6 @@ function LazyRowImage({ src, className, onFailed }: {
                 <img
                     src={src}
                     alt=""
-                    loading="lazy"
                     decoding="async"
                     referrerPolicy="no-referrer"
                     onError={onFailed}
