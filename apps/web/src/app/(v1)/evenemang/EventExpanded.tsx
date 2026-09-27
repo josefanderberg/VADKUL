@@ -15,7 +15,6 @@ import { recordEventClick } from '@/services/eventStatsService';
 import { linkEventService, type RsvpAttendee } from '@/services/linkEventService';
 import { useAuth } from '@/context/AuthContext';
 import EventChatPanel from '@/components/v2/EventChatPanel';
-import EventReminderBell from '@/components/ui/EventReminderBell';
 import type { ListedEvent } from './DayFilteredList';
 
 // Inloggningsmodalen laddas först när något faktiskt kräver konto (RSVP/chatt)
@@ -182,14 +181,6 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                 <button type="button" onClick={handleShare} aria-label="Dela eventet" title="Dela eventet" className={roundBtn}>
                     <Share2 size={15} />
                 </button>
-                {/* Notisklockan — samma påminnelser (8h/3h/1h/start) som kart-
-                    kortet, samma dokument. clock === null ⇔ inget klockslag
-                    (samma biconditional som radbygget), så klockan inaktiverar
-                    sig själv där precis som på kartan. */}
-                <EventReminderBell
-                    linkEvent={{ id: e.id, time: new Date(e.t), hasSpecificTime: e.clock !== null }}
-                    onRequireLogin={() => setAuthOpen('Logga in för att få påminnelser')}
-                />
                 <Link
                     href={e.href}
                     onClick={onMapClick}

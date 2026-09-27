@@ -19,6 +19,7 @@ import { writeEventSeed } from '@/utils/eventSeed';
 import { isPlainClick } from '@/utils/eventExpand';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import { emojiForCategory } from '@/utils/categories';
+import { recordEventLike } from '@/services/eventStatsService';
 import EventExpanded from './EventExpanded';
 import EventInfoRow from './EventInfoRow';
 
@@ -360,6 +361,9 @@ export default function CityVadkulSpotlight(props: Props) {
     }, []);
     const toggleSave = (id: string) => {
         if (!user && !saved.has(id)) { setAuthOpen(true); return; }
+        // Gilla-räknaren (eventStats.likes) - samma siffra som vid hjärtat på
+        // kartkortet; se toggleSave i DayFilteredList.
+        recordEventLike(id, saved.has(id) ? -1 : 1);
         setSaved(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);

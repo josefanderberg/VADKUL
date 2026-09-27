@@ -13,7 +13,7 @@ import { useDayFilter } from './dayFilter';
 import { dupKey } from '@/utils/groupDups';
 import { useAuth } from '@/context/AuthContext';
 import { anchorScrollDelta, isPlainClick } from '@/utils/eventExpand';
-import { recordEventClick } from '@/services/eventStatsService';
+import { recordEventClick, recordEventLike } from '@/services/eventStatsService';
 // Kartans ettords-kategorietiketter (Musik, Sport, Familj …) — kategori-
 // chipet nere till höger på raden (Josef 2/9), vänster om statusbadgen.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
@@ -571,6 +571,10 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
         // sparade rader får plockas bort utan inloggning: det är gamla poster
         // från localStorage-tiden, och de ska gå att städa bort.
         if (!user && !saved.has(id)) { setAuthOpen(true); return; }
+        // Gilla-räknaren (eventStats.likes) - samma siffra som vid hjärtat på
+        // kartkortet. Kartan räknar inte om localStorage-mergen vid nästa
+        // besök, så tryckningen ska bokföras här.
+        recordEventLike(id, saved.has(id) ? -1 : 1);
         setSaved(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
