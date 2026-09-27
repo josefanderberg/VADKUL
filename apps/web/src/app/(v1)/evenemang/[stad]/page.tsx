@@ -274,6 +274,13 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
 
                 <FaqSection faqs={faqs} />
 
+                {/* Länkbytet med ForFun (se utils/partnerLinks.ts): stads-
+                    sidan är fallbacken när barn-undersidan ligger under
+                    säsongströskeln — annars bor raden där. Direkt under
+                    vanliga frågor, samma läge som på kategorisidorna. */}
+                {showForFunOnCityPage(city.slug, cityCategories.some(c => c.cat.slug === 'barn' && c.hasPage))
+                    && <ForFunTips cityName={city.name} />}
+
                 {/* Önskningarna som AVSLUT (Josef 14/9: "ingen vill byta till
                     en annan stad — bättre att ha önskningar där"): synlig
                     efterfrågan + skapa-vägen. Klientkomponent utanför server-
@@ -317,11 +324,6 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                         föreningskalendrar. Fel i ett event? Rapportera det via eventkortet på{' '}
                         <Link href="/" className="text-[#006AA7] dark:text-sky-400">kartan</Link>.
                     </p>
-                    {/* Länkbytet med ForFun (se utils/partnerLinks.ts):
-                        stadssidan är fallbacken när barn-undersidan ligger
-                        under säsongströskeln — annars bor raden där. */}
-                    {showForFunOnCityPage(city.slug, cityCategories.some(c => c.cat.slug === 'barn' && c.hasPage))
-                        && <ForFunTips cityName={city.name} />}
                 </div>
             </div>
         </main>

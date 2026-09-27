@@ -228,6 +228,12 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
 
                 <FaqSection faqs={faqs} />
 
+                {/* Länkbytet med ForFun (se utils/partnerLinks.ts) — direkt
+                    under vanliga frågor (Josef 27/9: "längst ner" var för
+                    långt ner), inte som FAQ-post: FAQ:n går in i JSON-LD:n
+                    och partnerlänkar hör inte hemma i schema-datat. */}
+                {showForFunOnCategoryPage(city.slug, cat.slug) && <ForFunTips cityName={city.name} />}
+
                 {siblingCategories.length > 0 && (
                     <div className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">
                         <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-3">Mer i {city.name}</h2>
@@ -264,9 +270,6 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                     </div>
                 )}
 
-                {/* Länkbytet med ForFun (se utils/partnerLinks.ts) — längst
-                    ner, som partnerns motsvarande rad i deras stadsguider. */}
-                {showForFunOnCategoryPage(city.slug, cat.slug) && <ForFunTips cityName={city.name} />}
             </div>
         </main>
     );
