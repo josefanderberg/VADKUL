@@ -1,12 +1,13 @@
 import { safeJsonLd } from '@/utils/jsonLd';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import {
-    CITIES,
+    CITIES, CATEGORY_PAGES,
     categoryBySlug, getCityCategoryEvents, getCityEvents, getCityOptInEvents, getNationalUpcomingCount, getCityCategoryChips, countBySource, getCategoryCombos, dayLabel, cityTitle, categoryTitle,
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../../cityData';
+import { categoryChipHref } from '@/utils/categoryChips';
 import CategoryChips from '../../CategoryChips';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
@@ -18,21 +19,35 @@ import { categoryLabel } from '@/components/v2/v2MapLabel';
 
 // Kategorisidor per stad ("Konserter i Malmö", "Saker att göra med barn i
 // Stockholm") — fångar de SPECIFIKA sökfraserna folk faktiskt googlar, som
-// stadssidan är för bred för. Genereras BARA för kombinationer med
-// ≥ MIN_CATEGORY_EVENTS kommande event (inga tunna sidor).
+// stadssidan är för bred för. Riktig sida BARA för kombinationer över
+// undersidetröskeln (inga tunna sidor) — men ALLA giltiga stad×kategori-
+// adresser prerendras: under tröskeln blir adressen en redirect till
+// stadssidan med kategorifiltret på. Undersidorna kommer och går med
+// säsongen (trösklarna räknas om per build), så externa länkar till t.ex.
+// /evenemang/trosa/barn ska landa rätt året runt, aldrig i en 404.
 export const dynamic = 'force-static';
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-    const combos = await getCategoryCombos();
-    return combos.map(({ city, cat }) => ({ stad: city.slug, kategori: cat.slug }));
+    return CITIES.flatMap(city => CATEGORY_PAGES.map(cat => ({ stad: city.slug, kategori: cat.slug })));
+}
+
+/** Stad + kategori ur adressen, med dagens tröskelbesked: hasPage = false
+ *  betyder redirect till stadssidan (sidan är under undersidetröskeln). */
+async function resolveCombo(stad: string, kategori: string) {
+    const city = CITIES.find(c => c.slug === stad);
+    const cat = categoryBySlug(kategori);
+    if (!city || !cat) return null;
+    const { events } = await getCityEvents(city);
+    const hasPage = getCityCategoryChips(city, events).some(c => c.cat.slug === cat.slug && c.hasPage);
+    return { city, cat, hasPage };
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ stad: string; kategori: string }> }): Promise<Metadata> {
     const { stad, kategori } = await params;
-    const city = CITIES.find(c => c.slug === stad);
-    const cat = categoryBySlug(kategori);
-    if (!city || !cat) return {};
+    const combo = await resolveCombo(stad, kategori);
+    if (!combo || !combo.hasPage) return {}; // redirect-stubbar behöver ingen metadata
+    const { city, cat } = combo;
     const { events } = await getCityCategoryEvents(city, cat.dataKey);
     // "idag & i helgen" i titeln fångar långsvansen ("konserter kalmar i
     // helgen") — siffrorna hålls färska av den dagliga auto-deployen.
@@ -70,9 +85,13 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
 
 export default async function CityCategoryPage({ params }: { params: Promise<{ stad: string; kategori: string }> }) {
     const { stad, kategori } = await params;
-    const city = CITIES.find(c => c.slug === stad);
-    const cat = categoryBySlug(kategori);
-    if (!city || !cat) notFound();
+    const combo = await resolveCombo(stad, kategori);
+    if (!combo) notFound();
+    const { city, cat } = combo;
+    // Under tröskeln → stadssidan med kategorifiltret på (samma adress som
+    // chips utan undersida länkar till). redirect(), inte permanentRedirect:
+    // kategorin kan växa tillbaka över tröskeln nästa säsong.
+    if (!combo.hasPage) redirect(categoryChipHref(city.slug, cat.slug, false));
     const { events, updatedAt } = await getCityCategoryEvents(city, cat.dataKey);
 
     // Korslänkar: stadens övriga kategorisidor + samma kategori i andra städer.
