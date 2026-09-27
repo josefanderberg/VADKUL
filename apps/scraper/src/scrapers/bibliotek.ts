@@ -131,6 +131,42 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'osthammar',     customerId: '64f194758094f34fdca7fb02', eventsUrl: 'https://bibliotek.osthammar.se/evenemang',  name: 'Östhammars bibliotek',         cityHint: 'Östhammar' },
     { id: 'timra',         customerId: '60c9e48d4cfcfc2892c167d4', eventsUrl: 'https://bibliotek.timra.se/evenemang',      name: 'Timrå bibliotek',              cityHint: 'Timrå' },
     { id: 'are',           customerId: '68b68fa7a2fccd7fbf6612a6', eventsUrl: 'https://bibliotek.are.se/evenemang',        name: 'Åre bibliotek',                cityHint: 'Åre' },
+    // ── Runda 6 (2026-09-28, första discover-axiell-svepet): 179 kommuner
+    // probade → 19 nya, 0 dubbletter, 160 missar (ej Arena Nova eller egen
+    // host utanför bibliotek.<kommun>.se-mönstren). ────────────────────────────
+    // "Säter"-fyndet är i själva verket HELA Dalarnas läns-tenant —
+    // dalabiblioteken.se sniffar samma customerId. Konsortium, filialen bär
+    // orten ("Falu stadsbibliotek", "Smedjebackens bibliotek" …).
+    { id: 'dalarna',       customerId: '626a3a52bbee2204026d72ef', eventsUrl: 'https://dalabiblioteken.se/evenemang',      name: 'Dalabiblioteken',
+      cities: ['Falun', 'Borlänge', 'Ludvika', 'Avesta', 'Hedemora', 'Mora', 'Leksand', 'Rättvik', 'Säter', 'Smedjebacken', 'Malung', 'Orsa', 'Vansbro', 'Älvdalen', 'Gagnef', 'Djurås', 'Söderbärke', 'Särna', 'Bjursås', 'Horndal', 'Furudal'] },
+    { id: 'sundbyberg',    customerId: '6156bf69e9a84303da337fdb', eventsUrl: 'https://bibliotek.sundbyberg.se/evenemang', name: 'Sundbybergs bibliotek',        cityHint: 'Sundbyberg' },
+    { id: 'svedala',       customerId: '5dceb8e39cf47722f2bb983b', eventsUrl: 'https://bibliotek.svedala.se/evenemang',    name: 'Svedala bibliotek',            cityHint: 'Svedala' },
+    { id: 'ljungby',       customerId: '5fbf9fd99cf4776ba2b1a70f', eventsUrl: 'https://bibliotek.ljungby.se/evenemang',    name: 'Ljungby bibliotek',            cityHint: 'Ljungby' },
+    { id: 'hultsfred',     customerId: '67dc0769296c3258c8eaf1ef', eventsUrl: 'https://bibliotek.hultsfred.se/evenemang',  name: 'Hultsfreds bibliotek',         cityHint: 'Hultsfred' },
+    // Älvkarleby: enda filialen är "Biblioteket i Skutskär" — kommunhuvudorten
+    // som hint (Österåker/Åkersberga-mönstret).
+    { id: 'alvkarleby',    customerId: '64f194c48094f34fdca7fb04', eventsUrl: 'https://bibliotek.alvkarleby.se/evenemang', name: 'Älvkarlebys bibliotek',        cityHint: 'Skutskär' },
+    // Härjedalen: en kommun men ~10 mil mellan filialorterna (Sveg–Funäsdalen)
+    // — cities i stället för cityHint, filialen bär orten.
+    { id: 'herjedalen',    customerId: '68b68ffda2fccd7fbf6612a7', eventsUrl: 'https://bibliotek.herjedalen.se/evenemang', name: 'Härjedalens bibliotek',
+      cities: ['Sveg', 'Lillhärdal', 'Vemdalen', 'Funäsdalen'] },
+    { id: 'vingaker',      customerId: '61555ed3e9a84303da337f9d', eventsUrl: 'https://bibliotek.vingaker.se/evenemang',   name: 'Vingåkers bibliotek',          cityHint: 'Vingåker' },
+    // Håbo: kommunen heter Håbo, biblioteket ligger i Bålsta.
+    { id: 'habo',          customerId: '6374e8b771432976b7d81958', eventsUrl: 'https://bibliotekhabo.se/evenemang',        name: 'Håbo bibliotek',               cityHint: 'Bålsta' },
+    { id: 'enkoping',      customerId: '67122b13296c3201a2484510', eventsUrl: 'https://bibliotekenkoping.se/evenemang',    name: 'Enköpings bibliotek',          cityHint: 'Enköping' },
+    // Heby: tre filialorter med ~3 mil emellan (Heby/Östervåla/Tärnsjö) — cities.
+    { id: 'heby',          customerId: '64f1949e8094f34fdca7fb03', eventsUrl: 'https://bibliotek.heby.se/evenemang',       name: 'Heby bibliotek',
+      cities: ['Heby', 'Östervåla', 'Tärnsjö'] },
+    { id: 'trosa',         customerId: '651ea9388094f30ef37ff5f4', eventsUrl: 'https://bibliotek.trosa.se/evenemang',      name: 'Trosa bibliotek',              cityHint: 'Trosa' },
+    // Mörbylånga: Färjestaden ligger ~2 mil från huvudorten — cities.
+    { id: 'morbylanga',    customerId: '5e79d0df9cf4774dbe19996b', eventsUrl: 'https://bibliotek.morbylanga.se/evenemang', name: 'Mörbylånga bibliotek',
+      cities: ['Mörbylånga', 'Färjestaden', 'Degerhamn'] },
+    { id: 'vastervik',     customerId: '6960cf70cf04866f401d1b3d', eventsUrl: 'https://bibliotek.vastervik.se/evenemang',  name: 'Västerviks bibliotek',         cityHint: 'Västervik' },
+    { id: 'vimmerby',      customerId: '691dacdecdc95c5435968417', eventsUrl: 'https://bibliotek.vimmerby.se/evenemang',   name: 'Vimmerby bibliotek',           cityHint: 'Vimmerby' },
+    { id: 'nybro',         customerId: '627e268dbbee2204026d74db', eventsUrl: 'https://bibliotek.nybro.se/evenemang',      name: 'Nybro bibliotek',              cityHint: 'Nybro' },
+    { id: 'hoor',          customerId: '653b66e2e2092146b23391bd', eventsUrl: 'https://bibliotek.hoor.se/evenemang',       name: 'Höörs bibliotek',              cityHint: 'Höör' },
+    { id: 'monsteras',     customerId: '68f89ea8cdc95c5435967794', eventsUrl: 'https://bibliotek.monsteras.se/evenemang',  name: 'Mönsterås bibliotek',          cityHint: 'Mönsterås' },
+    { id: 'emmaboda',      customerId: '64f194eb8094f34fdca7fb05', eventsUrl: 'https://bibliotek.emmaboda.se/evenemang',   name: 'Emmaboda bibliotek',           cityHint: 'Emmaboda' },
 ];
 
 interface AxiellHit {
