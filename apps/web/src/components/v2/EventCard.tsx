@@ -557,7 +557,10 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
     const markerIdx = Math.min(3, upcomingItems.length - 1);
     return (
         <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
-            <div className={`px-4 md:px-6 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'py-2' : 'py-3'}`}>
+            {/* Flikraden har FAST höjd (h-11) i flikläget: dagrubrikerna nedan
+                är sticky top-11 och ska fästa exakt under den — ändras höjden
+                här måste top-11 följa med. */}
+            <div className={`px-4 md:px-6 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'h-11' : 'py-3'}`}>
                 {onTabChange ? (
                     <div role="tablist" aria-label="Lista" className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 min-w-0 overflow-x-auto no-scrollbar">
                         {([
@@ -622,7 +625,16 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                         const before = days.slice(0, di).reduce((n, d) => n + d.rows.length, 0);
                         return (
                             <section key={day.dayOffset}>
-                                <h3 className="px-4 md:px-6 pt-4 pb-1.5 text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-zinc-300 border-b border-border">
+                                {/* Klistrad dagrubrik (Josef 27/9: "den dagen man
+                                    är på ska stanna i toppen tills man scrollar
+                                    ner till nästa dag") — samma grepp som väljar-
+                                    listans dagrubriker: sticky mot kortets
+                                    scrollcontainer, hålls kvar av sin egen
+                                    <section> och knuffas ut av nästa dags rubrik.
+                                    top-11 = flikradens fasta höjd (h-11, sticky
+                                    top-0 z-10 ovanför); z-[9] så rubriken glider
+                                    IN UNDER flikraden när den knuffas ut. */}
+                                <h3 className="sticky top-11 z-[9] bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 md:px-6 pt-4 pb-1.5 text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-zinc-300 border-b border-border">
                                     {getDayLabel(day.dayOffset)}
                                 </h3>
                                 <ul className="divide-y divide-border">
