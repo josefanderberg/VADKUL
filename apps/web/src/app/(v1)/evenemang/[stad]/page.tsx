@@ -16,6 +16,8 @@ import CityCreatePitch from '../CityCreatePitch';
 import CityWishes from '../CityWishes';
 import { DayFilterProvider } from '../dayFilter';
 import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
+import { showForFunOnCityPage } from '@/utils/partnerLinks';
+import ForFunTips from '../ForFunTips';
 // Chipsen visar KARTANS ettords-etiketter (samma källa som kategorifiltret på
 // kartan — Musik, Sport, Familj …), inte kategorisidornas långa SEO-namn.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
@@ -271,6 +273,13 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 <CityCreatePitch cityName={city.name} createHref={`${cityMapHref(city)}&skapa=1`} />
 
                 <FaqSection faqs={faqs} />
+
+                {/* Länkbytet med ForFun (se utils/partnerLinks.ts): stads-
+                    sidan är fallbacken när barn-undersidan ligger under
+                    säsongströskeln — annars bor raden där. Direkt under
+                    vanliga frågor, samma läge som på kategorisidorna. */}
+                {showForFunOnCityPage(city.slug, cityCategories.some(c => c.cat.slug === 'barn' && c.hasPage))
+                    && <ForFunTips cityName={city.name} />}
 
                 {/* Önskningarna som AVSLUT (Josef 14/9: "ingen vill byta till
                     en annan stad — bättre att ha önskningar där"): synlig
