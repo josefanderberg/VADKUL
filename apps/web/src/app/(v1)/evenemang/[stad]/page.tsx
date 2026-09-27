@@ -16,6 +16,8 @@ import CityCreatePitch from '../CityCreatePitch';
 import CityWishes from '../CityWishes';
 import { DayFilterProvider } from '../dayFilter';
 import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
+import { showForFunOnCityPage } from '@/utils/partnerLinks';
+import ForFunTips from '../ForFunTips';
 // Chipsen visar KARTANS ettords-etiketter (samma källa som kategorifiltret på
 // kartan — Musik, Sport, Familj …), inte kategorisidornas långa SEO-namn.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
@@ -315,6 +317,11 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                         föreningskalendrar. Fel i ett event? Rapportera det via eventkortet på{' '}
                         <Link href="/" className="text-[#006AA7] dark:text-sky-400">kartan</Link>.
                     </p>
+                    {/* Länkbytet med ForFun (se utils/partnerLinks.ts):
+                        stadssidan är fallbacken när barn-undersidan ligger
+                        under säsongströskeln — annars bor raden där. */}
+                    {showForFunOnCityPage(city.slug, cityCategories.some(c => c.cat.slug === 'barn' && c.hasPage))
+                        && <ForFunTips cityName={city.name} />}
                 </div>
             </div>
         </main>

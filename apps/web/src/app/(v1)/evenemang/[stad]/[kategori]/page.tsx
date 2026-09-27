@@ -8,6 +8,8 @@ import {
     todayKey, weekendKeys, weekKeys, countByDayKeys, countsSentence, topVenues, exampleTitles, svList,
 } from '../../cityData';
 import { categoryChipHref } from '@/utils/categoryChips';
+import { showForFunOnCategoryPage } from '@/utils/partnerLinks';
+import ForFunTips from '../../ForFunTips';
 import CategoryChips from '../../CategoryChips';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd, buildFaqJsonLd, FaqSection, type Faq } from '../../EventList';
 import TopNav from '../../TopNav';
@@ -261,6 +263,10 @@ export default async function CityCategoryPage({ params }: { params: Promise<{ s
                         </div>
                     </div>
                 )}
+
+                {/* Länkbytet med ForFun (se utils/partnerLinks.ts) — längst
+                    ner, som partnerns motsvarande rad i deras stadsguider. */}
+                {showForFunOnCategoryPage(city.slug, cat.slug) && <ForFunTips cityName={city.name} />}
             </div>
         </main>
     );
