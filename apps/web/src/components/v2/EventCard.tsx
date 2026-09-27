@@ -605,8 +605,12 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                         }`}
                     >
                         {showImages ? <ImageIcon size={12} /> : <ImageOff size={12} />}
-                        {/* Med flikraden får bara ikonen plats på mobil. */}
-                        {onTabChange ? <span className="sr-only">Bilder</span> : 'Bilder'}
+                        {/* Klartext på knappen (Josef 27/9: "skriv visa bilder
+                            på den knappen, så blir det tydligare" — river
+                            24/9-beslutet att bara ikonen får plats bredvid
+                            flikraden; flikraden scrollar i sidled om det blir
+                            trångt). */}
+                        <span className="whitespace-nowrap">{showImages ? 'Dölj bilder' : 'Visa bilder'}</span>
                     </button>
                 )}
             </div>
