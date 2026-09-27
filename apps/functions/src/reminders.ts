@@ -39,10 +39,11 @@ export const eventReminders = region.pubsub
         // select() = fältmask: scannen körs var 15:e minut och läser samma event
         // upp till 4 gånger — skicka inte hela ~1 kB-dokumentet över nätet varje
         // gång (egress var den dyra SKU:n aug-26), bara fälten notisen behöver.
+        // url + userCreated behövs för kart-id:t (se mapId nedan).
         const eventsSnap = await db.collection('linkEvents')
             .where('time', '>', now)
             .where('time', '<=', inOneHour)
-            .select('time', 'hasSpecificTime', 'title', 'locationName')
+            .select('time', 'hasSpecificTime', 'title', 'locationName', 'url', 'userCreated')
             .get();
 
         for (const eventDoc of eventsSnap.docs) {
@@ -50,6 +51,18 @@ export const eventReminders = region.pubsub
             // Heldags-event (tid = 00:00 utan klockslag): en "om 1 timme"-notis
             // kl 23 kvällen innan vore fel — hoppa över dem.
             if (event.hasSpecificTime === false) continue;
+
+            // KART-ID:T: webbens savedEventIds bär eventens id SÅ SOM KARTAN
+            // ser dem - för skrapade event är det URL:en (url är primärnyckel
+            // i pipelinen; doc-id:t i linkEvents är slumpat), för användar-
+            // skapade (inkl. tips, som är userCreated MED url) doc-id:t.
+            // T.o.m. 27/9 frågades bara på doc-id:t, så gillare av skrapade
+            // event fick ALDRIG 1h-notisen - klockan (eventReminderPrefs)
+            // täckte dem, men den är riven och hjärtat är enda notisvägen.
+            const isUserCreated = event.userCreated === true;
+            const mapId = !isUserCreated && typeof event.url === 'string' && event.url
+                ? event.url as string
+                : eventDoc.id;
 
             const markerRef = db.collection('eventReminders').doc(eventDoc.id);
             try {
@@ -61,8 +74,11 @@ export const eventReminders = region.pubsub
                 const recipients = new Set<string>();
                 const attendeesSnap = await eventDoc.ref.collection('attendees').get();
                 attendeesSnap.docs.forEach(d => recipients.add(d.id));
+                // Båda id-formerna när de skiljer sig (array-contains-any tar
+                // upp till 10 värden) - gamla gillningar kan bära endera.
+                const likeIds = mapId === eventDoc.id ? [eventDoc.id] : [eventDoc.id, mapId];
                 const likersSnap = await db.collection('users')
-                    .where('savedEventIds', 'array-contains', eventDoc.id)
+                    .where('savedEventIds', 'array-contains-any', likeIds)
                     .get();
                 likersSnap.docs.forEach(d => recipients.add(d.id));
 
@@ -87,7 +103,9 @@ export const eventReminders = region.pubsub
                 const title = `⏰ Om 1 timme: ${event.title}`;
                 const body = `Börjar kl ${startsAt}${event.locationName ? ` · ${event.locationName}` : ''}`;
                 // /e/<slug> studsar direkt in på kartan med eventet öppet.
-                const slug = eventShareSlug(eventDoc.id);
+                // Slugas på KART-id:t - webbens /e/-uppslag hashar URL:en för
+                // skrapade event, en slug på doc-id:t hade gett en död länk.
+                const slug = eventShareSlug(mapId);
                 const url = `/e/${slug}`;
 
                 let delivered = 0;

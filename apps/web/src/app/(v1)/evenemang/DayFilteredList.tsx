@@ -14,6 +14,7 @@ import { dupKey } from '@/utils/groupDups';
 import { useAuth } from '@/context/AuthContext';
 import { anchorScrollDelta, isPlainClick } from '@/utils/eventExpand';
 import { recordEventClick, recordEventLike } from '@/services/eventStatsService';
+import { userService } from '@/services/userService';
 // Kartans ettords-kategorietiketter (Musik, Sport, Familj …) — kategori-
 // chipet nere till höger på raden (Josef 2/9), vänster om statusbadgen.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
@@ -575,6 +576,16 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
         // kartkortet. Kartan räknar inte om localStorage-mergen vid nästa
         // besök, så tryckningen ska bokföras här.
         recordEventLike(id, saved.has(id) ? -1 : 1);
+        // Gillningen till KONTOT direkt (fire-and-forget): påminnelsen 1 h
+        // före går till kontots savedEventIds (functions/reminders), och den
+        // som aldrig öppnar kartan får annars ingen - localStorage synkas
+        // först vid nästa kartbesök. Misslyckas skrivningen tar den mergen.
+        if (user) {
+            (saved.has(id)
+                ? userService.removeSavedEventId(user.uid, id)
+                : userService.addSavedEventId(user.uid, id)
+            ).catch(() => { /* offline - kartans merge tar den */ });
+        }
         setSaved(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);

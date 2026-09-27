@@ -1,5 +1,5 @@
 // src/services/userService.ts
-import { doc, setDoc, getDoc, Timestamp, runTransaction, collection, query, orderBy, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Timestamp, runTransaction, collection, query, orderBy, limit, getDocs, updateDoc, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { UserProfile } from '../types';
 
@@ -105,6 +105,21 @@ export const userService = {
   // Spegla hela sparlistan till users/{uid}. Cap:ad så dokumentet hålls litet.
   async setSavedEventIds(uid: string, ids: string[]): Promise<void> {
     await setDoc(doc(db, 'users', uid), { savedEventIds: ids.slice(-500) }, { merge: true });
+  },
+
+  // En enskild gillning till/från kontot - stadssidornas hjärtan. Kontots
+  // savedEventIds är det påminnelsejobbet (functions/reminders) frågar på,
+  // så gillningen måste nå Firestore direkt: localStorage synkas först vid
+  // nästa kartbesök, och den som aldrig öppnar kartan blev annars aldrig
+  // påmind. arrayUnion/arrayRemove i stället för hela listan - stadssidan
+  // ser bara sin egen enhets localStorage och får inte skriva över
+  // gillningar gjorda på andra enheter. setDoc+merge så skrivningen funkar
+  // även innan users-dokumentet finns.
+  async addSavedEventId(uid: string, id: string): Promise<void> {
+    await setDoc(doc(db, 'users', uid), { savedEventIds: arrayUnion(id) }, { merge: true });
+  },
+  async removeSavedEventId(uid: string, id: string): Promise<void> {
+    await setDoc(doc(db, 'users', uid), { savedEventIds: arrayRemove(id) }, { merge: true });
   },
 
   // Lägg till eller uppdatera omdöme

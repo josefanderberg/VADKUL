@@ -20,6 +20,7 @@ import { isPlainClick } from '@/utils/eventExpand';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import { emojiForCategory } from '@/utils/categories';
 import { recordEventLike } from '@/services/eventStatsService';
+import { userService } from '@/services/userService';
 import EventExpanded from './EventExpanded';
 import EventInfoRow from './EventInfoRow';
 
@@ -364,6 +365,14 @@ export default function CityVadkulSpotlight(props: Props) {
         // Gilla-räknaren (eventStats.likes) - samma siffra som vid hjärtat på
         // kartkortet; se toggleSave i DayFilteredList.
         recordEventLike(id, saved.has(id) ? -1 : 1);
+        // Gillningen till kontot direkt så påminnelsejobbet ser den - se
+        // toggleSave i DayFilteredList.
+        if (user) {
+            (saved.has(id)
+                ? userService.removeSavedEventId(user.uid, id)
+                : userService.addSavedEventId(user.uid, id)
+            ).catch(() => { /* offline - kartans merge tar den */ });
+        }
         setSaved(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
