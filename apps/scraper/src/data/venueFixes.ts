@@ -62,6 +62,20 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 18.07831,
         note: 'Kollektivet Livet, Stadsgårdsleden 19 (OSM-POI) — rapport 10/9, tre källor spretade Slussen↔Fotografiska',
     },
+    {
+        // Kulturhuset Väven i Umeå. FB-rapport 25/9 (Skönsmon-gruppen, "event
+        // 50 mil härifrån"): "Christoffer Nyqvist – Umeå, Väven" kom in via
+        // Sundsvalls sök-kö, ankrades på Sundsvall och Nominatim hittade en
+        // Väven-namne där (62.4067, 17.3348); "Program i Väven" (Vävens egen
+        // programserie) låg samtidigt på Karlstads mittpunkt. Bara Umeå-huset
+        // heter så. Koordinat: samma punkt som källornas korrekt geokodade
+        // Väven-event ("Umeå, Väven" / "Väven, Vävenscenen, Umeå").
+        names: ['Väven', 'Program i Väven'],
+        city: 'Umeå',
+        lat: 63.8256568,
+        lng: 20.2630745,
+        note: 'Kulturhuset Väven, Umeå — FB-rapport 25/9 (Skönsmon), "Väven" ur Sundsvalls-kön fick en namne i Sundsvall',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */

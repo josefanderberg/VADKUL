@@ -6,6 +6,7 @@ import { uploadEventImage, isOurStorageUrl } from '../../utils/storageHelper';
 import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
 import { FB_SEARCH_CITIES } from '../../utils/swedishPlaces';
 import { centroidFallbackRejection } from './centroidGuard';
+import { anchorCityOverride } from './anchorCity';
 import { classifyEvent } from '../../utils/classify';
 import { normalizeDescription } from '../../utils/normalizeEvent';
 import { extractPriceFromText } from '../../utils/priceFromText';
@@ -617,12 +618,40 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 let geoPrecision: string | null = null;
 
                 if (extractedAddress) {
+                    let coords: Awaited<ReturnType<typeof geocodeVenueSweden>> = null;
+
+                    // Försök 0: STAD UR EVENTETS EGEN TEXT (Skönsmon-rapporten
+                    // 25/9: "… Umeå, Väven" ur Sundsvalls-kön ankrades på
+                    // Sundsvall och fick en namne där). Pekar titel/adress
+                    // entydigt på en annan stad än köns — och köns stad aldrig
+                    // nämns — provas den staden FÖRST. Bara en SPECIFIK träff
+                    // (poi/gata) får vinna: en centroid-/ortsgissning där är
+                    // svagare än ordinarie kedjan nedan, som alltid står kvar
+                    // som fallback (fixen kan aldrig göra något sämre än förut;
+                    // se anchorCity.ts om bortalags-titlarna).
+                    const textCity = anchorCityOverride({
+                        contextCity: city,
+                        title: details.title,
+                        address: extractedAddress,
+                        description: details.description || details.ogDescription || '',
+                    });
+                    if (textCity) {
+                        const textQuery = extractedAddress.toLowerCase().includes(textCity.toLowerCase())
+                            ? extractedAddress
+                            : `${extractedAddress}, ${textCity}`;
+                        const textHit = await geocodeVenueSweden(textQuery, { nearCity: textCity });
+                        if (textHit && (textHit[2] === 'poi' || textHit[2] === 'gata')) {
+                            coords = textHit;
+                            console.log(`    📍 Geocoding (stad ur eventtexten): "${textCity}" → [${textHit[0]}, ${textHit[1]}] (kön sa "${city || '–'}")`);
+                        }
+                    }
+
                     let geocodeQuery = extractedAddress;
                     // Om stadsnamn inte redan ingår i adressen, lägg till kontext-staden från sök-kön
                     if (city && !extractedAddress.toLowerCase().includes(city.toLowerCase())) {
                         geocodeQuery = `${extractedAddress}, ${city}`;
                     }
-                    let coords = await geocodeVenueSweden(geocodeQuery, city ? { nearCity: city } : undefined);
+                    if (!coords) coords = await geocodeVenueSweden(geocodeQuery, city ? { nearCity: city } : undefined);
 
                     // Retry 1: skanna extractedAddress efter inbäddad stad (t.ex. "Foajén - Örebro Konserthus")
                     if (!coords) {
