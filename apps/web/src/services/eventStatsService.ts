@@ -68,6 +68,42 @@ export function recordEventClick(evt: { id: string; url?: string; title?: string
 }
 
 /**
+ * Gilla-räknaren per event: `likes` i SAMMA eventStats-doc som views/clicks.
+ * +1 när någon gillar (hjärtat på kortet), -1 när gillningen tas bort (hjärtat
+ * igen, krysset i sparat-listan eller svep bort). Fire-and-forget som views -
+ * räknaren är best-effort och får aldrig störa själva sparningen (som bor i
+ * users.savedEventIds och alltid går igenom).
+ */
+export function recordEventLike(eventId: string, delta: 1 | -1): void {
+    try {
+        const ref = doc(db, 'eventStats', eventShareSlug(eventId));
+        setDoc(ref, { likes: increment(delta), eventId }, { merge: true }).catch(() => {
+            /* nätverk/regler nere → släpp gillningen ur statistiken */
+        });
+    } catch {
+        /* defensivt - en trasig räknare ska inte fälla kartan */
+    }
+}
+
+/**
+ * Läs gilla-antalet för ett event (siffran vid hjärtat på kortet). En getDoc
+ * per kortöppning - inga lyssnare, ingen extra egress. Returnerar null vid fel
+ * (offline, rules ej deployade) så siffran döljs i stället för att ljuga "0".
+ */
+export async function getEventLikes(eventId: string): Promise<number | null> {
+    try {
+        const snap = await getDoc(doc(db, 'eventStats', eventShareSlug(eventId)));
+        if (!snap.exists()) return 0;
+        const likes = snap.data()?.likes;
+        // Decrement kan i teorin gå under noll (t.ex. avgillning vars +1 aldrig
+        // nådde servern) - visa aldrig ett negativt tal.
+        return typeof likes === 'number' ? Math.max(0, likes) : 0;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Läs visningsantalet för ett event (👁-badgen på kortet). En getDoc per
  * kortöppning — inga lyssnare, ingen extra egress. Returnerar null vid fel
  * (offline, rules ej deployade) så badgen döljs i stället för att ljuga "0".

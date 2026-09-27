@@ -17,9 +17,9 @@ import { isAffiliateUrl, AFFILIATE_DISCLOSURE } from '../../utils/affiliateLink'
 import { hostFaviconUrl, withRecoveredLineBreaks } from '../../utils/eventExpand';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { type BoostTier } from '../../services/boostService';
-import EventReminderBell from './EventReminderBell';
 import BoostTierPicker from './BoostTierPicker';
-import { recordEventClick } from '../../services/eventStatsService';
+import { recordEventClick, getEventLikes } from '../../services/eventStatsService';
+import { displayedLikeCount } from '../../utils/likeCount';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect, useRef } from 'react';
@@ -295,6 +295,28 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         onToggleSave?.();
     };
 
+    // Gilla-siffran vid hjärtat (Josef 27/9: "vid varje like-knapp ska man se
+    // hur många som klickat på like") - eventStats.likes läses en gång per
+    // kortöppning, som visningarna en gång gjorde. Ens eget tryck ska synas
+    // direkt: hämtningen bär med sig gillat-läget den gjordes i, och
+    // displayedLikeCount justerar +-1 när läget flippats sedan dess (serverns
+    // increment är fire-and-forget från föräldern och hinner inte alltid fram).
+    const [likeFetch, setLikeFetch] = useState<{ base: number; savedAtFetch: boolean } | null>(null);
+    const savedNowRef = useRef(saved);
+    savedNowRef.current = saved;
+    useEffect(() => {
+        let mounted = true;
+        setLikeFetch(null);
+        getEventLikes(linkEvent.id).then(n => {
+            // null = offline/regler nere → ingen siffra i stället för att ljuga "0".
+            if (mounted && n !== null) setLikeFetch({ base: n, savedAtFetch: savedNowRef.current });
+        });
+        return () => { mounted = false; };
+    }, [linkEvent.id]);
+    const likeCount = likeFetch === null
+        ? null
+        : displayedLikeCount(likeFetch.base, likeFetch.savedAtFetch, saved);
+
     // Stjärn-gåvan ⭐: placeringen är ENGÅNGS (kan aldrig ångras eller flyttas)
     // → alltid bekräftelsedialog innan Cloud-funktionen kallas.
     const handlePlaceStar = (e: React.MouseEvent) => {
@@ -509,21 +531,30 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 <Star size={15} fill="currentColor" />
                             </span>
                         ) : null}
-                        {/* Notisklockan 🔔 bredvid hjärtat: på/av för påminnelser
-                            (8 h/3 h/1 h före + vid start). Inaktiverad för event
-                            utan klockslag — se EventReminderBell. */}
-                        <EventReminderBell linkEvent={linkEvent} />
+                        {/* Hjärtat = gilla + notiser i ETT (Josef 27/9: klockan
+                            är borttagen, "det räcker med hjärtat/like knappen.
+                            den kan vara för att få notiser") - påminnelsen 1 h
+                            före går redan till alla som gillat (functions-jobbet
+                            över savedEventIds; nudgen vid första gillningen
+                            frågar om tillståndet). Siffran = hur många som
+                            gillat (eventStats.likes); vid 0 visas bara hjärtat. */}
                         {onToggleSave && (
                             <button
                                 onClick={handleToggleSave}
-                                aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
-                                className={`w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 ${
+                                aria-label={saved ? 'Ta bort din gillning' : 'Gilla eventet'}
+                                title={likeCount ? `${likeCount} har gillat det här eventet` : undefined}
+                                className={`h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 ${
+                                    likeCount ? 'px-2.5 gap-1' : 'w-8'
+                                } ${
                                     saved
                                         ? 'bg-rose-50 border-rose-200 text-rose-500 dark:bg-rose-950/30 dark:border-rose-900/50'
                                         : 'bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-500 dark:hover:text-rose-400 dark:hover:border-rose-900/50'
                                 }`}
                             >
                                 <Heart size={15} fill={saved ? 'currentColor' : 'none'} />
+                                {likeCount ? (
+                                    <span className="text-[11px] font-black tabular-nums leading-none">{likeCount}</span>
+                                ) : null}
                             </button>
                         )}
                         {/* Dela-knapp i knappraden mellan hjärtat och ANMÄL

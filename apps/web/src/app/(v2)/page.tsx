@@ -19,7 +19,7 @@ import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
-import { recordEventView } from '@/services/eventStatsService';
+import { recordEventView, recordEventLike } from '@/services/eventStatsService';
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
@@ -1922,6 +1922,9 @@ export default function HomePage() {
         // tillbaka — Sparat-panelen nås numera bara från profilpanelen.
         // Gäller ALLA vägar in hit: hjärtat på kortet OCH svep höger (SPARA).
         if (!user) { openLogin('Logga in för att gilla event'); return; }
+        // Gilla-räknaren vid hjärtat (eventStats.likes) - bara när gillningen
+        // faktiskt är ny, annars dubbelräknas t.ex. spara-vägar som redan är på.
+        if (!savedRef.current.has(eventId)) recordEventLike(eventId, 1);
         setSavedEventIds(prev => {
             const next = new Set(prev);
             next.add(eventId);
@@ -3025,6 +3028,8 @@ export default function HomePage() {
 
     // Ta bort från sparade (hjärtat på kortet eller krysset i sparat-listan).
     const handleUnsaveEvent = useCallback((eventId: string) => {
+        // Gilla-räknaren backar bara när det fanns en gillning att ta bort.
+        if (savedRef.current.has(eventId)) recordEventLike(eventId, -1);
         setSavedEventIds(prev => {
             const next = new Set(prev);
             next.delete(eventId);
@@ -3684,6 +3689,7 @@ export default function HomePage() {
             return next;
         });
         // Remove from saved if it was there
+        if (savedRef.current.has(eventId)) recordEventLike(eventId, -1);
         setSavedEventIds(prev => {
             const next = new Set(prev);
             next.delete(eventId);

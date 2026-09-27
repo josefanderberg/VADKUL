@@ -568,10 +568,12 @@ service cloud.firestore {
     match /eventStats/{docId} {
       allow read: if true;
       // clicksByDay (14/9): dagshinkarna bakom arrangörsmejlens 7/30-fönster.
+      // likes (27/9): gilla-räknaren vid hjärtat på eventkortet.
       allow create: if request.resource.data.keys()
-          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title'])
+          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes'])
         && request.resource.data.eventId is string
         && (!('views' in request.resource.data) || request.resource.data.views is number)
+        && (!('likes' in request.resource.data) || request.resource.data.likes is number)
         && (!('clicks' in request.resource.data) || request.resource.data.clicks is number)
         && (!('clicksByMonth' in request.resource.data) || request.resource.data.clicksByMonth is map)
         && (!('clicksByDay' in request.resource.data) || request.resource.data.clicksByDay is map)
@@ -579,9 +581,10 @@ service cloud.firestore {
         && (!('domain' in request.resource.data) || request.resource.data.domain is string)
         && (!('title' in request.resource.data) || request.resource.data.title is string);
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title'])
+          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes'])
         && request.resource.data.eventId is string
         && (!('views' in request.resource.data) || request.resource.data.views is number)
+        && (!('likes' in request.resource.data) || request.resource.data.likes is number)
         && (!('clicks' in request.resource.data) || request.resource.data.clicks is number)
         && (!('clicksByMonth' in request.resource.data) || request.resource.data.clicksByMonth is map)
         && (!('clicksByDay' in request.resource.data) || request.resource.data.clicksByDay is map)
