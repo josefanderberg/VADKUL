@@ -3460,6 +3460,22 @@ export const SOURCES: Source[] = [
             isHtmlCatalog: true,
             urlPatterns: [/\/sv\/evenemang\/[a-z0-9-]{4,}\/$/i],
             defaultCity: 'Gislaved',
+            // Sidorna saknar location-markup; orten står i titeln ("Soppbio,
+            // Torghuset Smålandsstenar"). Utan reglerna låg allt på Gislaveds
+            // centroid — Torghuset (Smålandsstenar) lägger upp sina event här
+            // (Robie Aqvilin, FB-gruppen Smålandsstenar med omnejd 28/9).
+            titlePlaces: [
+                { re: /torghuset/i, city: 'Smålandsstenar', venue: 'Torghuset Smålandsstenar' },
+                { re: /smålandsstenar/i, city: 'Smålandsstenar' },
+                { re: /anderstorp/i, city: 'Anderstorp' },
+                { re: /\bhestra\b|isaberg/i, city: 'Hestra' },  // \b: inte "Orchestra"
+                { re: /reftele/i, city: 'Reftele' },
+                { re: /burseryd/i, city: 'Burseryd' },
+                { re: /skeppshult/i, city: 'Skeppshult' },
+                { re: /broaryd/i, city: 'Broaryd' },
+                { re: /hillerstorp/i, city: 'Hillerstorp' },
+                { re: /gnosjö/i, city: 'Gnosjö' },
+            ],
             maxUrls: 60,
         },
         updateFrequency: 'every-3d',
@@ -3467,8 +3483,10 @@ export const SOURCES: Source[] = [
         windowDays: 180,
         notes: 'Hittad 8/9 2026 i runtknuten-svepet (41 event i Gislaved). OBS: detaljsidorna '
             + 'innehåller hela dagsprogram med många klockslag — kontrollera vid nästa '
-            + 'verifiering att rätt datum valts.',
-        lastVerified: '2026-09-08',
+            + 'verifiering att rätt datum valts. 28/9: karantänen 25/9 var falsk — alla '
+            + 'katalog-URL:er fanns redan i DB (runtknuten-svepet) och kända-skippen räknades '
+            + 'inte som liv; fixat i runner.ts.',
+        lastVerified: '2026-09-28',
         discovery: { method: 'hint', probeUrl: 'https://visitisabergsregionen.se/evenemang', date: '2026-09-08', rawEventCount: 46 },
     },
     {

@@ -65,6 +65,34 @@ export async function closeSitemapBrowser(): Promise<void> {
     if (_sitemapBrowser) { await _sitemapBrowser.close(); _sitemapBrowser = null; }
 }
 
+export interface TitlePlaceRule {
+    /** Matchas mot titeln (case-okänsligt rekommenderas). */
+    re: RegExp;
+    city: string;
+    /** Venue att sätta när sidan saknar egen; utelämnad ⇒ titelns
+     *  ", <plats>"-suffix om det innehåller träffen. */
+    venue?: string;
+}
+
+/**
+ * Sätt ort (och ev. venue) ur titeln enligt config.titlePlaces. Ren funktion
+ * — muterar ev. Rör inte event vars sida gav egen ort (city ≠ defaultCity).
+ */
+export function applyTitlePlaces(ev: RawEvent, rules: TitlePlaceRule[], defaultCity?: string): void {
+    if (ev.city && defaultCity && ev.city !== defaultCity) return;
+    const title = ev.title ?? '';
+    const rule = rules.find(r => r.re.test(title));
+    if (!rule) return;
+    ev.city = rule.city;
+    if (ev.venueName) return;
+    if (rule.venue) { ev.venueName = rule.venue; return; }
+    const comma = title.lastIndexOf(',');
+    const suffix = comma >= 0 ? title.slice(comma + 1).trim() : '';
+    // ", Hestra" är bara orten — ingen venue (annars geokodas ortens mittpunkt som verifierad plats).
+    if (suffix && suffix.length <= 60 && rule.re.test(suffix)
+        && suffix.toLowerCase() !== rule.city.toLowerCase()) ev.venueName = suffix;
+}
+
 export interface SitemapConfig {
     /**
      * URL till sitemap.xml ELLER en HTML-katalog-sida.
@@ -102,6 +130,15 @@ export interface SitemapConfig {
      * ett namn att slå upp i known_venues i stället för stadscentroiden.
      */
     defaultVenue?: string;
+    /**
+     * Ortledtrådar i TITELN för regionsajter som skriver platsen i rubriken
+     * men saknar location-markup ("Soppbio, Torghuset Smålandsstenar",
+     * "Näverworkshop, Anderstorps bibliotek"). Första regeln som matchar
+     * sätter city (slår defaultCity) och — om sidan saknar venue — venue.
+     * Utan detta hamnade hela Visit Isabergsregionen på Gislaveds centroid
+     * (rapport 28/9: Torghusets event syntes inte i Smålandsstenar).
+     */
+    titlePlaces?: TitlePlaceRule[];
     userAgent?: string;
     maxUrls?: number;
     maxSubSitemaps?: number;
@@ -1335,6 +1372,7 @@ export const sitemapEngine = async (
                 if (hadClock) d.setHours(ev.startDate.getHours(), ev.startDate.getMinutes(), 0, 0);
                 ev.startDate = d;
             }
+            if (config.titlePlaces) applyTitlePlaces(ev, config.titlePlaces, config.defaultCity);
             if (!ev.venueName && config.defaultVenue) ev.venueName = config.defaultVenue;
             // Plats-endpoint (Kulturbiljetter-mönstret): separat kart-sida bär
             // venue/adress/stad som detaljsidan saknar. Bara vid venue-miss.

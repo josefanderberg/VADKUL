@@ -102,6 +102,19 @@ export function geocodeQueriesFor(e: RawEvent): string[] {
     return [...new Set(candidates)].filter((q) => q && q.trim().length > 2);
 }
 
+/**
+ * Kända URL:er som motorn släppte helt (returnerade inte). Motorer som frågar
+ * isKnownUrl men ändå returnerar eventet (wp-rest, bestevent) räknas i
+ * found/duplicate-loopen — de får inte dubbelräknas här.
+ */
+export function countKnownDropped(knownUrls: Set<string>, rawEvents: { url?: string }[]): number {
+    if (knownUrls.size === 0) return 0;
+    const returned = new Set(rawEvents.map(e => e.url));
+    let n = 0;
+    for (const u of knownUrls) if (!returned.has(u)) n++;
+    return n;
+}
+
 export async function runSource(
     source: Source,
     engines: Record<string, Engine>,
@@ -151,13 +164,22 @@ export async function runSource(
     // SCRAPE_FORCE_REFRESH=1 tvingar refresh (reparationer efter motorfixar).
     const sweepDue = !opts.dryRun && getSyncMeta(sweepKey(source.id)) !== CONTENT_SWEEP_VERSION;
     const refreshKnown = !opts.dryRun && (isRefreshRun(source) || process.env.SCRAPE_FORCE_REFRESH === '1' || sweepDue);
+    // URL:er motorn hoppade över FÖRE fetch för att de redan finns i DB.
+    // De måste synas i run-historiken — annars ser en frisk källa utan NYA
+    // event helt tom ut (found=0, inga skips) och auto-karantänen pausar den
+    // (Visit Isabergsregionen 25/9: alla katalog-URL:er var redan kända).
+    const knownUrls = new Set<string>();
     const ctx: EngineContext = {
         windowStart,
         windowEnd,
         log: (msg) => console.log(`  [${source.id}] ${msg}`),
         // Kostnadsoptimering för engines med dyra per-event-hämtningar.
         // I dry-run svarar vi alltid "okänd" så hela flödet syns i utskriften.
-        isKnownUrl: opts.dryRun ? async () => false : (url) => eventExistsInDb(url),
+        isKnownUrl: opts.dryRun ? async () => false : async (url) => {
+            const known = await eventExistsInDb(url);
+            if (known) knownUrls.add(url);
+            return known;
+        },
         refreshKnown,
     };
     if (refreshKnown) ctx.log(sweepDue ? `full-refresh-körning (innehålls-svep ${CONTENT_SWEEP_VERSION}): kända URL:er re-fetchas` : 'full-refresh-körning: kända URL:er re-fetchas');
@@ -178,6 +200,12 @@ export async function runSource(
 
     result.found = rawEvents.length;
     ctx.log(`engine returned ${rawEvents.length} events`);
+    const knownDropped = countKnownDropped(knownUrls, rawEvents);
+    if (knownDropped > 0) {
+        // Räknas som dubbletter: källan lever, det fanns bara inget nytt.
+        result.skipped.duplicate += knownDropped;
+        ctx.log(`${knownDropped} kända URL:er skippade av motorn (räknas som dubbletter)`);
+    }
 
     // Volym-säkring (lärdom från SvK-floden 2026-06-11: ~19 700 ofiltrerade event
     // autopublicerades tills jobbet stoppades manuellt). En källa som plötsligt
@@ -229,6 +257,11 @@ export async function runSource(
                     const storedLoc = (storedRow?.locationName ?? '').trim().toLowerCase();
                     const storedUngeocoded = !(storedRow?.lat) || !(storedRow?.lng);
                     const cityLower = (e.city ?? '').trim().toLowerCase();
+                    // Sparad på källans defaultCity-fallback medan titeln/sidan nu
+                    // pekar ut en ANNAN ort (Visit Isabergsregionen 28/9: Torghuset
+                    // → Smålandsstenar, "… Reftele" → Reftele, allt låg i Gislaved).
+                    const defaultLower = String((source.config as { defaultCity?: string })?.defaultCity ?? '').trim().toLowerCase();
+                    const movedFromDefault = !!defaultLower && storedLoc === defaultLower && !!cityLower && cityLower !== defaultLower;
                     // Källan levererar nu EGNA koordinater medan det sparade bara
                     // var stadscentroid/ogeokodat → flytta eventet dit. Utan detta
                     // fastnar event som sparades innan källans koordinat-join
@@ -239,19 +272,20 @@ export async function runSource(
                             result.updated++;
                             ctx.log(`  📍 koordinater från källan: ${e.title.slice(0, 50)}`);
                         }
-                    } else if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
-                        const q = `${e.venueName}, ${e.city}`;
+                    } else if ((e.venueName || movedFromDefault) && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded || movedFromDefault)) {
+                        const q = e.venueName ? `${e.venueName}, ${e.city}` : e.city!;
                         // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
                         let hit: GeoHit | null = e.coords ? [e.coords[0], e.coords[1], 'kallkoordinat'] : null;
                         for (const cand of (e.geocodeCandidates ?? [])) {
                             if (hit) break;
                             hit = await geocodeVenueSweden(cand, { nearCity: e.city! });
                         }
-                        if (!hit) hit = await geocodeVenueSweden(q, { nearCity: e.city! });
+                        // Bara ort (ingen venue) → rakt till overifierad centroid nedan.
+                        if (!hit && e.venueName) hit = await geocodeVenueSweden(q, { nearCity: e.city! });
                         // Sista utväg för OGEOKODADE: stadscentrum (synligt på kartan, och
                         // geo-refine-klustren tar det vidare) — men märk som overifierat.
                         let verified = true;
-                        if (!hit && storedUngeocoded) {
+                        if (!hit && (storedUngeocoded || movedFromDefault)) {
                             hit = await geocodeVenueSweden(e.city!);
                             verified = false;
                             if (hit) hit = [hit[0], hit[1], 'stad-centroid'];
