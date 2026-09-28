@@ -257,6 +257,11 @@ export async function runSource(
                     const storedLoc = (storedRow?.locationName ?? '').trim().toLowerCase();
                     const storedUngeocoded = !(storedRow?.lat) || !(storedRow?.lng);
                     const cityLower = (e.city ?? '').trim().toLowerCase();
+                    // Sparad på källans defaultCity-fallback medan titeln/sidan nu
+                    // pekar ut en ANNAN ort (Visit Isabergsregionen 28/9: Torghuset
+                    // → Smålandsstenar, "… Reftele" → Reftele, allt låg i Gislaved).
+                    const defaultLower = String((source.config as { defaultCity?: string })?.defaultCity ?? '').trim().toLowerCase();
+                    const movedFromDefault = !!defaultLower && storedLoc === defaultLower && !!cityLower && cityLower !== defaultLower;
                     // Källan levererar nu EGNA koordinater medan det sparade bara
                     // var stadscentroid/ogeokodat → flytta eventet dit. Utan detta
                     // fastnar event som sparades innan källans koordinat-join
@@ -267,23 +272,20 @@ export async function runSource(
                             result.updated++;
                             ctx.log(`  📍 koordinater från källan: ${e.title.slice(0, 50)}`);
                         }
-                    } else if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded
-                        // Sparad på källans defaultCity-fallback medan titeln/sidan nu
-                        // pekar ut en annan ort (Torghuset → Smålandsstenar, inte Gislaved).
-                        || storedRow?.geoPrecision === 'stad-centroid'
-                        || (!!storedLoc && storedLoc === String((source.config as { defaultCity?: string })?.defaultCity ?? '').trim().toLowerCase()))) {
-                        const q = `${e.venueName}, ${e.city}`;
+                    } else if ((e.venueName || movedFromDefault) && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded || movedFromDefault)) {
+                        const q = e.venueName ? `${e.venueName}, ${e.city}` : e.city!;
                         // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
                         let hit: GeoHit | null = e.coords ? [e.coords[0], e.coords[1], 'kallkoordinat'] : null;
                         for (const cand of (e.geocodeCandidates ?? [])) {
                             if (hit) break;
                             hit = await geocodeVenueSweden(cand, { nearCity: e.city! });
                         }
-                        if (!hit) hit = await geocodeVenueSweden(q, { nearCity: e.city! });
+                        // Bara ort (ingen venue) → rakt till overifierad centroid nedan.
+                        if (!hit && e.venueName) hit = await geocodeVenueSweden(q, { nearCity: e.city! });
                         // Sista utväg för OGEOKODADE: stadscentrum (synligt på kartan, och
                         // geo-refine-klustren tar det vidare) — men märk som overifierat.
                         let verified = true;
-                        if (!hit && storedUngeocoded) {
+                        if (!hit && (storedUngeocoded || movedFromDefault)) {
                             hit = await geocodeVenueSweden(e.city!);
                             verified = false;
                             if (hit) hit = [hit[0], hit[1], 'stad-centroid'];

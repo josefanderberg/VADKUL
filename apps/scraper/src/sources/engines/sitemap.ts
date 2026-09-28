@@ -88,7 +88,9 @@ export function applyTitlePlaces(ev: RawEvent, rules: TitlePlaceRule[], defaultC
     if (rule.venue) { ev.venueName = rule.venue; return; }
     const comma = title.lastIndexOf(',');
     const suffix = comma >= 0 ? title.slice(comma + 1).trim() : '';
-    if (suffix && suffix.length <= 60 && rule.re.test(suffix)) ev.venueName = suffix;
+    // ", Hestra" är bara orten — ingen venue (annars geokodas ortens mittpunkt som verifierad plats).
+    if (suffix && suffix.length <= 60 && rule.re.test(suffix)
+        && suffix.toLowerCase() !== rule.city.toLowerCase()) ev.venueName = suffix;
 }
 
 export interface SitemapConfig {

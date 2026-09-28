@@ -457,6 +457,13 @@ describe('applyTitlePlaces', () => {
         expect(e.venueName).toBe('Anderstorps bibliotek');
     });
 
+    it('suffix som bara är orten → city men ingen venue', () => {
+        const e = ev('Berättelsen om Fornbolmen, Smålandsstenar');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Smålandsstenar');
+        expect(e.venueName).toBeUndefined();
+    });
+
     it('ort i löptext utan komma → bara city', () => {
         const e = ev('Jobbmässa i Smålandsstenar');
         applyTitlePlaces(e, rules, 'Gislaved');

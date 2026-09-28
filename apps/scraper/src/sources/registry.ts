@@ -3468,7 +3468,7 @@ export const SOURCES: Source[] = [
                 { re: /torghuset/i, city: 'Smålandsstenar', venue: 'Torghuset Smålandsstenar' },
                 { re: /smålandsstenar/i, city: 'Smålandsstenar' },
                 { re: /anderstorp/i, city: 'Anderstorp' },
-                { re: /hestra|isaberg/i, city: 'Hestra' },
+                { re: /\bhestra\b|isaberg/i, city: 'Hestra' },  // \b: inte "Orchestra"
                 { re: /reftele/i, city: 'Reftele' },
                 { re: /burseryd/i, city: 'Burseryd' },
                 { re: /skeppshult/i, city: 'Skeppshult' },
