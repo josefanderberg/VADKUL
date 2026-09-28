@@ -98,4 +98,13 @@ export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
     { slug: 'piteamuseum', name: 'Piteå museum', city: 'Piteå' },
     { slug: 'framnasfolkhogskola', name: 'Framnäs folkhögskola', city: 'Öjebyn' },
     { slug: 'piteaif', name: 'Piteå IF', city: 'Piteå' },
+
+    // ── Gislaved/Värnamo (community-tips i Messenger 2026-09-28) ────────
+    // Västbo Sportdansklubb: danskurser i Gislaved + Värnamo och socialdans
+    // (bugg/fox) fredagar 19–23 på Torghuset i Smålandsstenar. Egna sajten
+    // vastbosportdansklubb.se kunde inte probas (molnsession, nät blockerat)
+    // — FB-sidan är en billig första väg. Ingen city-hint: eventen sprids
+    // över tre orter, geokodningen får läsa eventadressen. Ej verifierad
+    // headless — 0 eventlänkar i natt-loggen ⇒ ta bort raden.
+    { slug: 'vastbosportdansklubb', name: 'Västbo Sportdansklubb' },
 ];
