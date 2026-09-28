@@ -235,7 +235,8 @@ export function dateFromDetailSelector(
     // fält är "månadsnamn + tal" för tvetydigt ("under januari 30 platser").
     // Vakter: inte när en dag redan STÅR FÖRE månaden, och inte när talet är
     // ett klockslag — Spritmuseum 28/9: "24 oktober 17.00" blev "24 17
-    // oktober.00" → 17 oktober.
+    // oktober.00" → 17 oktober; Malmö Live: "Ons 29 Apr 20:00" → null och
+    // "Ons 20 Maj 19:00" → 19 maj.
     const normalized = text.replace(
         /(?<!\d\s*)\b(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+(\d{1,2})\b(?![.:]\d)/i,
         '$2 $1',
@@ -493,13 +494,29 @@ export function extractCatalogDates(
 ): Map<string, Date> {
     const out = new Map<string, Date>();
     const $ = cheerio.load(html);
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     $(sel.itemSelector).each((_i, el) => {
         const href = $(el).find(sel.linkSelector).first().attr('href');
-        const text = $(el).find(sel.dateSelector).first().text().replace(/\s+/g, ' ').trim();
+        const text = $(el).find(sel.dateSelector).first().text().replace(/\s+/g, ' ').trim()
+            // Kortets intervall → STARTdagen (Havremagasinet 28/9): "27 - 29 OKT"
+            // gav annars bara "29 okt", och "23 SEP - 9 OKT" gav första
+            // FRAMTIDA datum = slutdagen. ISO-intervall ("… till …") rörs inte.
+            .replace(
+                /(?<![\d-])(\d{1,2})(\s+[a-zåäö]{3,9}\.?)?\s*[-–]\s*\d{1,2}(\s+[a-zåäö]{3,9}\.?)/gi,
+                (_m, day: string, startMonth: string | undefined, endMonth: string) => `${day}${startMonth ?? endMonth}`,
+            );
         if (!href || !text) return;
         const d = findFirstDateInText(text);
         if (!d) return;
-        try { out.set(new URL(href, baseUrl).toString().replace(/\/+$/, ''), d); } catch { /* trasig href */ }
+        let key: string;
+        try { key = new URL(href, baseUrl).toString().replace(/\/+$/, ''); } catch { return; /* trasig href */ }
+        // Första KOMMANDE kortet vinner: kalendrar som listar en återkommande
+        // aktivitet en gång per tillfälle (Havremagasinets /program/: "Skapa
+        // på Havre" 11 ggr) står i kronologisk ordning — sista kortet gav
+        // annars DECEMBER-tillfället åt ett event som går redan i helgen. Ett
+        // passerat tillfälle först i listan får ge plats åt nästa kommande.
+        const prev = out.get(key);
+        if (!prev || (prev < todayStart && d >= todayStart)) out.set(key, d);
     });
     return out;
 }

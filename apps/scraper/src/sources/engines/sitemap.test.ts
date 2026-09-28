@@ -150,6 +150,35 @@ describe('extractCatalogDates', () => {
     });
 });
 
+// Utsnitt ur havremagasinet.se/program/ (28/9): ett kort per TILLFÄLLE i
+// kronologisk ordning; stängningskortet länkar till vernissagen.
+const HAVRE_PROGRAM = `
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/vernissage-10-okt/"><h2>23 SEP - 9 OKT</h2><p>STÄNGT för omhängning</p></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/skapa-pa-havre/"><h2>28 SEP</h2></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/skapa-pa-havre/"><h2>5 OKT</h2></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/vernissage-10-okt/"><h2>10 OKT</h2></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/hostlov/"><h2>27 - 29 OKT</h2></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/skapa-pa-havre/"><h2>14 DEC</h2></a></article>`;
+
+describe('extractCatalogDates — kalender med ett kort per tillfälle', () => {
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 8, 28, 10, 0)); });
+    afterAll(() => { vi.useRealTimers(); });
+    const SEL = { itemSelector: 'article.h-grid-card', linkSelector: 'a', dateSelector: 'h2' };
+    const md = (d?: Date) => d && [d.getFullYear(), d.getMonth() + 1, d.getDate()];
+
+    it('återkommande aktivitet → första kommande tillfället, inte sista', () => {
+        const m = extractCatalogDates(HAVRE_PROGRAM, 'https://havremagasinet.se/program/', SEL);
+        expect(md(m.get('https://havremagasinet.se/event/skapa-pa-havre'))).toEqual([2026, 9, 28]);
+    });
+
+    it('intervallkort ger STARTdagen — passerad start ger plats åt nästa kort', () => {
+        const m = extractCatalogDates(HAVRE_PROGRAM, 'https://havremagasinet.se/program/', SEL);
+        expect(md(m.get('https://havremagasinet.se/event/hostlov'))).toEqual([2026, 10, 27]);
+        // "23 SEP - 9 OKT" (stängt) gav förr slutdagen 9 okt åt vernissagen.
+        expect(md(m.get('https://havremagasinet.se/event/vernissage-10-okt'))).toEqual([2026, 10, 10]);
+    });
+});
+
 // Utsnitt ur morbylanga.se/aktiviteter/ (probat 2026-08-31): platsen står i en
 // info-ruta med etiketten i <strong>, utan microdata.
 const MORBYLANGA_PAGE = `
@@ -394,6 +423,30 @@ describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
 
     it('månad-först följt av klockslag ("oktober 17.00") är inget datum', () => {
         expect(dateFromDetailSelector('<div class="d">oktober 17.00</div>', '.d', NOW)).toBeNull();
+    });
+
+    // Malmö Live 28/9: "Ons 29 Apr 20:00" är redan svensk ordning — vändningen
+    // gjorde "Ons 29 20 Apr:00" (null) och "Ons 20 Maj 19:00" → 19 maj.
+    it('dag FÖRE månaden + klockslag vänds inte', () => {
+        const at = (t: string) => dateFromDetailSelector(`<span class="d">${t}</span>`, '.d', NOW)!;
+        const a = at('Lör 3 Okt 18:00');
+        expect([a.date.getFullYear(), a.date.getMonth(), a.date.getDate(), a.date.getHours()]).toEqual([2026, 9, 3, 18]);
+        expect(a.hasTime).toBe(true);
+        const b = at('Tors 20 Maj 19:00');
+        expect([b.date.getFullYear(), b.date.getMonth(), b.date.getDate(), b.date.getHours()]).toEqual([2027, 4, 20, 19]);
+        const c = at('Fre 20 november 19:30');
+        expect([c.date.getMonth(), c.date.getDate(), c.date.getHours(), c.date.getMinutes()]).toEqual([10, 20, 19, 30]);
+    });
+
+    it('första KOMMANDE föreställning via :has-selektor (passerade märkta)', () => {
+        const html = `<div class="event--dates">
+<div class="event--date"><span class="event--date--detail">Ons 9 Sep 19:00</span><span class="event--passed">Passerat</span></div>
+<div class="event--date"><span class="event--date--detail">Lör 3 Okt 18:00</span></div>
+<div class="event--date"><span class="event--date--detail">Sön 4 Okt 15:00</span></div></div>`;
+        const r = dateFromDetailSelector(html, '.event--date:not(:has(.event--passed)) .event--date--detail', NOW)!;
+        expect([r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([9, 3, 18]);
+        const allPassed = html.replace(/<span class="event--date--detail">(?:Lör|Sön)[^<]*<\/span>/g, '');
+        expect(dateFromDetailSelector(allPassed, '.event--date:not(:has(.event--passed)) .event--date--detail', NOW)).toBeNull();
     });
 
     it('månad-först med flera föreställningar — första vinner', () => {

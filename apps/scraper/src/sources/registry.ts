@@ -4475,11 +4475,17 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.malmolive.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?program\/[^/]+\/?$/i],
+            // Föreställningslistan: ett .event--date per tillfälle ("Ons 29 Apr
+            // 20:00"), passerade märkta .event--passed → första KOMMANDE
+            // tillfället. Alla passerade/ingen lista → sidan hoppas över.
+            // Utan fältet vann sajtbannerns "Lördagen den 3 oktober passerar
+            // Malmö Marathon" (28/9: 64/87 event på 2026-10-03).
+            detailDateSelector: '.event--date:not(:has(.event--passed)) .event--date--detail',
             defaultCity: 'Malmö',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 1726 event-URLs (program-mönster) — konserthus.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 1726 event-URLs (program-mönster) — konserthus. 28/9: fritext-fallbacken tog sajtbannerns Malmö Marathon-datum (3 okt) på passerade konserter → detailDateSelector på föreställningslistan (första ej passerade tillfället).',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'malmoarena',
@@ -4792,13 +4798,23 @@ export const SOURCES: Source[] = [
         region: 'boden',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.havremagasinet.se/sitemap_index.xml',
+            // Programkalendern, inte sitemapen: detaljsidorna saknar eget
+            // datumfält (fritext i brödtexten, ofta utan år) men avslutas med
+            // "Andra event"-korten (rubriken är en <h1> → når inte
+            // stripRelatedBlocks). Fritext-fallbacken tog kortens "10 okt." på
+            // gamla sidor (28/9: 47/55 event på 2026-10-10, vernissage och
+            // finissage samma dag). Kalenderns kort bär tillfällets dag
+            // (<h2>10 OKT</h2>); återkommande aktiviteter listas per tillfälle
+            // → första kommande (extractCatalogDates).
+            sitemapUrl: 'https://havremagasinet.se/program/',
+            isHtmlCatalog: true,
+            catalogDates: { itemSelector: 'article.h-grid-card', linkSelector: 'a', dateSelector: 'h2' },
             urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i],
             defaultCity: 'Boden',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 246 event-URLs (event-mönster) — konsthall.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 246 event-URLs (event-mönster) — konsthall. 28/9: bytt från event-sitemapen (mest passerade sidor) till /program/ med catalogDates — sitemapsidorna fick "Andra event"-kortens datum. Kör INTE via sitemapen.',
+        lastVerified: '2026-09-28',
     },
 
     // ─── BATCH 2 (2026-06-09): live-musik / sommarscener / familj ─────────
