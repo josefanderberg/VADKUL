@@ -695,8 +695,12 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                                     {/* Blått streck + tydlig dagtext (Josef 28/9:
                                         "typ som på stadssidorna så man ser dagar
                                         lite tydligare") — samma formspråk som
-                                        stadssidornas dagrubriker. */}
-                                    <span aria-hidden className="shrink-0 h-4 w-1 rounded-full bg-[#006AA7] dark:bg-sky-400" />
+                                        stadssidornas dagrubriker. -ml-3 = streckets
+                                        bredd + gapet: strecket hänger i vänster-
+                                        marginalen så dagTEXTEN står i linje med
+                                        radernas innehåll (Josef: "Onsdag i linje
+                                        med allt annat, strecket åt vänster"). */}
+                                    <span aria-hidden className="shrink-0 -ml-3 h-4 w-1 rounded-full bg-[#006AA7] dark:bg-sky-400" />
                                     <span className="text-sm font-black text-slate-900 dark:text-zinc-100">
                                         {getDayLabel(day.dayOffset)}
                                     </span>
