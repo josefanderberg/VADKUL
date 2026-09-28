@@ -691,8 +691,15 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                                     padding-kanten så grip-zonens pt-6 ingår);
                                     z-[9] så rubriken glider IN UNDER flikraden
                                     när den knuffas ut. */}
-                                <h3 className="sticky top-11 z-[9] bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 md:px-6 pt-4 pb-1.5 text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-zinc-300 border-b border-border">
-                                    {getDayLabel(day.dayOffset)}
+                                <h3 className="sticky top-11 z-[9] bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 md:px-6 pt-3 pb-2 border-b border-border flex items-center gap-2">
+                                    {/* Blått streck + tydlig dagtext (Josef 28/9:
+                                        "typ som på stadssidorna så man ser dagar
+                                        lite tydligare") — samma formspråk som
+                                        stadssidornas dagrubriker. */}
+                                    <span aria-hidden className="shrink-0 h-4 w-1 rounded-full bg-[#006AA7] dark:bg-sky-400" />
+                                    <span className="text-sm font-black text-slate-900 dark:text-zinc-100">
+                                        {getDayLabel(day.dayOffset)}
+                                    </span>
                                 </h3>
                                 <ul className="divide-y divide-border">
                                     {day.rows.map(({ evt, distanceKm, dups }, i) => (
