@@ -60,11 +60,18 @@ async function main() {
             console.log(`   🕒 ${row.title}: ${fmt(stored)} → ${fmt(start)} (slut ${fmt(stored).slice(-5)})`);
             if (APPLY) {
                 if (row.firestoreId) {
-                    await db.collection('linkEvents').doc(row.firestoreId).update(stamped({
-                        time: Timestamp.fromDate(start),
-                        endDate: Timestamp.fromDate(stored),
-                        hasSpecificTime: true,
-                    }));
+                    try {
+                        await db.collection('linkEvents').doc(row.firestoreId).update(stamped({
+                            time: Timestamp.fromDate(start),
+                            endDate: Timestamp.fromDate(stored),
+                            hasSpecificTime: true,
+                        }));
+                    } catch (e: any) {
+                        // Spökrad i spegeln: dokumentet är raderat i Firestore.
+                        if (e.code !== 5 && !/NOT_FOUND/.test(e.message ?? '')) throw e;
+                        console.log('      (finns inte i Firestore - hoppas över)');
+                        continue;
+                    }
                 }
                 setEventTime(row.url, start.toISOString(), true);
                 setEventEndDate(row.url, stored.toISOString());
