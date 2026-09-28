@@ -435,6 +435,20 @@ else
     echo "⚠️ Re-aggregate misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Arrangörsregistret till studions Marknad-flik (bara nightly) ───────────
+# Spegeln grupperad per arrangör + visningar/klick/gillningar ur eventStats via
+# summeringsfrågor (några tusen reads). Skriver arrangorer-statistik.json som
+# studion på samma maskin läser. Fel stoppar aldrig kedjan.
+if [ "$JOB_NAME" = "nightly" ]; then
+    echo "" >> "$LOG_FILE"
+    echo "── ARRANGÖRSREGISTRET (studions Marknad-flik) ──" >> "$LOG_FILE"
+    if npm run organizer-stats >> "$LOG_FILE" 2>&1; then
+        echo "Arrangörsregistret OK" >> "$LOG_FILE"
+    else
+        echo "⚠️ Arrangörsregistret misslyckades — fortsätter ändå." >> "$LOG_FILE"
+    fi
+fi
+
 # ─── Git-synk UT (bara nightly): committa nattens data + pusha ──────────────
 # BARA whitelistade paths (aldrig add -A): aggregat-JSON:erna, FB-körloggen
 # och den genererade FB-watchlisten (skrivs om av måndags-snöbollen; om den
