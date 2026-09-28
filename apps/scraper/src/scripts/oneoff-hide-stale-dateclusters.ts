@@ -65,7 +65,11 @@ async function main() {
         if (!APPLY) continue;
         for (const r of stale) {
             setHidden(r.url, true);
-            if (r.firestoreId) await db!.collection('linkEvents').doc(r.firestoreId).update(stamped({ hidden: true }));
+            // Dokument som redan är borta i Firestore (spegeln släpar) → bara SQLite.
+            if (r.firestoreId) {
+                try { await db!.collection('linkEvents').doc(r.firestoreId).update(stamped({ hidden: true })); }
+                catch (err) { if ((err as { code?: number }).code !== 5) throw err; }
+            }
             hidden++;
         }
     }
