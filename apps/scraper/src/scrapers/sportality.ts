@@ -41,6 +41,11 @@
  *    filtreras bort på årtal.
  *  - Flera ligor svarar 302 till sin kanoniska domän (basketligandam.se →
  *    sbldam.se). Konfigurera den slutliga domänen, inte omdirigeringen.
+ *  - Ligor kan LÄMNA plattformen: HockeyAllsvenskan bytte till en egen
+ *    Next/Strapi-sajt hösten 2026 och settings svarade plötsligt med HTML
+ *    ("Unexpected token '<'", dry-run 28/9). Egen motor sedan dess —
+ *    scrapers/hockeyallsvenskan.ts. Samma symptom på en annan liga = kolla
+ *    först om sajten bytt plattform, inte om API:t flyttat.
  *
  * Ingen koordinat i datan; arenanamnet geokodas av runnern (known_venues
  * täcker de flesta hockeyarenor).
@@ -182,6 +187,12 @@ export const sportalityEngine: Engine = async (config: SportalityConfig, ctx) =>
     try {
         const res = await fetch(`${base}/api/site/settings`, { headers, signal: ctx.signal ?? AbortSignal.timeout(30_000) });
         if (!res.ok) { ctx.log(`settings HTTP ${res.status}`); return []; }
+        // HTML i stället för JSON = sajten har lämnat Sportality (HA-fallet 28/9).
+        // Säg det rakt ut i stället för ett kryptiskt JSON-parsefel.
+        if (!(res.headers.get('content-type') ?? '').includes('json')) {
+            ctx.log(`settings svarar ${res.headers.get('content-type') ?? 'utan content-type'} (${res.url}) — har ligan lämnat Sportality?`);
+            return [];
+        }
         const settings = await res.json();
         swedish = swedishTeamCodes(settings);
         swedishInstances = swedishInstanceIds(settings);

@@ -96,6 +96,97 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 13.53051,
         note: 'Gislesalen/Musikskolan, Gislaved — orkesterns källkoordinat; Visit Isabergsregionen 28/9 hamnade i Anderstorp',
     },
+
+    // ─── Hockeyarenor (28/9) ────────────────────────────────────────────────
+    // stats.swehockey.se och sportality-ligorna ger BARA arenanamnet — ingen
+    // ort, ingen koordinat. Sponsornamnen (Wibe Arena, VBO Arena, Coop
+    // Norrbotten Arena …) finns inte i OSM, och utan ort kan runnern inte
+    // stads-ankra frågan: 122 kommande SHL-/HockeyAllsvenskan-matcher låg på
+    // 0,0 och syntes aldrig på kartan. Varje koordinat nedan är OSM-objektet
+    // för hallen, korskollad mot HockeyAllsvenskans egna arenakoordinater
+    // (hockeyallsvenskan.se/pages/matcher, homeTeam.arenaLatitude/-Longitude)
+    // där laget spelar i HA — samstämmiga inom ~100 m.
+    {
+        names: ['Be-Ge Hockey Center', 'Be Ge Hockeycenter'],
+        city: 'Oskarshamn',
+        lat: 57.2637799,
+        lng: 16.4361222,
+        note: 'Be-Ge Hockey Center, Döderhultsvägen 5, Oskarshamn — OSM-nod 10144549589 + HA-ligans koordinat; swehockey-matcherna låg på 0,0 (28/9)',
+    },
+    {
+        // Almtunas hemmahall. swehockey skriver "Gränby Ishallar A-hall",
+        // HA-sajten "Gränby ishall".
+        names: ['Gränby Ishallar A-hall', 'Gränby Ishallar', 'Gränby ishall'],
+        city: 'Uppsala',
+        lat: 59.8802371,
+        lng: 17.6565848,
+        note: 'Gränby ishallar, Råbyvägen 71, Uppsala — OSM-way 98822088 + HA-ligans koordinat; swehockey-matcherna låg på 0,0 (28/9)',
+    },
+    {
+        // Mora IK:s hall — samma byggnad under flera sponsornamn: HA-sajten
+        // säger venue "Wibe Arena" men teamArena "Smidjegrav Arena"; OSM
+        // kallar den "Jalas Arena" (Hantverkaregatan).
+        names: ['Wibe Arena', 'Smidjegrav Arena'],
+        city: 'Mora',
+        lat: 61.0069827,
+        lng: 14.5308656,
+        note: 'Wibe Arena (f.d. Smidjegrav/Jalas Arena), Hantverkaregatan 31, Mora — OSM-relation 15514912 + HA-ligans koordinat; låg på 0,0 (28/9)',
+    },
+    {
+        // Luleå HF:s hall i Bergviken (gamla Delfinen). OSM: "Coop Arena";
+        // Nominatim hittar inte "Coop Norrbotten Arena" och ett nearCity-
+        // uppslag i Skellefteå-kön gav Skellefteås ortcentroid.
+        names: ['Coop Norrbotten Arena'],
+        city: 'Luleå',
+        lat: 65.5978683,
+        lng: 22.1482751,
+        note: 'Coop Norrbotten Arena, Delfingatan/Bergviken, Luleå — OSM-way 155814842 ("Coop Arena"); SHL/SDHL-matcherna låg på 0,0 (28/9)',
+    },
+    {
+        names: ['VBO Arena', 'Vimmerby Ishall'],
+        city: 'Vimmerby',
+        lat: 57.671908,
+        lng: 15.8715516,
+        note: 'VBO Arena (OSM "Vimmerby Ishall"), Kungsgatan 52, Vimmerby — OSM-way 268022311 + HA-ligans koordinat; låg på 0,0 (28/9)',
+    },
+    {
+        names: ['Hägglunds Arena'],
+        city: 'Örnsköldsvik',
+        lat: 63.283881,
+        lng: 18.7249665,
+        note: 'Hägglunds Arena, Viktoriaesplanaden 1, Örnsköldsvik — OSM-way 93485452 + HA-ligans koordinat; swehockey-matcherna låg på 0,0 (28/9)',
+    },
+    {
+        names: ['Hatstore Arena'],
+        city: 'Kalmar',
+        lat: 56.6681999,
+        lng: 16.347558,
+        note: 'Hatstore Arena, Kalmar — OSM-way 875517753 (ice_rink) + HA-ligans koordinat; swehockey-matcherna låg på 0,0 (28/9)',
+    },
+    {
+        names: ['Visby Ishall'],
+        city: 'Visby',
+        lat: 57.6262402,
+        lng: 18.329611,
+        note: 'Visby ishall, Rävhagen, Visby — OSM-way 9357257 + HA-ligans koordinat; swehockey-matcherna låg på 0,0 (28/9)',
+    },
+    {
+        // SDE Hockeys hemmahall (SDHL).
+        names: ['Enebybergs Ishall', 'Enebybergshallen'],
+        city: 'Danderyd',
+        lat: 59.4253473,
+        lng: 18.0277713,
+        note: 'Enebybergshallen (sport=ice_hockey), Enebybergs IP, Danderyd — OSM-way 20907879; SDHL-matchen låg på 0,0 (28/9)',
+    },
+    {
+        // "Östersund Arena Hall A" (swehockey) geokodades till en ortcentroid
+        // 4,5 km söder om hallen; HA-sajtens "Östersund Arena" låg redan rätt.
+        names: ['Östersund Arena Hall A', 'Östersund Arena'],
+        city: 'Östersund',
+        lat: 63.196044,
+        lng: 14.6609381,
+        note: 'Östersund Arena, Lugnvik, Östersund — OSM-way 451773679 + HA-ligans koordinat; swehockey-namnet låg på ortcentroiden (28/9)',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */

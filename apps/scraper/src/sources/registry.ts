@@ -7532,13 +7532,22 @@ export const SOURCES: Source[] = [
         id: 'hockeyallsvenskan',
         hostName: 'HockeyAllsvenskan',
         region: 'national',
-        engine: 'sportality',
-        config: { baseUrl: 'https://www.hockeyallsvenskan.se', leagueName: 'HockeyAllsvenskan', sport: 'ishockey' },
+        // Lämnade Sportality hösten 2026 — egen Next/Strapi-plattform, se
+        // scrapers/hockeyallsvenskan.ts. Hela säsongen på en sida, därav 240 d.
+        engine: 'hockeyallsvenskan',
+        config: { baseUrl: 'https://hockeyallsvenskan.se', leagueName: 'HockeyAllsvenskan', sport: 'ishockey' },
+        // AVSTÄNGD (28/9): swehockey-hockeyallsvenskan täcker redan hela säsongen
+        // (321 kommande matcher) med andra titlar ("Almtuna IS – Södertälje SK"
+        // mot "Almtuna – Södertälje") — dedupe-cross matchar inte dem, så båda
+        // påslagna = varje match dubbelt på kartan. Motorn står kvar som reserv
+        // om swehockey-vägen dör; stäng då av den och slå på den här.
+        disabled: true,
         updateFrequency: 'daily',
         status: 'experimental',
-        notes: 'Hockeyns andraliga, samma plattform som SHL. Rullande ~5-dagarsfönster (gameheader tar inga datumparametrar), därför daglig kadens — matcherna fångas in efterhand ~5 dagar i förväg. Matcher med utländskt hemmalag (CHL) filtreras bort; arenan ligger där hemmalaget spelar.',
-        lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://www.hockeyallsvenskan.se/api/gameday/gameheader', date: '2026-08-26', notes: 'Hittad med scout/sniff-one.cjs mot https://www.hockeyallsvenskan.se/spelschema. Samma API på alla tre hockeyligor.' },
+        windowDays: 240,
+        notes: 'Hockeyns andraliga. Bytte plattform hösten 2026: sportality-API:t (/api/site/settings, /api/gameday/gameheader) svarar med en HTML-404 sedan dess (dry-run 28/9: "Unexpected token \'<\'"). Nya sajten server-renderar HELA säsongsschemat (364 matcher) som RSC-flight på /pages/matcher, med hemmalagets arena + ligans egna arenakoordinater. Daglig kadens fångar flyttade matcher.',
+        lastVerified: '2026-09-28',
+        discovery: { method: 'manual', probeUrl: 'https://hockeyallsvenskan.se/pages/matcher', date: '2026-09-28', notes: 'Hittad när sportality-vägen dog: /pages/matcher bär komponent-props {"season":"current","games":[…]}. /api/games kräver documentIds, Strapi-CMS:et svarar 404 utan token.' },
     },
     {
         id: 'sdhl',
