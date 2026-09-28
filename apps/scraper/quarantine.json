@@ -41,6 +41,10 @@
       "lastRetry": "2026-09-24",
       "emptyRetries": 1
     },
+    "karlskoga": {
+      "since": "2026-09-28",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "nordmaling": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -82,8 +86,8 @@
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-20",
-      "emptyRetries": 2
+      "lastRetry": "2026-09-28",
+      "emptyRetries": 3
     },
     "staffanstorp": {
       "since": "2026-08-19",
