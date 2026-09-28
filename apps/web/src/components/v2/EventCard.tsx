@@ -589,9 +589,31 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
             {/* Flikraden har FAST höjd (h-11) i flikläget: dagrubrikerna nedan
                 är sticky top-11 och ska fästa exakt under den — ändras höjden
                 här måste top-11 följa med. */}
-            <div className={`px-4 md:px-6 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'h-11' : 'py-3'}`}>
+            {/* sticky top-0 fäster vid scrollcontainerns PADDING-kant — pt-6
+                (grip-zonen) ingår, så raden hamnar precis under den solida
+                zonen. top-6 gav dubbel offset (glipa där innehåll syntes). */}
+            <div data-tab-zone className={`px-4 md:px-6 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'h-11' : 'py-3'}`}>
                 {onTabChange ? (
-                    <div role="tablist" aria-label="Lista" className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 min-w-0 overflow-x-auto no-scrollbar">
+                    <div
+                        role="tablist"
+                        aria-label="Lista"
+                        className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 min-w-0 overflow-x-auto no-scrollbar"
+                        // Klick i den grå containerns kant/glipa (utanför själva
+                        // pillret) ska räknas som flikklick (Josef 28/9) —
+                        // närmaste fliken på X-led får det.
+                        onClick={(e) => {
+                            const t = e.target as HTMLElement;
+                            if (t.closest('button')) return;
+                            const btns = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button[role="tab"]'));
+                            const best = btns.reduce<{ el: HTMLElement; d: number } | null>((acc, b) => {
+                                const r = b.getBoundingClientRect();
+                                const d = e.clientX < r.left ? r.left - e.clientX
+                                    : e.clientX > r.right ? e.clientX - r.right : 0;
+                                return !acc || d < acc.d ? { el: b, d } : acc;
+                            }, null);
+                            best?.el.click();
+                        }}
+                    >
                         {([
                             // "Närmsta månaden" fick inte plats bredvid Populärt
                             // + bildknappen på mobil (173 px) — slutraden säger det.
@@ -665,8 +687,10 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                                     scrollcontainer, hålls kvar av sin egen
                                     <section> och knuffas ut av nästa dags rubrik.
                                     top-11 = flikradens fasta höjd (h-11, sticky
-                                    top-0 z-10 ovanför); z-[9] så rubriken glider
-                                    IN UNDER flikraden när den knuffas ut. */}
+                                    top-0 z-10 ovanför; offsets räknas från
+                                    padding-kanten så grip-zonens pt-6 ingår);
+                                    z-[9] så rubriken glider IN UNDER flikraden
+                                    när den knuffas ut. */}
                                 <h3 className="sticky top-11 z-[9] bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 md:px-6 pt-4 pb-1.5 text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-zinc-300 border-b border-border">
                                     {getDayLabel(day.dayOffset)}
                                 </h3>
@@ -2011,7 +2035,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // klicket bort och tappen fällde ihop kortet ("eventkortet åker ner
         // när jag klickar på bilden, så den öppnar aldrig"). Drag från
         // bilden fungerar som från knappar: händelserna bubblar hit ändå.
-        const interactive = target.closest('button, a, summary, [data-cover-zone]') as HTMLElement | null;
+        // `[data-tab-zone]` (28/9): flikraden Månaden/Populärt — en miss
+        // bredvid flikpillren fällde ihop kortet ("nu måste man träffa
+        // direkt på texten"). Hela raden räknas som interaktiv (tap-toggeln
+        // hoppar över den) och tablistens onClick routar kantklick till
+        // närmaste flik.
+        const interactive = target.closest('button, a, summary, [data-cover-zone], [data-tab-zone]') as HTMLElement | null;
 
         // SIDLEDSRULLANDE RADER (HScrollRow, 16/9): tid/plats-raden och
         // värdnamnet rullar i sidled inne i kortet. Med MUS drar raden sig
@@ -2695,10 +2724,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             >
                 {/* Drag-grip-zon — luftig så grip-indikatorn syns tydligt och får
                     plats. Hela zonen är grabbable och tar pekare själv (h-6 = 24px).
-                    Zonen ligger nu absolute överst och är transparent för att låta
-                    bilden i LinkEventCard scrolla hela vägen upp under den. */}
+                    Zonen ligger absolute överst och är SOLID (Josef 28/9: "den
+                    vita marginalen ska inte försvinna"): scrollat innehåll
+                    försvinner UNDER den i stället för att glida upp bakom
+                    strecken — som täckte flikradens text när den var
+                    transparent. Scrollcontainern kompenserar med pt-6 så inget
+                    innehåll ligger gömt bakom zonen i viloläget, och kortets
+                    stickies fäster på top-6 (under zonen). z-[39]: över
+                    innehållets stickies (z-10/z-20), under strecken (z-40). */}
                 <div
-                    className="absolute top-0 left-0 right-0 h-6 cursor-grab active:cursor-grabbing select-none z-[45] bg-transparent"
+                    className="absolute top-0 left-0 right-0 h-6 cursor-grab active:cursor-grabbing select-none z-[39] bg-card"
                     style={{ touchAction: 'none' }}
                 />
 
@@ -2726,7 +2761,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 {/* Scrollable content container */}
                 <div
                     ref={scrollContainerRef}
-                    className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar"
+                    // pt-6 = grip-zonens höjd: innehållet börjar under den
+                    // solida zonen i viloläget och scrollar in UNDER den.
+                    className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar pt-6"
                     style={{
                         // Innehållet scrollar FÖRST när kortet vuxit till taket.
                         // Under det tar kortets drag-handler gesten → hela

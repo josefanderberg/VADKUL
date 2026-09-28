@@ -437,7 +437,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 chatten kom och puttade ut den — nu scrollar ALLT direkt ut
                 över kanten när kortet är fullt uppdraget. */}
             <div
-                className={`p-4 md:p-6 pt-10 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer'}`}
+                // pt-4 (var pt-10): kortets scrollcontainer bär numera pt-6
+                // för den solida grip-zonen — totala luften till strecken är
+                // samma 40 px som förut.
+                className={`p-4 md:p-6 pt-4 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
