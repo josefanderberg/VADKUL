@@ -76,6 +76,26 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 20.2630745,
         note: 'Kulturhuset Väven, Umeå — FB-rapport 25/9 (Skönsmon), "Väven" ur Sundsvalls-kön fick en namne i Sundsvall',
     },
+    {
+        // Isaberg Mountain Resort, Hestra. Visit Isabergsregionens "Plats"-fält
+        // (28/9) geokodades till en punkt vid Kisa, 60 km bort.
+        // Koordinat: OSM-noden "Isaberg Mountain Resort, Transporten, Hestra".
+        names: ['Isaberg Mountain Resort'],
+        city: 'Hestra',
+        lat: 57.4349124,
+        lng: 13.609752,
+        note: 'Isaberg Mountain Resort, Hestra — OSM; Visit Isabergsregionen 28/9 hamnade vid Kisa',
+    },
+    {
+        // Gislesalen i Musikskolan, Södra Storgatan 34, Gislaved. Visit Isaberg-
+        // regionens platstext geokodades till Storgatan i Anderstorp (28/9).
+        // Koordinat: Gislaveds Symfoniorkesters egen källkoordinat för salen.
+        names: ['Gislesalen S Storgatan 34 Gislaved (Musikskolan)', 'Gislesalen, Musikskolan', 'Gislesalen'],
+        city: 'Gislaved',
+        lat: 57.29895,
+        lng: 13.53051,
+        note: 'Gislesalen/Musikskolan, Gislaved — orkesterns källkoordinat; Visit Isabergsregionen 28/9 hamnade i Anderstorp',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */
