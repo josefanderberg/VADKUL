@@ -34,8 +34,15 @@ export interface PopularDay<T> {
  * något), dagarna i ordning och eventen i tidsordning inom dagen. Passerade
  * (`isPast`) sorteras bort — listan är "vad kan jag gå på". `include` smalnar
  * urvalet (Populärt-fliken); utelämnad = alla (Alla-fliken, Josef 24/9).
+ *
+ * Lika klockslag skiljs på id (Josef 28/9: "eventen hoppar upp och nedåt").
+ * Utan skiljenyckeln ärvde lika-tid-event KÄLLARRAYENS ordning (stabil sort),
+ * och den byts flera gånger under de första sekunderna (dagens snapshot →
+ * API-slicen → tidsfönstret → användarevent) — varje byte permuterade raderna
+ * i kortets lista. Med id-nyckeln är ordningen densamma oavsett leveransordning,
+ * och dubblettgrupperingen (groupDups, helt ordningsdriven) följer med.
  */
-export function eventDays<T extends { time: Date }>(
+export function eventDays<T extends { time: Date; id?: string }>(
     events: readonly T[],
     fromDayOffset: number,
     now: Date,
@@ -51,11 +58,15 @@ export function eventDays<T extends { time: Date }>(
         if (list) list.push(e);
         else byDay.set(d, [e]);
     }
+    const tie = (a: T, b: T) => {
+        const ka = a.id ?? '', kb = b.id ?? '';
+        return ka < kb ? -1 : ka > kb ? 1 : 0;
+    };
     return [...byDay.entries()]
         .sort(([a], [b]) => a - b)
         .map(([dayOffset, list]) => ({
             dayOffset,
-            events: list.sort((a, b) => a.time.getTime() - b.time.getTime()),
+            events: list.sort((a, b) => a.time.getTime() - b.time.getTime() || tie(a, b)),
         }));
 }
 

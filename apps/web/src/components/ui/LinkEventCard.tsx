@@ -1,6 +1,6 @@
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { eventOutlink } from '@/utils/eventExpand';
-import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil, X } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil, X, Image as ImageIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
@@ -115,19 +115,45 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // aggregaten — ska inte belasta besökare som aldrig öppnar ett kort).
     // Mergen pekar om selectedEvent i page.tsx → description dyker upp här
     // via props när svaret landat; descriptionsPending styr bara fallbacktexten.
+    // Destinations-lagret sätter description/coverImage till '' (inte
+    // undefined), så "saknas" kan bara avgöras när respektive lager landat -
+    // därav settledNow-frågorna. (`=== undefined`-kollen som stod här gjorde
+    // att pending aldrig blev sann: "Ingen beskrivning tillgänglig." stod
+    // där redan medan lagret hämtades.)
     const [descriptionsPending, setDescriptionsPending] = useState(
-        () => !linkEvent.userCreated && (linkEvent as any).description === undefined,
+        () => !linkEvent.userCreated
+            && !(linkEvent as any).description
+            && !linkEventService.descriptionsSettledNow(),
+    );
+    // Kortlagret (bild/värd/pris/affiliate-länk) är också lazy - tills det
+    // landat visar bildytan ett skelett i stället för att se ut som att
+    // eventet saknar bild.
+    const [cardsPending, setCardsPending] = useState(
+        () => !linkEvent.userCreated
+            && !linkEvent.coverImage
+            && !linkEventService.cardsSettledNow(),
     );
     useEffect(() => {
         let mounted = true;
-        // Kortlagret (bild/värd/pris/affiliate-länk) är också lazy — ett öppnat
-        // kort är signalen att hämta det; mergen pekar om selectedEvent per id.
-        linkEventService.requestCards();
+        // Ett öppnat kort är signalen att hämta lagren; mergen pekar om
+        // selectedEvent i page.tsx per id. NÅDPERIODEN efter settle: löftet
+        // löser i samma veva som servicens emit, men emit-datan når kortet
+        // via en transition-render som kan committa EFTER settle-mikrotasken
+        // — släpptes pending direkt blinkade bildytan bort en cykel (224 px)
+        // innan den mergade coverImage-proppen hann fram. Finns bilden byts
+        // skelettet sömlöst när proppen landar; saknas den kollapsar ytan
+        // en gång när nådperioden gått ut.
+        const SETTLE_GRACE_MS = 1200;
+        linkEventService.requestCards().then(() => {
+            setTimeout(() => { if (mounted) setCardsPending(false); }, SETTLE_GRACE_MS);
+        });
         linkEventService.requestDescriptions().then(() => {
-            if (mounted) setDescriptionsPending(false);
+            setTimeout(() => { if (mounted) setDescriptionsPending(false); }, SETTLE_GRACE_MS);
         });
         // Säkerhetsnät: hänger nätet ska kortet inte stå på "Hämtar…" för evigt.
-        const guard = setTimeout(() => { if (mounted) setDescriptionsPending(false); }, 12000);
+        const guard = setTimeout(() => {
+            if (mounted) { setDescriptionsPending(false); setCardsPending(false); }
+        }, 12000);
         return () => { mounted = false; clearTimeout(guard); };
     }, []);
 
@@ -726,6 +752,16 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         21/8) — de flesta omslag är liggande, så "full höjd" på
                         mobilbredd blev LÄGRE än h-56 och klicket såg ut att
                         göra ingenting. Klick stegar reveal, som förut. */}
+                    {/* SKELETT medan kortlagret hämtas: samma h-56 som riktiga
+                        bilden (måtten för tapp-stoppet ska inte hoppa när den
+                        landar). Landar lagret utan bild försvinner ytan -
+                        "visas BARA när eventet har en riktig bild" gäller. */}
+                    {cardsPending && !hasRealCover && (
+                        <div className="w-full h-56 bg-muted/30 border-t border-border animate-pulse flex flex-col items-center justify-center gap-2" aria-hidden>
+                            <ImageIcon size={28} className="text-slate-300 dark:text-zinc-700" />
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-600">Hämtar bild…</span>
+                        </div>
+                    )}
                     {hasRealCover && !coverFailed && (
                         <div
                             // data-cover-zone: kart-kortets gestlogik (EventCard
@@ -794,7 +830,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     >
                         <p data-event-description className="text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
                             {withRecoveredLineBreaks((linkEvent as any).description)
-                                || (descriptionsPending ? 'Hämtar beskrivning…' : 'Ingen beskrivning tillgänglig.')}
+                                || (descriptionsPending
+                                    ? <span className="animate-pulse text-slate-400 dark:text-zinc-500">Hämtar beskrivning…</span>
+                                    : 'Ingen beskrivning tillgänglig.')}
                         </p>
                         
                         <div className="mt-6 flex flex-col gap-3">

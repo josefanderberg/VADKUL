@@ -2669,9 +2669,31 @@ export default function HomePage() {
     // i KARTANS RUTA som passerar kartans filter, ALLA dagar — inte bara den
     // visade — så listan kan fortsätta framåt i dagarna när man scrollar.
     // Kortet delar i dagar och väljer ut de populära (utils/popularList).
+    //
+    // LISTAN läser en LUGNAD bounds-kopia (Josef 28/9: "eventen hoppar upp
+    // och nedåt"): när ett kort öppnas recentrerar kartan och kortväxten
+    // flyttar centret — varje moveend gav nya bounds och byggde om listan
+    // med delvis andra event, mitt framför ögonen på den som redan scrollat
+    // ner. Kopian uppdateras först när kameran stått still en stund, så
+    // hela glidet blir EN ombyggnad. Badges/chips (viewEvents ovan) läser
+    // fortfarande live-bounds — det är listans RADER som inte ska kastas om.
+    const [settledMapBounds, setSettledMapBounds] = useState<typeof mapBounds>(null);
+    useEffect(() => {
+        if (!mapBounds) return;
+        const t = setTimeout(() => setSettledMapBounds(mapBounds), 600);
+        return () => clearTimeout(t);
+    }, [mapBounds]);
     const listViewEvents = useMemo(
-        () => events.filter(e => inMapView(e) && matchesFilter(e)),
-        [events, inMapView, matchesFilter],
+        () => {
+            const b = settledMapBounds;
+            if (!b) return [];
+            return events.filter(e =>
+                hasValidCoords(e)
+                && e.lat! >= b.south && e.lat! <= b.north
+                && e.lng! >= b.west && e.lng! <= b.east
+                && matchesFilter(e));
+        },
+        [events, settledMapBounds, matchesFilter],
     );
     // Kategoriradens siffror: per kategori, med ALLA filter utom själva
     // kategorivalet (opt-in-källor, familjegrinden) — alltså exakt det kartan

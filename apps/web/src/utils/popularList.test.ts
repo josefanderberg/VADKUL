@@ -86,4 +86,20 @@ describe('eventDays', () => {
         const days = eventDays(evts, 0, NOW, e => e.id === 'passerat');
         expect(days.flatMap(d => d.events).map(e => e.id)).toEqual(['ikvall']);
     });
+    it('lika klockslag: samma ordning oavsett källarrayens ordning (id skiljer)', () => {
+        // Aggregatlagren byts flera gånger under de första sekunderna och
+        // levererar eventen i olika ordning — raderna i kortets lista får
+        // inte hoppa runt för det (Josef 28/9).
+        const evts = [
+            { id: 'q', time: at(0, 18) },
+            { id: 'm', time: at(0, 18) },
+            { id: 'a', time: at(0, 20) },
+            { id: 'z', time: at(0, 18) },
+        ];
+        const orderOf = (list: typeof evts) =>
+            eventDays(list, 0, NOW, never)[0].events.map(e => e.id);
+        const expected = ['m', 'q', 'z', 'a'];
+        expect(orderOf(evts)).toEqual(expected);
+        expect(orderOf([...evts].reverse())).toEqual(expected);
+    });
 });
