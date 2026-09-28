@@ -757,13 +757,25 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string)
     // Sajtnamnet = svans-segmentet ("Eventtitel - Kalmar läns museum") — en h1
     // som ÄR sajtnamnet (logga-h1) får aldrig vinna som fallback.
     const siteName = (titleParts.length > 1 ? titleParts[titleParts.length - 1] : '').toLowerCase();
+    // Titlar med eget bindestreck ("Kicki i Soläng – en helt vanlig person
+    // från Småland - Växjös officiella upplevelseguide") klyvs av splitten
+    // ovan, så första segmentet matchar ingen h1 och logga-h1:an ("Upplev
+    // Växjö") vann på 19 Växjö-event 28/9. Därför räknas även hela titeln och
+    // titeln utan svans-segmentet som eventets namn.
+    const pageNames = new Set<string>();
+    for (const full of [ogTitle, docTitle]) {
+        if (!full) continue;
+        pageNames.add(full.toLowerCase());
+        const noTail = full.replace(/\s+[|–-]\s+[^|–-]*$/, '').trim();
+        if (noTail) pageNames.add(noTail.toLowerCase());
+    }
     let title = '';
     $('h1').each((_i, el) => {
         const t = decodeHtmlEntities(elementTextWithBreaks($.html(el))).replace(/\s+/g, ' ').trim();
         if (!t) return;
         const tl = t.toLowerCase();
         if (!title && tl !== siteName) title = t;   // första icke-logga som fallback
-        if (pageName && tl === pageName) { title = t; return false; }
+        if ((pageName && tl === pageName) || pageNames.has(tl)) { title = t; return false; }
     });
     if (!title) title = ogTitle;
     if (!title) title = docTitle.split(/\s+[|–-]\s+/)[0].trim();

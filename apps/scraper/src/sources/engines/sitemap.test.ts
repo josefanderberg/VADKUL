@@ -417,3 +417,17 @@ describe('Växjö-sluttiden: SiteVision-props skriver endDate före startDate', 
         expect(startInsteadOfEnd(html, picked)).toBe(picked);
     });
 });
+
+describe('cheerioFallback - titel med eget bindestreck slår logga-h1:an', () => {
+    // upplev.vaxjo.se 28/9: första h1 är loggan, sidtiteln har bindestreck i
+    // själva eventnamnet → 19 event hette "Upplev Växjö".
+    const PAGE = `<html><head><title>Kicki i Soläng – en helt vanlig person från Småland - Växjös officiella upplevelseguide</title>
+<meta property="og:title" content="Kicki i Soläng – en helt vanlig person från Småland"></head>
+<body><header><h1> <b>Upplev Växjö</b> </h1></header>
+<main><h1>Kicki i Soläng – en helt vanlig person från Småland</h1><p>30 september 2027 kl 18.00</p></main></body></html>`;
+
+    it('eventets h1 vinner, inte sajtloggan', () => {
+        const ev = cheerioFallback(PAGE, 'https://upplev.vaxjo.se/evenemang/evenemang/2026-08-27-kicki', 'Växjö')!;
+        expect(ev.title).toBe('Kicki i Soläng – en helt vanlig person från Småland');
+    });
+});
