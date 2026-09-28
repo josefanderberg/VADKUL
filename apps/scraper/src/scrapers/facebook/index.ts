@@ -28,6 +28,7 @@ import { FacebookSource } from './types';
 import { FACEBOOK_PAGE_WATCHLIST } from './watchlist';
 import { FACEBOOK_PAGE_WATCHLIST_NATIONAL } from './watchlist-national';
 import { matchesCityScope } from './scope';
+import { loadRejectMemory, saveRejectMemory, shouldSkip, rememberOutsideWindow, rememberNoDate } from './rejectMemory';
 
 /**
  * Automatically dismisses cookie banners and overlay login walls if they appear.
@@ -102,6 +103,10 @@ export interface FacebookScraperOptions {
      *  Breda sökord hoppas. Riktad körning på minuter i stället för timmar —
      *  `npm run scrape-fb -- --city=Piteå` efter community-kritik. */
     onlyCity?: string;
+    /** Kör FB:s eventsök (städer + breda sökord). AV som standard: söket är
+     *  dött utloggat sedan juli 2026 (login-vägg) — sidbevakning + seed-fil
+     *  bär FB-flödet. `FB_SEARCH=1` slår på det igen (sökvakten finns kvar). */
+    search?: boolean;
 }
 
 export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
@@ -190,8 +195,10 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         const DATE_FILTERS = DATE_FILTERS_INPUT;
 
         // --city=X: bara den stadens sök + sidor, inga breda sökord.
-        const cities = SWEDISH_CITIES.filter((c) => matchesCityScope(c, onlyCity));
-        const keywords = onlyCity ? [] : BROAD_KEYWORDS;
+        const searchOn = opts.search ?? process.env.FB_SEARCH === '1';
+        const cities = searchOn ? SWEDISH_CITIES.filter((c) => matchesCityScope(c, onlyCity)) : [];
+        const keywords = searchOn && !onlyCity ? BROAD_KEYWORDS : [];
+        if (!searchOn) console.log('🔕 FB-sök avstängt (dött sedan juli 2026) — bara sidbevakning + seed-fil. FB_SEARCH=1 slår på det.');
 
         const SOURCES: FacebookSource[] = [];
 
@@ -419,9 +426,19 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         let extractLoginWall = 0;
         let extractFailed = 0;
         let extractNewlySaved = 0;
+        // Avfärdade sid-/seed-event (passerade, bortom fönstret, utan datum) —
+        // se rejectMemory.ts. Utan minnet laddades samma ~2 700 sidor om varje natt.
+        const rejectPath = path.resolve(__dirname, '../../../fb-reject-memory.json');
+        const rejectMem = loadRejectMemory(rejectPath);
+        let skippedRemembered = 0;
         for (const [url, itemData] of allEventUrls.entries()) {
             const { expectedDay, city, requiresParsedDate, fromSearch } = itemData;
             processed++;
+            if (requiresParsedDate && shouldSkip(rejectMem, url)) {
+                skippedRemembered++;
+                continue;
+            }
+            if (processed % 200 === 0) saveRejectMemory(rejectPath, rejectMem);
             console.log(`\n📊 [${processed}/${totalToProcess}] Behandlar event (sparade hittills: ${scrapedEventsLog.length})`);
             try {
                 // Check if already in the database
@@ -753,6 +770,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     // Sid-/seed-event utan datum från eventsidan: "idag"-fallbacken
                     // vore en ren gissning (inget sökdatumfilter bakom) — skippa.
                     console.log(`    ⏩ Skippar sid-/seed-event utan parsbart datum: ${details.title}`);
+                    rememberNoDate(rejectMem, url);
                     extractSkippedDate++;
                     continue;
                 }
@@ -779,6 +797,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
                 if (eventTime > horizonEnd || eventTime < todayStart) {
                     console.log(`    ⏩ Skippar event (utanför ${horizonDays}-dagars intervall): ${details.title} (${eventTime.toLocaleDateString()})`);
+                    if (requiresParsedDate && hasValidDate) rememberOutsideWindow(rejectMem, url, eventTime);
                     extractSkippedDate++;
                     continue;
                 }
@@ -898,6 +917,9 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 dailyBreakdown[dateStr]++;
             }
         });
+
+        saveRejectMemory(rejectPath, rejectMem);
+        console.log(`🧠 Avfärdningsminnet: ${skippedRemembered} sidladdningar sparade (kända passerade/för avlägsna/datumlösa), ${Object.keys(rejectMem).length} poster.`);
 
         console.log('\n==========================================');
         console.log('📅 SAMMANSTÄLLNING FÖR DEN KOMMANDE VECKAN:');

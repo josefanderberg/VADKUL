@@ -22,3 +22,4 @@ ig-queue.json
 # Export av kommentarer i Facebookgrupperna (scripts/fb-kommentarer.ts) — innehåller namn, stannar lokalt
 fb-kommentarer*.csv
 fb-kommentarer-lankar.txt
+fb-reject-memory.json

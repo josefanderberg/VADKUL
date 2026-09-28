@@ -6,7 +6,10 @@
  *
  * Aktiva källor:
  *   1. Tickster (todayOnly)     — JSON-LD med pris vid scrape-tid, snabb (Puppeteer)
- *   2. Facebook (filter='idag') — bredast täckning för dagens lokala events
+ *
+ * Facebook körs INTE härifrån längre (28/9 2026): FB-söket är dött sedan juli,
+ * så "idag"-passet gjorde exakt samma sidbevakning + seed-fil som huvudpasset
+ * en gång till — ~6 extra timmar per natt utan ett enda unikt event.
  *
  * Avstängda källor (historiskt här, finns inte längre):
  *   - Nöjesguiden: ng.se/kalendarium → 404 sedan 2026, sajten är artikel-tidning nu.
@@ -22,7 +25,7 @@ export async function scrapeTodaySweden(): Promise<void> {
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     console.log(`\n📅 Scraping events för idag (${todayStr}) – hela Sverige\n`);
 
-    let ticksterErr = false, fbErr = false;
+    let ticksterErr = false;
 
     // Tickster — JSON-LD pris direkt, halv-volym med todayOnly.
     try {
@@ -34,22 +37,8 @@ export async function scrapeTodaySweden(): Promise<void> {
         console.error('⚠️ Tickster-idag misslyckades — fortsätter ändå:', e);
     }
 
-    // Facebook med BARA 'idag'-filtret. Halverar query-volymen mot full-svepet
-    // (som kör idag + denna veckan) men ger dagens events ~3 timmar tidigare
-    // — kritiskt så audit + aggregate hinner publicera priser/kategorier för
-    // dagens events innan användare kollar webben.
-    try {
-        console.log(`\n👥 Facebook (filter: idag)…`);
-        const { scrapeFacebookEvents } = require('./facebook');
-        await scrapeFacebookEvents({ filters: ['idag'] });
-    } catch (e) {
-        fbErr = true;
-        console.error('⚠️ FB-idag-skrapan misslyckades — fortsätter ändå:', e);
-    }
-
     console.log(`\n✅ Klar med dag-fokuserade källor.`);
     console.log(`   Tickster (idag):    ${ticksterErr ? 'FEL' : 'se logg ovan'}`);
-    console.log(`   Facebook (idag):    ${fbErr ? 'FEL' : 'se logg ovan'}`);
 
     // Aggregera all data till progressiva lager direkt efter insamling
     try {
