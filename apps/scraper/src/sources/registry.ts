@@ -2199,13 +2199,23 @@ export const SOURCES: Source[] = [
         region: 'karlsborg',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.karlsborg.se/sitemap.xml',
-            urlPatterns: [/\/(?:sv\/)?aktivitet(?:er)?\/[^/]+\/?$/i],
+            // Gamla aktivitet-mönstret gav 0 träffar 28/9 och har aldrig gett
+            // ett enda event i DB (sidorna var verksamhetssidor, inte event). Det
+            // riktiga utbudet är bibliotekets "Händer på biblioteket" — en
+            // sida per event, datum i löptext ("Måndag 26 oktober kl. 17.00").
+            // Bara direkta barn: /aterkommande/ är lovprogram-samlingar.
+            sitemapUrl: 'https://karlsborg.se/sitemap.xml',
+            urlPatterns: [/\/kultur--fritid\/bibliotek\/hander-pa-biblioteket\/[^/]+\/$/i],
+            // Fritext-parsern tog ett datum ur sidkromen (alla 11 → 2 okt);
+            // brödtexten är sanningen ("Måndag 26 oktober kl. 17.00").
+            detailDateSelector: '.article-editor',
             defaultCity: 'Karlsborg',
+            defaultVenue: 'Karlsborgs bibliotek',
         },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-03: 15 aktivitet-URLs. Text-parser.',
-        lastVerified: '2026-06-04',
+        notes: 'Probe-sitemap 2026-06-03: 15 aktivitet-URLs. Text-parser. 28/9: bytt till '
+            + 'bibliotekets eventsidor (11 URL:er); inga gamla URL:er i DB → ingen canonicalUrl.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'arjeplog',
@@ -4176,13 +4186,26 @@ export const SOURCES: Source[] = [
         region: 'stockholm',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.spritmuseum.se/sitemap_index.xml',
-            urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i],
+            // Sajten flyttade eventen till WooCommerce ~sep 2026: event-sitemap
+            // borta, /event/<slug>/ → /product/<slug>/ (samma slug, 301). Gamla
+            // mönstret gav 0 av ~50 produkt-URL:er. /en/product/ = engelska
+            // dubbletter → bara svenska. canonicalUrl MEDVETET utelämnad: de
+            // tre /event/-URL:erna i DB är alla passerade (9–27/9) — ingen
+            // överlapp att skydda, och nyckeln ska inte hänga på en redirect.
+            sitemapUrl: 'https://spritmuseum.se/product-sitemap.xml',
+            urlPatterns: [/^https:\/\/spritmuseum\.se\/product\/[^/]+\/$/i],
+            // Produktsidorna saknar JSON-LD-event; datumet står i huvudets
+            // info-lista ("595 sek (entré ingår) · 10 oktober, kl. 13.00–17.00").
+            // "Flera tillfällen" (provningar, visningar) ger inget datum →
+            // hoppas över i stället för att fritexten gissar ett.
+            detailDateSelector: '.article-header_list-info',
             defaultCity: 'Stockholm',
+            defaultVenue: 'Spritmuseum',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 253 event-URLs (event-mönster) — museum.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 253 event-URLs (event-mönster) — museum. 28/9: '
+            + 'eventen flyttade till /product/ (WooCommerce) → nytt sitemap + mönster.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'form-design-center',

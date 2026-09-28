@@ -383,6 +383,19 @@ describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
         expect(r.hasTime).toBe(true);
     });
 
+    // Spritmuseum 28/9: dag-först följt av klockslag vändes till "24 17
+    // oktober.00" → 17 oktober. Månad-först-vändningen får inte röra det.
+    it('dag-först + klockslag ("24 oktober 17.00") vänds INTE', () => {
+        const html = `<ul class="article-header_list-info"><li><em>750 sek (entré ingår)</em></li>
+<li><em>24 oktober 17.00</em></li></ul>`;
+        const r = dateFromDetailSelector(html, '.article-header_list-info', NOW)!;
+        expect([r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([9, 24, 17]);
+    });
+
+    it('månad-först följt av klockslag ("oktober 17.00") är inget datum', () => {
+        expect(dateFromDetailSelector('<div class="d">oktober 17.00</div>', '.d', NOW)).toBeNull();
+    });
+
     it('månad-först med flera föreställningar — första vinner', () => {
         const html = `<div class="dc"><div><div>oktober</div><div>30</div><div>Kl 19:30</div></div>
 <div><div>oktober</div><div>31</div><div>Kl 15:00</div></div></div>`;

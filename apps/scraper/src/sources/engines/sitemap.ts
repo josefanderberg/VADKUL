@@ -233,8 +233,11 @@ export function dateFromDetailSelector(
     // det. Bara första förekomsten — första föreställningen vinner ändå.
     // Medvetet LOKALT här (inte i swedishDate): utanför ett utpekat datum-
     // fält är "månadsnamn + tal" för tvetydigt ("under januari 30 platser").
+    // Vakter: inte när en dag redan STÅR FÖRE månaden, och inte när talet är
+    // ett klockslag — Spritmuseum 28/9: "24 oktober 17.00" blev "24 17
+    // oktober.00" → 17 oktober.
     const normalized = text.replace(
-        /\b(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+(\d{1,2})\b/i,
+        /(?<!\d\s*)\b(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+(\d{1,2})\b(?![.:]\d)/i,
         '$2 $1',
     );
     // Numeriskt ÅÅ-MM-DD / ÅÅÅÅ-MM-DD ("26-10-02 12:30" — Visit Isaberg-
