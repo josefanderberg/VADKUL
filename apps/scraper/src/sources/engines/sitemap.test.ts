@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -593,5 +593,53 @@ describe('cheerioFallback - reservdatum ur datumfältet', () => {
         const ev = cheerioFallback(html, 'https://x.se/e', 'Gislaved', d);
         expect(ev?.title).toBe('Den stora schlagerfesten');
         expect(ev?.startDate.getTime()).toBe(d.getTime());
+    });
+});
+
+// Utsnitt ur bastad.com/evenemangskalender (Statamic, probad 2026-09-28): hela
+// kalendern ligger som JS-array med json_encode-escapade snedstreck.
+describe('extractJsonCatalogUrls - JSON-escapade snedstreck', () => {
+    const js = `var BASTAD_EVENTS = [
+    { id: "e878", title: "KULTURNATT i B\\u00e5stad", date: "2026-10-10",
+      listBookingUrl: null, url: "\\/events\\/kulturnatt-i-bastad",
+      image: "/assets/kulturnatten.jpg" },
+    ];
+    var SEARCH = [{ type: 'event', url: "https:\\/\\/bastad.com\\/events\\/kulturnatt-i-bastad" },
+                  { type: 'event', url: "https:\\/\\/bastad.com\\/events\\/oppen-atelje3" }];`;
+    const urls = extractJsonCatalogUrls(js, 'https://bastad.com/evenemangskalender').map(e => e.url);
+
+    it('avkodar \\/ och löser relativa paths mot katalogens origin', () => {
+        expect(urls).toContain('https://bastad.com/events/kulturnatt-i-bastad');
+        expect(urls).toContain('https://bastad.com/events/oppen-atelje3');
+        expect(urls).toContain('https://bastad.com/assets/kulturnatten.jpg');
+    });
+
+    it('relativ + absolut form av samma URL slås ihop', () => {
+        expect(urls.filter(u => u.endsWith('/kulturnatt-i-bastad'))).toHaveLength(1);
+    });
+
+    it('vanlig JSON utan escapning fungerar som förut (Studiefrämjandet-formen)', () => {
+        const r = extractJsonCatalogUrls('{"hits":[{"url":"/kurser/a-b-c"},{"u":"https://x.se/y/z"}]}', 'https://x.se/sok');
+        expect(r.map(e => e.url)).toEqual(['https://x.se/kurser/a-b-c', 'https://x.se/y/z']);
+    });
+});
+
+// Utsnitt ur bastad.com/events/kulturnatt-i-bastad (28/9): meta-description är
+// sajtvid, den riktiga texten ligger i .article-body med <br />-radbrytningar.
+describe('descFromDetailSelector', () => {
+    const html = `<html><head><meta name="description" content="Allt om Båstad - besöksmål, evenemang, leder, boende och näringsliv på Bjärehalvön."></head><body>
+        <h2>KULTURNATT i Båstad</h2>
+        <div class="article-body">KULTURNATT i Båstad är en kväll där konst, musik &amp; kultur får ta plats!<br />
+<br />
+Programmet hittar du på vår hemsida.</div></body></html>`;
+
+    it('tar brödtexten, <br> blir mellanslag, entiteter avkodas', () => {
+        expect(descFromDetailSelector(html, '.article-body'))
+            .toBe('KULTURNATT i Båstad är en kväll där konst, musik & kultur får ta plats! Programmet hittar du på vår hemsida.');
+    });
+
+    it('saknat eller för kort fält → null (meta-beskrivningen behålls)', () => {
+        expect(descFromDetailSelector(html, '.finns-inte')).toBeNull();
+        expect(descFromDetailSelector('<div class="b">Kort.</div>', '.b')).toBeNull();
     });
 });

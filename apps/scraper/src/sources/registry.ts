@@ -1370,13 +1370,35 @@ export const SOURCES: Source[] = [
         id: 'bastad',
         hostName: 'Båstad',
         region: 'bastad',
-        engine: 'wp-rest',
+        engine: 'sitemap',
         config: {
-            baseUrl: 'https://www.bastad.com',
-            variant: 'tribe',
+            // Sajten bytte från WordPress/Tribe till Statamic (statisk nginx)
+            // ~sep 2026: /wp-json ger 404, ical-länken på sidan är död och
+            // sitemap.xml svarar med startsidan. Kalendersidan bäddar in HELA
+            // kalendern som JS-array (BASTAD_EVENTS, url: "\/events\/slug") →
+            // isJsonCatalog plockar URL:erna (JSON-escapade snedstreck avkodas).
+            // Gamla /event/slug/[datum]/-URL:er ger 404 (ingen redirect) och
+            // återkommande event har fått nya slugs (oppen-atelje3 …) →
+            // canonicalUrl går inte; nya URL:er blir nya nycklar.
+            sitemapUrl: 'https://bastad.com/evenemangskalender',
+            isJsonCatalog: true,
+            urlPatterns: [/^https:\/\/bastad\.com\/events\/[a-z0-9-]+$/i],
+            // Detaljsidan: <h1>, sedan "10 oktober 2026 – 10 oktober 2026" i
+            // en klasslös <span> och platsen i kartlänken. INGET klockslag —
+            // det finns bara i JS-arrayen, så eventen blir heldags.
+            detailDateSelector: 'h1 ~ div > div > span',
+            detailVenueSelector: '#event-location-link',
+            // meta-description är sajtvid ("Allt om Båstad - besöksmål …") på
+            // varje eventsida — brödtexten ligger i .article-body. og:image är
+            // likaså sajtvid (/og-image.png) och fälls av imageFilter.
+            detailDescSelector: '.article-body',
+            defaultCity: 'Båstad',
+            maxUrls: 120,
         },
         updateFrequency: 'daily',
-        notes: 'Probe 2026-06: 48 events. The Events Calendar (Tribe).',
+        notes: 'Probe 2026-06: 48 events. The Events Calendar (Tribe). 28/9: sajten ombyggd till '
+            + 'Statamic — tribe-API:t borta; nu JS-inbäddad kalender via sitemap/isJsonCatalog.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'trelleborg',
@@ -4161,10 +4183,17 @@ export const SOURCES: Source[] = [
             sitemapUrl: 'https://www.waldemarsudde.se/sitemap_index.xml',
             urlPatterns: [/\/(?:sv\/)?aktivitet(?:er)?\/[^/]+\/?$/i],
             defaultCity: 'Stockholm',
+            // Sajtens WAF (nginx) svarar 403 på "Mozilla/…"-UA som inte kommer
+            // från en riktig webbläsare (TLS-fingeravtrycket avslöjar node) —
+            // curl med samma UA släpps igenom. En ärlig bot-UA utan "Mozilla"
+            // släpps igenom (verifierat 28/9). Sitemapen och URL:erna är
+            // oförändrade, så nycklarna i DB består.
+            userAgent: 'VadKul/1.0 (+https://vadkul.se)',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 539 event-URLs (aktivitet-mönster) — museum.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 539 event-URLs (aktivitet-mönster) — museum. '
+            + '28/9: 0 event — WAF:en började ge 403 på vår Chrome-UA; ärlig VadKul-UA löser det.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'rohsska-museet',

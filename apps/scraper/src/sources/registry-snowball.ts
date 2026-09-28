@@ -653,8 +653,12 @@ export const SNOWBALL_SOURCES: Source[] = [
             date: '2026-08-25',
             rawEventCount: 6,
         },
-        notes: 'web-snöboll 2026-08-25: sitemap-text, smoke 6 event ok. Hänvisad av 10 event i DB (t.ex. "Sommarkvällar i Helensparken - Spara och Slösa - Familjemusi").',
-        lastVerified: '2026-08-25',
+        // AVSTÄNGD 28/9: sitemap.xml (och robots-listade www.…/Sitemap.xml)
+        // ger 404, och den listade förr bara demo.vgregion.se-URL:er. Sajten
+        // täcks av vastsverige-*-källorna via listsidor.
+        disabled: true,
+        notes: 'web-snöboll 2026-08-25: sitemap-text, smoke 6 event ok. Hänvisad av 10 event i DB (t.ex. "Sommarkvällar i Helensparken - Spara och Slösa - Familjemusi"). 28/9: sitemapen borta (404) → avstängd.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'sb-heptown-com',
@@ -678,7 +682,22 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Kb',
         region: 'national',
         engine: 'sitevision' as const,
-        config: { urls: ["https://kb.se/om-oss/evenemang"], defaultCity: '' },
+        config: {
+            // kb.se (utan www) behålls: relativa event-länkar löses mot den här
+            // URL:en, och DB-nycklarna har formen https://kb.se/om-oss/… (som
+            // 301:ar till www). Byt inte host — då dubbleras alla event.
+            urls: ["https://kb.se/om-oss/evenemang"],
+            // Korten saknar plats. Med tom defaultCity hamnade alla tre KB-event
+            // i DB på 0,0 (locationName "Sverige"). KB = Humlegården, Stockholm;
+            // enstaka visningar (Roggebiblioteket, Strängnäs) blir då fel ort
+            // men syns åtminstone — bättre än null-island.
+            defaultCity: 'Stockholm',
+            // 28/9: KB har satt en bot-spärr (Anubis-lik, "Kollar så att du
+            // inte är en bot!") framför sajten. Den utmanar UA:er som säger
+            // "Mozilla" — vår Chrome-UA fick en JS-utmaning i stället för
+            // kalendern (0 <time>-element). En ärlig bot-UA släpps igenom.
+            userAgent: 'VadKul/1.0 (+https://vadkul.se)',
+        },
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {
@@ -687,8 +706,9 @@ export const SNOWBALL_SOURCES: Source[] = [
             date: '2026-08-25',
             rawEventCount: 5,
         },
-        notes: 'web-snöboll 2026-08-25: sitevision-cal, smoke 5 event ok. Hänvisad av 3 event i DB (t.ex. "Visning av Roggebibliotekets samlingar").',
-        lastVerified: '2026-08-25',
+        notes: 'web-snöboll 2026-08-25: sitevision-cal, smoke 5 event ok. Hänvisad av 3 event i DB (t.ex. "Visning av Roggebibliotekets samlingar"). '
+            + '28/9: 0 event — bot-utmaning på Mozilla-UA; ärlig VadKul-UA löser det.',
+        lastVerified: '2026-09-28',
     },
 
     {

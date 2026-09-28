@@ -168,6 +168,13 @@ export interface SitemapConfig {
      *  location-markup — t.ex. `.info-container p` ("Plats: Konsertsalen"). */
     detailVenueSelector?: string;
     /**
+     * CSS-selektor för detaljsidans brödtext. Satt → beskrivningen tas
+     * därifrån i stället för meta-description, som på vissa sajter är SAMMA
+     * sajtvida text på varje sida (bastad.com 28/9: "Allt om Båstad -
+     * besöksmål, evenemang …" på alla 58 event). Tomt fält → meta behålls.
+     */
+    detailDescSelector?: string;
+    /**
      * Regex som extraherar år+månad (och ev. dag) ur URL. När satt:
      * pre-filtrerar URL:er INNAN fetch — sparar enorm tid på stora sajter
      * som Studiefrämjandet (1500+ URLs) där bara veckans har relevans.
@@ -255,6 +262,20 @@ export function dateFromDetailSelector(
     );
     const date = findFirstDateInText(numeric, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
+}
+
+/**
+ * Beskrivningen ur detaljsidans brödtextfält (SitemapConfig.detailDescSelector).
+ * <br>/block-taggar → mellanslag (samma skäl som i dateFromDetailSelector:
+ * cheerios .text() limmar ihop rader). null när fältet saknas eller är för
+ * kort för att vara en beskrivning.
+ */
+export function descFromDetailSelector(html: string, selector: string): string | null {
+    const $ = cheerio.load(html);
+    const el = $(selector).first();
+    if (el.length === 0) return null;
+    const text = decodeHtmlEntities((el.html() ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+    return text.length >= 20 ? truncateAtBoundary(text, DEFAULT_DESCRIPTION_MAX) : null;
 }
 
 /**
@@ -475,7 +496,7 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
     }
 }
 
-interface SitemapEntry {
+export interface SitemapEntry {
     url: string;
     lastmod?: Date;
     /** Datum som katalogsidan angav för just detta kort (se catalogDates). */
@@ -589,6 +610,28 @@ function extractLinksFromHtml(html: string, baseUrl: string): SitemapEntry[] {
     return out;
 }
 
+/**
+ * JSON-katalog (sök-API:er à la Studiefrämjandets kurssök): plocka ALLA
+ * citerade sträng-värden som ser ut som URL:er/paths — urlPatterns-filtret
+ * nedströms avgör vilka som är event-sidor.
+ *
+ * JSON-escapade snedstreck (`"\/events\/foo"`) avkodas först. PHP:s
+ * json_encode skriver dem så som standard — bastad.com (Statamic, bytte från
+ * WordPress ~sep 2026) bäddar in hela kalendern som JS-array med sådana
+ * strängar, och utan avkodningen stoppade `[^"\\]` varenda URL.
+ */
+export function extractJsonCatalogUrls(text: string, baseUrl: string): SitemapEntry[] {
+    const out: SitemapEntry[] = [];
+    const seen = new Set<string>();
+    const unescaped = text.replace(/\\\//g, '/');
+    for (const m of unescaped.matchAll(/"((?:https?:\/\/|\/)[^"\\\s]{4,300})"/g)) {
+        let href = m[1];
+        try { href = new URL(href, baseUrl).toString(); } catch { continue; }
+        if (!seen.has(href)) { seen.add(href); out.push({ url: href }); }
+    }
+    return out;
+}
+
 async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<SitemapEntry[]> {
     // JS-renderad katalogsida: rendera den med Puppeteer så event-länkarna (som
     // injiceras av JS) blir synliga. Kräver isHtmlCatalog + useBrowser.
@@ -603,15 +646,7 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
     let candidates: SitemapEntry[] = [];
 
     if (cfg.isJsonCatalog) {
-        // JSON-katalog (sök-API:er à la Studiefrämjandets kurssök): plocka ALLA
-        // citerade sträng-värden som ser ut som URL:er/paths — urlPatterns-
-        // filtret nedströms avgör vilka som är event-sidor.
-        const seen = new Set<string>();
-        for (const m of root.matchAll(/"((?:https?:\/\/|\/)[^"\\\s]{4,300})"/g)) {
-            let href = m[1];
-            try { href = new URL(href, cfg.sitemapUrl).toString(); } catch { continue; }
-            if (!seen.has(href)) { seen.add(href); candidates.push({ url: href }); }
-        }
+        candidates = extractJsonCatalogUrls(root, cfg.sitemapUrl);
         ctx.log(`json-katalog: ${candidates.length} URL-kandidater hittade`);
     } else if (cfg.isHtmlCatalog) {
         candidates = extractLinksFromHtml(root, cfg.sitemapUrl);
@@ -1423,6 +1458,10 @@ export const sitemapEngine = async (
             if (config.detailVenueSelector && !ev.venueName) {
                 const v = decodeHtmlEntities(cheerio.load(html)(config.detailVenueSelector).first().text()).replace(/\s+/g, ' ').trim();
                 if (v && v.length <= 80) ev.venueName = v;
+            }
+            if (config.detailDescSelector) {
+                const d = descFromDetailSelector(html, config.detailDescSelector);
+                if (d) ev.description = d;
             }
             if (config.titlePlaces) applyTitlePlaces(ev, config.titlePlaces, config.defaultCity);
             if (!ev.venueName && config.defaultVenue) ev.venueName = config.defaultVenue;

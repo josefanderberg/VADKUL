@@ -21,6 +21,11 @@ describe('isLikelyLogoOrPlaceholderImage', () => {
         expect(isLikelyLogoOrPlaceholderImage(
             'https://www.datocms-assets.com/108519/1706010715-shareimage-1200x630.jpg?auto=format&fit=max&w=1200')).toBe(true);
         expect(isLikelyLogoOrPlaceholderImage('https://x.se/img/placeholder.jpg')).toBe(true);
+        // bastad.com: samma /og-image.png på varje eventsida (28/9)
+        expect(isLikelyLogoOrPlaceholderImage('https://bastad.com/og-image.png')).toBe(true);
+        expect(isLikelyLogoOrPlaceholderImage('https://x.se/static/og_image.jpg')).toBe(true);
+        // …men bara när filen heter just så — eventspecifika bilder släpps
+        expect(isLikelyLogoOrPlaceholderImage('https://x.se/uploads/konsert-og-image.jpg')).toBe(false);
         expect(isLikelyLogoOrPlaceholderImage('https://x.se/img/spacer.gif')).toBe(true);
         expect(isLikelyLogoOrPlaceholderImage('https://x.se/static/1x1.png')).toBe(true);
         expect(isLikelyLogoOrPlaceholderImage('https://x.se/tracking/pixel.gif')).toBe(true);
