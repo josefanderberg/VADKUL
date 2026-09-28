@@ -30,6 +30,11 @@ SECRET_FILE="$HOME/.vadkul-secrets/env"
 
 mkdir -p "$LOG_DIR"
 
+# Nätverk (28/9 2026): Nodes happy eyeballs (IPv6+IPv4, 250 ms/försök) gav
+# ~200 "fetch failed"/ETIMEDOUT per natt mot bl.a. Nominatim — och fällde
+# null-island-reparationen helt. IPv4 först + längre försökstimeout.
+export NODE_OPTIONS="${NODE_OPTIONS:-} --dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=1000"
+
 # Ladda hemligheter (TG_BOT_TOKEN, TG_CHAT_ID m.m.) om filen finns
 if [ -f "$SECRET_FILE" ]; then
     # shellcheck disable=SC1090

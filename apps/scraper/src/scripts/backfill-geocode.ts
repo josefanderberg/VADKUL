@@ -137,6 +137,7 @@ async function main() {
     };
 
     let attempted = 0, fixed = 0, failed = 0, skipped = 0;
+    let netErrorsInRow = 0;
     for (const r of rows) {
         if (attempted >= LIMIT) break;
         const host = r.hostName || '(okänd)';
@@ -146,10 +147,24 @@ async function main() {
         attempted++;
         let hit: import('../utils/venueCoordinates').GeoHit | null = null;
         let usedQuery = '';
+        let netError = false;
         for (const q of cands) {
-            const res = await geocodeVenueSweden(q);
+            // Ett nätverksfel (Nominatim-timeout) fällde förr HELA körningen på
+            // första eventet — 28/9: 1 rättat av 1 481. Nu: hoppa över eventet.
+            let res: import('../utils/venueCoordinates').GeoHit | null = null;
+            try { res = await geocodeVenueSweden(q); } catch (err) {
+                netError = true;
+                console.log(`  ⚠️ nätverksfel för "${q.slice(0, 40)}": ${(err as Error)?.message}`);
+                break;
+            }
             if (res && isInNordic(res[0], res[1])) { hit = res; usedQuery = q; break; }
         }
+        if (netError) {
+            netErrorsInRow++;
+            if (netErrorsInRow >= 10) { console.log('  🛑 10 nätverksfel i rad — avbryter, nästa natt fortsätter.'); break; }
+            continue;
+        }
+        netErrorsInRow = 0;
 
         if (hit) {
             fixed++;
