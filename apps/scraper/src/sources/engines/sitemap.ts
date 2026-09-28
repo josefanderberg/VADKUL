@@ -715,6 +715,31 @@ function stripRelatedBlocks($: cheerio.CheerioAPI): void {
     });
 }
 
+/** Lokal "YYYY-MM-DDTHH:MM" — samma zonlösa form som JSON-propsen använder. */
+function localIsoMinute(d: Date): string {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/**
+ * Om `picked` är ett "endDate" i sidans inbäddade JSON: returnera det
+ * tidigaste "startDate" samma dag som ligger före det. Annars `picked`
+ * orört. Kräver samma dag så att en relaterad-evenemang-lista med andra
+ * datum aldrig kan flytta eventet.
+ */
+export function startInsteadOfEnd(html: string, picked: Date): Date {
+    const key = localIsoMinute(picked);
+    const iso = (field: string) => [...html.matchAll(
+        new RegExp(`"${field}"\\s*:\\s*"(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2})`, 'g'),
+    )].map((m) => m[1]);
+    if (!iso('endDate').includes(key)) return picked;
+    const day = key.slice(0, 10);
+    const starts = iso('startDate').filter((s) => s.slice(0, 10) === day && s < key).sort();
+    if (!starts.length) return picked;
+    const d = new Date(starts[0]);
+    return isNaN(d.getTime()) ? picked : d;
+}
+
 export function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
     const $ = cheerio.load(html);
     // FÖRE allt annat: bort med "Rekommenderade evenemang"-listan. Korten där
@@ -732,13 +757,25 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string)
     // Sajtnamnet = svans-segmentet ("Eventtitel - Kalmar läns museum") — en h1
     // som ÄR sajtnamnet (logga-h1) får aldrig vinna som fallback.
     const siteName = (titleParts.length > 1 ? titleParts[titleParts.length - 1] : '').toLowerCase();
+    // Titlar med eget bindestreck ("Kicki i Soläng – en helt vanlig person
+    // från Småland - Växjös officiella upplevelseguide") klyvs av splitten
+    // ovan, så första segmentet matchar ingen h1 och logga-h1:an ("Upplev
+    // Växjö") vann på 19 Växjö-event 28/9. Därför räknas även hela titeln och
+    // titeln utan svans-segmentet som eventets namn.
+    const pageNames = new Set<string>();
+    for (const full of [ogTitle, docTitle]) {
+        if (!full) continue;
+        pageNames.add(full.toLowerCase());
+        const noTail = full.replace(/\s+[|–-]\s+[^|–-]*$/, '').trim();
+        if (noTail) pageNames.add(noTail.toLowerCase());
+    }
     let title = '';
     $('h1').each((_i, el) => {
         const t = decodeHtmlEntities(elementTextWithBreaks($.html(el))).replace(/\s+/g, ' ').trim();
         if (!t) return;
         const tl = t.toLowerCase();
         if (!title && tl !== siteName) title = t;   // första icke-logga som fallback
-        if (pageName && tl === pageName) { title = t; return false; }
+        if ((pageName && tl === pageName) || pageNames.has(tl)) { title = t; return false; }
     });
     if (!title) title = ogTitle;
     if (!title) title = docTitle.split(/\s+[|–-]\s+/)[0].trim();
@@ -819,6 +856,14 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string)
                 hasSpecificTime = parsed.getHours() !== 0 || parsed.getMinutes() !== 0;
             }
         }
+        // 2b) Textskanningen tog SLUTTIDEN. cheerio .text() tar med <script>,
+        //     och upplev.vaxjo.se:s SiteVision-props skriver endDate FÖRE
+        //     startDate ({"endDate":"2026-10-05T20:00",…,"startDate":"2026-10-05T19:00"})
+        //     → första ISO-träffen var slutet och Tengstrandfestivalen, Pjäs m.fl.
+        //     visades vid sluttiden (81/94 Växjö-event 25/9). Är det valda datumet
+        //     exakt ett "endDate" på sidan och finns ett "startDate" samma dag
+        //     som ligger tidigare, är det starten som gäller.
+        if (startDate) startDate = startInsteadOfEnd(html, startDate);
     }
 
     if (!startDate) return null;

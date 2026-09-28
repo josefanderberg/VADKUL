@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -388,5 +388,46 @@ describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
 <div><div>oktober</div><div>31</div><div>Kl 15:00</div></div></div>`;
         const r = dateFromDetailSelector(html, '.dc', NOW)!;
         expect([r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([9, 30, 19]);
+    });
+});
+
+describe('Växjö-sluttiden: SiteVision-props skriver endDate före startDate', () => {
+    // Nedskalat ur upplev.vaxjo.se (Tengstrandfestivalen 5/10, 19.00-20.00).
+    // Sidans ld+json är inte schema.org → cheerioFallback, vars textskanning
+    // tar med <script> och hittade endDate först.
+    const PAGE = `<html><head><title>Tengstrandfestivalen: Staffan Mårtensson - Växjös officiella upplevelseguide</title></head>
+<body><main><h1>Tengstrandfestivalen: Staffan Mårtensson</h1>
+<script>AppRegistry.registerInitialState('12.x',{"next":{"date":"5","endDate":"2027-10-05T20:00","city":"Växjö","startTime":"19.00","endTime":"20.00","place":"Nygatan 6","startDate":"2027-10-05T19:00","title":"Tengstrandfestivalen: Staffan Mårtensson"}});</script>
+</main></body></html>`;
+
+    it('eventet får starttiden, inte sluttiden', () => {
+        const ev = cheerioFallback(PAGE, 'https://upplev.vaxjo.se/evenemang/evenemang/2026-08-19-x', 'Växjö')!;
+        const s = ev.startDate;
+        expect([s.getMonth(), s.getDate(), s.getHours(), s.getMinutes()]).toEqual([9, 5, 19, 0]);
+    });
+
+    it('rör inte ett datum som inte är ett endDate', () => {
+        const picked = new Date('2027-10-05T19:00');
+        expect(startInsteadOfEnd(PAGE, picked)).toBe(picked);
+    });
+
+    it('byter aldrig till en annan dags startDate (relaterade evenemang)', () => {
+        const html = '{"endDate":"2027-10-05T20:00"} {"startDate":"2027-10-04T18:00"}';
+        const picked = new Date('2027-10-05T20:00');
+        expect(startInsteadOfEnd(html, picked)).toBe(picked);
+    });
+});
+
+describe('cheerioFallback - titel med eget bindestreck slår logga-h1:an', () => {
+    // upplev.vaxjo.se 28/9: första h1 är loggan, sidtiteln har bindestreck i
+    // själva eventnamnet → 19 event hette "Upplev Växjö".
+    const PAGE = `<html><head><title>Kicki i Soläng – en helt vanlig person från Småland - Växjös officiella upplevelseguide</title>
+<meta property="og:title" content="Kicki i Soläng – en helt vanlig person från Småland"></head>
+<body><header><h1> <b>Upplev Växjö</b> </h1></header>
+<main><h1>Kicki i Soläng – en helt vanlig person från Småland</h1><p>30 september 2027 kl 18.00</p></main></body></html>`;
+
+    it('eventets h1 vinner, inte sajtloggan', () => {
+        const ev = cheerioFallback(PAGE, 'https://upplev.vaxjo.se/evenemang/evenemang/2026-08-27-kicki', 'Växjö')!;
+        expect(ev.title).toBe('Kicki i Soläng – en helt vanlig person från Småland');
     });
 });
