@@ -428,6 +428,18 @@ else
     echo "⚠️ Invariant-vakt misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── Samlad larmlista (28/9 2026) ───────────────────────────────────────────
+# Tysta källor, krascher, datumkluster, 0,0-event, invariant-larm och karantän
+# i EN fil (scraper-alerts.json) som pushas nedan och skrivs ut av rotens
+# `npm run dev` — signalerna fanns förut men låg utspridda och glömdes.
+echo "" >> "$LOG_FILE"
+echo "── SCRAPERLARM (samlad lista → scraper-alerts.json) ──" >> "$LOG_FILE"
+if npm run alerts >> "$LOG_FILE" 2>&1; then
+    echo "Scraperlarm OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Scraperlarm misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── Re-aggregate så audit-fyllda fält (price/category/emoji + hidden) når web ──
 # Aggregate kördes redan av npm-scriptet ovan (start/today), men då hade audit
 # inte hunnit fylla i price/category/emoji eller dölja junk för dagens nya events.
@@ -468,6 +480,7 @@ if [ "$JOB_NAME" = "nightly" ]; then
         apps/web/public/events-destinations.json \
         apps/scraped_events.json \
         apps/scraper/quarantine.json \
+        apps/scraper/scraper-alerts.json \
         apps/scraper/web-snowball-state.json \
         apps/scraper/src/sources/registry-snowball.ts \
         apps/scraper/src/scrapers/facebook/watchlist-national.ts >> "$LOG_FILE" 2>&1
@@ -504,6 +517,8 @@ COST_WARNINGS="$(grep '⚠️ KOSTNADSVAKT:' "$LOG_FILE" | sed 's/.*KOSTNADSVAKT
 # Invariant-vaktens utfall (sätts av steget ovan)
 INV_SUMMARY="$(grep -oE 'Invariantvakt-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Invariantvakt-summering: //')"
 INV_ALARMS="$(grep '🚨 INVARIANT:' "$LOG_FILE" | sed 's/.*INVARIANT: //' | head -5 | tr '\n' '|' | sed 's/|$//;s/|/ — /g' | cut -c1-400)"
+ALERTS_SUMMARY="$(grep -oE 'Scraperlarm-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Scraperlarm-summering: //')"
+ALERTS_TOP="$(grep -E '^(❌|⚠️ ) \[(krasch|tyst|datumkluster)\]' "$LOG_FILE" | head -5 | tr '\n' '|' | sed 's/|$//;s/|/ — /g' | cut -c1-500)"
 
 # ─── Hämta Firebase-statistik (dubbletter, daglig fördelning, FB-info) ──────
 echo "" >> "$LOG_FILE"
@@ -573,6 +588,8 @@ COST_SUMMARY="$COST_SUMMARY" \
 COST_WARNINGS="$COST_WARNINGS" \
 INV_SUMMARY="$INV_SUMMARY" \
 INV_ALARMS="$INV_ALARMS" \
+ALERTS_SUMMARY="$ALERTS_SUMMARY" \
+ALERTS_TOP="$ALERTS_TOP" \
 LOG_FILE_PATH="$LOG_FILE" \
 /usr/bin/python3 - >"$PAYLOAD_FILE" <<'PYEOF'
 import os, html
@@ -680,6 +697,15 @@ if inv_summary:
 if inv_alarms:
     inv_facts.append({"title": "🚨 LARM",    "value": inv_alarms})
 
+# ── Samlad larmlista (scraper-alerts.json) ──
+alerts_summary = os.environ.get("ALERTS_SUMMARY", "")
+alerts_top     = os.environ.get("ALERTS_TOP", "")
+alert_facts = []
+if alerts_summary:
+    alert_facts.append({"title": "🩺 Status", "value": alerts_summary})
+if alerts_top:
+    alert_facts.append({"title": "🔧 Att kolla", "value": alerts_top})
+
 def facts(rows):
     return "\n".join(f"• <b>{esc(r['title'])}:</b> {esc(r['value'])}" for r in rows)
 
@@ -694,6 +720,7 @@ parts = [
     section("⏸️ Källkarantän", quar_facts),
     section("🚨 Databas & kostnadsvakt" if cost_warnings else "🧹 Databas & kostnadsvakt", db_facts),
     section("🚨 Datainvarianter" if inv_alarms else "🧪 Datainvarianter", inv_facts),
+    section("🩺 Skraparnas hälsa", alert_facts),
 ]
 text = "\n".join(p for p in parts if p)
 

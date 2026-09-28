@@ -8,7 +8,8 @@ Triggas av `launchd`/cron. Skript: [run-daily.sh](../../apps/scraper/scripts/run
 
 1. **Setup** — laddar secrets (`TEAMS_WEBHOOK_URL`), öppnar loggfil i `~/Library/Logs/vadkul-scraper/`.
 2. **Cleanup** (om `--with-cleanup`) — kör [cleanup-old-events.ts](../../apps/scraper/src/scripts/cleanup-old-events.ts). Tar bort gamla events från Firestore.
-3. **Scrape** — kör ett npm-script, t.ex. `npm run scrape-fb`. Per scraper sker stegen i avsnittet "Per scraper" nedan.
+3. **Scrape** — `npm run start` (`src/index.ts`). Ordning sedan 2026-09-28: bespoke-skrapare (Tickster, Ticketmaster, Eventbrite …) → Sources-registret → aggregat → **Facebook sist** → slutaggregat. Kartan är alltså färsk på morgonen även om FB-svansen drar ut. Per scraper sker stegen i avsnittet "Per scraper" nedan.
+3b. **Efterbearbetning** — karantän, städning, geo-förfining, venue-fixar, AI-audit, invariant-vakt, **scraperlarm** (`npm run alerts` → `scraper-alerts.json`), re-aggregat, git-push av whitelistade datafiler.
 4. **post-run-stats** — kör [post-run-stats.ts](../../apps/scraper/src/scripts/post-run-stats.ts). Räknar Firestore + läser `keyword_stats.json`. Skriver `STAT_*=N` till stdout.
 5. **Bygg Teams-payload** — bash + python3 läser stats + plockar tail av loggen, bygger Adaptive Card.
 6. **POST till Teams** — via webhook.

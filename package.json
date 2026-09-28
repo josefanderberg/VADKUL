@@ -7,7 +7,9 @@
     "packages/*"
   ],
   "scripts": {
+    "predev": "node apps/scraper/scripts/print-alerts.mjs",
     "dev": "npm run dev -w web",
+    "alerts": "node apps/scraper/scripts/print-alerts.mjs --all",
     "dev:reset": "bash scripts/dev-reset.sh",
     "dev:check": "bash scripts/dev-reset.sh --check",
     "build": "npm run build -w web",

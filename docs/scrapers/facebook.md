@@ -2,6 +2,12 @@
 
 Källa: 1073/1200 events (89%). Scraper: [src/scrapers/facebook/](../../apps/scraper/src/scrapers/facebook/).
 
+**Status 2026-09-28 (gäller före allt nedan):**
+- Eventsöket (städer + sökord) är dött utloggat sedan juli 2026 → **avstängt som standard**, `FB_SEARCH=1` slår på det. Sökvakten finns kvar.
+- FB-flödet bärs av **sidbevakning** (`watchlist*.ts`, ~640 sidors /events-flikar) och **seed-filen** `fb-seed-urls.json` (snöbollen, måndagar). ~730 nya event/natt 28/9.
+- Körs **sist** i nattkedjan och bara EN gång (`today-sweden` körde förr hela FB en gång till).
+- `rejectMemory.ts` + lokala `fb-reject-memory.json`: sid-/seed-event som avfärdats på datum (passerade, bortom 30 d, utan datum) laddas inte om varje natt — det var ~2 700 onödiga sidladdningar/natt.
+
 **Status 2026-05-27:** chrome-läckage-fix applicerad — body-wide adress-scanning borttagen i [location.ts](../../apps/scraper/src/scrapers/facebook/location.ts). Singel-URL-test mot en tidigare läckande event: nu tom (✅). Regressionscheck mot verifierat event (Norrmalmstorg): adress kvar (✅). Hela DB:n behöver re-scrapas för att rensa de 61 gamla läckorna.
 
 ## Nu-läget

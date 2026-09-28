@@ -1,0 +1,178 @@
+{
+  "generatedAt": "2026-09-28T22:46:10.194Z",
+  "counts": {
+    "fel": 0,
+    "varning": 25,
+    "nollkoordinatTotalt": 862
+  },
+  "alerts": [
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "bastad",
+      "since": "2026-09-22",
+      "message": "gav 6 event 2026-09-20, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "ostra-goinge",
+      "since": "2026-09-22",
+      "message": "gav 63 event 2026-09-19, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "prins-eugens-waldemarsudde",
+      "since": "2026-09-19",
+      "message": "gav 85 event 2026-09-13, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "sb-kb-se",
+      "since": "2026-09-16",
+      "message": "gav 8 event 2026-09-10, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "spritmuseum",
+      "since": "2026-09-20",
+      "message": "gav 6 event 2026-09-17, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Astrid Lindgrens Värld",
+      "message": "18 av 18 kommande event ligger 2026-10-16 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Visit Vemdalen",
+      "message": "30 av 40 kommande event ligger 2026-09-30 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "nollkoordinat",
+      "source": "862 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 49, Visit Vemdalen 34, Förlösa-Kläckeberga församling 23, Söndrum-Vapnö församling 23, Equmenia 22"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Korpen Umeå",
+      "message": "invariant-vakten larmar (12 av 64 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Malmö Live Konserthus",
+      "message": "invariant-vakten larmar (13 av 85 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Mora Kommun",
+      "message": "invariant-vakten larmar (8 av 16 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "SHL",
+      "message": "invariant-vakten larmar (10 av 339 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "dalhalla",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "engso-hembygds-och-intresseforening",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "folk-goteborg",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "gotska-sandons-hembygdsforening",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "karlskoga",
+      "since": "2026-09-28",
+      "message": "i karantän sedan 2026-09-28: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "nordmaling",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "nybro",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "ortraskbygdens-intresse-och-hembygdsfor",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "rosendals-tradgard",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "sollero-hembygdsforening",
+      "since": "2026-09-06",
+      "message": "i karantän sedan 2026-09-06: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "staffanstorp",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "storsjoyran",
+      "since": "2026-09-18",
+      "message": "i karantän sedan 2026-09-18: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "tingsryd",
+      "since": "2026-08-19",
+      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    }
+  ]
+}
