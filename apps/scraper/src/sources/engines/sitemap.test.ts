@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -388,5 +388,32 @@ describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
 <div><div>oktober</div><div>31</div><div>Kl 15:00</div></div></div>`;
         const r = dateFromDetailSelector(html, '.dc', NOW)!;
         expect([r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([9, 30, 19]);
+    });
+});
+
+describe('Växjö-sluttiden: SiteVision-props skriver endDate före startDate', () => {
+    // Nedskalat ur upplev.vaxjo.se (Tengstrandfestivalen 5/10, 19.00-20.00).
+    // Sidans ld+json är inte schema.org → cheerioFallback, vars textskanning
+    // tar med <script> och hittade endDate först.
+    const PAGE = `<html><head><title>Tengstrandfestivalen: Staffan Mårtensson - Växjös officiella upplevelseguide</title></head>
+<body><main><h1>Tengstrandfestivalen: Staffan Mårtensson</h1>
+<script>AppRegistry.registerInitialState('12.x',{"next":{"date":"5","endDate":"2027-10-05T20:00","city":"Växjö","startTime":"19.00","endTime":"20.00","place":"Nygatan 6","startDate":"2027-10-05T19:00","title":"Tengstrandfestivalen: Staffan Mårtensson"}});</script>
+</main></body></html>`;
+
+    it('eventet får starttiden, inte sluttiden', () => {
+        const ev = cheerioFallback(PAGE, 'https://upplev.vaxjo.se/evenemang/evenemang/2026-08-19-x', 'Växjö')!;
+        const s = ev.startDate;
+        expect([s.getMonth(), s.getDate(), s.getHours(), s.getMinutes()]).toEqual([9, 5, 19, 0]);
+    });
+
+    it('rör inte ett datum som inte är ett endDate', () => {
+        const picked = new Date('2027-10-05T19:00');
+        expect(startInsteadOfEnd(PAGE, picked)).toBe(picked);
+    });
+
+    it('byter aldrig till en annan dags startDate (relaterade evenemang)', () => {
+        const html = '{"endDate":"2027-10-05T20:00"} {"startDate":"2027-10-04T18:00"}';
+        const picked = new Date('2027-10-05T20:00');
+        expect(startInsteadOfEnd(html, picked)).toBe(picked);
     });
 });

@@ -715,6 +715,31 @@ function stripRelatedBlocks($: cheerio.CheerioAPI): void {
     });
 }
 
+/** Lokal "YYYY-MM-DDTHH:MM" — samma zonlösa form som JSON-propsen använder. */
+function localIsoMinute(d: Date): string {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/**
+ * Om `picked` är ett "endDate" i sidans inbäddade JSON: returnera det
+ * tidigaste "startDate" samma dag som ligger före det. Annars `picked`
+ * orört. Kräver samma dag så att en relaterad-evenemang-lista med andra
+ * datum aldrig kan flytta eventet.
+ */
+export function startInsteadOfEnd(html: string, picked: Date): Date {
+    const key = localIsoMinute(picked);
+    const iso = (field: string) => [...html.matchAll(
+        new RegExp(`"${field}"\\s*:\\s*"(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2})`, 'g'),
+    )].map((m) => m[1]);
+    if (!iso('endDate').includes(key)) return picked;
+    const day = key.slice(0, 10);
+    const starts = iso('startDate').filter((s) => s.slice(0, 10) === day && s < key).sort();
+    if (!starts.length) return picked;
+    const d = new Date(starts[0]);
+    return isNaN(d.getTime()) ? picked : d;
+}
+
 export function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
     const $ = cheerio.load(html);
     // FÖRE allt annat: bort med "Rekommenderade evenemang"-listan. Korten där
@@ -819,6 +844,14 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string)
                 hasSpecificTime = parsed.getHours() !== 0 || parsed.getMinutes() !== 0;
             }
         }
+        // 2b) Textskanningen tog SLUTTIDEN. cheerio .text() tar med <script>,
+        //     och upplev.vaxjo.se:s SiteVision-props skriver endDate FÖRE
+        //     startDate ({"endDate":"2026-10-05T20:00",…,"startDate":"2026-10-05T19:00"})
+        //     → första ISO-träffen var slutet och Tengstrandfestivalen, Pjäs m.fl.
+        //     visades vid sluttiden (81/94 Växjö-event 25/9). Är det valda datumet
+        //     exakt ett "endDate" på sidan och finns ett "startDate" samma dag
+        //     som ligger tidigare, är det starten som gäller.
+        if (startDate) startDate = startInsteadOfEnd(html, startDate);
     }
 
     if (!startDate) return null;
