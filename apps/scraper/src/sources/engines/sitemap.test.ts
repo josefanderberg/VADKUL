@@ -481,10 +481,51 @@ describe('applyTitlePlaces', () => {
         expect(venue.city).toBe('Smålandsstenar');
     });
 
+    it('ort ur sidans venue när titeln saknar ort', () => {
+        const e = ev('Konsert med kören', { venueName: 'Anderstorps kyrka' });
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Anderstorp');
+        expect(e.venueName).toBe('Anderstorps kyrka');
+    });
+
     it('ingen träff → oförändrat', () => {
         const e = ev('Hur redo är du?, Torget i Gislaved');
         applyTitlePlaces(e, rules, 'Gislaved');
         expect(e.city).toBe('Gislaved');
         expect(e.venueName).toBeUndefined();
+    });
+});
+
+// Visit Isabergsregionen 28/9: nya sajtens datumfält är "26-10-02 12:30 - 15:00".
+describe('dateFromDetailSelector - numeriskt ÅÅ-MM-DD', () => {
+    const now = new Date('2026-09-28T12:00:00');
+    const at = (t: string) => dateFromDetailSelector(`<div class="d">${t}</div>`, '.d', now);
+
+    it('ÅÅ-MM-DD med klockslag → rätt dag och tid', () => {
+        const r = at('26-10-02 <div class="time">12:30 - 15:00</div>')!;
+        expect([r.date.getFullYear(), r.date.getMonth(), r.date.getDate(), r.date.getHours(), r.date.getMinutes()]).toEqual([2026, 9, 2, 12, 30]);
+        expect(r.hasTime).toBe(true);
+    });
+
+    it('start–slut utan tid → startdagen, ingen tid', () => {
+        const r = at('26-10-21 26-10-22')!;
+        expect([r.date.getMonth(), r.date.getDate()]).toEqual([9, 21]);
+        expect(r.hasTime).toBe(false);
+    });
+
+    it('ÅÅÅÅ-MM-DD fungerar också; ogiltig månad rörs inte', () => {
+        expect(at('2026-11-07')!.date.getDate()).toBe(7);
+        expect(at('26-13-02')).toBeNull();
+    });
+});
+
+describe('cheerioFallback - reservdatum ur datumfältet', () => {
+    const html = '<html><head><title>Den stora schlagerfesten</title></head><body><h1>Den stora schlagerfesten</h1><p>En glittrande kavalkad.</p></body></html>';
+    it('utan löptextdatum → null, med reservdatum → event', () => {
+        expect(cheerioFallback(html, 'https://x.se/e')).toBeNull();
+        const d = new Date('2026-11-07T00:00:00');
+        const ev = cheerioFallback(html, 'https://x.se/e', 'Gislaved', d);
+        expect(ev?.title).toBe('Den stora schlagerfesten');
+        expect(ev?.startDate.getTime()).toBe(d.getTime());
     });
 });

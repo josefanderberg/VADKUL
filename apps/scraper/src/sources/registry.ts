@@ -3454,11 +3454,19 @@ export const SOURCES: Source[] = [
         config: {
             // Ingen sitemap och ingen JSON-LD — listsidan bär länkarna och
             // detaljsidans datum står i löptext ("Lördag 12 september").
-            // /evenemang utan språkprefix serverar ENGELSKA länkar (/en/…) —
-            // hämta /sv/evenemang, annars matchar mönstret ingenting.
-            sitemapUrl: 'https://visitisabergsregionen.se/sv/evenemang',
+            // Sajten bytte struktur ~23/9: www-host och svenska UTAN /sv/-
+            // prefix (gamla /sv/-mönstret gav 0 träffar → den äkta orsaken
+            // till karantänen 25/9). Gamla URL:er redirectar och slugsen är
+            // samma → canonicalUrl behåller den gamla formen som nyckel.
+            sitemapUrl: 'https://www.visitisabergsregionen.se/evenemang/',
             isHtmlCatalog: true,
-            urlPatterns: [/\/sv\/evenemang\/[a-z0-9-]{4,}\/$/i],
+            urlPatterns: [/visitisabergsregionen\.se\/evenemang\/[a-z0-9-]{4,}\/$/i],
+            canonicalUrl: [/^https:\/\/www\.visitisabergsregionen\.se\/evenemang\//, 'https://visitisabergsregionen.se/sv/evenemang/'],
+            // Nya sajten har strukturerade fält: "Datum 26-10-02 12:30 - 15:00"
+            // och "Plats Torghuset i Smålandsstenar". Löptextdatumet saknas på
+            // hälften av sidorna (19/33 gav "utan event-struktur" utan dessa).
+            detailDateSelector: '.date-list li',
+            detailVenueSelector: '.info-container p',
             defaultCity: 'Gislaved',
             // Sidorna saknar location-markup; orten står i titeln ("Soppbio,
             // Torghuset Smålandsstenar"). Utan reglerna låg allt på Gislaveds

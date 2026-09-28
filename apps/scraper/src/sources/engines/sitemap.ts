@@ -81,7 +81,8 @@ export interface TitlePlaceRule {
 export function applyTitlePlaces(ev: RawEvent, rules: TitlePlaceRule[], defaultCity?: string): void {
     if (ev.city && defaultCity && ev.city !== defaultCity) return;
     const title = ev.title ?? '';
-    const rule = rules.find(r => r.re.test(title));
+    // Titeln först; annars sidans venue ("Plats: Reftele bygdegård").
+    const rule = rules.find(r => r.re.test(title)) ?? (ev.venueName ? rules.find(r => r.re.test(ev.venueName!)) : undefined);
     if (!rule) return;
     ev.city = rule.city;
     if (ev.venueName) return;
@@ -157,6 +158,16 @@ export interface SitemapConfig {
      */
     placeUrlReplace?: [RegExp, string];
     /**
+     * Skriv om den HÄMTADE URL:en till den som lagras (primärnyckeln) när en
+     * sajt bytt URL-struktur men gamla adresser redirectar. Slugsen är samma →
+     * inga dubbletter av det som redan ligger i DB. Visit Isabergsregionen
+     * 28/9: `/sv/evenemang/x/` → `www.…/evenemang/x/`.
+     */
+    canonicalUrl?: [RegExp, string];
+    /** CSS-selektor för detaljsidans eget platsfält (venue) när sidan saknar
+     *  location-markup — t.ex. `.info-container p` ("Plats: Konsertsalen"). */
+    detailVenueSelector?: string;
+    /**
      * Regex som extraherar år+månad (och ev. dag) ur URL. När satt:
      * pre-filtrerar URL:er INNAN fetch — sparar enorm tid på stora sajter
      * som Studiefrämjandet (1500+ URLs) där bara veckans har relevans.
@@ -226,7 +237,19 @@ export function dateFromDetailSelector(
         /\b(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+(\d{1,2})\b/i,
         '$2 $1',
     );
-    const date = findFirstDateInText(normalized, now);
+    // Numeriskt ÅÅ-MM-DD / ÅÅÅÅ-MM-DD ("26-10-02 12:30" — Visit Isaberg-
+    // regionen 28/9) → "2 oktober 2026" så klockslaget efter följer med;
+    // ISO-grenen i findFirstDateInText tappar det. Bara i utpekat datumfält.
+    const MONTHS = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'];
+    const numeric = normalized.replace(
+        /(?<![\d-])(\d{4}|\d{2})-(\d{2})-(\d{2})(?![\d-])/g,
+        (m, y: string, mo: string, d: string) => {
+            const month = MONTHS[Number(mo) - 1];
+            return month && Number(d) >= 1 && Number(d) <= 31
+                ? `${Number(d)} ${month} ${y.length === 2 ? `20${y}` : y}` : m;
+        },
+    );
+    const date = findFirstDateInText(numeric, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
 }
 
@@ -777,7 +800,7 @@ export function startInsteadOfEnd(html: string, picked: Date): Date {
     return isNaN(d.getTime()) ? picked : d;
 }
 
-export function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
+export function cheerioFallback(html: string, url: string, defaultCity?: string, fallbackDate?: Date): RawEvent | null {
     const $ = cheerio.load(html);
     // FÖRE allt annat: bort med "Rekommenderade evenemang"-listan. Korten där
     // bär egen microdata (startDate/location) och vinner annars varje .first().
@@ -903,6 +926,9 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string)
         if (startDate) startDate = startInsteadOfEnd(html, startDate);
     }
 
+    // Sidans utpekade datumfält (detailDateSelector) — skrivs ändå över av
+    // motorn efteråt; här bara så sidor UTAN löptextdatum inte faller bort.
+    if (!startDate && fallbackDate) startDate = new Date(fallbackDate);
     if (!startDate) return null;
 
     // Om datumet saknar specifik tid (midnatt), leta efter ett fristående HH:MM.
@@ -1246,7 +1272,7 @@ export function applyPlacePage(html: string, ev: RawEvent): void {
     }
 }
 
-export function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
+export function extractFromHtml(html: string, url: string, defaultCity?: string, fallbackDate?: Date): RawEvent | null {
     // 1) JSON-LD
     const blocks = extractJsonLdBlocks(html);
     const nodes: any[] = [];
@@ -1271,7 +1297,7 @@ export function extractFromHtml(html: string, url: string, defaultCity?: string)
     // (cheerio-fallbacken skulle annars återuppliva "Startsida"-sidorna).
     if (!ev && sawBlacklisted) return null;
     // 2) Cheerio-fallback
-    if (!ev) ev = cheerioFallback(html, url, defaultCity);
+    if (!ev) ev = cheerioFallback(html, url, defaultCity, fallbackDate);
     // 2b) Backfilla TOMMA desc/bild ur HTML — gäller BÅDA vägarna (JSON-LD med
     //     ofullständiga noder + cheerio-sidor utan og). Additivt, no-op när fullt.
     if (ev) backfillFromHtml(html, ev, url);
@@ -1347,19 +1373,21 @@ export const sitemapEngine = async (
             // Skip-känt: detaljsidan är dyraste steget (1,5s/domän rate-limit).
             // URL:er vi redan har i DB hoppas över — utom på full-refresh-
             // körningar (ctx.refreshKnown), där ändrade event ska fångas.
-            if (!ctx.refreshKnown && ctx.isKnownUrl && (await ctx.isKnownUrl(entry.url))) {
+            const key = config.canonicalUrl ? entry.url.replace(config.canonicalUrl[0], config.canonicalUrl[1]) : entry.url;
+            if (!ctx.refreshKnown && ctx.isKnownUrl && (await ctx.isKnownUrl(key))) {
                 skippedKnown++;
                 continue;
             }
             const html = await detailFetch(entry.url);
             fetched++;
             if (!html) { failed++; events.push(null); continue; }
-            const ev = extractFromHtml(html, entry.url, config.defaultCity);
+            // Sidans eget datumfält är sanningen — ingen fritext-fallback.
+            const own = config.detailDateSelector ? dateFromDetailSelector(html, config.detailDateSelector) : null;
+            if (config.detailDateSelector && !own) { noEvent++; events.push(null); continue; }
+            const ev = extractFromHtml(html, entry.url, config.defaultCity, own?.date);
             if (!ev) { noEvent++; events.push(null); continue; }
-            if (config.detailDateSelector) {
-                // Sidans eget datumfält är sanningen — ingen fritext-fallback.
-                const own = dateFromDetailSelector(html, config.detailDateSelector);
-                if (!own) { noEvent++; events.push(null); continue; }
+            ev.url = key;
+            if (own) {
                 ev.startDate = own.date;
                 ev.hasSpecificTime = own.hasTime;
             }
@@ -1371,6 +1399,10 @@ export const sitemapEngine = async (
                     || ev.startDate.getHours() !== 0 || ev.startDate.getMinutes() !== 0;
                 if (hadClock) d.setHours(ev.startDate.getHours(), ev.startDate.getMinutes(), 0, 0);
                 ev.startDate = d;
+            }
+            if (config.detailVenueSelector && !ev.venueName) {
+                const v = decodeHtmlEntities(cheerio.load(html)(config.detailVenueSelector).first().text()).replace(/\s+/g, ' ').trim();
+                if (v && v.length <= 80) ev.venueName = v;
             }
             if (config.titlePlaces) applyTitlePlaces(ev, config.titlePlaces, config.defaultCity);
             if (!ev.venueName && config.defaultVenue) ev.venueName = config.defaultVenue;
