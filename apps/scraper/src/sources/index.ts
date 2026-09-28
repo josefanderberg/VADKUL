@@ -43,6 +43,7 @@ import { fhpEngine } from '../scrapers/fhp';
 import { goteborgStadEngine } from '../scrapers/goteborgstad';
 import { gotlandComEngine } from '../scrapers/gotlandcom';
 import { skordefestEngine } from '../scrapers/skordefest';
+import { vastbosportdansEngine } from '../scrapers/vastbosportdans';
 import { bergmancenterEngine } from '../scrapers/bergmancenter';
 import { turidEngine } from '../scrapers/turid';
 import { hbgEventEngine } from '../scrapers/hbgevent';
@@ -117,6 +118,7 @@ export const ENGINES: Record<string, Engine> = {
     'nortic': norticEngine,
     'cbis': cbisEngine,
     'skordefest': skordefestEngine,
+    'vastbosportdans': vastbosportdansEngine,
     'fhp': fhpEngine,
     'goteborgstad': goteborgStadEngine,
     'gotlandcom': gotlandComEngine,
