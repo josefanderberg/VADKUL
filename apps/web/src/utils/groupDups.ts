@@ -23,14 +23,37 @@ export const dupKey = (title: string) =>
 
 export type DupGroup<T> = { rep: T; dups: T[] };
 
+/** Den kortare normtiteln ingår ORDAGRANT (hela ord) i den längre — och är
+ *  själv nog lång för att bära mening. "när bok blir bio" ingår i
+ *  "föreläsning när bok blir bio några nedslag i filmhistorien"; bara "bio"
+ *  gör det inte (minst 8 tecken). */
+const CONTAINED_TITLE_MIN = 8;
+const titleContains = (a: string, b: string): boolean => {
+    const [long, short] = a.length >= b.length ? [a, b] : [b, a];
+    return short.length >= CONTAINED_TITLE_MIN && ` ${long} `.includes(` ${short} `);
+};
+
 /**
  * Grupperar en dags (tidssorterade) event på titel och omslagsbild.
  * Ordningen mellan grupper är första förekomstens; ordningen inom gruppen
  * bevaras (= tidsordning). Representanten är gruppens första event MED
  * omslagsbild — bilden ska bära raden — annars det första. Singlar blir
  * grupper med tom dups-lista. Bildlösa event grupperas aldrig på bild.
+ *
+ * TREDJE regeln (Josef 28/9, "När bok blir bio"-paret: samma föreläsning
+ * från två källor med olika titellängd OCH olika bild-URL:er): event på
+ * SAMMA PLATS med SAMMA STARTTID grupperas när den ena normtiteln ingår i
+ * den andra. Plats + exakt tid krävs — titelinneslutning ensam hade slagit
+ * ihop "Julmarknad" med "Julmarknad i Tenhult" på annan ort, och olika
+ * program i samma hus (olika tider) ska inte gruppera. Kräver att anroparen
+ * skickar med `time` och `locationName`; utan dem gäller bara titel/bild.
  */
-export function groupDayDuplicates<T extends { title: string; coverImage?: string }>(
+export function groupDayDuplicates<T extends {
+    title: string;
+    coverImage?: string;
+    time?: string | Date;
+    locationName?: string;
+}>(
     list: T[],
 ): DupGroup<T>[] {
     // Union-find över listindex. Roten är alltid komponentens LÄGSTA index
@@ -53,6 +76,26 @@ export function groupDayDuplicates<T extends { title: string; coverImage?: strin
             else union(first, i);
         }
     });
+
+    // Plats + starttid-hinkarna för tredje regeln. Hinkarna är pyttesmå
+    // (samma lokal, samma klockslag), så parvisa jämförelser är gratis.
+    const byPlaceTime = new Map<string, number[]>();
+    list.forEach((e, i) => {
+        if (!e.locationName || !e.time) return;
+        const ms = new Date(e.time).getTime();
+        if (!Number.isFinite(ms)) return;
+        const k = `${dupKey(e.locationName)}|${ms}`;
+        const b = byPlaceTime.get(k);
+        if (b) b.push(i); else byPlaceTime.set(k, [i]);
+    });
+    for (const bucket of byPlaceTime.values()) {
+        for (let x = 0; x < bucket.length; x++) {
+            for (let y = x + 1; y < bucket.length; y++) {
+                const a = list[bucket[x]], b = list[bucket[y]];
+                if (titleContains(dupKey(a.title), dupKey(b.title))) union(bucket[x], bucket[y]);
+            }
+        }
+    }
 
     const byRoot = new Map<number, T[]>();
     list.forEach((e, i) => {

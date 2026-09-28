@@ -68,6 +68,58 @@ describe('groupDayDuplicates', () => {
         const groups = groupDayDuplicates([ev('A'), ev('B')]);
         expect(groups).toHaveLength(2);
     });
+
+    // TREDJE regeln: samma plats + samma starttid + titelinneslutning
+    // ("När bok blir bio"-paret 28/9: två källor, olika titellängd, olika
+    // bild-URL:er).
+    describe('plats + starttid + titelinneslutning', () => {
+        const pt = (title: string, locationName: string, time: string) => ({ title, locationName, time });
+
+        it('samma plats och tid, ena titeln ingår i den andra → EN rad', () => {
+            const kort = pt('När bok blir bio', 'Rydaholms bibliotek', '2026-09-30T18:00:00');
+            const lang = pt('Föreläsning: När bok blir bio - några nedslag i filmhistorien', 'Rydaholms bibliotek', '2026-09-30T18:00:00');
+            const groups = groupDayDuplicates([lang, kort]);
+            expect(groups).toHaveLength(1);
+            expect(groups[0].dups).toHaveLength(1);
+        });
+
+        it('olika platser grupperas inte (Julmarknad ≠ Julmarknad i Tenhult på annan ort)', () => {
+            const a = pt('Julmarknad', 'Hembygdsparken', '2026-12-05T11:00:00');
+            const b = pt('Julmarknad i Tenhult', 'Tenhults station', '2026-12-05T11:00:00');
+            expect(groupDayDuplicates([a, b])).toHaveLength(2);
+        });
+
+        it('olika starttider grupperas inte (två program i samma hus)', () => {
+            const a = pt('Yoga', 'Folkets hus', '2026-09-30T10:00:00');
+            const b = pt('Yoga för seniorer', 'Folkets hus', '2026-09-30T14:00:00');
+            expect(groupDayDuplicates([a, b])).toHaveLength(2);
+        });
+
+        it('orelaterade titlar på samma plats och tid grupperas inte', () => {
+            const a = pt('Schackklubben', 'Biblioteket', '2026-09-30T18:00:00');
+            const b = pt('Bokcirkel', 'Biblioteket', '2026-09-30T18:00:00');
+            expect(groupDayDuplicates([a, b])).toHaveLength(2);
+        });
+
+        it('för kort inneslutning räknas inte ("Bio" i "Utomhusbio")', () => {
+            const a = pt('Bio', 'Parken', '2026-09-30T21:00:00');
+            const b = pt('Utomhusbio med filmquiz', 'Parken', '2026-09-30T21:00:00');
+            expect(groupDayDuplicates([a, b])).toHaveLength(2);
+        });
+
+        it('inneslutningen gäller hela ord, inte delsträngar', () => {
+            // "loppis i parken" är ingen ordsekvens i "sommarloppis i parkens hörn".
+            const a = pt('Loppis i parken', 'Parken', '2026-09-30T10:00:00');
+            const b = pt('Sommarloppis i parkens hörn', 'Parken', '2026-09-30T10:00:00');
+            expect(groupDayDuplicates([a, b])).toHaveLength(2);
+        });
+
+        it('utan plats eller tid gäller bara titel/bild som förut', () => {
+            const a = { title: 'När bok blir bio' };
+            const b = { title: 'Föreläsning: När bok blir bio - några nedslag i filmhistorien' };
+            expect(groupDayDuplicates([a, b])).toHaveLength(2);
+        });
+    });
 });
 
 describe('groupListDuplicates', () => {

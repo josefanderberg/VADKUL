@@ -14,7 +14,7 @@ import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, takeRows } from '@/utils/popularList';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
-import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart } from 'lucide-react';
 
 /** Listflikarnas horisont (Josef 24/9: "vi fokuserar mest på kommande
  *  månaden"). Kartan laddar bara tidsfönstret (14 dagar, utils/timelineWindow);
@@ -239,6 +239,10 @@ interface NearbyEventsListProps {
     /** Slut på laddade rader men kartan har bara tidsfönstret inne — listans
      *  botten hämtar resten av tidslinjen i stället för att säga "slut". */
     onLoadLaterDays?: () => void;
+    /** Hjärtat uppe till höger på varje rad (Josef 28/9) — samma spara-
+     *  toggle som kortets hjärta. Utelämnade → inga hjärtan på raderna. */
+    savedIds?: Set<string>;
+    onToggleSave?: (eventId: string) => void;
 }
 
 type ListTab = 'all' | 'popular';
@@ -386,11 +390,15 @@ function NearbyDupList({ dups, repTitle, onSelect, className }: {
     );
 }
 
-function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false, dups }: {
+function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false, dups, saved = false, onToggleSave }: {
     evt: LinkEvent;
     distanceKm: number | null;
     now: number;
     onSelect: (evt: LinkEvent) => void;
+    /** Hjärtat uppe till höger (Josef 28/9). Ligger som SYSKON till radens
+     *  <button> (absolut positionerat) — knapp-i-knapp är ogiltig HTML. */
+    saved?: boolean;
+    onToggleSave?: () => void;
     /** False = användaren har slagit av bilderna i listhuvudet → alla rader
      *  renderas i den kompakta bildlösa layouten. */
     showImages?: boolean;
@@ -440,13 +448,33 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
         </div>
     );
 
+    // Hjärtat (spara-toggeln) uppe till höger — utanför radknappen och
+    // absolut positionerat, med mörk platta på bilden och naket i den
+    // kompakta layouten.
+    const heartBtn = (over: boolean) => onToggleSave && (
+        <button
+            type="button"
+            aria-pressed={saved}
+            aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
+            title={saved ? 'Ta bort från sparade' : 'Spara eventet'}
+            onClick={(e) => { e.stopPropagation(); onToggleSave(); }}
+            className={`absolute top-2 right-2.5 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 ${
+                over
+                    ? `bg-black/40 backdrop-blur-sm ${saved ? 'text-red-500' : 'text-white hover:text-red-400'}`
+                    : saved ? 'text-red-500' : 'text-slate-400 dark:text-zinc-500 hover:text-red-500'
+            }`}
+        >
+            <Heart size={15} className={saved ? 'fill-current' : ''} />
+        </button>
+    );
+
     // Rad MED bild: bilden kant till kant överst. Titeln ligger OVANPÅ bilden
     // (emojin till vänster på samma rad) och status-badgen i bildens höger-
     // kant — allt på en mörk gradient så texten alltid är läsbar, även på
     // ljusa bilder/platshållaren. Inforaden ligger under bilden.
     if (hasImage) {
         return (
-            <li>
+            <li className="relative">
                 <button
                     type="button"
                     onClick={() => onSelect(evt)}
@@ -493,6 +521,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                         <ChevronRight size={16} className="text-slate-400 shrink-0" />
                     </div>
                 </button>
+                {heartBtn(true)}
                 {dups && dups.length > 0 && (
                     <NearbyDupList dups={dups} repTitle={evt.title} onSelect={onSelect} className="px-4 md:px-6 pb-2.5 -mt-0.5" />
                 )}
@@ -501,13 +530,13 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     }
 
     // Rad UTAN bild: kompakt som förut — emoji-bricka till vänster, titel +
-    // badges, inforaden under.
+    // badges, inforaden under. Höger padding lämnar plats åt hjärtat.
     return (
-        <li>
+        <li className="relative">
             <button
                 type="button"
                 onClick={() => onSelect(evt)}
-                className="w-full text-left px-4 md:px-6 py-2.5 flex items-center gap-3 hover:bg-white dark:hover:bg-zinc-800/60 transition-colors"
+                className={`w-full text-left pl-4 md:pl-6 py-2.5 flex items-center gap-3 hover:bg-white dark:hover:bg-zinc-800/60 transition-colors ${onToggleSave ? 'pr-11 md:pr-12' : 'pr-4 md:pr-6'}`}
             >
                 <span
                     className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
@@ -547,7 +576,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], daysHasMore = false, onLoadMoreDays, onLoadLaterDays }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const effectiveShowImages = imagesOnly || showImages;
@@ -644,7 +673,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                                 <ul className="divide-y divide-border">
                                     {day.rows.map(({ evt, distanceKm, dups }, i) => (
                                         <Fragment key={evt.id}>
-                                            <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
+                                            <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} saved={!!savedIds?.has(evt.id)} onToggleSave={onToggleSave ? () => onToggleSave(evt.id) : undefined} />
                                             {before + i === 3 && coachMarkerRef && (
                                                 <li ref={coachMarkerRef} aria-hidden className="h-px" />
                                             )}
@@ -666,7 +695,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
             <ul className="divide-y divide-border">
                 {upcomingItems.map(({ evt, distanceKm, dups }, i) => (
                     <Fragment key={evt.id}>
-                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
+                        <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} saved={!!savedIds?.has(evt.id)} onToggleSave={onToggleSave ? () => onToggleSave(evt.id) : undefined} />
                         {i === markerIdx && coachMarkerRef && (
                             <li ref={coachMarkerRef} aria-hidden className="h-px" />
                         )}
@@ -706,7 +735,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                     {showPast && (
                         <ul className="divide-y divide-border opacity-70">
                             {pastItems.map(({ evt, distanceKm, dups }) => (
-                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} />
+                                <NearbyRow key={evt.id} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} saved={!!savedIds?.has(evt.id)} onToggleSave={onToggleSave ? () => onToggleSave(evt.id) : undefined} />
                             ))}
                         </ul>
                     )}
@@ -1672,7 +1701,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // bildflödets grupper bara bär bildsatta event. rows = RADER (pagineringen),
     // count = EVENT (rubrikens siffra).
     const groupNearby = (items: { evt: LinkEvent; distanceKm: number | null }[]) => {
-        const wrapped = items.map(it => ({ title: it.evt.title, coverImage: it.evt.coverImage || undefined, time: it.evt.time, it }));
+        const wrapped = items.map(it => ({ title: it.evt.title, coverImage: it.evt.coverImage || undefined, time: it.evt.time, locationName: it.evt.locationName, it }));
         const rows: NearbyItem[] = groupListDuplicates(wrapped).map(g => ({
             ...g.rep.it,
             ...(g.dups.length > 0 ? { dups: g.dups.map(d => d.it) } : {}),
@@ -2839,6 +2868,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             // Bara tidsfönstret inne → listans botten hämtar resten
                             // (bara för den som faktiskt scrollar dit — egress).
                             onLoadLaterDays={linkEventService.timelineHorizonMs() !== null ? () => linkEventService.requestFullTimeline() : undefined}
+                            // Radernas hjärtan — samma spara-toggle och inloggnings-
+                            // grind som kortets (onSaveEvent äger gaten).
+                            savedIds={savedEventIds}
+                            onToggleSave={savedEventIds && onUnsaveEvent
+                                ? (id) => (savedEventIds.has(id) ? onUnsaveEvent(id) : onSaveEvent(id))
+                                : undefined}
                         />
                     )}
                     </>)}
