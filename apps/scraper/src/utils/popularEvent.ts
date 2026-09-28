@@ -74,6 +74,37 @@ const EXTRA_DRAW_WORDS = new RegExp(String.raw`\bgala\b|\bderby\b|boxning|\bmma\
  *  "Rio under Kulturnatten") är venue-programpunkter och ska INTE lyftas. */
 const CITYWIDE_MAIN = /^(kulturnatt(en)?|stadsfest(en)?|stadsfestival(en)?|karneval(en)?)$/;
 
+/** ORTENS EGEN DAG (Rydaholmsdagen-fyndet 28/9: kommunens familjedag i
+ *  Rydaholm fick ~5 poäng — ingen biljett, ingen arena, rc 2 av två källor).
+ *  Små orters stadsfest heter "<Ort>dagen"/"<Ort>dagarna" och är byns
+ *  största händelse — samma roll som CITYWIDE_MAIN i städerna. Kravet som
+ *  skiljer den från TEMADAGAR (Beredskapsdagen, Digitaldagen, Arkeologidagen
+ *  — nationella koncept på många orter): stammen före "dagen" måste vara en
+ *  RIKTIG ORT — återfinnas i eventets platsnamn ("Rydaholmsdagen" på
+ *  "Rydaholms bibliotek") eller i SCB:s tätortsregister (uppslaget skickas
+ *  in av aggregatet; kommunguiderna sätter ofta bara kommunen som plats:
+ *  "Aspödagen" i "Karlskrona"). Helgdagar utesluts av samma krav —
+ *  "midsommardagen" är ingen ort. En titel = ETT ord: "AI-dagarna"
+ *  normaliseras till två och matchar aldrig. */
+const TOWN_DAY = /^([a-zåäö0-9]+)dag(en|arna)$/;
+export function isTownDay(
+    title: string,
+    locationName?: string | null,
+    isTownName?: (stem: string) => boolean,
+): boolean {
+    const m = TOWN_DAY.exec(normTitlePop(title));
+    if (!m) return false;
+    // Genitiv-s:et hör till orten ("Rydaholms-") — pröva båda stammarna.
+    const raw = m[1];
+    const stems = (raw.endsWith('s') ? [raw, raw.slice(0, -1)] : [raw]).filter(st => st.length >= 4);
+    if (stems.length === 0) return false;
+    if (locationName) {
+        const loc = normTitlePop(locationName);
+        if (stems.some(st => loc.includes(st))) return true;
+    }
+    return !!isTownName && stems.some(st => isTownName(st));
+}
+
 /** Målgrupps-/kursklasser: betald verksamhet som ser ut som event (bild,
  *  pris, scen-kategori) men är en KLASS — "Dans för Parkinson" (850 kr =
  *  terminsavgift) flaggades i Växjö 10/9. Straff, inte veto: en stor
@@ -118,7 +149,11 @@ export function isSmallVenueHost(url: string): boolean {
  *  40 → 8,6 % (ägarens val), 45 → 5,5 % (tunt utanför storstan). */
 export const POPULAR_THRESHOLD = 40;
 
-export function popularScore(e: PopularInput, repeatCount: number): number {
+export function popularScore(
+    e: PopularInput,
+    repeatCount: number,
+    isTownName?: (stem: string) => boolean,
+): number {
     let s = 0;
 
     // Biljettsläpp: någon tar betalt = arrangemang med publik. Ticketmaster/
@@ -136,7 +171,9 @@ export function popularScore(e: PopularInput, repeatCount: number): number {
     // Stadsfestnamn ("Kulturnatten") delas AV DESIGN mellan städer — sju
     // kommuners kulturnätter gav rc=7 och −22 som åt upp huvudevent-bonusen
     // (Eskilstuna-fyndet 10/9). Unikhets-termen hoppar över dem helt.
-    const citywideMain = CITYWIDE_MAIN.test(nt);
+    // Ortens egen dag ("Rydaholmsdagen") behandlas likadant: flera källor
+    // (kommunguiden + biblioteket) delar titeln by design.
+    const citywideMain = CITYWIDE_MAIN.test(nt) || isTownDay(e.title, e.locationName, isTownName);
     if (citywideMain) { /* varken plus eller straff */ }
     else if (repeatCount <= 1) s += 12;
     // >60 datum i fönstret ≈ dagligen = bokningsbar VERKSAMHET även med
@@ -192,8 +229,12 @@ export function isVetoed(e: PopularInput): boolean {
 }
 
 /** Hårda veton först, sedan poängribban. */
-export function isPopularEvent(e: PopularInput, repeatCount: number): boolean {
-    return popularRank(e, repeatCount) !== undefined;
+export function isPopularEvent(
+    e: PopularInput,
+    repeatCount: number,
+    isTownName?: (stem: string) => boolean,
+): boolean {
+    return popularRank(e, repeatCount, isTownName) !== undefined;
 }
 
 /**
@@ -203,8 +244,12 @@ export function isPopularEvent(e: PopularInput, repeatCount: number): boolean {
  * i stället för att bara veta ja/nej. Samma veto och ribba som
  * isPopularEvent - den ÄR den här funktionen.
  */
-export function popularRank(e: PopularInput, repeatCount: number): number | undefined {
+export function popularRank(
+    e: PopularInput,
+    repeatCount: number,
+    isTownName?: (stem: string) => boolean,
+): number | undefined {
     if (isVetoed(e)) return undefined;
-    const s = popularScore(e, repeatCount);
+    const s = popularScore(e, repeatCount, isTownName);
     return s >= POPULAR_THRESHOLD ? s : undefined;
 }

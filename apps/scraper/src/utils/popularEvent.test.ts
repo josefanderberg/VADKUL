@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     normTitlePop, buildTitleFreq, popularScore, isPopularEvent, popularRank,
-    isSmallVenueHost, POPULAR_THRESHOLD, PopularInput,
+    isSmallVenueHost, isTownDay, POPULAR_THRESHOLD, PopularInput,
 } from './popularEvent';
 
 /** Fredag kväll — bästa tänkbara slot. */
@@ -238,5 +238,63 @@ describe('popularRank (ps-fältet i aggregatet)', () => {
                 expect(popularRank(e, rc) !== undefined).toBe(isPopularEvent(e, rc));
             }
         }
+    });
+});
+
+describe('isTownDay — ortens egen dag (Rydaholmsdagen-fyndet 28/9)', () => {
+    const townDayEvent = (over: Partial<PopularInput> = {}): PopularInput => base({
+        url: 'https://varnamo.cruncho.co/sv-SE/place/omem8g',
+        title: 'Rydaholmsdagen',
+        // Lördag förmiddag — kommunala familjedagen, ingen kvällsbonus.
+        time: '2026-10-03T10:00:00',
+        category: 'family',
+        locationName: 'Rydaholms bibliotek',
+        price: null,
+        ...over,
+    });
+    const register = new Set(['aspö', 'bara', 'borlänge'].map(normTitlePop));
+    const isTownName = (stem: string) => register.has(stem);
+
+    it('stammen i platsnamnet räcker (Rydaholmsdagen på Rydaholms bibliotek)', () => {
+        expect(isTownDay('Rydaholmsdagen', 'Rydaholms bibliotek')).toBe(true);
+        // Genitiv-s:et: platsen utan s ska också gå.
+        expect(isTownDay('Rydaholmsdagen', 'Rydaholm')).toBe(true);
+    });
+
+    it('tätortsregistret räcker när platsen bara är kommunen (Aspödagen i Karlskrona)', () => {
+        expect(isTownDay('Aspödagen', 'Karlskrona')).toBe(false);
+        expect(isTownDay('Aspödagen', 'Karlskrona', isTownName)).toBe(true);
+        expect(isTownDay('Borlängedagarna', 'Borlänge kommun', isTownName)).toBe(true);
+    });
+
+    it('temadagar lyfts inte — stammen är ingen ort', () => {
+        for (const t of ['Beredskapsdagen', 'Digitaldagen', 'Arkeologidagen', 'Klädbytardagen', 'Alzheimersdagen']) {
+            expect(isTownDay(t, 'Karlskrona', isTownName)).toBe(false);
+        }
+    });
+
+    it('helgdagar lyfts inte', () => {
+        expect(isTownDay('Midsommardagen', 'Hembygdsparken', isTownName)).toBe(false);
+    });
+
+    it('flerordstitlar matchar aldrig ("AI-dagarna" normaliseras till två ord)', () => {
+        expect(isTownDay('AI-dagarna', 'Värnamo', isTownName)).toBe(false);
+        expect(isTownDay('Kulturnatt på stadsmuseet', 'Stadsmuseet', isTownName)).toBe(false);
+    });
+
+    it('Rydaholmsdagen når ribban trots svaga övriga signaler', () => {
+        // Två källor delar titeln (kommunguiden + biblioteket) → rc 2.
+        const e = townDayEvent();
+        expect(isPopularEvent(e, 2)).toBe(true);
+        // Utan ortdags-regeln (okänd stam, ingen platsträff) ligger samma
+        // event långt under ribban — det var själva fyndet.
+        const tema = townDayEvent({ title: 'Beredskapsdagen' });
+        expect(isPopularEvent(tema, 2)).toBe(false);
+    });
+
+    it('registerträffen ger samma lyft via popularScore-parametern', () => {
+        const e = townDayEvent({ title: 'Aspödagen', locationName: 'Karlskrona' });
+        expect(isPopularEvent(e, 2, isTownName)).toBe(true);
+        expect(isPopularEvent(e, 2)).toBe(false);
     });
 });

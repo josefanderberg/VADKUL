@@ -1,6 +1,6 @@
 import { db } from '../config/firebase';
 import { publicUrl } from '../utils/affiliateUrl';
-import { sqlite } from '../utils/sqliteHelper';
+import { sqlite, allTatortNames } from '../utils/sqliteHelper';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildTitleFreq, popularRank, normTitlePop } from '../utils/popularEvent';
 import { firstSeenExport } from '../utils/firstSeenExport';
@@ -152,6 +152,12 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
     const titleFreq = buildTitleFreq(rows);
     let popCount = 0;
 
+    // Ortdags-uppslaget för 🔥-klassaren ("Rydaholmsdagen", se isTownDay):
+    // SCB-registrets namn normaliserade som titlarna. Tomt register (oseedad
+    // lokal spegel) → regeln vilar på platsnamnet enbart.
+    const townNames = new Set(allTatortNames().map(normTitlePop));
+    const isTownName = (stem: string) => townNames.has(stem);
+
     // Riktigt "nu" (inte dygnsstarten ovan) — först-sedd-fönstret ska mätas
     // från körningsögonblicket, samma referens oavsett när på dygnet vi kör.
     const firstSeenNowMs = Date.now();
@@ -193,6 +199,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
                 locationName: row.locationName,
             },
             titleFreq.get(normTitlePop(row.title || '')) ?? 1,
+            isTownName,
         );
         const pop = ps !== undefined ? true as const : undefined;
         if (pop) popCount++;

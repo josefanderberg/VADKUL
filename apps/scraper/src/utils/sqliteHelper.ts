@@ -712,6 +712,13 @@ export function countTatorter(): number {
     return (sqlite.prepare('SELECT COUNT(*) n FROM tatorter').get() as { n: number }).n;
 }
 
+/** Alla tätortsnamn ur SCB-registret — 🔥-klassarens ortdags-uppslag
+ *  (isTownDay i popularEvent). Tom lista när registret inte seedats
+ *  (lokala dev-speglar) — regeln faller då tillbaka på platsnamnet. */
+export function allTatortNames(): string[] {
+    return (sqlite.prepare('SELECT name FROM tatorter').all() as { name: string }[]).map(r => r.name);
+}
+
 /**
  * Ortcentroid ur SCB-registret: närmaste tätorten med namnet inom maxKm från
  * ankaret (samma namn finns i flera kommuner — ankaret väljer rätt). Utan
