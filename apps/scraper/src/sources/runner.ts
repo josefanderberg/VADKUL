@@ -102,6 +102,19 @@ export function geocodeQueriesFor(e: RawEvent): string[] {
     return [...new Set(candidates)].filter((q) => q && q.trim().length > 2);
 }
 
+/**
+ * Kända URL:er som motorn släppte helt (returnerade inte). Motorer som frågar
+ * isKnownUrl men ändå returnerar eventet (wp-rest, bestevent) räknas i
+ * found/duplicate-loopen — de får inte dubbelräknas här.
+ */
+export function countKnownDropped(knownUrls: Set<string>, rawEvents: { url?: string }[]): number {
+    if (knownUrls.size === 0) return 0;
+    const returned = new Set(rawEvents.map(e => e.url));
+    let n = 0;
+    for (const u of knownUrls) if (!returned.has(u)) n++;
+    return n;
+}
+
 export async function runSource(
     source: Source,
     engines: Record<string, Engine>,
@@ -151,13 +164,22 @@ export async function runSource(
     // SCRAPE_FORCE_REFRESH=1 tvingar refresh (reparationer efter motorfixar).
     const sweepDue = !opts.dryRun && getSyncMeta(sweepKey(source.id)) !== CONTENT_SWEEP_VERSION;
     const refreshKnown = !opts.dryRun && (isRefreshRun(source) || process.env.SCRAPE_FORCE_REFRESH === '1' || sweepDue);
+    // URL:er motorn hoppade över FÖRE fetch för att de redan finns i DB.
+    // De måste synas i run-historiken — annars ser en frisk källa utan NYA
+    // event helt tom ut (found=0, inga skips) och auto-karantänen pausar den
+    // (Visit Isabergsregionen 25/9: alla katalog-URL:er var redan kända).
+    const knownUrls = new Set<string>();
     const ctx: EngineContext = {
         windowStart,
         windowEnd,
         log: (msg) => console.log(`  [${source.id}] ${msg}`),
         // Kostnadsoptimering för engines med dyra per-event-hämtningar.
         // I dry-run svarar vi alltid "okänd" så hela flödet syns i utskriften.
-        isKnownUrl: opts.dryRun ? async () => false : (url) => eventExistsInDb(url),
+        isKnownUrl: opts.dryRun ? async () => false : async (url) => {
+            const known = await eventExistsInDb(url);
+            if (known) knownUrls.add(url);
+            return known;
+        },
         refreshKnown,
     };
     if (refreshKnown) ctx.log(sweepDue ? `full-refresh-körning (innehålls-svep ${CONTENT_SWEEP_VERSION}): kända URL:er re-fetchas` : 'full-refresh-körning: kända URL:er re-fetchas');
@@ -178,6 +200,12 @@ export async function runSource(
 
     result.found = rawEvents.length;
     ctx.log(`engine returned ${rawEvents.length} events`);
+    const knownDropped = countKnownDropped(knownUrls, rawEvents);
+    if (knownDropped > 0) {
+        // Räknas som dubbletter: källan lever, det fanns bara inget nytt.
+        result.skipped.duplicate += knownDropped;
+        ctx.log(`${knownDropped} kända URL:er skippade av motorn (räknas som dubbletter)`);
+    }
 
     // Volym-säkring (lärdom från SvK-floden 2026-06-11: ~19 700 ofiltrerade event
     // autopublicerades tills jobbet stoppades manuellt). En källa som plötsligt
@@ -239,7 +267,11 @@ export async function runSource(
                             result.updated++;
                             ctx.log(`  📍 koordinater från källan: ${e.title.slice(0, 50)}`);
                         }
-                    } else if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded)) {
+                    } else if (e.venueName && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded
+                        // Sparad på källans defaultCity-fallback medan titeln/sidan nu
+                        // pekar ut en annan ort (Torghuset → Smålandsstenar, inte Gislaved).
+                        || storedRow?.geoPrecision === 'stad-centroid'
+                        || (!!storedLoc && storedLoc === String((source.config as { defaultCity?: string })?.defaultCity ?? '').trim().toLowerCase()))) {
                         const q = `${e.venueName}, ${e.city}`;
                         // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
                         let hit: GeoHit | null = e.coords ? [e.coords[0], e.coords[1], 'kallkoordinat'] : null;

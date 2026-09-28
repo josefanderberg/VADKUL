@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -429,5 +429,55 @@ describe('cheerioFallback - titel med eget bindestreck slår logga-h1:an', () =>
     it('eventets h1 vinner, inte sajtloggan', () => {
         const ev = cheerioFallback(PAGE, 'https://upplev.vaxjo.se/evenemang/evenemang/2026-08-27-kicki', 'Växjö')!;
         expect(ev.title).toBe('Kicki i Soläng – en helt vanlig person från Småland');
+    });
+});
+
+// Visit Isabergsregionen 28/9: sidorna saknar location-markup och allt landade
+// på Gislaveds centroid — även Torghusets event i Smålandsstenar.
+describe('applyTitlePlaces', () => {
+    const rules = [
+        { re: /torghuset/i, city: 'Smålandsstenar', venue: 'Torghuset Smålandsstenar' },
+        { re: /smålandsstenar/i, city: 'Smålandsstenar' },
+        { re: /anderstorp/i, city: 'Anderstorp' },
+    ];
+    const ev = (title: string, extra: Record<string, unknown> = {}) =>
+        ({ title, url: 'https://x.se/e', startDate: new Date(), city: 'Gislaved', ...extra }) as any;
+
+    it('Torghuset → Smålandsstenar med regelns venue', () => {
+        const e = ev('Soppbio, Torghuset Smålandsstenar');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Smålandsstenar');
+        expect(e.venueName).toBe('Torghuset Smålandsstenar');
+    });
+
+    it('venue ur titelns komma-suffix när regeln saknar venue', () => {
+        const e = ev('Näverworkshop, Anderstorps bibliotek');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Anderstorp');
+        expect(e.venueName).toBe('Anderstorps bibliotek');
+    });
+
+    it('ort i löptext utan komma → bara city', () => {
+        const e = ev('Jobbmässa i Smålandsstenar');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Smålandsstenar');
+        expect(e.venueName).toBeUndefined();
+    });
+
+    it('rör inte sidans egen ort eller venue', () => {
+        const own = ev('Soppbio på Torghuset', { city: 'Värnamo' });
+        applyTitlePlaces(own, rules, 'Gislaved');
+        expect(own.city).toBe('Värnamo');
+        const venue = ev('Konsert, Smålandsstenar', { venueName: 'Kyrkan' });
+        applyTitlePlaces(venue, rules, 'Gislaved');
+        expect(venue.venueName).toBe('Kyrkan');
+        expect(venue.city).toBe('Smålandsstenar');
+    });
+
+    it('ingen träff → oförändrat', () => {
+        const e = ev('Hur redo är du?, Torget i Gislaved');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Gislaved');
+        expect(e.venueName).toBeUndefined();
     });
 });

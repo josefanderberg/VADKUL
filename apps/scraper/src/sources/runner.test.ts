@@ -46,7 +46,7 @@ vi.mock('../utils/llmAudit', () => ({
     ollamaIsAvailable: vi.fn(async () => false),
 }));
 
-import { runSource, deriveHasSpecificTime, geocodeQueriesFor, CONTENT_SWEEP_VERSION } from './runner';
+import { runSource, deriveHasSpecificTime, geocodeQueriesFor, countKnownDropped, CONTENT_SWEEP_VERSION } from './runner';
 import { Source, RawEvent, Engine } from './types';
 import { addEventsBatch, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
@@ -319,6 +319,28 @@ describe('runSource — fel & run-historik', () => {
         expect(row.skippedDuplicate).toBe(1);
     });
 
+    // Visit Isabergsregionen 25/9: alla katalog-URL:er fanns redan i DB, motorn
+    // skippade dem före fetch → found=0 utan skips → falsk auto-karantän.
+    it('kända URL:er som motorn skippar räknas som dubbletter i run-historiken', async () => {
+        existsMock.mockResolvedValue(true);
+        await run(async (_cfg, ctx) => {
+            for (const u of ['https://x.se/a', 'https://x.se/b']) await ctx.isKnownUrl!(u);
+            return [];
+        });
+        const row = recordRunMock.mock.calls[0][0];
+        expect(row.found).toBe(0);
+        expect(row.skippedDuplicate).toBe(2);
+    });
+
+    it('känd URL som motorn ändå returnerar dubbelräknas inte', async () => {
+        existsMock.mockResolvedValue(true);
+        const ev = makeEvent({ url: 'https://x.se/a' });
+        await run(async (_cfg, ctx) => { await ctx.isKnownUrl!(ev.url); return [ev]; });
+        const row = recordRunMock.mock.calls[0][0];
+        expect(row.found).toBe(1);
+        expect(row.skippedDuplicate).toBe(1);
+    });
+
     // Incident 2026-06-11: en dry-run skrev "saved 19686" till scrape_runs och
     // förgiftade daily-report/regressionsdata. Dry-run får ALDRIG lämna spår.
     it('dry-run registrerar INGET i run-historiken — varken lyckad körning eller krasch', async () => {
@@ -394,5 +416,13 @@ describe('geocodeQueriesFor', () => {
 
     it('ingen platsinfo alls → inga frågor', () => {
         expect(geocodeQueriesFor({ title: 't', url: 'u', startDate: new Date() })).toEqual([]);
+    });
+});
+
+describe('countKnownDropped', () => {
+    it('räknar bara kända URL:er som inte returnerades', () => {
+        const known = new Set(['a', 'b', 'c']);
+        expect(countKnownDropped(known, [{ url: 'b' }, { url: 'z' }])).toBe(2);
+        expect(countKnownDropped(new Set(), [{ url: 'a' }])).toBe(0);
     });
 });
