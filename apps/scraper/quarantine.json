@@ -25,6 +25,10 @@
       "lastRetry": "2026-09-24",
       "emptyRetries": 5
     },
+    "karlsborg": {
+      "since": "2026-09-29",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "karlskoga": {
       "since": "2026-09-28",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
@@ -47,11 +51,19 @@
       "lastRetry": "2026-09-26",
       "emptyRetries": 5
     },
+    "prins-eugens-waldemarsudde": {
+      "since": "2026-09-29",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-09-26",
       "emptyRetries": 5
+    },
+    "sb-kb-se": {
+      "since": "2026-09-29",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
@@ -62,8 +74,8 @@
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-22",
-      "emptyRetries": 4
+      "lastRetry": "2026-09-29",
+      "emptyRetries": 5
     },
     "storsjoyran": {
       "since": "2026-09-18",
@@ -76,6 +88,10 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-09-24",
       "emptyRetries": 4
+    },
+    "turteatern": {
+      "since": "2026-09-29",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
 }
