@@ -65,6 +65,35 @@ export async function closeSitemapBrowser(): Promise<void> {
     if (_sitemapBrowser) { await _sitemapBrowser.close(); _sitemapBrowser = null; }
 }
 
+export interface TitlePlaceRule {
+    /** Matchas mot titeln (case-okänsligt rekommenderas). */
+    re: RegExp;
+    city: string;
+    /** Venue att sätta när sidan saknar egen; utelämnad ⇒ titelns
+     *  ", <plats>"-suffix om det innehåller träffen. */
+    venue?: string;
+}
+
+/**
+ * Sätt ort (och ev. venue) ur titeln enligt config.titlePlaces. Ren funktion
+ * — muterar ev. Rör inte event vars sida gav egen ort (city ≠ defaultCity).
+ */
+export function applyTitlePlaces(ev: RawEvent, rules: TitlePlaceRule[], defaultCity?: string): void {
+    if (ev.city && defaultCity && ev.city !== defaultCity) return;
+    const title = ev.title ?? '';
+    // Titeln först; annars sidans venue ("Plats: Reftele bygdegård").
+    const rule = rules.find(r => r.re.test(title)) ?? (ev.venueName ? rules.find(r => r.re.test(ev.venueName!)) : undefined);
+    if (!rule) return;
+    ev.city = rule.city;
+    if (ev.venueName) return;
+    if (rule.venue) { ev.venueName = rule.venue; return; }
+    const comma = title.lastIndexOf(',');
+    const suffix = comma >= 0 ? title.slice(comma + 1).trim() : '';
+    // ", Hestra" är bara orten — ingen venue (annars geokodas ortens mittpunkt som verifierad plats).
+    if (suffix && suffix.length <= 60 && rule.re.test(suffix)
+        && suffix.toLowerCase() !== rule.city.toLowerCase()) ev.venueName = suffix;
+}
+
 export interface SitemapConfig {
     /**
      * URL till sitemap.xml ELLER en HTML-katalog-sida.
@@ -102,6 +131,15 @@ export interface SitemapConfig {
      * ett namn att slå upp i known_venues i stället för stadscentroiden.
      */
     defaultVenue?: string;
+    /**
+     * Ortledtrådar i TITELN för regionsajter som skriver platsen i rubriken
+     * men saknar location-markup ("Soppbio, Torghuset Smålandsstenar",
+     * "Näverworkshop, Anderstorps bibliotek"). Första regeln som matchar
+     * sätter city (slår defaultCity) och — om sidan saknar venue — venue.
+     * Utan detta hamnade hela Visit Isabergsregionen på Gislaveds centroid
+     * (rapport 28/9: Torghusets event syntes inte i Smålandsstenar).
+     */
+    titlePlaces?: TitlePlaceRule[];
     userAgent?: string;
     maxUrls?: number;
     maxSubSitemaps?: number;
@@ -119,6 +157,23 @@ export interface SitemapConfig {
      * efter <h3>Venue / Stad</h3> + adress-<p> (svensk postnummer-signatur).
      */
     placeUrlReplace?: [RegExp, string];
+    /**
+     * Skriv om den HÄMTADE URL:en till den som lagras (primärnyckeln) när en
+     * sajt bytt URL-struktur men gamla adresser redirectar. Slugsen är samma →
+     * inga dubbletter av det som redan ligger i DB. Visit Isabergsregionen
+     * 28/9: `/sv/evenemang/x/` → `www.…/evenemang/x/`.
+     */
+    canonicalUrl?: [RegExp, string];
+    /** CSS-selektor för detaljsidans eget platsfält (venue) när sidan saknar
+     *  location-markup — t.ex. `.info-container p` ("Plats: Konsertsalen"). */
+    detailVenueSelector?: string;
+    /**
+     * CSS-selektor för detaljsidans brödtext. Satt → beskrivningen tas
+     * därifrån i stället för meta-description, som på vissa sajter är SAMMA
+     * sajtvida text på varje sida (bastad.com 28/9: "Allt om Båstad -
+     * besöksmål, evenemang …" på alla 58 event). Tomt fält → meta behålls.
+     */
+    detailDescSelector?: string;
     /**
      * Regex som extraherar år+månad (och ev. dag) ur URL. När satt:
      * pre-filtrerar URL:er INNAN fetch — sparar enorm tid på stora sajter
@@ -185,12 +240,42 @@ export function dateFromDetailSelector(
     // det. Bara första förekomsten — första föreställningen vinner ändå.
     // Medvetet LOKALT här (inte i swedishDate): utanför ett utpekat datum-
     // fält är "månadsnamn + tal" för tvetydigt ("under januari 30 platser").
+    // Vakter: inte när en dag redan STÅR FÖRE månaden, och inte när talet är
+    // ett klockslag — Spritmuseum 28/9: "24 oktober 17.00" blev "24 17
+    // oktober.00" → 17 oktober; Malmö Live: "Ons 29 Apr 20:00" → null och
+    // "Ons 20 Maj 19:00" → 19 maj.
     const normalized = text.replace(
-        /\b(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+(\d{1,2})\b/i,
+        /(?<!\d\s*)\b(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+(\d{1,2})\b(?![.:]\d)/i,
         '$2 $1',
     );
-    const date = findFirstDateInText(normalized, now);
+    // Numeriskt ÅÅ-MM-DD / ÅÅÅÅ-MM-DD ("26-10-02 12:30" — Visit Isaberg-
+    // regionen 28/9) → "2 oktober 2026" så klockslaget efter följer med;
+    // ISO-grenen i findFirstDateInText tappar det. Bara i utpekat datumfält.
+    const MONTHS = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'];
+    const numeric = normalized.replace(
+        /(?<![\d-])(\d{4}|\d{2})-(\d{2})-(\d{2})(?![\d-])/g,
+        (m, y: string, mo: string, d: string) => {
+            const month = MONTHS[Number(mo) - 1];
+            return month && Number(d) >= 1 && Number(d) <= 31
+                ? `${Number(d)} ${month} ${y.length === 2 ? `20${y}` : y}` : m;
+        },
+    );
+    const date = findFirstDateInText(numeric, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
+}
+
+/**
+ * Beskrivningen ur detaljsidans brödtextfält (SitemapConfig.detailDescSelector).
+ * <br>/block-taggar → mellanslag (samma skäl som i dateFromDetailSelector:
+ * cheerios .text() limmar ihop rader). null när fältet saknas eller är för
+ * kort för att vara en beskrivning.
+ */
+export function descFromDetailSelector(html: string, selector: string): string | null {
+    const $ = cheerio.load(html);
+    const el = $(selector).first();
+    if (el.length === 0) return null;
+    const text = decodeHtmlEntities((el.html() ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+    return text.length >= 20 ? truncateAtBoundary(text, DEFAULT_DESCRIPTION_MAX) : null;
 }
 
 /**
@@ -411,7 +496,7 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
     }
 }
 
-interface SitemapEntry {
+export interface SitemapEntry {
     url: string;
     lastmod?: Date;
     /** Datum som katalogsidan angav för just detta kort (se catalogDates). */
@@ -430,13 +515,29 @@ export function extractCatalogDates(
 ): Map<string, Date> {
     const out = new Map<string, Date>();
     const $ = cheerio.load(html);
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     $(sel.itemSelector).each((_i, el) => {
         const href = $(el).find(sel.linkSelector).first().attr('href');
-        const text = $(el).find(sel.dateSelector).first().text().replace(/\s+/g, ' ').trim();
+        const text = $(el).find(sel.dateSelector).first().text().replace(/\s+/g, ' ').trim()
+            // Kortets intervall → STARTdagen (Havremagasinet 28/9): "27 - 29 OKT"
+            // gav annars bara "29 okt", och "23 SEP - 9 OKT" gav första
+            // FRAMTIDA datum = slutdagen. ISO-intervall ("… till …") rörs inte.
+            .replace(
+                /(?<![\d-])(\d{1,2})(\s+[a-zåäö]{3,9}\.?)?\s*[-–]\s*\d{1,2}(\s+[a-zåäö]{3,9}\.?)/gi,
+                (_m, day: string, startMonth: string | undefined, endMonth: string) => `${day}${startMonth ?? endMonth}`,
+            );
         if (!href || !text) return;
         const d = findFirstDateInText(text);
         if (!d) return;
-        try { out.set(new URL(href, baseUrl).toString().replace(/\/+$/, ''), d); } catch { /* trasig href */ }
+        let key: string;
+        try { key = new URL(href, baseUrl).toString().replace(/\/+$/, ''); } catch { return; /* trasig href */ }
+        // Första KOMMANDE kortet vinner: kalendrar som listar en återkommande
+        // aktivitet en gång per tillfälle (Havremagasinets /program/: "Skapa
+        // på Havre" 11 ggr) står i kronologisk ordning — sista kortet gav
+        // annars DECEMBER-tillfället åt ett event som går redan i helgen. Ett
+        // passerat tillfälle först i listan får ge plats åt nästa kommande.
+        const prev = out.get(key);
+        if (!prev || (prev < todayStart && d >= todayStart)) out.set(key, d);
     });
     return out;
 }
@@ -509,6 +610,28 @@ function extractLinksFromHtml(html: string, baseUrl: string): SitemapEntry[] {
     return out;
 }
 
+/**
+ * JSON-katalog (sök-API:er à la Studiefrämjandets kurssök): plocka ALLA
+ * citerade sträng-värden som ser ut som URL:er/paths — urlPatterns-filtret
+ * nedströms avgör vilka som är event-sidor.
+ *
+ * JSON-escapade snedstreck (`"\/events\/foo"`) avkodas först. PHP:s
+ * json_encode skriver dem så som standard — bastad.com (Statamic, bytte från
+ * WordPress ~sep 2026) bäddar in hela kalendern som JS-array med sådana
+ * strängar, och utan avkodningen stoppade `[^"\\]` varenda URL.
+ */
+export function extractJsonCatalogUrls(text: string, baseUrl: string): SitemapEntry[] {
+    const out: SitemapEntry[] = [];
+    const seen = new Set<string>();
+    const unescaped = text.replace(/\\\//g, '/');
+    for (const m of unescaped.matchAll(/"((?:https?:\/\/|\/)[^"\\\s]{4,300})"/g)) {
+        let href = m[1];
+        try { href = new URL(href, baseUrl).toString(); } catch { continue; }
+        if (!seen.has(href)) { seen.add(href); out.push({ url: href }); }
+    }
+    return out;
+}
+
 async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<SitemapEntry[]> {
     // JS-renderad katalogsida: rendera den med Puppeteer så event-länkarna (som
     // injiceras av JS) blir synliga. Kräver isHtmlCatalog + useBrowser.
@@ -523,15 +646,7 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
     let candidates: SitemapEntry[] = [];
 
     if (cfg.isJsonCatalog) {
-        // JSON-katalog (sök-API:er à la Studiefrämjandets kurssök): plocka ALLA
-        // citerade sträng-värden som ser ut som URL:er/paths — urlPatterns-
-        // filtret nedströms avgör vilka som är event-sidor.
-        const seen = new Set<string>();
-        for (const m of root.matchAll(/"((?:https?:\/\/|\/)[^"\\\s]{4,300})"/g)) {
-            let href = m[1];
-            try { href = new URL(href, cfg.sitemapUrl).toString(); } catch { continue; }
-            if (!seen.has(href)) { seen.add(href); candidates.push({ url: href }); }
-        }
+        candidates = extractJsonCatalogUrls(root, cfg.sitemapUrl);
         ctx.log(`json-katalog: ${candidates.length} URL-kandidater hittade`);
     } else if (cfg.isHtmlCatalog) {
         candidates = extractLinksFromHtml(root, cfg.sitemapUrl);
@@ -740,7 +855,7 @@ export function startInsteadOfEnd(html: string, picked: Date): Date {
     return isNaN(d.getTime()) ? picked : d;
 }
 
-export function cheerioFallback(html: string, url: string, defaultCity?: string): RawEvent | null {
+export function cheerioFallback(html: string, url: string, defaultCity?: string, fallbackDate?: Date): RawEvent | null {
     const $ = cheerio.load(html);
     // FÖRE allt annat: bort med "Rekommenderade evenemang"-listan. Korten där
     // bär egen microdata (startDate/location) och vinner annars varje .first().
@@ -866,6 +981,9 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string)
         if (startDate) startDate = startInsteadOfEnd(html, startDate);
     }
 
+    // Sidans utpekade datumfält (detailDateSelector) — skrivs ändå över av
+    // motorn efteråt; här bara så sidor UTAN löptextdatum inte faller bort.
+    if (!startDate && fallbackDate) startDate = new Date(fallbackDate);
     if (!startDate) return null;
 
     // Om datumet saknar specifik tid (midnatt), leta efter ett fristående HH:MM.
@@ -1209,7 +1327,7 @@ export function applyPlacePage(html: string, ev: RawEvent): void {
     }
 }
 
-export function extractFromHtml(html: string, url: string, defaultCity?: string): RawEvent | null {
+export function extractFromHtml(html: string, url: string, defaultCity?: string, fallbackDate?: Date): RawEvent | null {
     // 1) JSON-LD
     const blocks = extractJsonLdBlocks(html);
     const nodes: any[] = [];
@@ -1234,7 +1352,7 @@ export function extractFromHtml(html: string, url: string, defaultCity?: string)
     // (cheerio-fallbacken skulle annars återuppliva "Startsida"-sidorna).
     if (!ev && sawBlacklisted) return null;
     // 2) Cheerio-fallback
-    if (!ev) ev = cheerioFallback(html, url, defaultCity);
+    if (!ev) ev = cheerioFallback(html, url, defaultCity, fallbackDate);
     // 2b) Backfilla TOMMA desc/bild ur HTML — gäller BÅDA vägarna (JSON-LD med
     //     ofullständiga noder + cheerio-sidor utan og). Additivt, no-op när fullt.
     if (ev) backfillFromHtml(html, ev, url);
@@ -1310,19 +1428,21 @@ export const sitemapEngine = async (
             // Skip-känt: detaljsidan är dyraste steget (1,5s/domän rate-limit).
             // URL:er vi redan har i DB hoppas över — utom på full-refresh-
             // körningar (ctx.refreshKnown), där ändrade event ska fångas.
-            if (!ctx.refreshKnown && ctx.isKnownUrl && (await ctx.isKnownUrl(entry.url))) {
+            const key = config.canonicalUrl ? entry.url.replace(config.canonicalUrl[0], config.canonicalUrl[1]) : entry.url;
+            if (!ctx.refreshKnown && ctx.isKnownUrl && (await ctx.isKnownUrl(key))) {
                 skippedKnown++;
                 continue;
             }
             const html = await detailFetch(entry.url);
             fetched++;
             if (!html) { failed++; events.push(null); continue; }
-            const ev = extractFromHtml(html, entry.url, config.defaultCity);
+            // Sidans eget datumfält är sanningen — ingen fritext-fallback.
+            const own = config.detailDateSelector ? dateFromDetailSelector(html, config.detailDateSelector) : null;
+            if (config.detailDateSelector && !own) { noEvent++; events.push(null); continue; }
+            const ev = extractFromHtml(html, entry.url, config.defaultCity, own?.date);
             if (!ev) { noEvent++; events.push(null); continue; }
-            if (config.detailDateSelector) {
-                // Sidans eget datumfält är sanningen — ingen fritext-fallback.
-                const own = dateFromDetailSelector(html, config.detailDateSelector);
-                if (!own) { noEvent++; events.push(null); continue; }
+            ev.url = key;
+            if (own) {
                 ev.startDate = own.date;
                 ev.hasSpecificTime = own.hasTime;
             }
@@ -1335,6 +1455,15 @@ export const sitemapEngine = async (
                 if (hadClock) d.setHours(ev.startDate.getHours(), ev.startDate.getMinutes(), 0, 0);
                 ev.startDate = d;
             }
+            if (config.detailVenueSelector && !ev.venueName) {
+                const v = decodeHtmlEntities(cheerio.load(html)(config.detailVenueSelector).first().text()).replace(/\s+/g, ' ').trim();
+                if (v && v.length <= 80) ev.venueName = v;
+            }
+            if (config.detailDescSelector) {
+                const d = descFromDetailSelector(html, config.detailDescSelector);
+                if (d) ev.description = d;
+            }
+            if (config.titlePlaces) applyTitlePlaces(ev, config.titlePlaces, config.defaultCity);
             if (!ev.venueName && config.defaultVenue) ev.venueName = config.defaultVenue;
             // Plats-endpoint (Kulturbiljetter-mönstret): separat kart-sida bär
             // venue/adress/stad som detaljsidan saknar. Bara vid venue-miss.

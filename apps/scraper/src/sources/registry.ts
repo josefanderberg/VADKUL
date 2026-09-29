@@ -1370,13 +1370,35 @@ export const SOURCES: Source[] = [
         id: 'bastad',
         hostName: 'Båstad',
         region: 'bastad',
-        engine: 'wp-rest',
+        engine: 'sitemap',
         config: {
-            baseUrl: 'https://www.bastad.com',
-            variant: 'tribe',
+            // Sajten bytte från WordPress/Tribe till Statamic (statisk nginx)
+            // ~sep 2026: /wp-json ger 404, ical-länken på sidan är död och
+            // sitemap.xml svarar med startsidan. Kalendersidan bäddar in HELA
+            // kalendern som JS-array (BASTAD_EVENTS, url: "\/events\/slug") →
+            // isJsonCatalog plockar URL:erna (JSON-escapade snedstreck avkodas).
+            // Gamla /event/slug/[datum]/-URL:er ger 404 (ingen redirect) och
+            // återkommande event har fått nya slugs (oppen-atelje3 …) →
+            // canonicalUrl går inte; nya URL:er blir nya nycklar.
+            sitemapUrl: 'https://bastad.com/evenemangskalender',
+            isJsonCatalog: true,
+            urlPatterns: [/^https:\/\/bastad\.com\/events\/[a-z0-9-]+$/i],
+            // Detaljsidan: <h1>, sedan "10 oktober 2026 – 10 oktober 2026" i
+            // en klasslös <span> och platsen i kartlänken. INGET klockslag —
+            // det finns bara i JS-arrayen, så eventen blir heldags.
+            detailDateSelector: 'h1 ~ div > div > span',
+            detailVenueSelector: '#event-location-link',
+            // meta-description är sajtvid ("Allt om Båstad - besöksmål …") på
+            // varje eventsida — brödtexten ligger i .article-body. og:image är
+            // likaså sajtvid (/og-image.png) och fälls av imageFilter.
+            detailDescSelector: '.article-body',
+            defaultCity: 'Båstad',
+            maxUrls: 120,
         },
         updateFrequency: 'daily',
-        notes: 'Probe 2026-06: 48 events. The Events Calendar (Tribe).',
+        notes: 'Probe 2026-06: 48 events. The Events Calendar (Tribe). 28/9: sajten ombyggd till '
+            + 'Statamic — tribe-API:t borta; nu JS-inbäddad kalender via sitemap/isJsonCatalog.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'trelleborg',
@@ -2199,13 +2221,23 @@ export const SOURCES: Source[] = [
         region: 'karlsborg',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.karlsborg.se/sitemap.xml',
-            urlPatterns: [/\/(?:sv\/)?aktivitet(?:er)?\/[^/]+\/?$/i],
+            // Gamla aktivitet-mönstret gav 0 träffar 28/9 och har aldrig gett
+            // ett enda event i DB (sidorna var verksamhetssidor, inte event). Det
+            // riktiga utbudet är bibliotekets "Händer på biblioteket" — en
+            // sida per event, datum i löptext ("Måndag 26 oktober kl. 17.00").
+            // Bara direkta barn: /aterkommande/ är lovprogram-samlingar.
+            sitemapUrl: 'https://karlsborg.se/sitemap.xml',
+            urlPatterns: [/\/kultur--fritid\/bibliotek\/hander-pa-biblioteket\/[^/]+\/$/i],
+            // Fritext-parsern tog ett datum ur sidkromen (alla 11 → 2 okt);
+            // brödtexten är sanningen ("Måndag 26 oktober kl. 17.00").
+            detailDateSelector: '.article-editor',
             defaultCity: 'Karlsborg',
+            defaultVenue: 'Karlsborgs bibliotek',
         },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-03: 15 aktivitet-URLs. Text-parser.',
-        lastVerified: '2026-06-04',
+        notes: 'Probe-sitemap 2026-06-03: 15 aktivitet-URLs. Text-parser. 28/9: bytt till '
+            + 'bibliotekets eventsidor (11 URL:er); inga gamla URL:er i DB → ingen canonicalUrl.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'arjeplog',
@@ -3454,12 +3486,36 @@ export const SOURCES: Source[] = [
         config: {
             // Ingen sitemap och ingen JSON-LD — listsidan bär länkarna och
             // detaljsidans datum står i löptext ("Lördag 12 september").
-            // /evenemang utan språkprefix serverar ENGELSKA länkar (/en/…) —
-            // hämta /sv/evenemang, annars matchar mönstret ingenting.
-            sitemapUrl: 'https://visitisabergsregionen.se/sv/evenemang',
+            // Sajten bytte struktur ~23/9: www-host och svenska UTAN /sv/-
+            // prefix (gamla /sv/-mönstret gav 0 träffar → den äkta orsaken
+            // till karantänen 25/9). Gamla URL:er redirectar och slugsen är
+            // samma → canonicalUrl behåller den gamla formen som nyckel.
+            sitemapUrl: 'https://www.visitisabergsregionen.se/evenemang/',
             isHtmlCatalog: true,
-            urlPatterns: [/\/sv\/evenemang\/[a-z0-9-]{4,}\/$/i],
+            urlPatterns: [/visitisabergsregionen\.se\/evenemang\/[a-z0-9-]{4,}\/$/i],
+            canonicalUrl: [/^https:\/\/www\.visitisabergsregionen\.se\/evenemang\//, 'https://visitisabergsregionen.se/sv/evenemang/'],
+            // Nya sajten har strukturerade fält: "Datum 26-10-02 12:30 - 15:00"
+            // och "Plats Torghuset i Smålandsstenar". Löptextdatumet saknas på
+            // hälften av sidorna (19/33 gav "utan event-struktur" utan dessa).
+            detailDateSelector: '.date-list li',
+            detailVenueSelector: '.info-container p',
             defaultCity: 'Gislaved',
+            // Sidorna saknar location-markup; orten står i titeln ("Soppbio,
+            // Torghuset Smålandsstenar"). Utan reglerna låg allt på Gislaveds
+            // centroid — Torghuset (Smålandsstenar) lägger upp sina event här
+            // (Robie Aqvilin, FB-gruppen Smålandsstenar med omnejd 28/9).
+            titlePlaces: [
+                { re: /torghuset/i, city: 'Smålandsstenar', venue: 'Torghuset Smålandsstenar' },
+                { re: /smålandsstenar/i, city: 'Smålandsstenar' },
+                { re: /anderstorp/i, city: 'Anderstorp' },
+                { re: /\bhestra\b|isaberg/i, city: 'Hestra' },  // \b: inte "Orchestra"
+                { re: /reftele/i, city: 'Reftele' },
+                { re: /burseryd/i, city: 'Burseryd' },
+                { re: /skeppshult/i, city: 'Skeppshult' },
+                { re: /broaryd/i, city: 'Broaryd' },
+                { re: /hillerstorp/i, city: 'Hillerstorp' },
+                { re: /gnosjö/i, city: 'Gnosjö' },
+            ],
             maxUrls: 60,
         },
         updateFrequency: 'every-3d',
@@ -3467,8 +3523,10 @@ export const SOURCES: Source[] = [
         windowDays: 180,
         notes: 'Hittad 8/9 2026 i runtknuten-svepet (41 event i Gislaved). OBS: detaljsidorna '
             + 'innehåller hela dagsprogram med många klockslag — kontrollera vid nästa '
-            + 'verifiering att rätt datum valts.',
-        lastVerified: '2026-09-08',
+            + 'verifiering att rätt datum valts. 28/9: karantänen 25/9 var falsk — alla '
+            + 'katalog-URL:er fanns redan i DB (runtknuten-svepet) och kända-skippen räknades '
+            + 'inte som liv; fixat i runner.ts.',
+        lastVerified: '2026-09-28',
         discovery: { method: 'hint', probeUrl: 'https://visitisabergsregionen.se/evenemang', date: '2026-09-08', rawEventCount: 46 },
     },
     {
@@ -4125,10 +4183,17 @@ export const SOURCES: Source[] = [
             sitemapUrl: 'https://www.waldemarsudde.se/sitemap_index.xml',
             urlPatterns: [/\/(?:sv\/)?aktivitet(?:er)?\/[^/]+\/?$/i],
             defaultCity: 'Stockholm',
+            // Sajtens WAF (nginx) svarar 403 på "Mozilla/…"-UA som inte kommer
+            // från en riktig webbläsare (TLS-fingeravtrycket avslöjar node) —
+            // curl med samma UA släpps igenom. En ärlig bot-UA utan "Mozilla"
+            // släpps igenom (verifierat 28/9). Sitemapen och URL:erna är
+            // oförändrade, så nycklarna i DB består.
+            userAgent: 'VadKul/1.0 (+https://vadkul.se)',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 539 event-URLs (aktivitet-mönster) — museum.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 539 event-URLs (aktivitet-mönster) — museum. '
+            + '28/9: 0 event — WAF:en började ge 403 på vår Chrome-UA; ärlig VadKul-UA löser det.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'rohsska-museet',
@@ -4150,13 +4215,26 @@ export const SOURCES: Source[] = [
         region: 'stockholm',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.spritmuseum.se/sitemap_index.xml',
-            urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i],
+            // Sajten flyttade eventen till WooCommerce ~sep 2026: event-sitemap
+            // borta, /event/<slug>/ → /product/<slug>/ (samma slug, 301). Gamla
+            // mönstret gav 0 av ~50 produkt-URL:er. /en/product/ = engelska
+            // dubbletter → bara svenska. canonicalUrl MEDVETET utelämnad: de
+            // tre /event/-URL:erna i DB är alla passerade (9–27/9) — ingen
+            // överlapp att skydda, och nyckeln ska inte hänga på en redirect.
+            sitemapUrl: 'https://spritmuseum.se/product-sitemap.xml',
+            urlPatterns: [/^https:\/\/spritmuseum\.se\/product\/[^/]+\/$/i],
+            // Produktsidorna saknar JSON-LD-event; datumet står i huvudets
+            // info-lista ("595 sek (entré ingår) · 10 oktober, kl. 13.00–17.00").
+            // "Flera tillfällen" (provningar, visningar) ger inget datum →
+            // hoppas över i stället för att fritexten gissar ett.
+            detailDateSelector: '.article-header_list-info',
             defaultCity: 'Stockholm',
+            defaultVenue: 'Spritmuseum',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 253 event-URLs (event-mönster) — museum.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 253 event-URLs (event-mönster) — museum. 28/9: '
+            + 'eventen flyttade till /product/ (WooCommerce) → nytt sitemap + mönster.',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'form-design-center',
@@ -4426,11 +4504,17 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.malmolive.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?program\/[^/]+\/?$/i],
+            // Föreställningslistan: ett .event--date per tillfälle ("Ons 29 Apr
+            // 20:00"), passerade märkta .event--passed → första KOMMANDE
+            // tillfället. Alla passerade/ingen lista → sidan hoppas över.
+            // Utan fältet vann sajtbannerns "Lördagen den 3 oktober passerar
+            // Malmö Marathon" (28/9: 64/87 event på 2026-10-03).
+            detailDateSelector: '.event--date:not(:has(.event--passed)) .event--date--detail',
             defaultCity: 'Malmö',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 1726 event-URLs (program-mönster) — konserthus.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 1726 event-URLs (program-mönster) — konserthus. 28/9: fritext-fallbacken tog sajtbannerns Malmö Marathon-datum (3 okt) på passerade konserter → detailDateSelector på föreställningslistan (första ej passerade tillfället).',
+        lastVerified: '2026-09-28',
     },
     {
         id: 'malmoarena',
@@ -4743,13 +4827,23 @@ export const SOURCES: Source[] = [
         region: 'boden',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.havremagasinet.se/sitemap_index.xml',
+            // Programkalendern, inte sitemapen: detaljsidorna saknar eget
+            // datumfält (fritext i brödtexten, ofta utan år) men avslutas med
+            // "Andra event"-korten (rubriken är en <h1> → når inte
+            // stripRelatedBlocks). Fritext-fallbacken tog kortens "10 okt." på
+            // gamla sidor (28/9: 47/55 event på 2026-10-10, vernissage och
+            // finissage samma dag). Kalenderns kort bär tillfällets dag
+            // (<h2>10 OKT</h2>); återkommande aktiviteter listas per tillfälle
+            // → första kommande (extractCatalogDates).
+            sitemapUrl: 'https://havremagasinet.se/program/',
+            isHtmlCatalog: true,
+            catalogDates: { itemSelector: 'article.h-grid-card', linkSelector: 'a', dateSelector: 'h2' },
             urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i],
             defaultCity: 'Boden',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 246 event-URLs (event-mönster) — konsthall.',
-        lastVerified: '2026-06-09',
+        notes: 'Probe-venues 2026-06-09: 246 event-URLs (event-mönster) — konsthall. 28/9: bytt från event-sitemapen (mest passerade sidor) till /program/ med catalogDates — sitemapsidorna fick "Andra event"-kortens datum. Kör INTE via sitemapen.',
+        lastVerified: '2026-09-28',
     },
 
     // ─── BATCH 2 (2026-06-09): live-musik / sommarscener / familj ─────────
@@ -7483,13 +7577,22 @@ export const SOURCES: Source[] = [
         id: 'hockeyallsvenskan',
         hostName: 'HockeyAllsvenskan',
         region: 'national',
-        engine: 'sportality',
-        config: { baseUrl: 'https://www.hockeyallsvenskan.se', leagueName: 'HockeyAllsvenskan', sport: 'ishockey' },
+        // Lämnade Sportality hösten 2026 — egen Next/Strapi-plattform, se
+        // scrapers/hockeyallsvenskan.ts. Hela säsongen på en sida, därav 240 d.
+        engine: 'hockeyallsvenskan',
+        config: { baseUrl: 'https://hockeyallsvenskan.se', leagueName: 'HockeyAllsvenskan', sport: 'ishockey' },
+        // AVSTÄNGD (28/9): swehockey-hockeyallsvenskan täcker redan hela säsongen
+        // (321 kommande matcher) med andra titlar ("Almtuna IS – Södertälje SK"
+        // mot "Almtuna – Södertälje") — dedupe-cross matchar inte dem, så båda
+        // påslagna = varje match dubbelt på kartan. Motorn står kvar som reserv
+        // om swehockey-vägen dör; stäng då av den och slå på den här.
+        disabled: true,
         updateFrequency: 'daily',
         status: 'experimental',
-        notes: 'Hockeyns andraliga, samma plattform som SHL. Rullande ~5-dagarsfönster (gameheader tar inga datumparametrar), därför daglig kadens — matcherna fångas in efterhand ~5 dagar i förväg. Matcher med utländskt hemmalag (CHL) filtreras bort; arenan ligger där hemmalaget spelar.',
-        lastVerified: '2026-08-26',
-        discovery: { method: 'probe-xhr', probeUrl: 'https://www.hockeyallsvenskan.se/api/gameday/gameheader', date: '2026-08-26', notes: 'Hittad med scout/sniff-one.cjs mot https://www.hockeyallsvenskan.se/spelschema. Samma API på alla tre hockeyligor.' },
+        windowDays: 240,
+        notes: 'Hockeyns andraliga. Bytte plattform hösten 2026: sportality-API:t (/api/site/settings, /api/gameday/gameheader) svarar med en HTML-404 sedan dess (dry-run 28/9: "Unexpected token \'<\'"). Nya sajten server-renderar HELA säsongsschemat (364 matcher) som RSC-flight på /pages/matcher, med hemmalagets arena + ligans egna arenakoordinater. Daglig kadens fångar flyttade matcher.',
+        lastVerified: '2026-09-28',
+        discovery: { method: 'manual', probeUrl: 'https://hockeyallsvenskan.se/pages/matcher', date: '2026-09-28', notes: 'Hittad när sportality-vägen dog: /pages/matcher bär komponent-props {"season":"current","games":[…]}. /api/games kräver documentIds, Strapi-CMS:et svarar 404 utan token.' },
     },
     {
         id: 'sdhl',

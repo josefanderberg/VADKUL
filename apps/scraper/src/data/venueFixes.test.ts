@@ -54,3 +54,33 @@ describe('applyVenueFixInPlace', () => {
         expect(e.lat).toBe(65.32058);
     });
 });
+
+describe('hockeyarenorna i venueFixes (0,0-matcherna 28/9)', () => {
+    // Exakt de namn swehockey/sportality levererade och som låg på 0,0.
+    const ZERO_ZERO: Record<string, string> = {
+        'Be-Ge Hockey Center': 'Oskarshamn',
+        'Gränby Ishallar A-hall': 'Uppsala',
+        'Wibe Arena': 'Mora',
+        'Coop Norrbotten Arena': 'Luleå',
+        'VBO Arena': 'Vimmerby',
+        'Hägglunds Arena': 'Örnsköldsvik',
+        'Hatstore Arena': 'Kalmar',
+        'Visby Ishall': 'Visby',
+        'Enebybergs Ishall': 'Danderyd',
+        'Östersund Arena Hall A': 'Östersund',
+        // HA-sajtens stavning av Almtunas hall.
+        'Gränby ishall': 'Uppsala',
+    };
+
+    it('varje arena har en verifierad fix i rätt stad', () => {
+        for (const [name, city] of Object.entries(ZERO_ZERO)) {
+            expect(matchVenueFix(name)?.city, name).toBe(city);
+        }
+    });
+
+    it('inget namn förekommer i två fixar (exakt matchning ska vara entydig)', () => {
+        // Per fix dedupat: skiftlägesvarianter inom samma fix är ofarliga.
+        const all = VENUE_FIXES.flatMap(f => [...new Set(f.names.map(n => n.trim().toLowerCase()))]);
+        expect(all.filter((n, i) => all.indexOf(n) !== i)).toEqual([]);
+    });
+});

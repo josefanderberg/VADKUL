@@ -57,6 +57,7 @@
     "cleanup-images": "ts-node src/scripts/cleanup-storage-images.ts",
     "setup-telegram": "ts-node src/scripts/setup-telegram.ts",
     "health": "ts-node src/scripts/health.ts",
+    "alerts": "ts-node src/scripts/scraper-alerts.ts && node scripts/print-alerts.mjs --all",
     "coverage": "ts-node src/scripts/coverage.ts",
     "sources-list": "ts-node src/scripts/list-sources.ts",
     "inspect": "ts-node src/scripts/inspect-source.ts",

@@ -29,6 +29,9 @@ const JUNK_TOKEN = new RegExp(
         'avatar',
         'emoji',
         'shareimage|share-image|og-image-default|default-share', // sajtvida delningsbilder
+        // Filen heter BARA og-image (bastad.com/og-image.png på varje sida,
+        // 28/9) — sajtens standardbild för delning, aldrig ett specifikt event.
+        '(?:^|/)og[-_]?image\\.(?:png|jpe?g|webp|gif)$',
         '(?:^|[^0-9])1x1(?:[^0-9]|$)',     // 1x1-pixlar
         'blank[-_]?px|whitepx|white[-_]px',
         'pixel\\.(?:png|gif|jpg)',

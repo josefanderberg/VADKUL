@@ -30,6 +30,7 @@ Varje källa i [registry.ts](../../apps/scraper/src/sources/registry.ts) bär et
 **Inventarium & hälsa:**
 - `npm run sources-list` — hela registret grupperat på status + senaste utfall. `-- --status=experimental` filtrerar.
 - `npm run health` — STABLE/WATCH/BROKEN ur körhistorik.
+- `npm run alerts` — **samlad larmlista** (sedan 28/9): tysta källor (gav event förr, 0 de 3 senaste körningarna), krascher, datumkluster (≥60 % av kommande event samma dag), event på 0,0, invariant-larm och karantän. Skrivs varje natt till `apps/scraper/scraper-alerts.json`, pushas av minin och skrivs ut överst när du kör `npm run dev` i repots rot (`npm run alerts` i roten visar hela listan). Står också i Telegram-rapporten under "🩺 Skraparnas hälsa".
 - `npm run coverage` — kommun-täckning (vilka av 290 vi når).
 
 ## Skrivregler

@@ -46,11 +46,11 @@ vi.mock('../utils/llmAudit', () => ({
     ollamaIsAvailable: vi.fn(async () => false),
 }));
 
-import { runSource, deriveHasSpecificTime, geocodeQueriesFor, CONTENT_SWEEP_VERSION } from './runner';
+import { runSource, deriveHasSpecificTime, geocodeQueriesFor, countKnownDropped, CONTENT_SWEEP_VERSION } from './runner';
 import { Source, RawEvent, Engine } from './types';
-import { addEventsBatch, eventExistsInDb } from '../utils/dbHelper';
+import { addEventsBatch, eventExistsInDb, refreshEventPlace } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
-import { recordScrapeRun, getSyncMeta, setSyncMeta } from '../utils/sqliteHelper';
+import { recordScrapeRun, getSyncMeta, setSyncMeta, getSqliteEvent } from '../utils/sqliteHelper';
 
 const batchMock = vi.mocked(addEventsBatch);
 // Runnern batchar skrivningar: alla event från en körning kommer i ETT
@@ -319,6 +319,28 @@ describe('runSource — fel & run-historik', () => {
         expect(row.skippedDuplicate).toBe(1);
     });
 
+    // Visit Isabergsregionen 25/9: alla katalog-URL:er fanns redan i DB, motorn
+    // skippade dem före fetch → found=0 utan skips → falsk auto-karantän.
+    it('kända URL:er som motorn skippar räknas som dubbletter i run-historiken', async () => {
+        existsMock.mockResolvedValue(true);
+        await run(async (_cfg, ctx) => {
+            for (const u of ['https://x.se/a', 'https://x.se/b']) await ctx.isKnownUrl!(u);
+            return [];
+        });
+        const row = recordRunMock.mock.calls[0][0];
+        expect(row.found).toBe(0);
+        expect(row.skippedDuplicate).toBe(2);
+    });
+
+    it('känd URL som motorn ändå returnerar dubbelräknas inte', async () => {
+        existsMock.mockResolvedValue(true);
+        const ev = makeEvent({ url: 'https://x.se/a' });
+        await run(async (_cfg, ctx) => { await ctx.isKnownUrl!(ev.url); return [ev]; });
+        const row = recordRunMock.mock.calls[0][0];
+        expect(row.found).toBe(1);
+        expect(row.skippedDuplicate).toBe(1);
+    });
+
     // Incident 2026-06-11: en dry-run skrev "saved 19686" till scrape_runs och
     // förgiftade daily-report/regressionsdata. Dry-run får ALDRIG lämna spår.
     it('dry-run registrerar INGET i run-historiken — varken lyckad körning eller krasch', async () => {
@@ -394,5 +416,64 @@ describe('geocodeQueriesFor', () => {
 
     it('ingen platsinfo alls → inga frågor', () => {
         expect(geocodeQueriesFor({ title: 't', url: 'u', startDate: new Date() })).toEqual([]);
+    });
+});
+
+describe('countKnownDropped', () => {
+    it('räknar bara kända URL:er som inte returnerades', () => {
+        const known = new Set(['a', 'b', 'c']);
+        expect(countKnownDropped(known, [{ url: 'b' }, { url: 'z' }])).toBe(2);
+        expect(countKnownDropped(new Set(), [{ url: 'a' }])).toBe(0);
+    });
+});
+
+// Visit Isabergsregionen 28/9: allt låg på defaultCity (Gislaved) fast titeln
+// pekade ut Smålandsstenar/Reftele. Refresh ska flytta dem — men bara dem.
+describe('runSource — refresh flyttar event från defaultCity-fallbacken', () => {
+    const placeMock = vi.mocked(refreshEventPlace);
+    const sqliteMock = vi.mocked(getSqliteEvent);
+    const src = { config: { defaultCity: 'Gislaved' } } as Partial<Source>;
+    const stored = (over: Record<string, unknown> = {}) =>
+        ({ locationName: 'Gislaved', lat: 57.303, lng: 13.539, geoPrecision: 'gata', ...over }) as any;
+
+    beforeEach(() => {
+        existsMock.mockResolvedValue(true);
+        syncMetaGetMock.mockReturnValue(null);   // svep förfallet → refresh-läge
+        placeMock.mockResolvedValue(true);
+    });
+
+    it('venue i annan ort → venue-geokodning och flytt', async () => {
+        sqliteMock.mockReturnValue(stored());
+        geocodeMock.mockResolvedValue([57.16, 13.41, 'gata'] as any);
+        await run([makeEvent({ city: 'Smålandsstenar', venueName: 'Torghuset Smålandsstenar' })], {}, src);
+        expect(geocodeMock).toHaveBeenCalledWith('Torghuset Smålandsstenar, Smålandsstenar', { nearCity: 'Smålandsstenar' });
+        expect(placeMock.mock.calls[0].slice(1, 3)).toEqual(['Torghuset Smålandsstenar, Smålandsstenar', 57.16]);
+    });
+
+    it('bara ort ur titeln → overifierad centroid för nya orten', async () => {
+        sqliteMock.mockReturnValue(stored());
+        geocodeMock.mockResolvedValue([57.18, 13.57, 'ort'] as any);
+        await run([makeEvent({ city: 'Reftele' })], {}, src);
+        expect(geocodeMock).toHaveBeenCalledTimes(1);
+        expect(geocodeMock).toHaveBeenCalledWith('Reftele');
+        const call = placeMock.mock.calls[0];
+        expect(call[1]).toBe('Reftele');
+        expect(call[5]).toBe(false);
+        expect(call[6]).toBe('stad-centroid');
+    });
+
+    it('samma ort som defaultCity eller redan flyttad → rörs inte', async () => {
+        sqliteMock.mockReturnValue(stored());
+        await run([makeEvent({ city: 'Gislaved' })], {}, src);
+        sqliteMock.mockReturnValue(stored({ locationName: 'Reftele' }));
+        await run([makeEvent({ city: 'Reftele' })], {}, src);
+        expect(geocodeMock).not.toHaveBeenCalled();
+        expect(placeMock).not.toHaveBeenCalled();
+    });
+
+    it('centroid-lagrat event i annan källa utan defaultCity-flytt → ingen geokodning', async () => {
+        sqliteMock.mockReturnValue(stored({ locationName: 'Kulturhuset', geoPrecision: 'stad-centroid' }));
+        await run([makeEvent({ city: 'Växjö', venueName: 'Kulturhuset' })], {}, { config: {} } as Partial<Source>);
+        expect(geocodeMock).not.toHaveBeenCalled();
     });
 });

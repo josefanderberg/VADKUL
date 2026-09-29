@@ -1,10 +1,6 @@
 {
   "version": 1,
   "sources": {
-    "bastad": {
-      "since": "2026-09-24",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -29,17 +25,9 @@
       "lastRetry": "2026-09-24",
       "emptyRetries": 5
     },
-    "hockeyallsvenskan": {
-      "since": "2026-09-17",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-24",
-      "emptyRetries": 1
-    },
-    "karlsborg": {
-      "since": "2026-09-17",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-24",
-      "emptyRetries": 1
+    "karlskoga": {
+      "since": "2026-09-28",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "nordmaling": {
       "since": "2026-08-19",
@@ -56,38 +44,20 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-19",
-      "emptyRetries": 4
-    },
-    "prins-eugens-waldemarsudde": {
-      "since": "2026-09-25",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "lastRetry": "2026-09-26",
+      "emptyRetries": 5
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-19",
-      "emptyRetries": 4
-    },
-    "sater": {
-      "since": "2026-09-15",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
-    "sb-kb-se": {
-      "since": "2026-09-22",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
-    "sb-vastsverige-com": {
-      "since": "2026-09-15",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-24",
-      "emptyRetries": 1
+      "lastRetry": "2026-09-26",
+      "emptyRetries": 5
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-20",
-      "emptyRetries": 2
+      "lastRetry": "2026-09-28",
+      "emptyRetries": 3
     },
     "staffanstorp": {
       "since": "2026-08-19",
@@ -106,14 +76,6 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-09-24",
       "emptyRetries": 4
-    },
-    "turteatern": {
-      "since": "2026-09-23",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
-    "visitisabergsregionen": {
-      "since": "2026-09-25",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
 }

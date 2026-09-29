@@ -4,6 +4,14 @@ Entry-point. Läs först. Hålls under 60 rader.
 
 ## Senaste riktade insats
 
+2026-09-28: **Källgenomgång + nattkedjan** — Visit Isabergsregionen, Spritmuseum,
+Karlsborg (bytt URL-struktur), Waldemarsudde + KB (WAF mot Mozilla-UA),
+Båstad (ny plattform), Malmö Live + Havremagasinet (sajtvida datum) lagade;
+hockeyarenorna fick verifierade koordinater (122 matcher låg på 0,0).
+Nattkedjan tog ~21 h → FB sist, en gång, sök av. Ny samlad larmlista
+(`npm run alerts`, visas vid `npm run dev`). Kvar: ~860 event på 0,0
+(rikstäckande arrangörer "Sverige", församlingsnamn).
+
 2026-09-04: **Källsvep storstadsscener + svagaste städerna** — Stockholm Lives
 fem arenor, Berwaldhallen, Debaser, Got Event (Scandinavium/Ullevi), Visit
 Luleå, Visit Roslagen in; Pustervik + Konserthuset lagade. Två nya motorer

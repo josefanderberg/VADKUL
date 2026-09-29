@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -147,6 +147,35 @@ describe('extractCatalogDates', () => {
         const m = extractCatalogDates(BORGHOLM_ARCHIVE, 'https://www.borgholmsslott.se/evenemang/', CATALOG_SEL);
         expect(m.has('https://www.borgholmsslott.se/evenemang/spokvandring-pa-borgholms-slott')).toBe(false);
         expect(m.size).toBe(2);
+    });
+});
+
+// Utsnitt ur havremagasinet.se/program/ (28/9): ett kort per TILLFÄLLE i
+// kronologisk ordning; stängningskortet länkar till vernissagen.
+const HAVRE_PROGRAM = `
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/vernissage-10-okt/"><h2>23 SEP - 9 OKT</h2><p>STÄNGT för omhängning</p></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/skapa-pa-havre/"><h2>28 SEP</h2></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/skapa-pa-havre/"><h2>5 OKT</h2></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/vernissage-10-okt/"><h2>10 OKT</h2></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/hostlov/"><h2>27 - 29 OKT</h2></a></article>
+<article class="h-grid-card"><a href="https://havremagasinet.se/event/skapa-pa-havre/"><h2>14 DEC</h2></a></article>`;
+
+describe('extractCatalogDates — kalender med ett kort per tillfälle', () => {
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 8, 28, 10, 0)); });
+    afterAll(() => { vi.useRealTimers(); });
+    const SEL = { itemSelector: 'article.h-grid-card', linkSelector: 'a', dateSelector: 'h2' };
+    const md = (d?: Date) => d && [d.getFullYear(), d.getMonth() + 1, d.getDate()];
+
+    it('återkommande aktivitet → första kommande tillfället, inte sista', () => {
+        const m = extractCatalogDates(HAVRE_PROGRAM, 'https://havremagasinet.se/program/', SEL);
+        expect(md(m.get('https://havremagasinet.se/event/skapa-pa-havre'))).toEqual([2026, 9, 28]);
+    });
+
+    it('intervallkort ger STARTdagen — passerad start ger plats åt nästa kort', () => {
+        const m = extractCatalogDates(HAVRE_PROGRAM, 'https://havremagasinet.se/program/', SEL);
+        expect(md(m.get('https://havremagasinet.se/event/hostlov'))).toEqual([2026, 10, 27]);
+        // "23 SEP - 9 OKT" (stängt) gav förr slutdagen 9 okt åt vernissagen.
+        expect(md(m.get('https://havremagasinet.se/event/vernissage-10-okt'))).toEqual([2026, 10, 10]);
     });
 });
 
@@ -383,6 +412,43 @@ describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
         expect(r.hasTime).toBe(true);
     });
 
+    // Spritmuseum 28/9: dag-först följt av klockslag vändes till "24 17
+    // oktober.00" → 17 oktober. Månad-först-vändningen får inte röra det.
+    it('dag-först + klockslag ("24 oktober 17.00") vänds INTE', () => {
+        const html = `<ul class="article-header_list-info"><li><em>750 sek (entré ingår)</em></li>
+<li><em>24 oktober 17.00</em></li></ul>`;
+        const r = dateFromDetailSelector(html, '.article-header_list-info', NOW)!;
+        expect([r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([9, 24, 17]);
+    });
+
+    it('månad-först följt av klockslag ("oktober 17.00") är inget datum', () => {
+        expect(dateFromDetailSelector('<div class="d">oktober 17.00</div>', '.d', NOW)).toBeNull();
+    });
+
+    // Malmö Live 28/9: "Ons 29 Apr 20:00" är redan svensk ordning — vändningen
+    // gjorde "Ons 29 20 Apr:00" (null) och "Ons 20 Maj 19:00" → 19 maj.
+    it('dag FÖRE månaden + klockslag vänds inte', () => {
+        const at = (t: string) => dateFromDetailSelector(`<span class="d">${t}</span>`, '.d', NOW)!;
+        const a = at('Lör 3 Okt 18:00');
+        expect([a.date.getFullYear(), a.date.getMonth(), a.date.getDate(), a.date.getHours()]).toEqual([2026, 9, 3, 18]);
+        expect(a.hasTime).toBe(true);
+        const b = at('Tors 20 Maj 19:00');
+        expect([b.date.getFullYear(), b.date.getMonth(), b.date.getDate(), b.date.getHours()]).toEqual([2027, 4, 20, 19]);
+        const c = at('Fre 20 november 19:30');
+        expect([c.date.getMonth(), c.date.getDate(), c.date.getHours(), c.date.getMinutes()]).toEqual([10, 20, 19, 30]);
+    });
+
+    it('första KOMMANDE föreställning via :has-selektor (passerade märkta)', () => {
+        const html = `<div class="event--dates">
+<div class="event--date"><span class="event--date--detail">Ons 9 Sep 19:00</span><span class="event--passed">Passerat</span></div>
+<div class="event--date"><span class="event--date--detail">Lör 3 Okt 18:00</span></div>
+<div class="event--date"><span class="event--date--detail">Sön 4 Okt 15:00</span></div></div>`;
+        const r = dateFromDetailSelector(html, '.event--date:not(:has(.event--passed)) .event--date--detail', NOW)!;
+        expect([r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([9, 3, 18]);
+        const allPassed = html.replace(/<span class="event--date--detail">(?:Lör|Sön)[^<]*<\/span>/g, '');
+        expect(dateFromDetailSelector(allPassed, '.event--date:not(:has(.event--passed)) .event--date--detail', NOW)).toBeNull();
+    });
+
     it('månad-först med flera föreställningar — första vinner', () => {
         const html = `<div class="dc"><div><div>oktober</div><div>30</div><div>Kl 19:30</div></div>
 <div><div>oktober</div><div>31</div><div>Kl 15:00</div></div></div>`;
@@ -429,5 +495,151 @@ describe('cheerioFallback - titel med eget bindestreck slår logga-h1:an', () =>
     it('eventets h1 vinner, inte sajtloggan', () => {
         const ev = cheerioFallback(PAGE, 'https://upplev.vaxjo.se/evenemang/evenemang/2026-08-27-kicki', 'Växjö')!;
         expect(ev.title).toBe('Kicki i Soläng – en helt vanlig person från Småland');
+    });
+});
+
+// Visit Isabergsregionen 28/9: sidorna saknar location-markup och allt landade
+// på Gislaveds centroid — även Torghusets event i Smålandsstenar.
+describe('applyTitlePlaces', () => {
+    const rules = [
+        { re: /torghuset/i, city: 'Smålandsstenar', venue: 'Torghuset Smålandsstenar' },
+        { re: /smålandsstenar/i, city: 'Smålandsstenar' },
+        { re: /anderstorp/i, city: 'Anderstorp' },
+    ];
+    const ev = (title: string, extra: Record<string, unknown> = {}) =>
+        ({ title, url: 'https://x.se/e', startDate: new Date(), city: 'Gislaved', ...extra }) as any;
+
+    it('Torghuset → Smålandsstenar med regelns venue', () => {
+        const e = ev('Soppbio, Torghuset Smålandsstenar');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Smålandsstenar');
+        expect(e.venueName).toBe('Torghuset Smålandsstenar');
+    });
+
+    it('venue ur titelns komma-suffix när regeln saknar venue', () => {
+        const e = ev('Näverworkshop, Anderstorps bibliotek');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Anderstorp');
+        expect(e.venueName).toBe('Anderstorps bibliotek');
+    });
+
+    it('suffix som bara är orten → city men ingen venue', () => {
+        const e = ev('Berättelsen om Fornbolmen, Smålandsstenar');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Smålandsstenar');
+        expect(e.venueName).toBeUndefined();
+    });
+
+    it('ort i löptext utan komma → bara city', () => {
+        const e = ev('Jobbmässa i Smålandsstenar');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Smålandsstenar');
+        expect(e.venueName).toBeUndefined();
+    });
+
+    it('rör inte sidans egen ort eller venue', () => {
+        const own = ev('Soppbio på Torghuset', { city: 'Värnamo' });
+        applyTitlePlaces(own, rules, 'Gislaved');
+        expect(own.city).toBe('Värnamo');
+        const venue = ev('Konsert, Smålandsstenar', { venueName: 'Kyrkan' });
+        applyTitlePlaces(venue, rules, 'Gislaved');
+        expect(venue.venueName).toBe('Kyrkan');
+        expect(venue.city).toBe('Smålandsstenar');
+    });
+
+    it('ort ur sidans venue när titeln saknar ort', () => {
+        const e = ev('Konsert med kören', { venueName: 'Anderstorps kyrka' });
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Anderstorp');
+        expect(e.venueName).toBe('Anderstorps kyrka');
+    });
+
+    it('ingen träff → oförändrat', () => {
+        const e = ev('Hur redo är du?, Torget i Gislaved');
+        applyTitlePlaces(e, rules, 'Gislaved');
+        expect(e.city).toBe('Gislaved');
+        expect(e.venueName).toBeUndefined();
+    });
+});
+
+// Visit Isabergsregionen 28/9: nya sajtens datumfält är "26-10-02 12:30 - 15:00".
+describe('dateFromDetailSelector - numeriskt ÅÅ-MM-DD', () => {
+    const now = new Date('2026-09-28T12:00:00');
+    const at = (t: string) => dateFromDetailSelector(`<div class="d">${t}</div>`, '.d', now);
+
+    it('ÅÅ-MM-DD med klockslag → rätt dag och tid', () => {
+        const r = at('26-10-02 <div class="time">12:30 - 15:00</div>')!;
+        expect([r.date.getFullYear(), r.date.getMonth(), r.date.getDate(), r.date.getHours(), r.date.getMinutes()]).toEqual([2026, 9, 2, 12, 30]);
+        expect(r.hasTime).toBe(true);
+    });
+
+    it('start–slut utan tid → startdagen, ingen tid', () => {
+        const r = at('26-10-21 26-10-22')!;
+        expect([r.date.getMonth(), r.date.getDate()]).toEqual([9, 21]);
+        expect(r.hasTime).toBe(false);
+    });
+
+    it('ÅÅÅÅ-MM-DD fungerar också; ogiltig månad rörs inte', () => {
+        expect(at('2026-11-07')!.date.getDate()).toBe(7);
+        expect(at('26-13-02')).toBeNull();
+    });
+});
+
+describe('cheerioFallback - reservdatum ur datumfältet', () => {
+    const html = '<html><head><title>Den stora schlagerfesten</title></head><body><h1>Den stora schlagerfesten</h1><p>En glittrande kavalkad.</p></body></html>';
+    it('utan löptextdatum → null, med reservdatum → event', () => {
+        expect(cheerioFallback(html, 'https://x.se/e')).toBeNull();
+        const d = new Date('2026-11-07T00:00:00');
+        const ev = cheerioFallback(html, 'https://x.se/e', 'Gislaved', d);
+        expect(ev?.title).toBe('Den stora schlagerfesten');
+        expect(ev?.startDate.getTime()).toBe(d.getTime());
+    });
+});
+
+// Utsnitt ur bastad.com/evenemangskalender (Statamic, probad 2026-09-28): hela
+// kalendern ligger som JS-array med json_encode-escapade snedstreck.
+describe('extractJsonCatalogUrls - JSON-escapade snedstreck', () => {
+    const js = `var BASTAD_EVENTS = [
+    { id: "e878", title: "KULTURNATT i B\\u00e5stad", date: "2026-10-10",
+      listBookingUrl: null, url: "\\/events\\/kulturnatt-i-bastad",
+      image: "/assets/kulturnatten.jpg" },
+    ];
+    var SEARCH = [{ type: 'event', url: "https:\\/\\/bastad.com\\/events\\/kulturnatt-i-bastad" },
+                  { type: 'event', url: "https:\\/\\/bastad.com\\/events\\/oppen-atelje3" }];`;
+    const urls = extractJsonCatalogUrls(js, 'https://bastad.com/evenemangskalender').map(e => e.url);
+
+    it('avkodar \\/ och löser relativa paths mot katalogens origin', () => {
+        expect(urls).toContain('https://bastad.com/events/kulturnatt-i-bastad');
+        expect(urls).toContain('https://bastad.com/events/oppen-atelje3');
+        expect(urls).toContain('https://bastad.com/assets/kulturnatten.jpg');
+    });
+
+    it('relativ + absolut form av samma URL slås ihop', () => {
+        expect(urls.filter(u => u.endsWith('/kulturnatt-i-bastad'))).toHaveLength(1);
+    });
+
+    it('vanlig JSON utan escapning fungerar som förut (Studiefrämjandet-formen)', () => {
+        const r = extractJsonCatalogUrls('{"hits":[{"url":"/kurser/a-b-c"},{"u":"https://x.se/y/z"}]}', 'https://x.se/sok');
+        expect(r.map(e => e.url)).toEqual(['https://x.se/kurser/a-b-c', 'https://x.se/y/z']);
+    });
+});
+
+// Utsnitt ur bastad.com/events/kulturnatt-i-bastad (28/9): meta-description är
+// sajtvid, den riktiga texten ligger i .article-body med <br />-radbrytningar.
+describe('descFromDetailSelector', () => {
+    const html = `<html><head><meta name="description" content="Allt om Båstad - besöksmål, evenemang, leder, boende och näringsliv på Bjärehalvön."></head><body>
+        <h2>KULTURNATT i Båstad</h2>
+        <div class="article-body">KULTURNATT i Båstad är en kväll där konst, musik &amp; kultur får ta plats!<br />
+<br />
+Programmet hittar du på vår hemsida.</div></body></html>`;
+
+    it('tar brödtexten, <br> blir mellanslag, entiteter avkodas', () => {
+        expect(descFromDetailSelector(html, '.article-body'))
+            .toBe('KULTURNATT i Båstad är en kväll där konst, musik & kultur får ta plats! Programmet hittar du på vår hemsida.');
+    });
+
+    it('saknat eller för kort fält → null (meta-beskrivningen behålls)', () => {
+        expect(descFromDetailSelector(html, '.finns-inte')).toBeNull();
+        expect(descFromDetailSelector('<div class="b">Kort.</div>', '.b')).toBeNull();
     });
 });

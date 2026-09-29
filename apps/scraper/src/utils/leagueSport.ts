@@ -1,6 +1,6 @@
 /**
  * Ligakällornas sport — deterministisk emoji för matcher från ligornas egna
- * sajter (sportality, sportomedia, swehockey).
+ * sajter (sportality, sportomedia, swehockey, hockeyallsvenskan).
  *
  * Matchtitlarna bär bara lagnamn ("Växjö Vipers – Team Thorengruppen"), så
  * titelreglerna i utils/activityEmoji träffar aldrig och LLM-auditen vet inte
@@ -29,6 +29,7 @@ const LEAGUE_ENGINE_SITE: Record<string, (config: Record<string, any>) => string
     sportality: (c) => c.baseUrl,
     sportomedia: (c) => c.siteBase,
     swehockey: () => 'https://stats.swehockey.se',
+    hockeyallsvenskan: (c) => c.baseUrl,
 };
 
 type SourceLike = { engine: string; config: Record<string, any> };

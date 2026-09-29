@@ -52,6 +52,7 @@ import { svenskJazzEngine } from '../scrapers/svenskjazz';
 import { optimizelyEventsEngine } from '../scrapers/optimizely-events';
 import { sportalityEngine } from '../scrapers/sportality';
 import { sweHockeyEngine } from '../scrapers/swehockey';
+import { hockeyAllsvenskanEngine } from '../scrapers/hockeyallsvenskan';
 import { sportomediaEngine } from '../scrapers/sportomedia';
 import { gotEventEngine } from '../scrapers/gotevent';
 import { visitLuleaEngine } from '../scrapers/visitlulea';
@@ -129,6 +130,7 @@ export const ENGINES: Record<string, Engine> = {
     'optimizely-events': optimizelyEventsEngine,
     'sportality': sportalityEngine,
     'swehockey': sweHockeyEngine,
+    'hockeyallsvenskan': hockeyAllsvenskanEngine,
     'sportomedia': sportomediaEngine,
     'gotevent': gotEventEngine,
     'visitlulea': visitLuleaEngine,
