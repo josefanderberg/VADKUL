@@ -7,6 +7,7 @@ import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { isAffiliateUrl } from '@/utils/ticketmasterEvent';
 import { applyVenueFixInPlace } from '@/data/venueFixes';
 import { buildCardIndex } from '@/utils/eventKey';
+import { organizerPageSlug } from '@/utils/organizerPages';
 
 // Stadssidornas dataunderlag. Läser samma events-JSON som kartan använder som
 // fallback (public/events-*.json) — vid BUILD, så sidorna är helt statiska.
@@ -46,6 +47,9 @@ export type CityEvent = {
     category: string;
     emoji: string;
     hostName?: string;
+    /** Arrangörssidans slug (/arrangor/<slug>) när eventet har en sådan -
+     *  utils/organizerPages. Värdnamnet i utfällningen länkar dit. */
+    hostSlug?: string;
     coverImage?: string;
     price?: string;
     attendees?: number;
@@ -248,6 +252,7 @@ async function upcomingCityEvents(city: City, assigned: Map<string, RawDest[]>):
                 // här lagret). 📍-fallbacken nedströms blir därmed död kod.
                 emoji: e.emoji || emojiForCategory(e.category),
                 hostName: card?.hostName || undefined,
+                hostSlug: organizerPageSlug(card?.hostName, e.id) ?? undefined,
                 coverImage: usableImageUrl(card?.coverImage),
                 price: card?.price || undefined,
                 attendees: card?.attendees || undefined,
@@ -374,6 +379,23 @@ export async function getNationalUpcomingCount(): Promise<number> {
         if (dayKey(e.time) >= todayK) n++;
     }
     return n;
+}
+
+/** Antal kommande event per arrangörssida (slug) i hela landet - sitemapen
+ *  tar med sidorna över ORGANIZER_PAGE_INDEX_MIN. Samma urval som sidan själv
+ *  räknar i drift (app/(v1)/arrangor): koordinat, idag eller senare, och
+ *  organizerPageSlug (inga opt-in-källor, inga plattformar). */
+export async function getOrganizerPageCounts(): Promise<Map<string, number>> {
+    const { dests, card } = await loadData();
+    const todayK = dayKey(new Date().toISOString());
+    const counts = new Map<string, number>();
+    for (const e of dests) {
+        if (!e.lat || !e.lng) continue;
+        if (dayKey(e.time) < todayK) continue;
+        const slug = organizerPageSlug(card(e.id)?.hostName, e.id);
+        if (slug) counts.set(slug, (counts.get(slug) ?? 0) + 1);
+    }
+    return counts;
 }
 
 /** Antal kommande event per stad — för indexsidan och sitemapen. */

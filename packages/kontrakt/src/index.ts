@@ -4,7 +4,8 @@
  *
  *  - typerna för Firestore-dokument och API-ytor (types.ts)
  *  - kategori-nycklarna, som aggregat och filter refererar med sträng (categories.ts)
- *  - ren, miljöfri logik som MÅSTE räkna lika överallt (eventShareSlug.ts)
+ *  - ren, miljöfri logik som MÅSTE räkna lika överallt (eventShareSlug.ts,
+ *    organizer.ts = arrangörssidornas /arrangor/-adresser)
  *
  * REGLER: paketet får aldrig bero på firebase, react eller node-API:er —
  * det ska gå att importera oförändrat i Next, Cloud Functions och React
@@ -14,3 +15,4 @@ export * from './types';
 export * from './cities';
 export * from './categories';
 export * from './eventShareSlug';
+export * from './organizer';

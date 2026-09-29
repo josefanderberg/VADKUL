@@ -21,6 +21,7 @@ import ForFunTips from '../ForFunTips';
 // Chipsen visar KARTANS ettords-etiketter (samma källa som kategorifiltret på
 // kartan — Musik, Sport, Familj …), inte kategorisidornas långa SEO-namn.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
+import { ORGANIZER_CITY_CHIP_MIN, organizerHref, topOrganizers } from '@/utils/organizerPages';
 
 // Statiska stads-landningssidor ("Vad händer i Malmö?") byggda ur eventdatat —
 // det är de här sidorna som ger Google något att indexera (kartan är klient-
@@ -162,6 +163,9 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
         .sort((a, b) => a.d - b.d)
         .slice(0, 12)
         .map(x => x.c);
+    // "Arrangörer i X" (29/9): de största arrangörerna i staden, länkade till
+    // sina arrangörssidor - interna länkar som får Google att hitta sidorna.
+    const organizers = topOrganizers(events, ORGANIZER_CITY_CHIP_MIN, 12);
 
     return (
         <main className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-200">
@@ -298,6 +302,22 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 />
 
                 <div className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">
+                    {organizers.length > 0 && (
+                        <>
+                            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-3">Arrangörer i {city.name}</h2>
+                            <div className="flex flex-wrap gap-2 mb-6">
+                                {organizers.map(o => (
+                                    <Link
+                                        key={o.slug}
+                                        href={organizerHref(o.slug)}
+                                        className="px-3 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-bold text-slate-600 dark:text-zinc-400 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
+                                    >
+                                        {o.name}
+                                    </Link>
+                                ))}
+                            </div>
+                        </>
+                    )}
                     <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-3">Evenemang i fler städer</h2>
                     <div className="flex flex-wrap gap-2">
                         {otherCities.map(c => (

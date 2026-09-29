@@ -16,6 +16,7 @@ import { linkEventService, type RsvpAttendee } from '@/services/linkEventService
 import { useAuth } from '@/context/AuthContext';
 import EventChatPanel from '@/components/v2/EventChatPanel';
 import type { ListedEvent } from './DayFilteredList';
+import { organizerHref } from '@/utils/organizerPages';
 
 // Inloggningsmodalen laddas först när något faktiskt kräver konto (RSVP/chatt)
 // — stadssidorna är SEO-ytor och ska inte bära den i förstabundlen.
@@ -230,7 +231,17 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                                 <span className="font-bold text-[8px] text-slate-700">{e.hostName.charAt(0).toUpperCase()}</span>
                             )}
                         </span>
-                        <span className="truncate text-slate-800 dark:text-zinc-100">{e.hostName}</span>
+                        {/* Arrangörssidan (29/9): alla deras kommande event. */}
+                        {e.hostSlug ? (
+                            <Link
+                                href={organizerHref(e.hostSlug)}
+                                className="truncate text-slate-800 dark:text-zinc-100 underline decoration-slate-300 dark:decoration-zinc-600 underline-offset-2 hover:text-[#006AA7] dark:hover:text-sky-400 hover:decoration-current"
+                            >
+                                {e.hostName}
+                            </Link>
+                        ) : (
+                            <span className="truncate text-slate-800 dark:text-zinc-100">{e.hostName}</span>
+                        )}
                     </span>
                 )}
                 <span className="inline-flex items-center gap-1.5">

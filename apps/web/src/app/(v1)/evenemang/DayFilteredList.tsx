@@ -93,6 +93,9 @@ export type ListedEvent = {
     lng: number;
     category: string;
     hostName: string | null;
+    /** Arrangörssidans slug - värdnamnet i utfällningen länkar till
+     *  /arrangor/<slug>. Bara när eventet har en sida (utils/organizerPages). */
+    hostSlug?: string;
     description: string | null;
     /** Opt-in-källans nyckel ('svenskakyrkan' | 'pro' | 'korpen') — bara på
      *  raderna i stadens opt-in.json; sidornas egna rader saknar fältet. */

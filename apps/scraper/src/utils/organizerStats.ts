@@ -11,6 +11,8 @@
  * får inte klumpas ihop, medan samma arrangör på samma sajt ska bli en rad.
  */
 
+import { isOrganizerCandidate, organizerDomain, organizerPageSlug } from './organizerPage';
+
 export interface OrganizerEventRow {
     url: string;
     title: string | null;
@@ -40,21 +42,17 @@ export interface Organizer {
     kategorier: string[];      // vanligaste först, max 3
     exempel: OrganizerExample[]; // närmaste kommande event, max 5
     urls: string[];            // alla eventets id:n = eventStats.eventId
+    /** Arrangörssidans slug på vadkul.se (/arrangor/<sida>), eller null när
+     *  arrangören inte får någon sida (opt-in-källorna Svenska kyrkan/PRO/
+     *  Korpen). Flera arrangörer med samma namn delar sida. */
+    sida: string | null;
 }
 
-/** Biljettplattformar och aggregatorer = återförsäljare, inte arrangörer. */
-export const PLATFORM_DOMAINS = /tickster|nortic|billetto|eventbrite|ticketmaster|kulturbiljetter|biljett|tickets\.|showtic|nolltvå|axs\.|dice\.fm|livenation|meetup\.com/i;
-
-/** hostName-värden som är källans namn snarare än en arrangör. */
-const GENERIC_HOSTS = new Set(['facebook', 'tickster', 'billetto', 'eventbrite', 'ticketmaster', 'meetup']);
-
-export function siteDomain(url: string): string | null {
-    try {
-        return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
-    } catch {
-        return null;
-    }
-}
+// Vem som räknas som arrangör (plattformar och källnamn bort) och
+// arrangörssidans adress bor i @vadkul/kontrakt (kopia i ./organizerPage) -
+// samma regel som webbens /arrangor/-sidor, så studions länk alltid pekar
+// på en sida som finns.
+export const siteDomain = (url: string): string | null => organizerDomain(url);
 
 export function organizerKey(hostName: string, domain: string): string {
     return `${hostName.trim().toLowerCase()}|${domain}`;
@@ -105,10 +103,9 @@ export function groupOrganizers(
     }
     const groups = new Map<string, Acc>();
     for (const r of rows) {
-        const host = r.hostName?.replace(/\s+/g, ' ').trim();
-        if (!host || host.length < 3 || GENERIC_HOSTS.has(host.toLowerCase())) continue;
-        const domain = siteDomain(r.url);
-        if (!domain || PLATFORM_DOMAINS.test(domain)) continue;
+        if (!isOrganizerCandidate(r.hostName, r.url)) continue;
+        const host = r.hostName!.replace(/\s+/g, ' ').trim();
+        const domain = organizerDomain(r.url)!;
         const key = organizerKey(host, domain);
         let g = groups.get(key);
         if (!g) {
@@ -148,6 +145,7 @@ export function groupOrganizers(
             kategorier: topKeys(g.kategorier, 3),
             exempel,
             urls: g.urls,
+            sida: organizerPageSlug(topKeys(g.namn, 1)[0], g.urls[0]),
         });
     }
     return out.sort((a, b) => b.kommande - a.kommande || a.nyckel.localeCompare(b.nyckel));

@@ -6,6 +6,7 @@ import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { hostLabelFor } from '../../utils/hostLabel';
+import { organizerHref, organizerPageSlug } from '../../utils/organizerPages';
 import HScrollRow from './HScrollRow';
 import { boostedUntilLabel } from '../../utils/boostLabel';
 import { seriesLabel } from '../../utils/weeklySeries';
@@ -422,6 +423,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const priceLabel = normalizePriceLabel(linkEvent.price);
     // Källans domän tills cards-lagret mergat in värden (aldrig "Okänd" med länk).
     const hostLabel = hostLabelFor(linkEvent.hostName, linkEvent.url);
+    // Arrangörssidan (29/9): värdnamnet länkar till alla arrangörens event.
+    // Bara skrapade event med riktig arrangör (utils/organizerPages) -
+    // användarskapade har inget URL-id och får null.
+    const hostSlug = linkEvent.userCreated ? null : organizerPageSlug(linkEvent.hostName, linkEvent.id);
     // "Varannan lördag · t.o.m. 31 okt." — null för allt som inte är en serie.
     const seriesText = seriesLabel(linkEvent);
 
@@ -721,7 +726,16 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             {/* Långa värdnamn rullar i sidled i stället för
                                 att kapas — samma rad-mekanik som tid/plats. */}
                             <HScrollRow className="min-w-0 flex-1">
-                                <span className="text-xs font-black text-black dark:text-white whitespace-nowrap">{hostLabel}</span>
+                                {hostSlug ? (
+                                    <a
+                                        href={organizerHref(hostSlug)}
+                                        className="text-xs font-black text-black dark:text-white whitespace-nowrap underline decoration-slate-300 dark:decoration-zinc-600 underline-offset-2 hover:text-primary hover:decoration-current"
+                                    >
+                                        {hostLabel}
+                                    </a>
+                                ) : (
+                                    <span className="text-xs font-black text-black dark:text-white whitespace-nowrap">{hostLabel}</span>
+                                )}
                             </HScrollRow>
                         </div>
                     </div>

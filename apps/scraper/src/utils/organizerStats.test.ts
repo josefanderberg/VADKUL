@@ -41,6 +41,7 @@ describe('groupOrganizers', () => {
         ];
         const [o] = groupOrganizers(rows, { nowIso: NOW, placeOf });
         expect(o.namn).toBe('ABF');
+        expect(o.sida).toBe('abf');
         expect(o.doman).toBe('abf.se');
         expect(o.kanal).toBe('mejl');
         expect(o.kommande).toBe(3);
@@ -64,6 +65,13 @@ describe('groupOrganizers', () => {
             ev({ url: `https://facebook.com/events/${i}`, hostName: 'Facebook' }),
         ]);
         expect(groupOrganizers(rows, { nowIso: NOW, placeOf })).toEqual([]);
+    });
+
+    it('opt-in-källor finns i registret men får ingen arrangörssida', () => {
+        const rows = [1, 2, 3].map(i => ev({ url: `https://www.svenskakyrkan.se/atvid/${i}`, hostName: 'Åtvids församling' }));
+        const [o] = groupOrganizers(rows, { nowIso: NOW, placeOf });
+        expect(o.namn).toBe('Åtvids församling');
+        expect(o.sida).toBeNull();
     });
 
     it('Facebook-arrangörer får kanalen facebook', () => {

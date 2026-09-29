@@ -225,6 +225,8 @@ export function buildListedDays(events: CityEvent[], cityName: string): { days: 
         lng: e.lng,
         category: e.category,
         hostName: e.hostName ?? null,
+        // Arrangörssidan - bara när den finns, samma mindre-HTML-mönster.
+        ...(e.hostSlug ? { hostSlug: e.hostSlug } : {}),
         description: e.description ?? null,
         // Källnyckeln finns bara på opt-in-raderna (stadens opt-in.json) —
         // Fler-radens chips filtrerar per källa. Sidornas egna rader är

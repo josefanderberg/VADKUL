@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { CITIES, MIN_INDEXABLE_EVENTS, getCategoryCombos, getCityEvents } from './(v1)/evenemang/cityData';
+import { CITIES, MIN_INDEXABLE_EVENTS, getCategoryCombos, getCityEvents, getOrganizerPageCounts } from './(v1)/evenemang/cityData';
+import { ORGANIZER_PAGE_INDEX_MIN, organizerHref } from '@/utils/organizerPages';
 
 // Genereras vid build och ersätter den gamla handskrivna public/sitemap.xml.
 // Bara riktiga, indexerbara sidor hör hemma här — kartans ?event=-djuplänkar
@@ -57,6 +58,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'daily' as const,
             priority: 0.6,
         })),
+        // Arrangörssidorna (29/9) över index-tröskeln - samma gräns som
+        // noindex-vakten i arrangor/[slug]/page.tsx.
+        ...[...(await getOrganizerPageCounts()).entries()]
+            .filter(([, n]) => n >= ORGANIZER_PAGE_INDEX_MIN)
+            .map(([slug]) => ({
+                url: `https://vadkul.se${organizerHref(slug)}`,
+                lastModified: eventsUpdatedAt,
+                changeFrequency: 'daily' as const,
+                priority: 0.5,
+            })),
         {
             url: 'https://vadkul.se/integritet',
             lastModified: new Date('2026-06-01'),

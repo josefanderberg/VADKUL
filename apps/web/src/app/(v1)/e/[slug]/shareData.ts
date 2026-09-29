@@ -4,6 +4,7 @@ import { eventShareSlug } from '@/utils/eventShareSlug';
 import { buildCardIndex } from '@/utils/eventKey';
 import { emojiForCategory } from '@/utils/categories';
 import { getAdminDb } from '@/lib/firestore-admin';
+import { organizerPageSlug } from '@/utils/organizerPages';
 
 // Uppslag slug → event för delningssidorna (/e/[slug]). Läser samma
 // events-JSON som stadssidorna, men vid RUNTIME (delningssidor renderas på
@@ -25,6 +26,20 @@ export type ShareEvent = {
     emoji: string;
     hostName?: string;
     coverImage?: string;
+    // Fälten nedan finns bara på skrapade event (aggregaten) och används av
+    // arrangörssidorna (app/(v1)/arrangor), som läser SAMMA inlästa index -
+    // funktionen har 512 MiB och ska inte parsa eventlagren två gånger.
+    lat?: number;
+    lng?: number;
+    category?: string;
+    price?: string;
+    attendees?: number;
+    pop?: boolean;
+    likes?: number;
+    /** Kortlagrets url (affiliate-omskriven när publicUrl() gjort det). */
+    url?: string;
+    /** Arrangörssidans slug (utils/organizerPages), när eventet har en. */
+    hostSlug?: string;
 };
 
 let indexPromise: Promise<Map<string, ShareEvent>> | null = null;
@@ -55,6 +70,15 @@ function loadIndex(): Promise<Map<string, ShareEvent>> {
                     emoji: e.emoji || '🎉',
                     hostName: card?.hostName || undefined,
                     coverImage: card?.coverImage || undefined,
+                    lat: typeof e.lat === 'number' ? e.lat : undefined,
+                    lng: typeof e.lng === 'number' ? e.lng : undefined,
+                    category: e.category || undefined,
+                    price: card?.price || undefined,
+                    attendees: card?.attendees || undefined,
+                    pop: e.pop || undefined,
+                    likes: e.likes || undefined,
+                    url: card?.url || undefined,
+                    hostSlug: organizerPageSlug(card?.hostName, e.id) ?? undefined,
                 });
             }
             return index;
@@ -120,6 +144,13 @@ function loadUserCreatedIndex(): Promise<Map<string, ShareEvent>> {
         })().finally(() => { userIndexBuild = null; });
     }
     return userIndexBuild;
+}
+
+/** Alla skrapade event i aggregaten (inte de användarskapade) - underlaget
+ *  för arrangörssidorna. Samma index som /e/-uppslaget, inläst en gång per
+ *  instans. */
+export async function getIndexedEvents(): Promise<ShareEvent[]> {
+    return Array.from((await loadIndex()).values());
 }
 
 export async function getShareEvent(slug: string): Promise<ShareEvent | null> {
