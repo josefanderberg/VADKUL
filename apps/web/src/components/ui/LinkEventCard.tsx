@@ -734,7 +734,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     // event (brickan under dagplattan släpper).
                                     <button
                                         type="button"
-                                        onClick={() => onSelectOrganizer(hostSlug, hostLabel)}
+                                        // stopPropagation: namnet ligger i kortets rubrik, vars
+                                        // klick fäller ut kortet (handleHeaderClick). Filtret
+                                        // ska inte flytta kortet (Josef 30/9).
+                                        onClick={(e) => { e.stopPropagation(); onSelectOrganizer(hostSlug, hostLabel); }}
                                         title={`Visa alla event från ${hostLabel} på kartan`}
                                         className="text-xs font-black text-black dark:text-white whitespace-nowrap underline decoration-slate-300 dark:decoration-zinc-600 underline-offset-2 hover:text-primary hover:decoration-current"
                                     >

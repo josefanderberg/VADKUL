@@ -24,7 +24,7 @@ import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPi
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
-import { isFromOrganizer, organizerNameFromSlug } from '@/utils/organizerPages';
+import { isFromOrganizer, organizerHref, organizerNameFromSlug } from '@/utils/organizerPages';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
@@ -2070,18 +2070,14 @@ export default function HomePage() {
         () => searchFilteredEvents.filter(matchesFilter),
         [searchFilteredEvents, matchesFilter],
     );
-    // Väljarens siffror i arrangörsläget: arrangörens event per läge, med
-    // samma filter som kartan - så siffran på det valda läget är exakt det
-    // som syns (Josef 29/9: "antalet ... ska stämma med de som är synliga").
-    const organizerCounts = useMemo(() => {
-        if (!organizerEvents) return null;
-        const shown = organizerEvents.filter(matchesFilter);
-        return {
-            all: shown.length,
-            week: shown.filter(evt => inPeriod(evt, dayOffset, 7)).length,
-            day: shown.filter(evt => inPeriod(evt, dayOffset, 1)).length,
-        };
-    }, [organizerEvents, matchesFilter, inPeriod, dayOffset]);
+    // Bannern: arrangörens TOTALA antal kommande event (alla dagar, hela
+    // landet, samma filter som kartan) - Josef 30/9: "där uppe ska det
+    // totala stå". Väljarens siffror räknar i stället kartvyn
+    // (organizerCounts, efter inMapView nedan).
+    const organizerTotal = useMemo(
+        () => (organizerEvents ? organizerEvents.filter(matchesFilter).length : 0),
+        [organizerEvents, matchesFilter],
+    );
     // Siffrorna i arrangörsläget är klara först när BÅDE värdnamnen (kort-
     // lagret) och hela tidslinjen landat - annars klättrar de (27 -> 47)
     // medan resten av veckorna laddas. Till dess visas "…".
@@ -2288,6 +2284,20 @@ export default function HomePage() {
         && evt.lat! >= mapBounds.south && evt.lat! <= mapBounds.north
         && evt.lng! >= mapBounds.west && evt.lng! <= mapBounds.east
     ), [mapBounds]);
+
+    // Dagväljarens siffror i arrangörsläget (Alla / Idag / Hela veckan):
+    // arrangörens event I KARTVYN, precis som väljarens vanliga siffror
+    // räknar kartrutan (Josef 30/9: "nere ... ska det bara vara de vi ser i
+    // vår viewport"). Totalen står i bannern (organizerTotal).
+    const organizerCounts = useMemo(() => {
+        if (!organizerEvents) return null;
+        const shown = organizerEvents.filter(evt => matchesFilter(evt) && inMapView(evt));
+        return {
+            all: shown.length,
+            week: shown.filter(evt => inPeriod(evt, dayOffset, 7)).length,
+            day: shown.filter(evt => inPeriod(evt, dayOffset, 1)).length,
+        };
+    }, [organizerEvents, matchesFilter, inMapView, inPeriod, dayOffset]);
 
     // ── Nästa-bläddringen håller sig till det man SER ───────────────────────
     /**
@@ -3953,33 +3963,51 @@ export default function HomePage() {
             det. Det var knappt att jag fattade det"): ersätter den lilla
             vita brickan. Blå, två rader - VAD som visas och hur många - och
             en tydlig "Visa alla" som släpper filtret. Ligger direkt under
-            stadsplattan, där man trycker för att få bort den. Siffran = det
-            kartan visar (väljarens valda läge); "…" tills kortlagret och hela
-            tidslinjen landat (organizerCountsReady). */}
+            stadsplattan, där man trycker för att få bort den. Siffran =
+            arrangörens TOTALA antal kommande event (organizerTotal, 30/9);
+            dagväljaren nedanför räknar kartvyn. "…" tills kortlagret och
+            hela tidslinjen landat (organizerCountsReady). */}
         {mapOrganizer && (
-            <button
-                type="button"
+            // Tryck på bannern = släpp filtret, UTOM på namnet: det är en
+            // länk till arrangörssidan (Josef 30/9, understruket). Länken
+            // bara när arrangören har kommande event - sidan finns då alltid
+            // (samma urval, utils/organizerPages), aldrig en tom sida.
+            <div
                 onClick={() => startTransition(() => setMapOrganizer(null))}
-                aria-label={`Visar bara event från ${organizerName} - tryck för att visa alla event`}
-                title="Tryck för att visa alla event igen"
-                className="pointer-events-auto flex items-center gap-3 max-w-[88vw] rounded-2xl bg-[#006AA7] pl-4 pr-2 py-2 text-left text-white shadow-xl border border-white/20 hover:bg-[#005d93] active:scale-[0.98] transition animate-in fade-in slide-in-from-top-2 duration-300"
+                className="pointer-events-auto flex cursor-pointer items-center gap-3 max-w-[88vw] rounded-2xl bg-[#006AA7] pl-4 pr-2 py-2 text-left text-white shadow-xl border border-white/20 hover:bg-[#005d93] transition animate-in fade-in slide-in-from-top-2 duration-300"
             >
                 <span className="min-w-0 flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-[0.14em] leading-none text-white/70">
                         Visar bara event från
                     </span>
                     <span className="mt-1 flex items-baseline gap-1.5 min-w-0">
-                        <span className="truncate text-sm font-black leading-tight">{organizerName}</span>
+                        {organizerTotal > 0 ? (
+                            <a
+                                href={organizerHref(mapOrganizer.slug)}
+                                onClick={e => e.stopPropagation()}
+                                title={`Arrangörssidan för ${organizerName}`}
+                                className="truncate text-sm font-black leading-tight underline decoration-white/50 underline-offset-2 hover:decoration-white"
+                            >
+                                {organizerName}
+                            </a>
+                        ) : (
+                            <span className="truncate text-sm font-black leading-tight">{organizerName}</span>
+                        )}
                         <span className="shrink-0 text-xs font-bold tabular-nums text-white/70">
-                            {organizerCountsReady ? `${visibleEvents.length} event` : '…'}
+                            {organizerCountsReady ? `${organizerTotal} event` : '…'}
                         </span>
                     </span>
                 </span>
-                <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider">
+                <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); startTransition(() => setMapOrganizer(null)); }}
+                    aria-label={`Visa alla event igen, inte bara från ${organizerName}`}
+                    className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider"
+                >
                     <X size={13} strokeWidth={3} aria-hidden />
                     Visa alla
-                </span>
-            </button>
+                </button>
+            </div>
         )}
         {(mapCategory || mapSource || popularOnly) && (
         <div className="flex items-center gap-1.5">
