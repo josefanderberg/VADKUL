@@ -6,6 +6,7 @@ import { LinkEvent } from '../../types';
 import { eventEmoji, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { nearestCityPoint } from '@/utils/cityPoints';
+import { getDayLabel } from './FloatingNavbar';
 
 // ── Gruppväljaren i EVENTKORTET ─────────────────────────────────────────────
 // Ersätter multi-event-listan som svävade över kartan (V2MapGroupList,
@@ -18,10 +19,11 @@ import { nearestCityPoint } from '@/utils/cityPoints';
 //
 // DAGRUBRIKER: när man tittar på hela veckan kan en scen ha 30+ event i högen
 // och då räcker inte klockslaget — man måste se VILKEN DAG raden gäller. Listan
-// grupperas därför per dag med klistrade dagrubriker, precis som daglistan på
-// stadssidorna (/evenemang/<stad>): blå pille med veckodag + datum, gul
-// "Idag"/"Imorgon"-badge, antal event i dagen. Är hela högen samma dag (vanligt
-// i dagsläget) ritas INGA rubriker.
+// grupperas därför per dag med klistrade dagrubriker i SAMMA stil som listan
+// under eventkortet (Josef 29/9: "dagarna ska se ut som på de vanliga
+// eventkorten när man scrollar ner"): blått streck + dagnamnet ("Idag",
+// "Imorgon", "Onsdag", "Ons 8 okt" - getDayLabel). Är hela högen samma dag
+// (vanligt i dagsläget) ritas INGA rubriker.
 // SCROLLEN (Josef 2/9): kortet står still och listan rullar upp under kortets
 // överkant (EventCard låter innehållet scrolla i väljarläget i stället för att
 // växa kortet). Dagrubriken är sticky mot kortets scrollcontainer, så den dag
@@ -31,18 +33,16 @@ import { nearestCityPoint } from '@/utils/cityPoints';
 
 const TZ = 'Europe/Stockholm';
 const keyFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
-const dayFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' });
-const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
-/** "Idag"/"Imorgon" för en dagnyckel, annars null. */
-function relativeDayLabel(key: string, now: number): string | null {
-    const d = new Date(now);
-    if (key === keyFmt.format(d)) return 'Idag';
-    if (key === keyFmt.format(addDays(d, 1))) return 'Imorgon';
-    return null;
+/** Dagnyckelns avstånd i dagar från idag (svensk tid) - båda nycklarna är
+ *  'ÅÅÅÅ-MM-DD', så skillnaden är ett helt antal dygn. null utan datum. */
+function dayOffsetOf(key: string, now: number): number | null {
+    const k = Date.parse(key);
+    if (Number.isNaN(k)) return null;
+    return Math.round((k - Date.parse(keyFmt.format(new Date(now)))) / 86_400_000);
 }
 
-type DayBucket = { key: string; label: string; rel: string | null; events: LinkEvent[] };
+type DayBucket = { key: string; label: string; events: LinkEvent[] };
 
 /** Tidssorterar och delar upp på dag (svensk tid), i kronologisk ordning. */
 function bucketByDay(list: LinkEvent[], nowMs: number): DayBucket[] {
@@ -52,9 +52,9 @@ function bucketByDay(list: LinkEvent[], nowMs: number): DayBucket[] {
         const key = ev.time ? keyFmt.format(ev.time) : 'okänt';
         let bucket = byKey.get(key);
         if (!bucket) {
-            // "lör 9 aug." → "Lör 9 aug." (svenskan versaliserar bara första bokstaven).
-            const raw = ev.time ? dayFmt.format(ev.time) : 'Datum saknas';
-            bucket = { key, label: raw.charAt(0).toUpperCase() + raw.slice(1), rel: relativeDayLabel(key, nowMs), events: [] };
+            // Samma etikett som eventkortets lista (getDayLabel).
+            const offset = dayOffsetOf(key, nowMs);
+            bucket = { key, label: offset === null ? 'Datum saknas' : getDayLabel(offset), events: [] };
             byKey.set(key, bucket);
             buckets.push(bucket);
         }
@@ -169,24 +169,20 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
                 sticky-elementet hålls kvar av sin egen lista (samma grepp som
                 stadssidornas <section> per dag). Låg alla dagar i EN lista
                 lade rubrikerna sig ovanpå varandra i stället för att bytas.
-                pt-5 lyfter pillen under drag-strecken (absolut överst i
+                pt-5 lyfter rubriken under drag-strecken (absolut överst i
                 kortet, 8–20 px) när rubriken sitter fast; i flödet blir samma
                 luft avgränsaren mellan dagarna. */}
             {dayBuckets.map(day => (
                 <ul key={day.key} className="divide-y divide-slate-100 dark:divide-zinc-800">
                     {showDays && (
-                        <li className="sticky top-0 z-20 px-3 pt-5 pb-1.5 bg-card">
-                            <span className="flex items-center gap-1.5">
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#006AA7] text-white text-[11px] font-black">
-                                    {day.rel && (
-                                        <span className="inline-flex items-center px-1.5 rounded-full bg-[#FECC02] text-[9px] font-black uppercase tracking-wider text-slate-900">
-                                            {day.rel}
-                                        </span>
-                                    )}
-                                    {day.label}
-                                </span>
-                                <span className="text-[10px] font-black text-slate-400 tabular-nums">{day.events.length}</span>
-                            </span>
+                        // Samma rubrik som listan under eventkortet (EventCard:
+                        // blått streck i vänstermarginalen, dagtexten i linje med
+                        // radernas innehåll). pt-5 i stället för pt-3: här finns
+                        // ingen flikrad, så rubriken fastnar överst i kortet och
+                        // ska gå fri från drag-strecken.
+                        <li className="sticky top-0 z-20 bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 pt-5 pb-2 border-b border-border flex items-center gap-2">
+                            <span aria-hidden className="shrink-0 -ml-3 h-4 w-1 rounded-full bg-[#006AA7] dark:bg-sky-400" />
+                            <span className="text-sm font-black text-slate-900 dark:text-zinc-100">{day.label}</span>
                         </li>
                     )}
                     {day.events.map(ev => row(ev, false))}

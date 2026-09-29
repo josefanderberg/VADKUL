@@ -446,6 +446,11 @@ export default function HomePage() {
     // värdnamnen bor) har landat.
     const [mapOrganizer, setMapOrganizer] = useState<{ slug: string; name: string | null } | null>(null);
     const [organizerCardsReady, setOrganizerCardsReady] = useState(() => linkEventService.cardsSettledNow());
+    // Arrangörslägets period (Josef 29/9): väljaren får TRE lägen - Alla
+    // (standard: vi visar ju alla deras event), Vecka och Dag. Ett tryck på
+    // väljaren växlar Alla -> Vecka -> Dag -> Alla. Vecka/Dag utgår från
+    // dayOffset precis som vanligt, så pilarna stegar som förut.
+    const [organizerRange, setOrganizerRange] = useState<'all' | 'week' | 'day'>('all');
     // Bumpas när sökrutan ska fällas ihop utifrån (man valde en stad ur
     // träfflistan) — se closeSearchNonce i FloatingNavbar.
     const [closeSearchNonce, setCloseSearchNonce] = useState(0);
@@ -1986,26 +1991,50 @@ export default function HomePage() {
         linkEventService.requestCards().then(() => { if (alive) setOrganizerCardsReady(true); });
         return () => { alive = false; };
     }, [organizerSlug]);
-    const searchFilteredEvents = useMemo(() => {
-        if (!searchQ && !organizerSlug) return filteredEvents;
+    // Ny arrangör = börja om på Alla.
+    useEffect(() => { setOrganizerRange('all'); }, [organizerSlug]);
+    const organizerDays = organizerRange === 'week' ? 7 : 1;
+    // Alla-läget har inga dagar: väljarens pilar, kalender och ↺ göms.
+    const organizerAllMode = !!organizerSlug && organizerRange === 'all';
+    // Arrangörens KOMMANDE event, alla dagar (samma urval som arrangörssidan
+    // - utils/organizerPages). null utan arrangörsfilter.
+    const organizerEvents = useMemo(() => {
+        if (!organizerSlug) return null;
         const nowMs = Date.now();
-        return events.filter(evt =>
-            // Arrangören: deras KOMMANDE event, alla dagar (samma urval som
-            // arrangörssidan - utils/organizerPages).
-            (!organizerSlug || (isFromOrganizer(evt.hostName, evt.id, organizerSlug) && !isEventPast(evt, nowMs)))
-            && (!searchQ || (
-                (!searchText || eventSearchTier(evt, searchText) >= 0)
-                && (!searchCity || (hasValidCoords(evt)
-                    && haversineKm(searchCity.lat, searchCity.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM)))));
-    }, [events, filteredEvents, searchQ, searchText, searchCity, organizerSlug]);
+        return events.filter(evt => isFromOrganizer(evt.hostName, evt.id, organizerSlug) && !isEventPast(evt, nowMs));
+    }, [events, organizerSlug]);
+    // Ligger eventet i perioden som börjar `offset` dagar fram och är `days`
+    // dagar lång? Samma dygnsgränser som periodSlice (lokal midnatt).
+    const inPeriod = useCallback((evt: LinkEvent, offset: number, days: number) => {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() + offset);
+        const end = new Date(start);
+        end.setDate(end.getDate() + days);
+        return !!evt.time && evt.time >= start && evt.time < end;
+    }, []);
+    const searchFilteredEvents = useMemo(() => {
+        if (!searchQ && !organizerEvents) return filteredEvents;
+        // Arrangören först: alla deras event, eller perioden i Vecka/Dag.
+        const base = organizerEvents
+            ? (organizerRange === 'all' ? organizerEvents : organizerEvents.filter(evt => inPeriod(evt, dayOffset, organizerDays)))
+            : events;
+        if (!searchQ) return base;
+        return base.filter(evt =>
+            (!searchText || eventSearchTier(evt, searchText) >= 0)
+            && (!searchCity || (hasValidCoords(evt)
+                && haversineKm(searchCity.lat, searchCity.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM)));
+    }, [events, filteredEvents, searchQ, searchText, searchCity, organizerEvents, organizerRange, inPeriod, dayOffset, organizerDays]);
     // Brickans namn: det riktiga värdnamnet så fort ett event matchat (länken
     // bär bara sluggen), annars en läsbar reserv ur sluggen.
+    // Ur ALLA arrangörens event, inte bara periodens - en tom dag ska inte
+    // byta namnet mot reserven.
     const organizerName = useMemo(() => {
         if (!mapOrganizer) return null;
         if (mapOrganizer.name) return mapOrganizer.name;
-        const hit = searchFilteredEvents.find(e => e.hostName);
+        const hit = organizerEvents?.find(e => e.hostName);
         return hit?.hostName?.replace(/\s+/g, ' ').trim() ?? organizerNameFromSlug(mapOrganizer.slug);
-    }, [mapOrganizer, searchFilteredEvents]);
+    }, [mapOrganizer, organizerEvents]);
 
     // Opt-in-källor (Svenska kyrkan/PRO) har väldigt många event och är
     // avstängda som default: deras event GÖMS tills användaren själv kryssar i
@@ -2046,6 +2075,26 @@ export default function HomePage() {
         () => searchFilteredEvents.filter(matchesFilter),
         [searchFilteredEvents, matchesFilter],
     );
+    // Väljarens siffror i arrangörsläget: arrangörens event per läge, med
+    // samma filter som kartan - så siffran på det valda läget är exakt det
+    // som syns (Josef 29/9: "antalet ... ska stämma med de som är synliga").
+    const organizerCounts = useMemo(() => {
+        if (!organizerEvents) return null;
+        const shown = organizerEvents.filter(matchesFilter);
+        return {
+            all: shown.length,
+            week: shown.filter(evt => inPeriod(evt, dayOffset, 7)).length,
+            day: shown.filter(evt => inPeriod(evt, dayOffset, 1)).length,
+        };
+    }, [organizerEvents, matchesFilter, inPeriod, dayOffset]);
+    // Siffrorna i arrangörsläget är klara först när BÅDE värdnamnen (kort-
+    // lagret) och hela tidslinjen landat - annars klättrar de (27 -> 47)
+    // medan resten av veckorna laddas. Till dess visas "…".
+    const organizerCountsReady = organizerCardsReady && timelineHorizonMs === null;
+    const cycleOrganizerRange = useCallback(() => {
+        setPulseSuppressed(true);
+        startTransition(() => setOrganizerRange(r => (r === 'all' ? 'week' : r === 'week' ? 'day' : 'all')));
+    }, []);
 
     // Träfflistans ordning: titelns början → ord i titeln → mitt i titeln →
     // plats → arrangör → bara URL, tid inom varje nivå. Egen lista — kartan
@@ -2258,7 +2307,7 @@ export default function HomePage() {
     // inte vid varje Firestore-uppdatering. Det här är också landningen för
     // Nästa-knappens automatiska dagbyte (EventCard advanceToNextDay).
     useEffect(() => {
-        const dayKey = `${dayOffset}:${dayRangeDays}`;
+        const dayKey = `${dayOffset}:${dayRangeDays}:${organizerRange}`;
         if (prevDayKey.current !== dayKey) {
             prevDayKey.current = dayKey;
             // Ett begärt landningsevent (kortets Bakåt/Nästa över ett dagbyte)
@@ -2272,7 +2321,10 @@ export default function HomePage() {
             // ett (Josef 9/8) — kartan ska bara byta vad den visar. Kort öppnas
             // när man själv klickar på en bricka.
             if (selectedEventRef.current) {
-                const wanted = wantedId ? filteredEvents.find(e => e.id === wantedId) ?? null : null;
+                // I arrangörsläget är det arrangörens event som gäller, inte
+                // dagens alla event (annars kunde bytet landa på någon annans).
+                const pool = organizerSlug ? visibleEvents : filteredEvents;
+                const wanted = wantedId ? pool.find(e => e.id === wantedId) ?? null : null;
                 if (wanted) {
                     // Bakåt/Nästa över ett dagbyte: landa på just det event man
                     // stod på där (Josef 2/9). Finns det inte längre i dagens
@@ -2282,12 +2334,12 @@ export default function HomePage() {
                     const nowMs = Date.now();
                     const inView = visibleEvents.filter(e =>
                         inTourView(e) && !discardedEventIds.has(e.id) && !isEventPast(e, nowMs));
-                    setSelectedEvent(pickNearestToPoint(mapCenterRef.current, inView.length > 0 ? inView : filteredEvents));
+                    setSelectedEvent(pickNearestToPoint(mapCenterRef.current, inView.length > 0 ? inView : pool));
                 }
             }
             setDaySwitchNonce(n => n + 1);
         }
-    }, [filteredEvents, visibleEvents, inTourView, discardedEventIds, dayOffset, dayRangeDays]);
+    }, [filteredEvents, visibleEvents, inTourView, discardedEventIds, dayOffset, dayRangeDays, organizerRange, organizerSlug]);
 
     /**
      * NÄSTA DAG FÖR BLÄDDRINGEN (Josef 2/9): har man klickat sig igenom alla
@@ -2300,15 +2352,18 @@ export default function HomePage() {
      */
     const nextTourDayOffset = useMemo(() => {
         if (!mapBounds || searchQuery.trim()) return null;
+        // Arrangörsläget: Alla har inga dagar att stega i; Vecka/Dag stegar
+        // bara till perioder där ARRANGÖREN har något i bild.
+        if (organizerEvents && organizerRange === 'all') return null;
         const nowMs = Date.now();
         const nowDate = new Date(nowMs);
         const offsets: number[] = [];
-        for (const evt of events) {
+        for (const evt of organizerEvents ?? events) {
             if (!inTourView(evt) || discardedEventIds.has(evt.id) || !matchesFilter(evt) || isEventPast(evt, nowMs)) continue;
             offsets.push(dayOffsetOf(evt.time, nowDate));
         }
-        return nextPeriodWithEvents(offsets, dayOffset, effectiveRangeDays);
-    }, [mapBounds, searchQuery, events, inTourView, discardedEventIds, matchesFilter, dayOffset, effectiveRangeDays]);
+        return nextPeriodWithEvents(offsets, dayOffset, organizerEvents ? organizerDays : effectiveRangeDays);
+    }, [mapBounds, searchQuery, events, inTourView, discardedEventIds, matchesFilter, dayOffset, effectiveRangeDays, organizerEvents, organizerRange, organizerDays]);
 
     // Vilken stad kartrutan senast MÄTTES under — stadsrutans vakt mot att visa
     // förra stadens siffror under den nya stadens namn (se areaCounts).
@@ -3873,7 +3928,9 @@ export default function HomePage() {
                 key={`day-${dayFlashNonce}`}
                 className={`block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
             >
-                {getDayLabel(dayOffset, effectiveRangeDays)}
+                {mapOrganizer && organizerRange === 'all'
+                    ? 'Alla'
+                    : getDayLabel(dayOffset, mapOrganizer ? organizerDays : effectiveRangeDays)}
             </span>
             {/* Staden som liten underrad: plattan är länken till stadens
                 egen /evenemang-sida (cityLink; indexet som fallback — Googles
@@ -3892,9 +3949,9 @@ export default function HomePage() {
             är stängd. Tryck = släpp filtret. */}
         {(mapCategory || mapSource || popularOnly || mapOrganizer) && (
         <div className="flex items-center gap-1.5">
-        {/* Arrangörsfiltret (29/9): namnet + hur många av deras kommande
-            event kartan visar. Siffran väntar in kortlagret - före det vet
-            vi inte vilka event som är deras. */}
+        {/* Arrangörsfiltret (29/9): namnet + hur många av deras event
+            kartan visar (samma tal som väljarens valda rad). Siffran väntar
+            in kortlagret och hela tidslinjen (organizerCountsReady). */}
         {mapOrganizer && (
             <button
                 type="button"
@@ -3904,7 +3961,7 @@ export default function HomePage() {
             >
                 <span className="truncate">{organizerName}</span>
                 <span className="shrink-0 text-slate-400 tabular-nums">
-                    {organizerCardsReady ? visibleEvents.length : '…'}
+                    {organizerCountsReady ? visibleEvents.length : '…'}
                 </span>
                 <X size={13} strokeWidth={3} className="shrink-0 text-slate-400" aria-hidden />
             </button>
@@ -3989,13 +4046,22 @@ export default function HomePage() {
                     <button> och bryter både validering och en del skärmläsare. */}
                 <button
                     type="button"
-                    onClick={handleToggleTourRange}
-                    aria-label={dayRangeDays >= WEEK_RANGE_MIN_DAYS
+                    // Arrangörsläget växlar Alla -> Vecka -> Dag -> Alla (29/9).
+                    onClick={mapOrganizer ? cycleOrganizerRange : handleToggleTourRange}
+                    aria-label={mapOrganizer
+                        ? (organizerRange === 'all'
+                            ? `Visa bara ${getDayLabel(dayOffset, 7).toLowerCase()} från ${organizerName}`
+                            : organizerRange === 'week'
+                                ? `Visa bara ${getDayLabel(dayOffset, 1).toLowerCase()} från ${organizerName}`
+                                : `Visa alla event från ${organizerName}`)
+                        : dayRangeDays >= WEEK_RANGE_MIN_DAYS
                         ? `Visa bara ${getDayLabel(dayOffset, 1).toLowerCase()} i ${liveCityName}`
                         : tourRangeToggleLocked
                             ? `Zooma in och visa hela veckan i ${liveCityName}`
                             : `Visa hela veckan i ${liveCityName}`}
-                    title={tourRangeToggleLocked
+                    title={mapOrganizer
+                        ? 'Växla mellan alla, veckan och dagen'
+                        : tourRangeToggleLocked
                         ? 'Zoomar in kartan och visar hela veckan'
                         : 'Växla mellan dagen och hela veckan'}
                     className="pointer-events-auto flex flex-col items-center rounded-full bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md px-[66px] py-1 shadow-2xl border border-white/10 transition-colors active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-white/70"
@@ -4016,25 +4082,32 @@ export default function HomePage() {
                            som sina två rader (py-1 = segmentens egen insats).
                            Hjälpraden ligger UTANFÖR plattan, se ovan. */}
                     <span className="flex w-[168px] flex-col gap-0.5">
-                        {([
-                            { label: getDayLabel(dayOffset, 1), days: 1, count: areaCounts?.day },
-                            // Veckoraden säger VILKEN vecka: "Hela veckan" när
-                            // fönstret börjar idag, annars datumspannet ("7–13
-                            // sep") — sedan pilarna hoppar veckovis (31/8) kan
-                            // fönstret ligga på framtida veckor och en statisk
-                            // etikett hade ljugit.
-                            { label: getDayLabel(dayOffset, 7), days: 7, count: areaCounts?.week },
-                        ] as const).map(row => {
-                            const active = row.days >= WEEK_RANGE_MIN_DAYS
-                                ? dayRangeDays >= WEEK_RANGE_MIN_DAYS
-                                : dayRangeDays < WEEK_RANGE_MIN_DAYS;
+                        {(mapOrganizer
+                            // Arrangörsläget (29/9): en tredje rad, Alla, och
+                            // siffrorna räknar BARA arrangörens event.
+                            ? [
+                                { key: 'day', label: getDayLabel(dayOffset, 1), count: organizerCounts?.day, active: organizerRange === 'day' },
+                                { key: 'week', label: getDayLabel(dayOffset, 7), count: organizerCounts?.week, active: organizerRange === 'week' },
+                                { key: 'all', label: 'Alla', count: organizerCounts?.all, active: organizerRange === 'all' },
+                            ]
+                            : [
+                                { key: 'day', label: getDayLabel(dayOffset, 1), count: areaCounts?.day, active: dayRangeDays < WEEK_RANGE_MIN_DAYS },
+                                // Veckoraden säger VILKEN vecka: "Hela veckan" när
+                                // fönstret börjar idag, annars datumspannet ("7–13
+                                // sep") — sedan pilarna hoppar veckovis (31/8) kan
+                                // fönstret ligga på framtida veckor och en statisk
+                                // etikett hade ljugit.
+                                { key: 'week', label: getDayLabel(dayOffset, 7), count: areaCounts?.week, active: dayRangeDays >= WEEK_RANGE_MIN_DAYS },
+                            ]).map(row => {
+                            const active = row.active;
+                            const countReady = mapOrganizer ? organizerCountsReady : eventsLoaded && dayCountReady;
                             return (
                                 // HOVER på det EJ valda segmentet (Josef 10/9):
                                 // en svag vit platta — "lite så som det ser ut
                                 // när det är valt" — så man ser att det går att
                                 // växla dit.
                                 <span
-                                    key={row.days}
+                                    key={row.key}
                                     className={`group/seg flex items-center justify-between gap-2 rounded-full px-3 py-1.5 transition-colors duration-300 ${
                                         active ? 'bg-white shadow-sm' : tourHint === 'toggle' ? 'bg-white/20' : 'hover:bg-white/20'
                                     }`}
@@ -4047,7 +4120,7 @@ export default function HomePage() {
                                     <span
                                         className={`shrink-0 tabular-nums text-base font-extrabold leading-none transition-colors duration-300 ${active ? 'text-slate-900' : tourHint === 'toggle' ? 'text-white/90' : 'text-white/55 group-hover/seg:text-white/90'}`}
                                     >
-                                        {eventsLoaded && dayCountReady && typeof row.count === 'number' ? row.count : '…'}
+                                        {countReady && typeof row.count === 'number' ? row.count : '…'}
                                     </span>
                                 </span>
                             );
@@ -4083,7 +4156,7 @@ export default function HomePage() {
                        Syskon till plattknappen (inte barn) — nästlade knappar är
                        ogiltig HTML. Bakåtpilen bara när det finns en dag kvar
                        bakåt (idag är botten). */}
-                {dayOffset > 0 && (
+                {dayOffset > 0 && !organizerAllMode && (
                     <button
                         type="button"
                         onClick={() => handleTourDayStep(-1)}
@@ -4096,6 +4169,7 @@ export default function HomePage() {
                         </span>
                     </button>
                 )}
+                {!organizerAllMode && (
                 <button
                     type="button"
                     onClick={() => handleTourDayStep(1)}
@@ -4107,6 +4181,7 @@ export default function HomePage() {
                         <ChevronRight size={24} strokeWidth={2.5} />
                     </span>
                 </button>
+                )}
 
                 {/* 2b. KALENDER-/NOLLSTÄLLNINGSKNAPPEN. PÅ IDAG (dayOffset 0):
                        kalenderknappen står i vänsterkolumnen — exakt de mått
@@ -4146,7 +4221,7 @@ export default function HomePage() {
                        fältet och ikonen roller — fältet släpper pointer-events och
                        ikonen blir stäng-knapp (se kommentaren vid
                        calendarPickerOpen). */}
-                {dayOffset === 0 ? (
+                {organizerAllMode ? null : dayOffset === 0 ? (
                     <>
                         <input
                             ref={calendarInputRef}
@@ -5299,7 +5374,7 @@ export default function HomePage() {
                 // Det kartan FAKTISKT visar (veckan faller till en dag utzoomad)
                 // — samma tal som toppplattans etikett och Nästa-knappens
                 // "nästa dag"-text, så de aldrig går isär.
-                dayRangeDays={effectiveRangeDays}
+                dayRangeDays={mapOrganizer ? organizerDays : effectiveRangeDays}
                 onDayRangeChange={handleDayRangeChange}
                 // Nästa-bläddringen håller sig till det man ser (Josef 2/9):
                 // i bild-vakten, nästa dag med event i bild, och dagsteget
