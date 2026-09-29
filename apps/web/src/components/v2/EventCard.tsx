@@ -305,8 +305,8 @@ function eventEmoji(evt: LinkEvent): string {
  *  FÖRST när raden scrollats fram (IntersectionObserver). Kortet öppnar alltså
  *  lika snabbt som utan bilder; bara det man faktiskt tittar på hämtas.
  *  Fast höjd via className så inget hoppar när bilden dyker upp; trasig
- *  bildlänk rapporteras uppåt via onFailed (raden faller då tillbaka till
- *  sin bildlösa layout). */
+ *  bildlänk rapporteras uppåt via onFailed (raden avgör om den faller
+ *  tillbaka till sin bildlösa layout - bara om ingen ser bytet). */
 function LazyRowImage({ src, alt, className, onFailed }: {
     src: string;
     alt: string;
@@ -315,6 +315,9 @@ function LazyRowImage({ src, alt, className, onFailed }: {
 }) {
     const holderRef = useRef<HTMLDivElement>(null);
     const [inView, setInView] = useState(false);
+    // Trasig länk: ramen står kvar tom (raden avgör om den ska bort, se
+    // NearbyRow) - ingen trasig-bild-ikon i den.
+    const [failed, setFailed] = useState(false);
     useEffect(() => {
         const el = holderRef.current;
         if (!el || typeof IntersectionObserver === 'undefined') return;
@@ -329,19 +332,24 @@ function LazyRowImage({ src, alt, className, onFailed }: {
     }, []);
     return (
         <div ref={holderRef} className={`overflow-hidden bg-slate-200 dark:bg-zinc-800 ${className ?? ''}`}>
-            {inView && (
+            {inView && !failed && (
                 <img
                     src={src}
                     alt={alt}
                     loading="lazy"
                     decoding="async"
-                    onError={onFailed}
+                    onError={() => { setFailed(true); onFailed?.(); }}
                     className="w-full h-full object-cover animate-in fade-in duration-300"
                 />
             )}
         </div>
     );
 }
+
+/** Omslagsbilder som redan felat den här sessionen - nästa rad med samma länk
+ *  (ny lista, annan flik) renderas bildlös från start i stället för att
+ *  försöka igen och byta layout framför ögonen. */
+const failedCoverImages = new Set<string>();
 
 /** "kl 10:30" för utfällningens variantrader — bara för event med klockslag. */
 const dupClock = (evt: LinkEvent): string | null =>
@@ -413,9 +421,25 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
     const priceLabel = normalizePriceLabel(evt.price);
     const attendees = evt.attendees ?? 0;
-    // Trasig bildlänk → rendera den kompakta bildlösa raden i stället.
-    const [imgFailed, setImgFailed] = useState(false);
-    const hasImage = showImages && !!evt.coverImage && !imgFailed;
+    // Trasig bildlänk (Josef 29/9: "eventen i listan hoppar runt igen" -
+    // bl.a. ~540 biblioteksevent med https://…:80/-bilder som aldrig laddar).
+    // Bilden hämtas först när raden närmar sig, så felet kom ofta när raden
+    // redan syntes: den försvann (bildflödet) eller krympte till kompakt-
+    // läget, och allt under hoppade ~145 px. Nu faller raden bara tillbaka
+    // när den fortfarande ligger UNDER kortets synliga yta (ingen ser
+    // bytet); annars står bildramen kvar tom i samma höjd. En redan känd
+    // trasig länk (failedCoverImages) renderas bildlös direkt vid mount.
+    const rowRef = useRef<HTMLLIElement>(null);
+    const [imgFailed, setImgFailed] = useState<'no' | 'fallback' | 'keepFrame'>(
+        () => (evt.coverImage && failedCoverImages.has(evt.coverImage) ? 'fallback' : 'no'),
+    );
+    const handleImgFailed = () => {
+        if (evt.coverImage) failedCoverImages.add(evt.coverImage);
+        const li = rowRef.current;
+        const viewBottom = li?.closest('[data-card-scroll]')?.getBoundingClientRect().bottom ?? window.innerHeight;
+        setImgFailed(li && li.getBoundingClientRect().top >= viewBottom ? 'fallback' : 'keepFrame');
+    };
+    const hasImage = showImages && !!evt.coverImage && imgFailed !== 'fallback';
     if (hideWithoutImage && !hasImage) return null;
 
     // EN inforad (avstånd, plats, klocka, pris, kommer) — delas av båda
@@ -474,7 +498,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     // ljusa bilder/platshållaren. Inforaden ligger under bilden.
     if (hasImage) {
         return (
-            <li className="relative">
+            <li ref={rowRef} className="relative">
                 <button
                     type="button"
                     onClick={() => onSelect(evt)}
@@ -485,7 +509,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                             src={evt.coverImage!}
                             alt=""
                             className="h-28"
-                            onFailed={() => setImgFailed(true)}
+                            onFailed={handleImgFailed}
                         />
                         <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 md:px-6 pb-2 pt-8 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
                             <span className="text-lg leading-none shrink-0 drop-shadow" aria-hidden>
@@ -532,7 +556,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     // Rad UTAN bild: kompakt som förut — emoji-bricka till vänster, titel +
     // badges, inforaden under. Höger padding lämnar plats åt hjärtat.
     return (
-        <li className="relative">
+        <li ref={rowRef} className="relative">
             <button
                 type="button"
                 onClick={() => onSelect(evt)}
@@ -1070,6 +1094,22 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // ur Populärt ska listan under det nya kortet fortfarande vara Populärt.
     const [listTab, setListTab] = useState<ListTab>('all');
     const [daysVisibleCount, setDaysVisibleCount] = useState(NEARBY_PAGE_SIZE);
+    // Kortlagret (bilder, värd, pris) hämtas först när ett kort öppnas. Innan
+    // det landat har bara användarevent en bild, så bildflödet ritades först
+    // med en handfull av dem och byttes sedan ut HELT ~1 s senare (uppmätt
+    // 29/9: "Temakurs …" → "Trädgårdsdagar …"). Listan väntar in lagret och
+    // visar "Letar fler event…" så länge - en gång per session.
+    const [cardsReady, setCardsReady] = useState(() => linkEventService.cardsSettledNow());
+    const cardOpen = !!selectedEvent;
+    useEffect(() => {
+        if (cardsReady || !cardOpen) return;
+        let alive = true;
+        linkEventService.requestCards().then(() => { if (alive) setCardsReady(true); });
+        // Säkerhetsnät: aggregatens felväg (catch → getAll) signalerar aldrig
+        // kortlagret - hellre en lista som byggs om en gång än en evig snurra.
+        const safety = setTimeout(() => { if (alive) setCardsReady(true); }, 8000);
+        return () => { alive = false; clearTimeout(safety); };
+    }, [cardsReady, cardOpen]);
     const [now, setNow] = useState(() => Date.now());
     const [scrollNudgeActive, setScrollNudgeActive] = useState(false);
     const scrollNudgeTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -1808,8 +1848,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         );
         io.observe(marker);
         return () => io.disconnect();
+    // cardsReady: listan (och därmed markören) monteras först när kortlagret landat.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEvent?.id, nearbyEvents.length, listTab, tabDays.all.count]);
+    }, [selectedEvent?.id, nearbyEvents.length, listTab, tabDays.all.count, cardsReady]);
 
     // Event på EXAKT samma plats (koordinat) som det valda — multi-event-högen.
     // Driver pagern ("3/7") på kortets platsrad. Ordnad efter tid för stabil numrering.
@@ -2772,6 +2813,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 {/* Scrollable content container */}
                 <div
                     ref={scrollContainerRef}
+                    // data-card-scroll: listraderna mäter synlig botten härifrån
+                    // (NearbyRow, trasiga bildlänkar).
+                    data-card-scroll
                     // pt-6 = grip-zonens höjd: innehållet börjar under den
                     // solida zonen i viloläget och scrollar in UNDER den.
                     className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar pt-6"
@@ -2882,8 +2926,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         laddat, så närhetslistan är tom en stund. Visa sektionen
                         som laddande i stället för att den poppar in ur
                         ingenstans — försvinner när listan fyllts, eller tyst
-                        när det definitiva beskedet säger att inget finns nära. */}
-                    {cardView !== 'chat' && nearbyEvents.length === 0 && !eventsSettled && (
+                        när det definitiva beskedet säger att inget finns nära.
+                        Samma rad står också tills kortlagret landat (cardsReady),
+                        så listan ritas EN gång med rätt innehåll. */}
+                    {cardView !== 'chat' && ((nearbyEvents.length === 0 && !eventsSettled) || !cardsReady) && (
                         <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
                             <div className="px-4 md:px-6 py-3 flex items-center gap-2.5">
                                 <span aria-hidden className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 dark:border-zinc-600 border-t-[#006AA7] dark:border-t-sky-400 animate-spin" />
@@ -2893,7 +2939,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             </div>
                         </div>
                     )}
-                    {cardView !== 'chat' && (nearbyEvents.length > 0 || tabDays.all.count > 0) && (
+                    {cardView !== 'chat' && cardsReady && (nearbyEvents.length > 0 || tabDays.all.count > 0) && (
                         <NearbyEventsList
                             upcomingItems={listedUpcoming.rows.slice(0, nearbyVisibleCount)}
                             upcomingTotal={listedUpcoming.rows.length}
