@@ -20,8 +20,9 @@ interface CreateEventButtonProps {
  * vänster (ägarbeslut 24/9: "den att man skapar event den kan vara under
  * profilknappen"). Bodde där 14/8–15/9 också, och i botten-dockans vänstra
  * hörn 15/9–24/9 (🔥-knappen i högra hörnet revs samma dag — 🔥 är ett chip
- * i sökpanelen). Formspråket är oförändrat: blå gradient, gul kant,
- * gold-glow-pulse. 44 px — samma storlek som profil och sök.
+ * i sökpanelen). Formspråket: blå gradient, gul kant. Den pulserande guld-
+ * glöden (gold-glow-pulse) är BORTTAGEN 29/9 (Josef: "gör så den slutar
+ * blinka gult"). 44 px — samma storlek som profil och sök.
  *
  * z-[1090] = samma som dagväljaren → hamnar under eventkortet (1250) när ett
  * kort är uppe, precis som väljaren. I placerings-läget är knappen bekräfta-
@@ -96,7 +97,7 @@ export default function CreateEventButton({
                     onClick={handlePlusClick}
                     disabled={plusDropping}
                     aria-label={label}
-                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-11 w-11 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${hint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group gold-glow-pulse`}
+                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-11 w-11 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${hint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group`}
                 >
                     {creationMode === 'placing'
                         ? <Check size={20} className="text-white shrink-0" />
