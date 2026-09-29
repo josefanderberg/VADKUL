@@ -38,6 +38,7 @@ import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { shouldAutoBumpDay } from '@/utils/autoDayBump';
+import { normalizeTipUrl } from '@/utils/tipUrl';
 import { isNewSince, readAndStampVisit, NEW_SINCE_MIN_COUNT } from '@/utils/newSinceLastVisit';
 import { fitCamera, SWEDEN_BOUNDS, OVERVIEW_PADDING, SWEDEN_NUDGE_DELAY_MS, canOfferOverview, hasLeftOverview, readSwedenNudgeDone, markSwedenNudgeDone } from '@/utils/swedenOverview';
 import PostCreateNudge from '@/components/v2/PostCreateNudge';
@@ -234,22 +235,6 @@ const toInputDate = (d: Date) =>
  * (relativt det gamla) någon annanstans. Faller tillbaka till första event om
  * punkten saknas eller inget event för dagen har koords.
  */
-/**
- * Normalisera tips-länken: protokoll saknas → https:// läggs på, sedan måste
- * det bli en riktig http(s)-URL med punkt i domänen ("aftonbladet" räcker inte,
- * "javascript:…" stoppas). null = ogiltig → Skapa-knappen hålls inaktiv.
- */
-const normalizeTipUrl = (raw: string): string | null => {
-    const trimmed = raw.trim();
-    if (!trimmed) return null;
-    const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-    try {
-        const u = new URL(withProto);
-        if ((u.protocol !== 'http:' && u.protocol !== 'https:') || !u.hostname.includes('.')) return null;
-        return u.toString();
-    } catch { return null; }
-};
-
 /**
  * Fel vid event-skapande → begriplig svenska.
  *
