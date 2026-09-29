@@ -927,6 +927,8 @@ interface EventCardProps {
     onBoostOwnEvent?: (eventId: string, tier: BoostTier) => void;
     /** Värdnamnet i kortet filtrerar kartan till arrangörens event (29/9). */
     onSelectOrganizer?: (slug: string, name: string) => void;
+    /** Göm "Inga event den här dagen"-rutan (arrangörsläget, 30/9). */
+    hideEmptyHint?: boolean;
     /** Stjärn-gåvan ⭐: eventId:n som redan fått en stjärna (guld-indikator på
      *  kortet), om användaren har en oanvänd stjärna att sätta, samt placerings-
      *  callbacken (bekräftelsedialogen bor i LinkEventCard). */
@@ -946,7 +948,7 @@ interface EventCardProps {
     viewEvents?: LinkEvent[];
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -3018,7 +3020,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 <p className="text-sm font-bold text-slate-700">Laddar event…</p>
                             </div>
                         </div>
-                    ) : (eventsSettled && events.length === 0) && (
+                    ) : (eventsSettled && events.length === 0 && !hideEmptyHint) && (
                         <div role="status" className="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 px-5 py-3 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <p className="text-sm font-bold text-slate-700">
                                 Inga event {dayRangeDays > 1 ? 'den här perioden' : 'den här dagen'} 😴

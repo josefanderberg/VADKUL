@@ -2247,9 +2247,6 @@ export default function HomePage() {
     }, [dayOffset]);
     /** Tom-promptens knapp: tipsa om något man VET händer (inget konto krävs). */
     const startTipHere = useCallback(() => startCreateHere('tip'), [startCreateHere]);
-    /** Allt-har-varit-promptens knapp: dra ihop något EGET de närmaste timmarna
-     *  — arrangörsläge, inte tips (man tipsar inte om sitt eget påhitt). */
-    const startSpontaneousHere = useCallback(() => startCreateHere('host'), [startCreateHere]);
 
     // Antal event totalt för idag (oavsett filter) för välkomstmodalen
     const todayEventCount = useMemo(() => {
@@ -5013,46 +5010,27 @@ export default function HomePage() {
 
             {/* Allt har redan varit: perioden HAR event men varenda ett har
                 passerat (se nearbyAllPast). Kartan står då full av dämpade
-                brickor och ser lika död ut som en tom karta — skillnaden är att
-                svaret här är "byt dag" eller "hitta på något själv", inte
-                "zooma ut". Samma plats och mått som tom-prompten ovan; de kan
-                aldrig visas samtidigt (den ena kräver noll, den andra fler än
-                noll). Knapparna ligger på egen rad: två pillar + texten fick
-                inte plats på en rad i mobilbredd. */}
+                brickor och ser lika död ut som en tom karta. Samma plats och
+                mått som tom-prompten ovan; de kan aldrig visas samtidigt (den
+                ena kräver noll, den andra fler än noll).
+                EN RAD, EN KNAPP (Josef 30/9: "skriv inte på mycket info ...
+                det räcker med bara visa imorgon"): förklaringstexten och
+                "Hitta på något ⚡" är borttagna - hela raden tar en till
+                nästa dag. */}
             {nearbyAllPast && !showOverviewReturn && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
-                    <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl" aria-hidden>⏳</span>
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-slate-800">
-                                    {periodCount === 1
-                                        ? `Det enda eventet ${promptDayLabel} har redan varit.`
-                                        : `Alla ${periodCount} event ${promptDayLabel} har redan varit.`}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                    Byt dag för att se vad som kommer — eller dra ihop
-                                    något eget här och nu.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="mt-2.5 flex flex-wrap items-center justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={startSpontaneousHere}
-                                className="px-4 py-2 rounded-full bg-green-600 text-white text-sm font-bold hover:bg-green-500 transition-colors"
-                            >
-                                Hitta på något ⚡
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleTourDayStep(1)}
-                                className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
-                            >
-                                Visa {getDayLabel(dayOffset + 1, dayRangeDays).toLowerCase()}
-                            </button>
-                        </div>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => handleTourDayStep(1)}
+                        className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-white/50 pl-3 pr-4 py-2 text-sm hover:bg-white active:scale-[0.98] transition animate-in fade-in duration-300"
+                    >
+                        <span aria-hidden>⏳</span>
+                        <span className="font-bold text-slate-700">Allt {promptDayLabel} har varit</span>
+                        <span className="text-slate-300" aria-hidden>·</span>
+                        <span className="font-black text-[#006AA7]">
+                            Visa {getDayLabel(dayOffset + 1, dayRangeDays).toLowerCase()} →
+                        </span>
+                    </button>
                 </div>
             )}
 
@@ -5384,6 +5362,9 @@ export default function HomePage() {
             <EventCard
                 events={visibleEvents}
                 onSelectOrganizer={handleSelectOrganizer}
+                // Arrangörsläget säger redan antalet (bannern + väljaren) och
+                // Alla-knappen står där tom-rutan hamnade (Josef 30/9).
+                hideEmptyHint={!!mapOrganizer}
                 dayCount={dayEventCount}
                 eventsLoaded={eventsLoaded}
                 eventsSettled={eventsSettledForView}
