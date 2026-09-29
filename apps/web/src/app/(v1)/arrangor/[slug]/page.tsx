@@ -93,7 +93,7 @@ export default async function OrganizerPage({ params }: { params: Promise<{ slug
                     Just nu ligger <strong className="text-slate-900 dark:text-zinc-100">{o.events.length} kommande evenemang</strong> från
                     {' '}{o.name} på VADKUL
                     {o.cities.length > 0 && <>, i {svList(o.cities.map(c => c.name))}</>}.
-                    {' '}Klicka på ett event för tid, plats och biljetter, eller se allt på kartan.
+                    {' '}Klicka på ett event för tid, plats och biljetter, eller se alla på kartan.
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                     {site && (
@@ -106,14 +106,14 @@ export default async function OrganizerPage({ params }: { params: Promise<{ slug
                             {site.replace(/^https:\/\//, '')} ↗
                         </a>
                     )}
-                    {home && (
-                        <Link
-                            href={cityMapHref(home)}
-                            className="px-3 py-1.5 rounded-full bg-[#006AA7] border border-[#006AA7] text-xs font-bold text-white hover:bg-[#00598c] transition-colors"
-                        >
-                            Se på kartan →
-                        </Link>
-                    )}
+                    {/* Kartan filtrerad till arrangören (?arrangor=, 29/9):
+                        alla deras kommande event, bricka överst för att släppa. */}
+                    <Link
+                        href={home ? `${cityMapHref(home)}&arrangor=${o.slug}` : `/?arrangor=${o.slug}`}
+                        className="px-3 py-1.5 rounded-full bg-[#006AA7] border border-[#006AA7] text-xs font-bold text-white hover:bg-[#00598c] transition-colors"
+                    >
+                        Se alla på kartan →
+                    </Link>
                 </div>
 
                 <DayFilterProvider>

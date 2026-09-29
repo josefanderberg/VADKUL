@@ -83,6 +83,9 @@ interface LinkEventCardProps {
     /** Ägaren får boosta sitt event (Stripe Checkout). Visas bredvid "Ta bort".
      *  Nivån (1 dag/vecka/månad) väljs i BoostTierPicker innan callbacken fyras. */
     onBoost?: (tier: BoostTier) => void;
+    /** Värdnamnet tryckt (29/9): kartan filtreras till arrangörens event.
+     *  Utan callback leder namnet till arrangörssidan i stället. */
+    onSelectOrganizer?: (slug: string, name: string) => void;
     /** Chatt-vyn (sektionen med chatt/aktivitet): true = kortet visar BARA
      *  headern — föräldern renderar chatten direkt under. Togglas via knappen
      *  på headerns översta rad (onToggleActivityView). */
@@ -106,7 +109,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
@@ -423,7 +426,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const priceLabel = normalizePriceLabel(linkEvent.price);
     // Källans domän tills cards-lagret mergat in värden (aldrig "Okänd" med länk).
     const hostLabel = hostLabelFor(linkEvent.hostName, linkEvent.url);
-    // Arrangörssidan (29/9): värdnamnet länkar till alla arrangörens event.
+    // Arrangörsfiltret (29/9): värdnamnet visar alla arrangörens event.
     // Bara skrapade event med riktig arrangör (utils/organizerPages) -
     // användarskapade har inget URL-id och får null.
     const hostSlug = linkEvent.userCreated ? null : organizerPageSlug(linkEvent.hostName, linkEvent.id);
@@ -726,7 +729,18 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             {/* Långa värdnamn rullar i sidled i stället för
                                 att kapas — samma rad-mekanik som tid/plats. */}
                             <HScrollRow className="min-w-0 flex-1">
-                                {hostSlug ? (
+                                {hostSlug && onSelectOrganizer ? (
+                                    // På kartan: filtrera PÅ PLATS till arrangörens
+                                    // event (brickan under dagplattan släpper).
+                                    <button
+                                        type="button"
+                                        onClick={() => onSelectOrganizer(hostSlug, hostLabel)}
+                                        title={`Visa alla event från ${hostLabel} på kartan`}
+                                        className="text-xs font-black text-black dark:text-white whitespace-nowrap underline decoration-slate-300 dark:decoration-zinc-600 underline-offset-2 hover:text-primary hover:decoration-current"
+                                    >
+                                        {hostLabel}
+                                    </button>
+                                ) : hostSlug ? (
                                     <a
                                         href={organizerHref(hostSlug)}
                                         className="text-xs font-black text-black dark:text-white whitespace-nowrap underline decoration-slate-300 dark:decoration-zinc-600 underline-offset-2 hover:text-primary hover:decoration-current"

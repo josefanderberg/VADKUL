@@ -925,6 +925,8 @@ interface EventCardProps {
     /** Boosta (featura) ett event — startar Stripe Checkout på vald nivå
      *  (nivåerna ägs av BOOST_TIERS; väljs i kortets BoostTierPicker). */
     onBoostOwnEvent?: (eventId: string, tier: BoostTier) => void;
+    /** Värdnamnet i kortet filtrerar kartan till arrangörens event (29/9). */
+    onSelectOrganizer?: (slug: string, name: string) => void;
     /** Stjärn-gåvan ⭐: eventId:n som redan fått en stjärna (guld-indikator på
      *  kortet), om användaren har en oanvänd stjärna att sätta, samt placerings-
      *  callbacken (bekräftelsedialogen bor i LinkEventCard). */
@@ -944,7 +946,7 @@ interface EventCardProps {
     viewEvents?: LinkEvent[];
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -2886,6 +2888,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // eventBoosts-overlayn, se createBoostCheckout/boostTargetRef).
                         // Nivån väljs i kortets BoostTierPicker (ägs av BOOST_TIERS).
                         onBoost={onBoostOwnEvent ? (tier) => onBoostOwnEvent(selectedEvent.id, tier) : undefined}
+                        onSelectOrganizer={onSelectOrganizer}
                         // Chatt-knappen i knappraden BORTTAGEN (Josef 21/8) —
                         // chatten nås genom att scrolla ner i kortet, den
                         // ligger direkt under eventinfon. Lista-toggeln bara

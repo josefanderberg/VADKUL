@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isOptInSourceUrl } from '@vadkul/kontrakt';
-import { organizerHref, organizerPageSlug, topOrganizers } from './organizerPages';
+import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug, topOrganizers } from './organizerPages';
 import { classifySource } from './sources';
 
 describe('organizerPageSlug', () => {
@@ -66,5 +66,38 @@ describe('opt-in-reglerna räknar lika i kontraktet och kartans filter', () => {
         'https://www.facebook.com/events/1',
     ])('%s', (url) => {
         expect(isOptInSourceUrl(url)).toBe(!!classifySource(url));
+    });
+});
+
+describe('isFromOrganizer', () => {
+    it('matchar arrangörens event oavsett blanksteg och versaler', () => {
+        expect(isFromOrganizer('Visit Linköping', 'https://visitlinkoping.se/1', 'visit-linkoping')).toBe(true);
+        expect(isFromOrganizer('visit  linköping', 'https://visitlinkoping.se/2', 'visit-linkoping')).toBe(true);
+    });
+    it('avvisar andra arrangörer och event utan sida', () => {
+        expect(isFromOrganizer('ABF', 'https://abf.se/1', 'visit-linkoping')).toBe(false);
+        expect(isFromOrganizer(null, 'https://abf.se/1', 'abf')).toBe(false);
+        // Samma namn men opt-in-källa: ingen sida, alltså ingen träff.
+        expect(isFromOrganizer('Korpen Linköping', 'https://korpenlinkoping.zoezi.se/1', 'korpen-linkoping')).toBe(false);
+        // Användarskapat event med samma namn (id är inget URL).
+        expect(isFromOrganizer('ABF', 'x1Y2z3', 'abf')).toBe(false);
+    });
+    it('ger samma svar som organizerPageSlug', () => {
+        const fall: [string, string][] = [
+            ['Visit Linköping', 'https://visitlinkoping.se/1'],
+            ['Tickster', 'https://www.tickster.com/1'],
+            ['Åtvids församling', 'https://www.svenskakyrkan.se/1'],
+            ['Kultur & Fritid', 'https://kultur.se/1'],
+        ];
+        for (const [namn, url] of fall) {
+            const slug = organizerPageSlug(namn, url);
+            if (slug) expect(isFromOrganizer(namn, url, slug)).toBe(true);
+        }
+    });
+});
+
+describe('organizerNameFromSlug', () => {
+    it('gör en läsbar reserv', () => {
+        expect(organizerNameFromSlug('visit-linkoping')).toBe('Visit linkoping');
     });
 });

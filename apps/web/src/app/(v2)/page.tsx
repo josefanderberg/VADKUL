@@ -24,6 +24,7 @@ import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPi
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
+import { isFromOrganizer, organizerNameFromSlug } from '@/utils/organizerPages';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
@@ -437,6 +438,14 @@ export default function HomePage() {
     // Utesluter kategorin (en sak åt gången) och 🔥 (källorna är aldrig
     // populära). Korpen saknade väg in på kartan sedan 8/8 — nu via Fler.
     const [mapSource, setMapSource] = useState<string | null>(null);
+    // ARRANGÖRSFILTRET (29/9, Josef: "så man ser visit-linköping längst uppe
+    // på kartan"): bara EN arrangörs kommande event, ALLA dagar - en dag i
+    // taget vore oftast tom. Nås via ?arrangor=<slug> (arrangörssidans "Se på
+    // kartan") och värdnamnet i eventkortet. Syns som bricka under dagplattan
+    // precis som kategorin; ✕ släpper. `name` är null tills kortlagret (där
+    // värdnamnen bor) har landat.
+    const [mapOrganizer, setMapOrganizer] = useState<{ slug: string; name: string | null } | null>(null);
+    const [organizerCardsReady, setOrganizerCardsReady] = useState(() => linkEventService.cardsSettledNow());
     // Bumpas när sökrutan ska fällas ihop utifrån (man valde en stad ur
     // träfflistan) — se closeSearchNonce i FloatingNavbar.
     const [closeSearchNonce, setCloseSearchNonce] = useState(0);
@@ -773,7 +782,10 @@ export default function HomePage() {
         // welcomeDone (inte bara "visa inte") så landningspulsens grind öppnas;
         // annars väntar dag/vecka-blinken för evigt på en ruta som aldrig kom.
         try {
-            if (new URLSearchParams(window.location.search).has('event')) {
+            // ?arrangor= likaså (29/9): man kommer från arrangörssidans
+            // "Se på kartan" - valet är gjort, rutan skulle skymma filtret.
+            const q = new URLSearchParams(window.location.search);
+            if (q.has('event') || q.has('arrangor')) {
                 setWelcomeDone(true);
                 return;
             }
@@ -861,7 +873,7 @@ export default function HomePage() {
         // man just öppnat "försvann". Djuplänks-effekten landar i stället
         // kameran vid eventet när det hittats.
         const params = new URLSearchParams(window.location.search);
-        if (params.has('plats') || params.has('event')) {
+        if (params.has('plats') || params.has('event') || params.has('arrangor')) {
             tourAutoStartedRef.current = true;
             return;
         }
@@ -1964,13 +1976,36 @@ export default function HomePage() {
             linkEventService.requestFullTimeline();
         }
     }, [searchQ]);
+    // Arrangörsfiltret behöver också värdnamnen (kortlagret) och hela
+    // tidslinjen - deras event ligger ofta veckor fram.
+    const organizerSlug = mapOrganizer?.slug ?? null;
+    useEffect(() => {
+        if (!organizerSlug) return;
+        linkEventService.requestFullTimeline();
+        let alive = true;
+        linkEventService.requestCards().then(() => { if (alive) setOrganizerCardsReady(true); });
+        return () => { alive = false; };
+    }, [organizerSlug]);
     const searchFilteredEvents = useMemo(() => {
-        if (!searchQ) return filteredEvents;
+        if (!searchQ && !organizerSlug) return filteredEvents;
+        const nowMs = Date.now();
         return events.filter(evt =>
-            (!searchText || eventSearchTier(evt, searchText) >= 0)
-            && (!searchCity || (hasValidCoords(evt)
-                && haversineKm(searchCity.lat, searchCity.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM)));
-    }, [events, filteredEvents, searchQ, searchText, searchCity]);
+            // Arrangören: deras KOMMANDE event, alla dagar (samma urval som
+            // arrangörssidan - utils/organizerPages).
+            (!organizerSlug || (isFromOrganizer(evt.hostName, evt.id, organizerSlug) && !isEventPast(evt, nowMs)))
+            && (!searchQ || (
+                (!searchText || eventSearchTier(evt, searchText) >= 0)
+                && (!searchCity || (hasValidCoords(evt)
+                    && haversineKm(searchCity.lat, searchCity.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM)))));
+    }, [events, filteredEvents, searchQ, searchText, searchCity, organizerSlug]);
+    // Brickans namn: det riktiga värdnamnet så fort ett event matchat (länken
+    // bär bara sluggen), annars en läsbar reserv ur sluggen.
+    const organizerName = useMemo(() => {
+        if (!mapOrganizer) return null;
+        if (mapOrganizer.name) return mapOrganizer.name;
+        const hit = searchFilteredEvents.find(e => e.hostName);
+        return hit?.hostName?.replace(/\s+/g, ' ').trim() ?? organizerNameFromSlug(mapOrganizer.slug);
+    }, [mapOrganizer, searchFilteredEvents]);
 
     // Opt-in-källor (Svenska kyrkan/PRO) har väldigt många event och är
     // avstängda som default: deras event GÖMS tills användaren själv kryssar i
@@ -2473,9 +2508,11 @@ export default function HomePage() {
     const canOfferWeek = weekUnlocked && dayRangeDays < WEEK_RANGE_MIN_DAYS && (areaCounts?.week ?? 0) > 0;
     // Tomlägets filterfall: 🔥 och/eller kategorin har smalnat bort allt —
     // svaret är då "släpp filtret", inte "zooma ut".
-    const filterActive = popularOnly || mapCategory !== null || mapSource !== null;
+    const filterActive = popularOnly || mapCategory !== null || mapSource !== null || mapOrganizer !== null;
     const sourceLabel = mapSource ? (SOURCE_DEFS.find(s => s.key === mapSource)?.label ?? mapSource) : null;
-    const filterPhrase = popularOnly
+    const filterPhrase = mapOrganizer
+        ? `Inga kommande event från ${organizerName ?? 'arrangören'}`
+        : popularOnly
         ? `Inga populära event${mapCategory ? ` inom ${categoryLabel(mapCategory)}` : ''}`
         : sourceLabel
             ? `Inget från ${sourceLabel}`
@@ -2780,7 +2817,15 @@ export default function HomePage() {
             setMapCategory(null);
             setMapSource(null);
             setPopularOnly(false);
+            setMapOrganizer(null);
         });
+    }, []);
+    // Värdnamnet i eventkortet (29/9): filtrera kartan PÅ PLATS till
+    // arrangörens event i stället för att lämna kartan för arrangörssidan.
+    // Kameran står still (som vid sökning); det valda eventet är ju deras.
+    const handleSelectOrganizer = useCallback((slug: string, name: string) => {
+        setPulseSuppressed(true);
+        startTransition(() => setMapOrganizer({ slug, name }));
     }, []);
 
     // Byt visad dag/intervall — från dagväljaren eller återställningsknappen.
@@ -3400,6 +3445,9 @@ export default function HomePage() {
         else if (kat && SOURCE_DEFS.some(s => s.key === kat)) setMapSource(kat);
         // 🔥-läget i en delad länk — samma mönster som ?kategori=.
         if (params.get('pop') === '1') setPopularOnly(true);
+        // Arrangörsfiltret (arrangörssidans "Se på kartan", 29/9).
+        const arrangor = params.get('arrangor');
+        if (arrangor && /^[a-z0-9-]{2,80}$/.test(arrangor)) setMapOrganizer({ slug: arrangor, name: null });
         const dag = parseInt(params.get('dag') ?? '', 10);
         const dagar = parseInt(params.get('dagar') ?? '', 10);
         const eventId = params.get('event');
@@ -3474,9 +3522,10 @@ export default function HomePage() {
         if (popularOnly) params.set('pop', '1');
         const kat = mapCategory ?? mapSource;
         if (kat) params.set('kat', kat);
+        if (mapOrganizer) params.set('arrangor', mapOrganizer.slug);
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user, popularOnly, mapCategory, mapSource]);
+    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user, popularOnly, mapCategory, mapSource, mapOrganizer]);
 
     // ── Sparade kategorifilter (inloggade) ──────────────────────────────────
     // Aktiverar man t.ex. Svenska kyrkan eller PRO ska valet överleva nästa
@@ -3838,11 +3887,28 @@ export default function HomePage() {
             15/9: "skriva gå till stadssida typ") — samma pill som skapa- och
             🔥-stegen, och på desktop även vid hover (peer på länken). */}
         <HoverLabel show={tourHint === 'city'}>Gå till stadssidan</HoverLabel>
-        {/* FILTRET PÅ (16/9) — kategori, Fler-källa eller 🔥 (24/9): alltid synligt
+        {/* FILTRET PÅ (16/9) — arrangör (29/9), kategori, Fler-källa eller 🔥 (24/9): alltid synligt
             under plattan, ett filter får aldrig vara osynligt när sökpanelen
             är stängd. Tryck = släpp filtret. */}
-        {(mapCategory || mapSource || popularOnly) && (
+        {(mapCategory || mapSource || popularOnly || mapOrganizer) && (
         <div className="flex items-center gap-1.5">
+        {/* Arrangörsfiltret (29/9): namnet + hur många av deras kommande
+            event kartan visar. Siffran väntar in kortlagret - före det vet
+            vi inte vilka event som är deras. */}
+        {mapOrganizer && (
+            <button
+                type="button"
+                onClick={() => startTransition(() => setMapOrganizer(null))}
+                aria-label={`Visar bara event från ${organizerName} - tryck för att visa allt`}
+                className="pointer-events-auto inline-flex items-center gap-1.5 max-w-[72vw] rounded-full bg-white/95 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-slate-800 shadow-lg border border-white/50 hover:bg-white active:scale-95 transition animate-in fade-in duration-200"
+            >
+                <span className="truncate">{organizerName}</span>
+                <span className="shrink-0 text-slate-400 tabular-nums">
+                    {organizerCardsReady ? visibleEvents.length : '…'}
+                </span>
+                <X size={13} strokeWidth={3} className="shrink-0 text-slate-400" aria-hidden />
+            </button>
+        )}
         {popularOnly && (
             <button
                 type="button"
@@ -5200,6 +5266,7 @@ export default function HomePage() {
             {/* 3. Dra-och-släpp (Tinder-style) kort längst ner */}
             <EventCard
                 events={visibleEvents}
+                onSelectOrganizer={handleSelectOrganizer}
                 dayCount={dayEventCount}
                 eventsLoaded={eventsLoaded}
                 eventsSettled={eventsSettledForView}

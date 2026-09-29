@@ -3,12 +3,16 @@
 // stadssidornas rader och själva sidan avgör med SAMMA regel om ett event
 // har en arrangörssida, så en länk aldrig pekar på en sida som inte finns.
 // Regeln (organizerPageSlug) bor i @vadkul/kontrakt, delad med pipelinen.
-export { organizerPageSlug } from '@vadkul/kontrakt';
+import { organizerPageSlug, organizerSlug } from '@vadkul/kontrakt';
+export { organizerPageSlug };
 
 /** Från så här många kommande event är sidan värd att bjuda ut till Google
  *  (index + sitemap). Färre = sidan finns (länkarna ska inte 404:a) men får
- *  noindex - en sida med två event är tunn. */
-export const ORGANIZER_PAGE_INDEX_MIN = 5;
+ *  noindex. 20 (Josef 29/9): Google indexerade redan bara ~hälften av sajten
+ *  (317 av 593), så vi börjar med de ~260 arrangörerna med mest innehåll i
+ *  stället för ~800 vid gränsen 5. Sänk när Search Console visar att de
+ *  indexeras. */
+export const ORGANIZER_PAGE_INDEX_MIN = 20;
 
 /** Stadssidans "Arrangörer i X"-chips: arrangörer med minst så här många
  *  kommande event i just den staden. */
@@ -46,4 +50,33 @@ export function topOrganizers(
         }))
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'sv'))
         .slice(0, n);
+}
+
+// Namn -> slug, cachat per hostName. Kartans arrangörsfilter prövar ~50k
+// event vid varje ny databatch; utan cachen normaliseras varje namn om och
+// om igen (tusentals unika namn, så minnet är ingen fråga).
+const slugByName = new Map<string, string>();
+
+/**
+ * Hör eventet till arrangörssidan `slug`? Kartans arrangörsfilter (29/9).
+ * Snabb väg: namnets slug (cachad) jämförs först; hela regeln
+ * (organizerPageSlug - plattformar, opt-in-källor, URL-id) körs bara vid
+ * träff, så svaret blir alltid detsamma som sidans eget urval.
+ */
+export function isFromOrganizer(hostName: string | null | undefined, eventId: string | null | undefined, slug: string): boolean {
+    if (!hostName) return false;
+    let s = slugByName.get(hostName);
+    if (s === undefined) {
+        s = organizerSlug(hostName.replace(/\s+/g, ' ').trim());
+        slugByName.set(hostName, s);
+    }
+    if (s !== slug) return false;
+    return organizerPageSlug(hostName, eventId) === slug;
+}
+
+/** Läsbart namn ur en slug ("visit-linkoping" -> "Visit linkoping") - bara
+ *  reserv på kartans filterbricka tills arrangörens riktiga namn laddats. */
+export function organizerNameFromSlug(slug: string): string {
+    const t = slug.replace(/-+/g, ' ').trim();
+    return t.charAt(0).toUpperCase() + t.slice(1);
 }
