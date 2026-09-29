@@ -10,6 +10,7 @@ import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView } from '../../utils/mapUtils';
 import { readStartCity } from '../../utils/startCity';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
+import { nextFront, overlapClusters, type OverlapPoint } from '../../utils/overlapCycle';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
 // Nöjesfälts-kartan (enda basstilen) + klot/terräng-hjälpare. Voyager-URL:en är
@@ -263,6 +264,26 @@ const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
 // (en etikett får aldrig skymma en bricka), topplagret bär bara den VALDA
 // gruppens etikett (sortKey ≥ 1e6) ovanpå. Alla synlighetsväxlar går över båda.
 const LABEL_LAYER_IDS = ['plain-events-labels', 'plain-events-labels-top'] as const;
+// ── Z-växlingen för överlappande brickor ──────────────────────────────────────
+// Grannbrickor (egna grupper >11 m isär) som täcker varandra på skärmen turas
+// om att ligga överst. Mekaniken är en SPEGELKÄLLA: brickan som "har ordet"
+// ritas EN gång till i ett lager ovanpå brick-lagret - huvudlagrets
+// symbol-sort-key rörs aldrig (en layout-ändring där = om-layout av hela
+// lagret varje tick). Spegeln pekar på samma bakade ikonbilder, så emoji-
+// cykling och "+N"-badge följer med gratis. Geometrin/turordningen bor i
+// utils/overlapCycle (testad).
+const FRONT_SOURCE_ID = 'plain-events-front';
+const FRONT_LAYER_ID = 'plain-events-front';
+// Ankarpunkter närmare än så här (px) räknas som "på varandra" - ungefär en
+// brickbredd (~38 px kropp) med lite marginal inåt.
+const OVERLAP_RADIUS_PX = 30;
+// Ett byte per tick (staggrat som emojicyklingen, aldrig två samtidigt) -
+// lugnare takt än emojins 500 ms: ett z-byte är ett större visuellt hopp.
+const Z_CYCLE_STEP_MS = 1600;
+// Den framroterade brickan tonas in/ut via feature-state 'zop'.
+const Z_FADE_MS = 220;
+// Brickor strax utanför bild får vara med i högarna (halvt synliga i kanten).
+const Z_VIEW_MARGIN_PX = 40;
 const IS_PAST_EXPR: maplibregl.ExpressionSpecification =
     ['boolean', ['get', 'past'], false];
 const REVEAL_STATE_EXPR: maplibregl.ExpressionSpecification =
@@ -1190,6 +1211,22 @@ export default function V2Map({
     // Round-robin-pekare för pumpen: gruppnyckeln som bytte frame förra ticken.
     const cycleLastKeyRef = useRef<string | null>(null);
 
+    // ── Z-växlingens bokföring (se konstanterna vid FRONT_SOURCE_ID) ──────────
+    // klusterid → nyckeln som ligger överst i den högen just nu.
+    const zFrontRef = useRef<Map<string, string>>(new Map());
+    // Round-robin-pekare: klustret som bytte front förra ticken.
+    const zLastClusterRef = useRef<string | null>(null);
+    // Spegelkällans innehåll: nyckel → seq (stigande - nyast främjad ritas
+    // överst inom spegeln, så intoningen alltid sker OVANPÅ förra fronten).
+    const zMirrorRef = useRef<Map<string, number>>(new Map());
+    const zSeqRef = useRef(1);
+    // Pågående in-/uttoning (max en åt gången - takten är glesare än tonen).
+    const zFadeRef = useRef<{ cancel: () => void; finish: () => void } | null>(null);
+    // Nollställaren, kallad från pushPlainEvents när källdatan FAKTISKT byts
+    // (dagbyte o.dyl.) - en spegelkopia från gamla datan ovanpå nya vore en
+    // klassisk "rest". Sätts av z-växlingseffekten nedan.
+    const clearZCycleRef = useRef<() => void>(() => {});
+
     // Lätta GL-prickar för multi-event-grupper UNDER zoom-gesten. I vila är listan
     // tom → DOM-brickorna ritar dem i stället (se visibleGroups). Egenskapen `count`
     // = antal event → ritas som GL-siffra ovanpå pricken. Inte viewport-gallrad —
@@ -1402,6 +1439,11 @@ export default function V2Map({
             return;
         }
         lastPushedTargetRef.current = target;
+        // Innehållet byts på riktigt (identiska pushar returnerade ovan) - släck
+        // z-växlingens spegel direkt så ingen kopia ur GAMLA datan ligger kvar
+        // ritad ovanpå den nya (dagbytes-rester). Rotationen börjar om från de
+        // naturliga topparna vid nästa tick.
+        clearZCycleRef.current();
         if (streamCleanupRef.current) { streamCleanupRef.current(); streamCleanupRef.current = null; }
         const prevCount = pushedCountRef.current;
         // Latch-återöppning: hang-guarden kan ha satt eventsSettled (och släckt
@@ -1729,6 +1771,44 @@ export default function V2Map({
                 cycleFrameIndexRef.current.clear();
                 reapplyAllRevealRef.current();
                 ensureRevealPumpRef.current();
+            }
+            // Z-växlingens spegelkälla/-lager: brickan som roterats fram ritas en
+            // gång till OVANPÅ brick-lagret (skapas direkt efter → hamnar över det
+            // i ritordningen; etikett-topplagret läggs sist och stannar överst).
+            // promoteId 'key' → in-/uttoningen skrivs som feature-state 'zop'.
+            if (!map.getSource(FRONT_SOURCE_ID)) {
+                map.addSource(FRONT_SOURCE_ID, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, promoteId: 'key' });
+                // Färsk (tom) källa (stilbyte rensar även feature-state) → glöm
+                // fronter/spegelinnehåll så bokföringen matchar det som ritas.
+                clearZCycleRef.current();
+            }
+            if (!layerExists(map, FRONT_LAYER_ID)) {
+                map.addLayer({
+                    id: FRONT_LAYER_ID,
+                    type: 'symbol',
+                    source: FRONT_SOURCE_ID,
+                    layout: {
+                        // Samma bakade bild och mått som huvudlagret - kopian ska
+                        // lägga sig exakt över sin bricka.
+                        'icon-image': ['get', 'icon'],
+                        'icon-anchor': 'bottom',
+                        'icon-allow-overlap': true,
+                        'icon-ignore-placement': true,
+                        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, GL_ICON_SIZE_TOP],
+                        // Nyast främjad överst inom spegeln (intoningen sker ovanpå
+                        // förra fronten, som ligger kvar tills tonen är klar).
+                        'symbol-sort-key': ['coalesce', ['get', 'seq'], 0],
+                        'symbol-z-order': 'auto',
+                        'visibility': isZoomingRef.current ? 'none' : 'visible',
+                    },
+                    paint: {
+                        // Dold tills z-pumpen tonar in den (default 0 = ingen blink
+                        // mellan setData och första state-skrivningen). Tonövergången
+                        // sköts av pumpens rAF-ramp, inte av en paint-transition.
+                        'icon-opacity': ['coalesce', ['feature-state', 'zop'], 0],
+                        'icon-opacity-transition': { duration: 0, delay: 0 },
+                    },
+                });
             }
             // "+N"-badgen (vit pill + mörk siffra i övre högra hörnet) är BAKAD
             // i brick-bilden (se v2MapBricka) — inget eget lager. Ett separat
@@ -2618,6 +2698,154 @@ export default function V2Map({
         };
     }, []);
 
+    // ── Z-växlingen: överlappande grannbrickor turas om att ligga överst ──────
+    // (Josef 27/9: "växla vilken som är överst ifall de är jättenära varandra".)
+    // Kandidater = tända brickor (reveal > 0.5) i bild, minus passerade,
+    // nedtonade, valda och önskningar. De projiceras till skärmen VARJE tick -
+    // inga move-lyssnare behövs, en flyttad vy ger automatiskt nya högar, och
+    // punktmängden är liten (reveal-systemet håller tänt antal till tiotal).
+    // STAGGRAT som emojicyklingen: ETT kluster byter front per tick, round-
+    // robin, och bytet tonas in via feature-state 'zop' i spegellagret. OBS:
+    // huvudlagrets sortKey-stapling (fler event överst) rörs inte - rotationen
+    // låter medvetet även ensamma brickor titta fram över en multibricka, för
+    // syftet är exponering; klickvägen (pickHoverKey) är data-driven och
+    // påverkas inte alls av vad som råkar ritas överst.
+    useEffect(() => {
+        const setZop = (map: maplibregl.Map, key: string, v: number) => {
+            try { map.setFeatureState({ source: FRONT_SOURCE_ID, id: key }, { zop: v }); } catch { /* källan ej redo */ }
+        };
+        const dropZop = (map: maplibregl.Map, key: string) => {
+            try { map.removeFeatureState({ source: FRONT_SOURCE_ID, id: key }); } catch { /* källan ej redo */ }
+        };
+        // Skriv spegelns bokförda innehåll (zMirrorRef) till källan. Geometri +
+        // ikon slås upp i live-datan så kopian alltid pekar på samma bakade bild
+        // som brickan under (emojicykling/badge följer med); en nyckel som
+        // hunnit försvinna ur datan hoppas över.
+        const writeMirror = (map: maplibregl.Map) => {
+            const src = map.getSource(FRONT_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+            if (!src) return;
+            const byKey = plainFeatureByKeyRef.current;
+            const feats: GeoJSON.Feature[] = [];
+            for (const [key, seq] of zMirrorRef.current) {
+                const f = byKey.get(key);
+                if (!f) continue;
+                feats.push({ type: 'Feature', geometry: f.geometry, properties: { key, icon: f.properties.icon, seq } });
+            }
+            try { src.setData({ type: 'FeatureCollection', features: feats }); } catch { /* källan riven */ }
+        };
+        // rAF-ramp av 'zop' för EN nyckel (samma teknik som reveal-ramperna).
+        // En ny ton avslutar en ev. pågående momentant - i en gömd flik fryser
+        // rAF, så nästa tick måste kunna knuffa den i mål.
+        const startZFade = (map: maplibregl.Map, key: string, from: number, to: number, onDone: () => void) => {
+            zFadeRef.current?.finish();
+            const t0 = performance.now();
+            let raf = 0;
+            const done = () => {
+                zFadeRef.current = null;
+                setZop(map, key, to);
+                onDone();
+            };
+            const tick = () => {
+                if (mapRef.current !== map) { zFadeRef.current = null; return; }
+                const p = Math.min(1, (performance.now() - t0) / Z_FADE_MS);
+                setZop(map, key, from + (to - from) * p);
+                if (p < 1) raf = requestAnimationFrame(tick); else done();
+            };
+            zFadeRef.current = {
+                cancel: () => { cancelAnimationFrame(raf); zFadeRef.current = null; },
+                finish: () => { cancelAnimationFrame(raf); done(); },
+            };
+            raf = requestAnimationFrame(tick);
+        };
+        // Nollställaren - kallas av pushPlainEvents vid accepterad datapush och
+        // av syncPlainLayer när källan återskapats (stilbyte).
+        clearZCycleRef.current = () => {
+            zFadeRef.current?.cancel();
+            const map = mapRef.current;
+            if (map) {
+                zMirrorRef.current.forEach((_seq, key) => dropZop(map, key));
+                const src = map.getSource(FRONT_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+                try { src?.setData({ type: 'FeatureCollection', features: [] }); } catch { /* källan riven */ }
+            }
+            zMirrorRef.current.clear();
+            zFrontRef.current.clear();
+            zLastClusterRef.current = null;
+        };
+        const interval = setInterval(() => {
+            const map = mapRef.current;
+            if (!map || !styleReady(map) || !layerExists(map, FRONT_LAYER_ID)) return;
+            // Under zoom-gesten är brickorna nålar - rotationen vilar.
+            if (isZoomingRef.current) return;
+            const byKey = plainFeatureByKeyRef.current;
+            const el = map.getContainer();
+            const w = el.clientWidth, h = el.clientHeight;
+            const pts: OverlapPoint[] = [];
+            revealWrittenRef.current.forEach((op, key) => {
+                if (op <= 0.5) return;
+                if (key.startsWith('wish:')) return;
+                const f = byKey.get(key);
+                if (!f || f.properties.past || f.properties.dim) return;
+                // Vald grupp deltar inte: dess look ägs av DOM-markören och
+                // ingen granne ska rotera fram över den öppna brickan.
+                if (f.properties.sortKey >= 1_000_000) return;
+                const p = map.project([f.geometry.coordinates[0], f.geometry.coordinates[1]]);
+                if (p.x < -Z_VIEW_MARGIN_PX || p.y < -Z_VIEW_MARGIN_PX || p.x > w + Z_VIEW_MARGIN_PX || p.y > h + Z_VIEW_MARGIN_PX) return;
+                pts.push({ key, x: p.x, y: p.y, sortKey: f.properties.sortKey });
+            });
+            const clusters = overlapClusters(pts, OVERLAP_RADIUS_PX);
+            const fronts = zFrontRef.current;
+            const mirror = zMirrorRef.current;
+            // Städa: högar som försvunnit (panorering/utsläckta brickor) släpper
+            // sin front, och en ev. spegelkopia ryker med den.
+            const liveIds = new Set(clusters.map(c => c.id));
+            let dirty = false;
+            for (const [id, key] of [...fronts]) {
+                if (liveIds.has(id)) continue;
+                fronts.delete(id);
+                if (mirror.delete(key)) { dropZop(map, key); dirty = true; }
+            }
+            if (clusters.length === 0) {
+                zLastClusterRef.current = null;
+                if (dirty) writeMirror(map);
+                return;
+            }
+            // Round-robin: nästa hög efter den som bytte förra ticken (samma
+            // mönster som emojipumpens cycleLastKeyRef).
+            const ids = clusters.map(c => c.id);
+            const pickId = ids[(ids.indexOf(zLastClusterRef.current ?? '') + 1) % ids.length];
+            zLastClusterRef.current = pickId;
+            const cluster = clusters.find(c => c.id === pickId)!;
+            const prev = fronts.get(pickId) ?? null;
+            const next = nextFront(cluster, prev);
+            fronts.set(pickId, next);
+            if (next === cluster.topKey) {
+                // Varvet är runt: tona BORT kopian så den naturliga toppen tar
+                // över igen - spegelns viloläge för högen är "ingen kopia alls".
+                if (dirty) writeMirror(map);
+                if (prev != null && mirror.has(prev)) {
+                    startZFade(map, prev, 1, 0, () => {
+                        if (mirror.delete(prev)) { dropZop(map, prev); writeMirror(map); }
+                    });
+                }
+                return;
+            }
+            // Ny front: in i spegeln överst (högst seq) och tona IN. Förra
+            // frontens kopia ligger kvar UNDER tills tonen är klar, så högen
+            // aldrig visar ett hål mitt i bytet.
+            mirror.set(next, (zSeqRef.current += 1));
+            setZop(map, next, 0);
+            writeMirror(map);
+            startZFade(map, next, 0, 1, () => {
+                if (prev != null && mirror.delete(prev)) { dropZop(map, prev); writeMirror(map); }
+            });
+        }, Z_CYCLE_STEP_MS);
+        return () => {
+            clearInterval(interval);
+            zFadeRef.current?.cancel();
+            clearZCycleRef.current = () => {};
+        };
+    }, []);
+
     // Spårar ORDNINGEN man bläddrat genom den valda gruppen, så grupp-markörens
     // siffra speglar din position (Nästa → mindre, Bakåt → större). Nollställs
     // när man byter grupp. (Ett event som man går tillbaka till finns redan i
@@ -2803,6 +3031,7 @@ export default function V2Map({
             container.classList.remove('map-state-full');
             container.classList.add('map-state-needle');
             setGlLayer('plain-events', false);
+            setGlLayer(FRONT_LAYER_ID, false); // spegelkopian följer brickorna
             LABEL_LAYER_IDS.forEach(id => setGlLayer(id, false)); // text över nål-prickar = svävande etiketter
             // During zoom, show all dots including revealed ones ("har varit" stays at 50%)
             if (layerExists(map, 'plain-events-dots')) {
@@ -2815,6 +3044,7 @@ export default function V2Map({
             container.classList.remove('map-state-needle');
             container.classList.add('map-state-full');
             setGlLayer('plain-events', true);
+            setGlLayer(FRONT_LAYER_ID, true);
             LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
             // Prickarna göms INTE här — då blir det ett tomt glapp medan symbol-lagret
             // (brickorna) placerar sina ikoner. De ligger kvar tills exitZooming, dvs
@@ -2855,6 +3085,7 @@ export default function V2Map({
             zoomIdleTimer = null;
             isZoomingRef.current = false;
             setGlLayer('plain-events', true);            // brickorna ska vara tända i vila
+            setGlLayer(FRONT_LAYER_ID, true);
             LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
             // Zoomen kan ha korsat z13 (kategori ↔ titel) — låt spegeln skriva
             // om sig med rätt nivå (signaturvakten gör den till no-op annars).
