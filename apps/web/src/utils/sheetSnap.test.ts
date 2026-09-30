@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from './sheetSnap';
+import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown, snapRelease } from './sheetSnap';
 
 // Typisk telefon: default 35 vh, tapp-höjden 55 vh, taket 90 vh.
 const STOPS = [35, 55, 90];
@@ -71,5 +71,46 @@ describe('snapDown (släpp efter nedåtdrag)', () => {
 
     it('vid lika avstånd vinner det lägre', () => {
         expect(snapDown(STOPS, 90, 45)).toBe(35);
+    });
+});
+
+describe('snapRelease (fingerdraget, med kompaktläget 30/9)', () => {
+    // Sträcket mellan tid/plats och arrangören når kanten vid 20 vh - det är
+    // också kompaktstoppet (arrangören dold, titel + tid kvar).
+    const EDGE = 20;
+    const WITH_COMPACT = [EDGE, ...STOPS];
+
+    it('sakta ner från default, släppt medan sträcket syns → kompaktläget', () => {
+        expect(snapRelease(WITH_COMPACT, 35, 27, EDGE)).toBe(20);
+        expect(snapRelease(WITH_COMPACT, 35, 20.5, EDGE)).toBe(20);
+    });
+
+    it('sträcket över kanten → stäng', () => {
+        expect(snapRelease(WITH_COMPACT, 35, 19.5, EDGE)).toBeNull();
+        expect(snapRelease(WITH_COMPACT, 35, 5, EDGE)).toBeNull();
+    });
+
+    it('från kompaktläget: darr studsar tillbaka, ett riktigt neddrag stänger', () => {
+        expect(snapRelease(WITH_COMPACT, 20, 17, EDGE)).toBe(20);
+        expect(snapRelease(WITH_COMPACT, 20, 12, EDGE)).toBeNull();
+    });
+
+    it('från kompaktläget uppåt → default', () => {
+        expect(snapRelease(WITH_COMPACT, 20, 23, EDGE)).toBe(35);
+    });
+
+    it('ett kort ryck från default studsar tillbaka', () => {
+        expect(snapRelease(WITH_COMPACT, 35, 31, EDGE)).toBe(35);
+    });
+
+    it('långt drag från taket landar på närmaste stopp, eller stänger under sträcket', () => {
+        expect(snapRelease(WITH_COMPACT, 90, 24, EDGE)).toBe(20);
+        expect(snapRelease(WITH_COMPACT, 90, 33, EDGE)).toBe(35);
+        expect(snapRelease(WITH_COMPACT, 90, 10, EDGE)).toBeNull();
+    });
+
+    it('utan sträck (väljarlistan) avgör bara stoppen', () => {
+        expect(snapRelease(STOPS, 35, 25, null)).toBeNull();
+        expect(snapRelease(STOPS, 90, 40, null)).toBe(35);
     });
 });

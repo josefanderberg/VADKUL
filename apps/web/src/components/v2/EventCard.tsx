@@ -13,7 +13,7 @@ import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, takeRows } from '@/utils/popularList';
 import { linkEventService } from '@/services/linkEventService';
-import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown } from '@/utils/sheetSnap';
+import { sheetStops, nextStopAbove, nextStopBelow, snapRelease } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart } from 'lucide-react';
 
 /** Listflikarnas horisont (Josef 24/9: "vi fokuserar mest på kommande
@@ -959,17 +959,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Fallback-höjd för uppmätt "öppna till första beskrivningsraden" (tap) om
     // mätningen saknas.
     const OPEN_HEIGHT_VH = 80;
-    // "Peek"-läget längst ner där bara kortets header (titel, tid, plats) syns.
-    // Ett nedåt-drag som släpps strax under gränsen snäpper tillbaka hit —
-    // men drar man vidare nedåt glider kortet ner och STÄNGS (samma som att
-    // klicka utanför det på kartan).
+    // Reservvärde för kompaktlägets höjd (se measureCompactHeight) när
+    // sträcket under tid/plats inte går att mäta.
     const COLLAPSED_HEIGHT_VH = 22;
-    // Hur långt under peek-gränsen (i vh) man måste släppa för att kortet ska
-    // stängas i stället för att snäppa tillbaka till peek.
-    const DISMISS_BELOW_VH = 6;
     // Minsta nedåtdrag (i vh) för att ett släpp ska räknas som ett medvetet
-    // "scrolla ner"-snäpp (helskärm → default, default → stängt; se
-    // onPointerUp) — kortare ryck studsar tillbaka dit gesten började.
+    // "scrolla ner"-snäpp (helskärm → default, default → kompakt, kompakt →
+    // stängt; se onPointerUp) - kortare ryck studsar tillbaka dit gesten
+    // började.
     const SNAP_PULL_MIN_VH = 6;
     // Kortets TAK: hur högt det får växa. INTE hela vägen upp längre (Josef
     // 31/8, ersätter 26/8-beslutet "kortet ska kunna fylla skärmen"): NÄSTA-
@@ -1209,26 +1205,34 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         return Math.max(PEEK_HEIGHT_VH, Math.min(MAX_HEIGHT_VH, Math.round(vh)));
     };
 
-    // Minsta höjd kortet kan dras ner till: precis så att kortets nedre kant
-    // hamnar på sträcket (border-linjen) under tid + plats — d.v.s. titel +
-    // tid/plats syns, men Värd/Pris-raden är dold under vikningen. Mäter var den
-    // linjen ligger (markerad med data-peek-boundary i LinkEventCard) relativt
-    // scroll-innehållet + grip-zonen (h-6 = 24px). Faller tillbaka till
-    // COLLAPSED_HEIGHT_VH om mätning saknas.
-    const measureCollapsedHeight = (): number => {
+    // KOMPAKTLÄGET = kortets lägsta stopp (Josef 30/9: "dra ner det så inte
+    // arrangören syns, men drar man ner så det sträcket mellan arrangören och
+    // tiden försvinner över kanten, så ska den försvinna"): kortets nedre kant
+    // på sträcket (border-linjen) under tid + plats - knapprad, titel och
+    // tid/plats syns, Värd/Pris-raden är dold under kanten. Samma höjd är
+    // stänggränsen: släpps kortet med sträcket under kanten stängs det (se
+    // snapRelease i utils/sheetSnap). Mäter var linjen ligger (data-peek-
+    // boundary i LinkEventCard) relativt scroll-innehållet, vars topp är
+    // kortets överkant (grip-zonen ligger i dess pt-6). null = inget sträck
+    // att mäta mot (väljarlistan) → inget kompaktläge.
+    const measureCompactHeight = (): number | null => {
+        if (chooserActiveRef.current) return null;
         const sc = scrollContainerRef.current;
-        if (!sc) return COLLAPSED_HEIGHT_VH;
+        if (!sc) return null;
         const line = sc.querySelector('[data-peek-boundary]') as HTMLElement | null;
-        if (!line) return COLLAPSED_HEIGHT_VH;
+        if (!line) return null;
         const scRect = sc.getBoundingClientRect();
         const lineRect = line.getBoundingClientRect();
         // Linjens topp relativt scroll-innehållets topp (oberoende av nuvarande
         // korthöjd/scroll).
         const lineTopWithinContent = (lineRect.top - scRect.top) + sc.scrollTop;
-        const targetPx = lineTopWithinContent;
-        const vh = (targetPx / window.innerHeight) * 100;
-        return Math.max(10, Math.min(PEEK_HEIGHT_VH, Math.round(vh)));
+        const vh = (lineTopWithinContent / window.innerHeight) * 100;
+        // Taket 60 (inte peek-höjdens 22 som förr): på en kort skärm eller med
+        // härkomst-raden ligger sträcket högre än 22 vh, och då hade stoppet
+        // skurit av tidsraden.
+        return Math.max(10, Math.min(60, Math.round(vh)));
     };
+    const measureCollapsedHeight = (): number => measureCompactHeight() ?? COLLAPSED_HEIGHT_VH;
 
     // Default-höjd när ett kort öppnas: visa HELA headern (titel, tid, plats,
     // värd, pris) + en remsa av bilden — så man direkt ser värden OCH lite av
@@ -1269,8 +1273,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // sist stängs kortet. Mäts färskt per gest — bild- och headerhöjd varierar.
     // Väljarlistan har ingen tapp-höjd (ingen beskrivning att mäta mot).
     // Toleransen: ett läge inom 4 vh från ett stopp räknas som "på" det.
+    // KOMPAKTLÄGET (30/9, se measureCompactHeight) är det lägsta stoppet:
+    // taket → tapp-höjden → default → kompakt → stängt, med hjul som drag.
     const SNAP_TOLERANCE_VH = 4;
     const sheetStopsNow = (): number[] => sheetStops([
+        measureCompactHeight() ?? NaN,
         measureDefaultHeight(),
         ...(chooserActiveRef.current ? [] : [measureOpenHeight()]),
         maxVhRef.current,
@@ -1486,9 +1493,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 return;
             }
             // Scrolla tillbaka vid innehållets topp → ETT STOPP NER i stället
-            // för att glida (Josef 1/9, utökat 2/9 med tapp-höjden): taket →
-            // tapp-höjden → default, och nästa svep därifrån stänger kortet
-            // helt. Grinden (wheelSnapArmedRef) slukar tröghetssvansen så ett
+            // för att glida (Josef 1/9, utökat 2/9 med tapp-höjden och 30/9
+            // med kompaktläget): taket → tapp-höjden → default → kompakt, och
+            // nästa svep därifrån stänger kortet helt. Grinden (wheelSnapArmedRef) slukar tröghetssvansen så ett
             // enda svep aldrig kedjar genom flera steg.
             // < 1 (inte <= 0): Firefox rapporterar BRÅKDELS-scrollTop (0.5 osv)
             // nära toppen — med <= 0 fastnade hjulet i en död zon där varken
@@ -1586,6 +1593,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
         const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
         isFreshOpenRef.current = freshOpen;
+        // Stod kortet i KOMPAKTLÄGET (30/9) följer läget med till nästa event
+        // i stället för den råa höjden: sträcket sitter olika högt beroende på
+        // härkomst-raden, så samma vh hade skurit av tidsraden eller visat en
+        // flik av arrangören. Blir nästa vy väljarlistan (inget kompaktläge)
+        // öppnar den på sin vanliga höjd.
+        const wasCompact = !freshOpen && Math.abs(heightVhRef.current - collapsedVhRef.current) < 1;
         // Helskärmsbegäran (djuplänken från stadssidorna): förbrukas här, en
         // gång per bump — efterföljande kartklick öppnar som vanligt. En
         // djuplänk är explicit navigering, så den vinner även om ett kort
@@ -1593,10 +1606,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const wantsFullOpen = fullOpenNonce > consumedFullOpenNonceRef.current;
         if (wantsFullOpen) consumedFullOpenNonceRef.current = fullOpenNonce;
         const raf = requestAnimationFrame(() => {
-            const collapsed = measureCollapsedHeight();
-            collapsedVhRef.current = collapsed;
+            const compact = measureCompactHeight();
+            collapsedVhRef.current = compact ?? COLLAPSED_HEIGHT_VH;
             if (wantsFullOpen) updateHeightVh(DEEPLINK_HEIGHT_VH);
             else if (freshOpen) updateHeightVh(measureDefaultHeight());
+            else if (wasCompact) updateHeightVh(compact ?? measureDefaultHeight());
         });
         return () => cancelAnimationFrame(raf);
         // fullOpenNonce bumpas i samma commit som selectedEvent sätts (djup-
@@ -2208,37 +2222,21 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
         if (dragDirection.current === 'vertical') {
             const h = heightVhRef.current;
-            const collapsed = collapsedVhRef.current;
-            if (h < collapsed - DISMISS_BELOW_VH) {
-                // Släppt långt under peek-gränsen → kortet glider ner och
-                // stängs helt (avmarkerar eventet, precis som ett kartklick).
-                closeCard();
-            } else if (h < collapsed) {
-                // Strax under gränsen → snäpp tillbaka till peek-läget.
-                updateHeightVh(collapsed);
-            } else if (h > startHeightVh.current) {
-                // UPPÅT-drag → snäpp till närmaste STOPP ovanför startläget
-                // (Josef 2/9: default → tapp-höjden → taket): ett kort ryck
-                // tar ett steg, ett långt drag landar där fingret släppte.
-                // Släppet hamnar alltid PÅ ett stopp, aldrig mitt emellan —
-                // så kortet inte blir kvar i touch-action:none-zonen (< MAX-5)
-                // där svep på innehållet varken scrollar eller växer. Först
-                // på taket scrollar innehållet (nästa svep).
-                updateHeightVh(snapUp(sheetStopsNow(), startHeightVh.current, h, SNAP_TOLERANCE_VH));
-            } else {
-                // Neddrag → stoppen baklänges (Josef 1/9, utökat 2/9): taket →
-                // tapp-höjden → default, och från default (eller lägre) stängs
-                // kortet helt. Korta ryck studsar tillbaka dit gesten började
-                // — ett darr på fingret ska inte stänga kortet. (Ett släpp
-                // långt under peek har redan stängts av grenarna ovan.)
-                if (startHeightVh.current - h < SNAP_PULL_MIN_VH) {
-                    updateHeightVh(startHeightVh.current);
-                } else {
-                    const target = snapDown(sheetStopsNow(), startHeightVh.current, h, SNAP_TOLERANCE_VH);
-                    if (target !== null) updateHeightVh(target);
-                    else closeCard();
-                }
-            }
+            // Uppåt → närmaste STOPP ovanför startläget (Josef 2/9: default →
+            // tapp-höjden → taket): ett kort ryck tar ett steg, ett långt drag
+            // landar där fingret släppte. Släppet hamnar alltid PÅ ett stopp,
+            // aldrig mitt emellan, så kortet inte blir kvar i touch-action:
+            // none-zonen (< MAX-5) där svep på innehållet varken scrollar
+            // eller växer. Först på taket scrollar innehållet (nästa svep).
+            // Nedåt → stoppen baklänges: taket → tapp-höjden → default →
+            // KOMPAKTLÄGET (30/9). Har sträcket under tid/plats gått under
+            // skärmkanten stängs kortet i stället (Josef 30/9: "drar man ner
+            // så det sträcket mellan arrangören och tiden försvinner över
+            // kanten, så ska den försvinna"). Korta ryck studsar tillbaka dit
+            // gesten började - ett darr på fingret ska inte stänga kortet.
+            const target = snapRelease(sheetStopsNow(), startHeightVh.current, h, measureCompactHeight(), SNAP_PULL_MIN_VH, SNAP_TOLERANCE_VH);
+            if (target !== null) updateHeightVh(target);
+            else closeCard();
         } else if (dragDirection.current === 'horizontal') {
             const currentDragX = dragXRef.current;
             if (!SIDE_SWIPE_ENABLED) {
