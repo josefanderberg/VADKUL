@@ -943,6 +943,10 @@ export default function HomePage() {
     // paintRoundNonce-nuläget: nästa kvitto EFTER den tillhör veckopushen.
     const pulseBackRef = useRef(1);
     const [weekShown, setWeekShown] = useState<{ nonce: number; paintBase: number } | null>(null);
+    // Stadens puls har gått klart (dag -> vecka -> tillbaka till dag). Veckans
+    // populära-bannern väntar på just det ögonblicket (Josef 30/9: "den ska
+    // komma upp i början när den växlat från dag till vecka och tillbaka").
+    const [pulseDoneNonce, setPulseDoneNonce] = useState(-1);
     useEffect(() => {
         if (!tourPlaying || pulseSuppressed) return;
         if (pulseArmedNonce !== tourCycleNonce) return;
@@ -1004,6 +1008,7 @@ export default function HomePage() {
         const hide = setTimeout(() => {
             setWeekShown(null);
             setDayRangeDays(pulseBackRef.current);
+            setPulseDoneNonce(tourCycleNonce);
             playTourHints();
         }, weekPulsePainted ? TOUR_PULSE_HOLD_MS : TOUR_PULSE_PAINT_FALLBACK_MS);
         return () => clearTimeout(hide);
@@ -2699,6 +2704,14 @@ export default function HomePage() {
      * kartklick eller när den används, och kommer inte tillbaka under besöket.
      */
     const [popularWeekDismissed, setPopularWeekDismissed] = useState(false);
+    // Bannerns tystnad: som promptContextQuiet, men landningsläget (tourPlaying,
+    // som varar tills man rör kartan) räcker inte som skäl att tiga - bannern
+    // ska upp DIREKT när landningspulsen gått tillbaka till dag. Under själva
+    // pulsen (och innan den körts) tiger den; har man valt period själv
+    // (pulseSuppressed) är pulsen inte längre i vägen.
+    const landingPulseSettled = !tourPlaying || pulseSuppressed || pulseDoneNonce === tourCycleNonce;
+    const popularWeekQuiet = eventsSettled && mapPainted && landingPulseSettled && !weekShown
+        && creationMode === 'idle' && !selectedEvent && !selectedWish && !searchQuery.trim();
     // Två tal: `qualifying` = riktiga KOMMANDE populära (grinden "mer än 5"),
     // `shown` = exakt det dagväljarens veckorad visar efter trycket (samma
     // fönster och filter som areaCounts.week med 🔥 på - inkl. användar-
@@ -2706,7 +2719,7 @@ export default function HomePage() {
     // `shown`, så siffran stämmer med det man får se.
     const popularWeek = useMemo(() => {
         const none = { qualifying: 0, shown: 0 };
-        if (!promptContextQuiet || popularOnly || dayRangeDays >= WEEK_RANGE_MIN_DAYS || popularWeekDismissed) return none;
+        if (!popularWeekQuiet || popularOnly || dayRangeDays >= WEEK_RANGE_MIN_DAYS || popularWeekDismissed) return none;
         const nowMs = Date.now();
         const start = new Date();
         start.setDate(start.getDate() + dayOffset);
@@ -2725,8 +2738,8 @@ export default function HomePage() {
             if (popular && !isEventPast(evt, nowMs)) qualifying++;
         }
         return { qualifying, shown };
-    }, [promptContextQuiet, popularOnly, dayRangeDays, popularWeekDismissed, events, inMapView, dayOffset, matchesFilterFor, mapCategory, mapSource]);
-    const showPopularWeek = promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn
+    }, [popularWeekQuiet, popularOnly, dayRangeDays, popularWeekDismissed, events, inMapView, dayOffset, matchesFilterFor, mapCategory, mapSource]);
+    const showPopularWeek = popularWeekQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn
         && !showSwedenOffer && !showNotisBanner && !inCityJump
         && shouldOfferPopularWeek({
             popularInWeek: popularWeek.qualifying,
