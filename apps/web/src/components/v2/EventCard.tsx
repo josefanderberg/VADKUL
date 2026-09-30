@@ -1005,15 +1005,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const DEEPLINK_HEIGHT_VH = 80;
     // VÄLJARLISTANS öppningshöjd (Josef 2/9: "multieventet blir inte alls lika
     // högt"). Listan saknar data-peek-boundary och föll ner på peek-höjden
-    // 22 vh. Det vanliga kortet öppnar på header + 110 px bildremsa ≈ 323 px
-    // (mobil): luft 28 (grip-zonen 24 + pt-1; var 40 t.o.m. 30/9, då kortet var
-    // 335 px) + knapprad 40 + titelrad 57 + tidsrad 36 + Värd/Pris 52 + 110
-    // (bildremsan höjd 60 → 110 den 16/9). Listan öppnar
+    // 22 vh. Det vanliga kortet öppnar på header + bildremsa ≈ 335 px
+    // (mobil): luft 28 (grip-zonen 24 + pt-1) + knapprad 40 + titelrad 57 +
+    // tidsrad 36 + Värd/Pris 52 + remsan 122 (DEFAULT_STRIP_PX; 60 → 110 den
+    // 16/9, 122 den 30/9 när luften överst minskade 12 px - Josef: "så de
+    // ändå behåller höjden"). Listan öppnar
     // på EXAKT den höjden (Josef 16/9: "samma höjd som när man öppnar ett
     // vanligt") — hela-rader-snäppet (2/9) landade på 290 px eftersom
     // raderna slutar på 290/353, och en halv rad i vikningen visar dessutom
     // att listan går att scrolla. Ryms hela listan blir kortet lägre.
-    const CHOOSER_DEFAULT_PX = 323;
+    const CHOOSER_DEFAULT_PX = 335;
+    // Bildremsan under Värd/Pris-raden i standardhöjden (se measureDefaultHeight).
+    const DEFAULT_STRIP_PX = 122;
 
     // VÄLJARLÄGET (Josef 31/8): en multi-brickas grupp har skickats upp och
     // inget val är gjort än — kortets innehåll är väljarlistan i stället för
@@ -1233,8 +1236,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // i innehållet (bilden ligger direkt under), eftersom header-höjden varierar.
     // Remsan var 60 px t.o.m. 15/9 — Josef 16/9: "typ 70px högre upp, så man ser
     // lite mer", justerat samma dag till "ta 335px istället" (= remsan 110 px,
-    // kortet ≈335 px totalt på mobil; ≈323 px sedan luften ovanför knapp-
-    // raden minskades 12 px 30/9 - samma innehåll syns). Ändrar du den måste
+    // kortet ≈335 px totalt på mobil). 30/9 minskades luften ovanför
+    // knappraden 12 px och remsan växte lika mycket (DEFAULT_STRIP_PX 122) -
+    // kortet står kvar på 335 px (Josef). Ändrar du den måste
     // CHOOSER_DEFAULT_PX följa med: väljarlistan ska öppna lika högt som
     // ett vanligt event.
     const measureDefaultHeight = (): number => {
@@ -1253,7 +1257,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (!peek) return measureCollapsedHeight();
         const scRect = sc.getBoundingClientRect();
         const peekRect = peek.getBoundingClientRect();
-        const targetPx = (peekRect.bottom - scRect.top) + sc.scrollTop + 110;
+        const targetPx = (peekRect.bottom - scRect.top) + sc.scrollTop + DEFAULT_STRIP_PX;
         const vh = (targetPx / window.innerHeight) * 100;
         return Math.max(PEEK_HEIGHT_VH, Math.min(80, Math.round(vh)));
     };
