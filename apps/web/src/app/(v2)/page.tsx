@@ -5154,9 +5154,13 @@ export default function HomePage() {
                             className="flex items-center gap-2 rounded-full pl-3 pr-3 py-1.5 text-sm hover:bg-orange-50 active:scale-[0.98] transition"
                         >
                             <span aria-hidden>🔥</span>
-                            <span className="font-black text-[#c2410c]">
-                                Visa alla {popularWeek.shown} populära event i veckan →
+                            {/* Samma vandrande text som "Se alla N event på
+                                kartan" i stadssidornas navbar, i eldens färger
+                                (.fire-sweep, som 🔥-chippet) - Josef 30/9. */}
+                            <span className="font-black fire-sweep fire-sweep-on-light">
+                                Visa alla {popularWeek.shown} populära event i veckan
                             </span>
+                            <span aria-hidden className="font-black text-[#E8590C]">→</span>
                         </button>
                         <button
                             type="button"

@@ -398,6 +398,13 @@
 @media (prefers-reduced-motion: reduce) {
   .fire-sweep { animation: none; }
 }
+/* På en VIT platta (kartans botten-prompter, t.ex. "Visa alla N populära
+   event i veckan" 30/9): ljusa lägets mättade färger även i mörkt läge -
+   mörkerlägets ljusa orange/gul försvinner mot vitt. */
+.dark .fire-sweep.fire-sweep-on-light {
+  background-image: linear-gradient(90deg,
+    #E8590C 0%, #F59E0B 50%, #E8590C 100%);
+}
 
 /* Subtil pulserande guld-glöd för "Evenemang stad för stad"-knappen */
 @keyframes gold-glow-pulse {
