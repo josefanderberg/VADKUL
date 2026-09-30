@@ -11,10 +11,10 @@ export const POPULAR_WEEK_PROMPT_MIN = 6;
 export type PopularWeekPromptState = {
     /** Pop-flaggade (eller boostade) event i veckofönstret i kartvyn. */
     popularInWeek: number;
-    /** 🔥 redan på - då har man redan det bannern erbjuder. */
+    /** 🔥 redan på - då har man redan det bannern erbjuder. Veckovyn i sig
+     *  hindrar INTE: rör man kartan mitt i landningspulsen blir man kvar på
+     *  veckan, och då ska bannern ändå upp (Josef 30/9). */
     popularOnly: boolean;
-    /** Veckovyn redan vald (dayRangeDays >= WEEK_RANGE_MIN_DAYS). */
-    weekMode: boolean;
     /** Veckan går att välja på den här zoomen (samma grind som dagväljaren). */
     weekUnlocked: boolean;
     /** Arrangörsfilter eller en opt-in-källa (aldrig populära) är vald. */
@@ -24,7 +24,29 @@ export type PopularWeekPromptState = {
 };
 
 export function shouldOfferPopularWeek(s: PopularWeekPromptState): boolean {
-    if (s.dismissed || s.popularOnly || s.weekMode || s.otherFilter) return false;
+    if (s.dismissed || s.popularOnly || s.otherFilter) return false;
     if (!s.weekUnlocked) return false;
     return s.popularInWeek >= POPULAR_WEEK_PROMPT_MIN;
+}
+
+export type LandingPulseState = {
+    /** Landningsläget (kartans tourPlaying) - varar tills man rör kartan. */
+    tourPlaying: boolean;
+    /** Man har själv valt period - pulsen är inte längre i vägen. */
+    pulseSuppressed: boolean;
+    /** Stadens puls har gått tillbaka till dag (pulseDoneNonce === tourCycleNonce). */
+    pulseDoneForCity: boolean;
+    /** Pulsen har växlat till veckan (weekShown satt). */
+    weekShown: boolean;
+};
+
+/**
+ * Får populära-bannern visas med tanke på landningspulsen (dag -> vecka ->
+ * dag)? Nej medan pulsen väntar på sin tur eller kör; ja så fort den gått
+ * tillbaka till dag, ELLER när man rört kartan (landningsläget slut) - även
+ * mitt i veckofasen, då man blir kvar på veckan (Josef 30/9).
+ */
+export function landingPulseAllowsPrompt(s: LandingPulseState): boolean {
+    if (!s.tourPlaying || s.pulseSuppressed) return true;
+    return s.pulseDoneForCity && !s.weekShown;
 }

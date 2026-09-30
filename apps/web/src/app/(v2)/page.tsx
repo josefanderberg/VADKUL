@@ -24,7 +24,7 @@ import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPi
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
-import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
+import { landingPulseAllowsPrompt, shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug } from '@/utils/organizerPages';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
@@ -2573,6 +2573,7 @@ export default function HomePage() {
     const showNewSince = promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast
         && !newSinceDismissed && newSinceCount >= NEW_SINCE_MIN_COUNT
         && !(cityTourTarget && boundsCityKey !== cityTourTarget.key);
+    const showNewSinceRef = useRef(false);
 
     /** Går det att erbjuda veckan? Bara inzoomad (samma grind som dagväljaren),
      *  bara från dagsläget, och bara om veckan faktiskt har något — mätt med
@@ -2709,8 +2710,17 @@ export default function HomePage() {
     // ska upp DIREKT när landningspulsen gått tillbaka till dag. Under själva
     // pulsen (och innan den körts) tiger den; har man valt period själv
     // (pulseSuppressed) är pulsen inte längre i vägen.
-    const landingPulseSettled = !tourPlaying || pulseSuppressed || pulseDoneNonce === tourCycleNonce;
-    const popularWeekQuiet = eventsSettled && mapPainted && landingPulseSettled && !weekShown
+    // Rör man kartan mitt i veckofasen stoppas tourPlaying, hålltimern rivs
+    // och weekShown blir liggande - men pulsen är över och man står kvar på
+    // veckan. Då ska bannern upp (Josef 30/9). Regeln (testad) bor i
+    // utils/popularWeekPrompt.
+    const landingPulseSettled = landingPulseAllowsPrompt({
+        tourPlaying,
+        pulseSuppressed,
+        pulseDoneForCity: pulseDoneNonce === tourCycleNonce,
+        weekShown: !!weekShown,
+    });
+    const popularWeekQuiet = eventsSettled && mapPainted && landingPulseSettled
         && creationMode === 'idle' && !selectedEvent && !selectedWish && !searchQuery.trim();
     // Två tal: `qualifying` = riktiga KOMMANDE populära (grinden "mer än 5"),
     // `shown` = exakt det dagväljarens veckorad visar efter trycket (samma
@@ -2719,7 +2729,7 @@ export default function HomePage() {
     // `shown`, så siffran stämmer med det man får se.
     const popularWeek = useMemo(() => {
         const none = { qualifying: 0, shown: 0 };
-        if (!popularWeekQuiet || popularOnly || dayRangeDays >= WEEK_RANGE_MIN_DAYS || popularWeekDismissed) return none;
+        if (!popularWeekQuiet || popularOnly || popularWeekDismissed) return none;
         const nowMs = Date.now();
         const start = new Date();
         start.setDate(start.getDate() + dayOffset);
@@ -2738,17 +2748,22 @@ export default function HomePage() {
             if (popular && !isEventPast(evt, nowMs)) qualifying++;
         }
         return { qualifying, shown };
-    }, [popularWeekQuiet, popularOnly, dayRangeDays, popularWeekDismissed, events, inMapView, dayOffset, matchesFilterFor, mapCategory, mapSource]);
+    }, [popularWeekQuiet, popularOnly, popularWeekDismissed, events, inMapView, dayOffset, matchesFilterFor, mapCategory, mapSource]);
     const showPopularWeek = popularWeekQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn
         && !showSwedenOffer && !showNotisBanner && !inCityJump
         && shouldOfferPopularWeek({
             popularInWeek: popularWeek.qualifying,
             popularOnly,
-            weekMode: dayRangeDays >= WEEK_RANGE_MIN_DAYS,
             weekUnlocked,
             otherFilter: !!mapOrganizer || !!mapSource,
             dismissed: popularWeekDismissed,
         });
+    // Kartklicket stänger bara ett meddelande som faktiskt SYNS - annars
+    // stängde klicket som avbryter landningen bannern innan den kommit upp.
+    const showPopularWeekRef = useRef(false);
+    showPopularWeekRef.current = showPopularWeek;
+    // Samma villkor som renderingen av nytt-sedan-sist längre ned.
+    showNewSinceRef.current = showNewSince && !showOverviewReturn && !showNotisBanner && !showPopularWeek;
     const handleShowPopularWeek = useCallback(() => {
         setPulseSuppressed(true);
         setPopularWeekDismissed(true);
@@ -4524,8 +4539,10 @@ export default function HomePage() {
                     // Nytt sedan sist-hälsningen försvinner vid första
                     // kartklicket (Josef 29/9) - den är en hälsning, inget
                     // man ska behöva sikta på ett litet ✕ för att bli av med.
-                    setNewSinceDismissed(true);
-                    setPopularWeekDismissed(true);
+                    // Bara det som syns: ett klick INNAN meddelandet kommit upp
+                    // (t.ex. det som avbryter landningen) ska inte stänga det.
+                    if (showNewSinceRef.current) setNewSinceDismissed(true);
+                    if (showPopularWeekRef.current) setPopularWeekDismissed(true);
                 }}
                 onUserPosChange={setUserPos}
                 starredEventIds={starredEventIds}
