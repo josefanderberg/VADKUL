@@ -23,8 +23,8 @@ import {
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
     BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
-    BRICKA_BODY_ALPHA, brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
-    makeBrickaImageData, sourceGradientCss,
+    BRICKA_BODY_ALPHA, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
+    makeBrickaImageData, selectedMarkerColors, sourceGradientCss,
 } from './v2MapBricka';
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
@@ -3947,6 +3947,11 @@ export default function V2Map({
                 // kategorifärgningen → standardmörk bricka; övriga får sin kategori-
                 // färg. Speciella tillstånd (vald/featured/sparad) går alltid före nedan.
                 const catColorHex = brickaBodyHex(rep);
+                // VALD bricka (30/9): kroppen = brickans färg till 50 % över vitt
+                // (svart i mörkt läge, via .pin-bubble-selected) och färgen i
+                // ramen, med svepet (.pin-ring). Guld (boost/TM) är brickans
+                // färg för de eventen.
+                const sel = selectedMarkerColors(isGoldStar || isTicketmasterGold ? '#f59e0b' : catColorHex);
 
                 // Nål-brickans utseende per tillstånd. Mörkgrå standardbricka med
                 // mjuk gradient för djup; VADKUL-skapade event får en smaragdgrön
@@ -3963,7 +3968,7 @@ export default function V2Map({
                     ? sourceGradientCss(catColorHex, BRICKA_BODY_ALPHA)
                     : BRICKA_DARK_BG;
                 const pinBorder = isSelected
-                    ? '3px solid #ffffff'
+                    ? `3px solid ${sel.ringA}`
                     : isGoldStar || isTicketmasterGold
                     ? '3px solid #fbbf24'
                     : isSaved
@@ -3995,10 +4000,17 @@ export default function V2Map({
                 // Multi-event-brickan krymps till single-event-storlek: DOM-brickans
                 // kropp är 44px, GL-single-brickans 40px → 40/44 ≈ 0.91. Enda kvar-
                 // varande skillnaden mot en single blir då siffer-badgen.
-                // Vald bricka får BARA vit kant (se pinBorder) — den ska INTE bli större
-                // eller skifta plats (scale 1.2 gjorde båda). Behåll normal storlek.
+                // Vald bricka är LITE STÖRRE (Josef 30/9: "gör eventmarkören lite
+                // större istället, så man ser tydligare vilken man är på") -
+                // ersätter "bara vit kant, normal storlek". Växer runt bottom
+                // center, så spetsen står kvar på koordinaten (scale 1.2 med
+                // förflyttning prövades förr och avvisades). Offseten nedan
+                // räknas på baseScale, INTE med valfaktorn, så det är spetsen
+                // och inte kroppens mitt som ligger kvar.
+                const SELECTED_SCALE = 1.15;
                 const baseScale = count > 1 ? 0.91 : 1;
-                const scaleStyle = `scale(${baseScale})`;
+                const shownScale = isSelected ? baseScale * SELECTED_SCALE : baseScale;
+                const scaleStyle = `scale(${shownScale})`;
 
                 // Den valda gruppen ritas i BÅDA lagren (GL-brickan ligger kvar
                 // under DOM-markören, se plainData) — då måste de ligga exakt på
@@ -4046,8 +4058,8 @@ export default function V2Map({
                 // --pop-scale styr animationens slutvärde (se @keyframes marker-pop-in)
                 // så multi-event-brickan landar på rätt storlek även efter pop-in.
                 const pinAnimationStyle = showImmediately
-                    ? `--pop-scale: ${baseScale}; animation: none !important; opacity: 1 !important; transform: ${scaleStyle} !important;`
-                    : `--pop-scale: ${baseScale}; transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
+                    ? `--pop-scale: ${shownScale}; animation: none !important; opacity: 1 !important; transform: ${scaleStyle} !important;`
+                    : `--pop-scale: ${shownScale}; transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
 
                 // OBS: emojin sätts med textContent NEDANFÖR — aldrig i mallen.
                 // Fältet kommer från användare (tips) och AI-audit av skrapat
@@ -4058,9 +4070,10 @@ export default function V2Map({
                 markerData.element.innerHTML = `
                     <div class="custom-marker-wrapper" style="${opacityStyle}; ${wrapperStyle}">
                         <div class="pin-element" style="${pinAnimationStyle}">
-                            <div class="pin-bubble" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
+                            <div class="pin-bubble${isSelected ? ' pin-bubble-selected' : ''}" style="${isSelected ? `--sel-body:${sel.body}; ` : `background:${pinBg}; `}border:${pinBorder}; box-shadow: ${pinShadow};">
                                 <div class="pin-emoji"></div>
                             </div>
+                            ${isSelected ? `<div class="pin-ring" aria-hidden="true" style="--ring-a:${sel.ringA}; --ring-b:${sel.ringB};"></div>` : ''}
                             ${countBadge}
                             ${boostBadge}
                         </div>
@@ -4077,13 +4090,22 @@ export default function V2Map({
                 const selEmoji = eventEmoji(inGroupSelected);
                 const emojiEl = markerData.element.querySelector('.pin-emoji');
                 if (emojiEl && emojiEl.textContent !== selEmoji) emojiEl.textContent = selEmoji;
-                // Brickans kropp följer det bläddrade eventet (samma skäl som i
-                // cyclern). Fasta tillstånd (sparad, guld) äger färgen och rörs
-                // ej — guldet sitter på GRUPPEN (som GL:s drawGold) och ska inte
-                // blinka bort när man bläddrar till ett oboostat event i högen.
-                if (!isSaved && !isGoldStar && !isTicketmasterGold) {
+                // Den valda brickans kropp och ram följer det bläddrade eventets
+                // färg (samma skäl som i cyclern). Guldet sitter på GRUPPEN (som
+                // GL:s drawGold) och ska inte blinka bort när man bläddrar till
+                // ett oboostat event i högen.
+                if (!isGoldStar && !isTicketmasterGold) {
+                    const c = selectedMarkerColors(brickaBodyHex(inGroupSelected));
                     const bubble = markerData.element.querySelector('.pin-bubble') as HTMLElement | null;
-                    if (bubble) bubble.style.background = brickaBodyBg(inGroupSelected);
+                    if (bubble) {
+                        bubble.style.setProperty('--sel-body', c.body);
+                        bubble.style.borderColor = c.ringA;
+                    }
+                    const ring = markerData.element.querySelector('.pin-ring') as HTMLElement | null;
+                    if (ring) {
+                        ring.style.setProperty('--ring-a', c.ringA);
+                        ring.style.setProperty('--ring-b', c.ringB);
+                    }
                 }
 
                 // Siffran = count − position i bläddrings-ordningen. Nästa → index
@@ -4253,6 +4275,55 @@ export default function V2Map({
                     position: relative;
                     transition: transform 0.18s ease, filter 0.18s ease;
                 }
+                /* VALD bricka (ägarbeslut 30/9, Josef: "tydligare vilken markör
+                   vi har valt" - den vita ramen såg ut som 🔥-brickornas):
+                   - lite STÖRRE (SELECTED_SCALE, spetsen kvar på platsen),
+                   - KROPPEN = brickans färg till 50 % över VITT, i mörkt läge
+                     över SVART (--sel-body från selectedMarkerColors; ingen
+                     inline-bakgrund för vald). Ogenomskinlig - kartan syns
+                     inte igenom (Josef: "inte så man ser kartan").
+                   - RAMEN i brickans egen färg (kategori/grön/guld) med samma
+                     vandrande nyansskifte som zoom-bannerns text
+                     (map-portal-sweep i globals.css, 7 s).
+                   .pin-ring ligger OVANPÅ bubblan och täcker exakt dess 3 px-
+                   kant (masken släpper bara igenom kanten; bubblan har
+                   overflow:hidden och ::before är upptagen). Bubblans egen kant
+                   har ringens basfärg, så inget annat skymtar i kantens
+                   kantutjämning. --ring-a/--ring-b sätts per markör.
+                   PRÖVAT OCH RIVET samma dag: eldfärgat skimmer ("inte
+                   gulding"), vit-grått skimmer på vanlig kropp, helvit/svart
+                   kropp, och en ram som
+                   pulserade i tjocklek - inåt, utåt (skakade: border-width
+                   avrundas till hela pixlar) och som skalad ring bakom bubblan
+                   ("skippa den pulserande storleken"). */
+                .pin-bubble.pin-bubble-selected {
+                    background: var(--sel-body), #ffffff;
+                }
+                .dark .pin-bubble.pin-bubble-selected {
+                    background: var(--sel-body), #000000;
+                }
+                .pin-ring {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 44px;
+                    height: 44px;
+                    box-sizing: border-box;
+                    padding: 3px;
+                    border-radius: 50% 50% 0 50%;
+                    transform: rotate(45deg);
+                    background-image: linear-gradient(90deg, var(--ring-a, #ffffff) 0%, var(--ring-b, #94a3b8) 50%, var(--ring-a, #ffffff) 100%);
+                    background-size: 200% auto;
+                    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                    -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+                    animation: map-portal-sweep 7s linear infinite;
+                    pointer-events: none;
+                    transition: transform 0.18s ease;
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .pin-ring { animation: none; }
+                }
                 /* Glansig topp-highlight ger brickan en kupad känsla — ligger
                    under emojin (.pin-emoji har z-index 1) och följer bubblans
                    rundning via border-radius: inherit. */
@@ -4285,6 +4356,9 @@ export default function V2Map({
                     .v2-custom-marker:hover .pin-bubble {
                         transform: rotate(45deg) scale(1.07);
                         filter: brightness(1.05);
+                    }
+                    .v2-custom-marker:hover .pin-ring {
+                        transform: rotate(45deg) scale(1.07);
                     }
                 }
                 .badge-count {

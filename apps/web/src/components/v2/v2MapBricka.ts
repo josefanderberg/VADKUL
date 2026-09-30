@@ -184,6 +184,26 @@ export function brickaBodyBg(ev: LinkEvent): string {
     return hex ? sourceGradientCss(hex, BRICKA_BODY_ALPHA) : BRICKA_DARK_BG;
 }
 
+// VALD brickas färger (ägarbeslut 30/9, Josef: "kategorifärgen som är på
+// eventmarkören som borderfärg, med samma skimmer" + "50% transparent med
+// bakgrundsfärgen kvar ... inte så man ser kartan"). hex = brickans färg
+// (brickaBodyHex, guld för boost/TM); null (ingen kategorifärg) → skiffer.
+//  - body: brickans gradient på 50 % alfa - läggs över VITT (svart i mörkt
+//    läge) av .pin-bubble-selected, så kroppen är ogenomskinlig.
+//  - ringA/ringB: ramens svep (ringA → ringB → ringA, map-portal-sweep som
+//    zoom-bannerns text). Mörkare → ljusare nyans av färgen, så ramen syns
+//    både mot den bleka kroppen (ljust läge) och den mörka (mörkt läge) -
+//    en topp halvvägs mot vitt hade smält ihop med den bleka kroppen.
+export const SELECTED_RING_FALLBACK_HEX = '#475569';
+export function selectedMarkerColors(hex: string | null): { body: string; ringA: string; ringB: string } {
+    const base = hex ?? SELECTED_RING_FALLBACK_HEX;
+    return {
+        body: sourceGradientCss(base, 0.5),
+        ringA: mixHex(base, '#000000', 0.2),
+        ringB: mixHex(base, '#ffffff', 0.3),
+    };
+}
+
 // Nål-prickens färg för ÖNSKE-brickor (samma lila familj som wish-gradienten).
 export const WISH_DOT_HEX = '#8b5cf6';
 
@@ -329,13 +349,24 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     ctx.shadowColor = 'transparent';
     // Ram: vald = tydlig opak vit (markeringen man är "på"); stjärnmärkt = varm
     // ljusgul kant mot guldkroppen; sparad = ljusblå (#5BA3CC, samma som DOM);
-    // önskan = STRECKAD vit (drömlinje); 🔥 populär = något tjockare, nästan
-    // opak vit (Josef 10/9: "litelite tjockare border") — syns även med
-    // filtret AV, guld/vald/sparad vinner; annars svag vit kant för djup.
+    // önskan = STRECKAD vit (drömlinje).
+    // Vanliga brickor: en LJUSARE NYANS av kroppens egen färg (ägarbeslut 30/9,
+    // Josef: "gör alla som inte är valda med en border med en ljusare nyans")
+    // - kroppens gradient med en vit slöja på 55 %, samma blandning som DOM-
+    // brickans kategorikant (rgba(255,255,255,0.55) över kroppen). 🔥 populär
+    // = samma nyans, lite tjockare (Josef 10/9 + 30/9) - syns även med
+    // filtret AV. (Förr: svag vit kant 0.28 och nästan opak vit för 🔥.)
     if (wish) ctx.setLineDash([5, 4]);
     ctx.lineWidth = selected ? 3.5 : goldBody || saved ? 2.5 : pop ? 3 : 2;
-    ctx.strokeStyle = selected ? '#ffffff' : goldBody ? '#fff3c4' : saved ? '#5BA3CC' : wish ? 'rgba(255,255,255,0.9)' : pop ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.28)';
-    ctx.stroke();
+    if (selected || goldBody || saved || wish) {
+        ctx.strokeStyle = selected ? '#ffffff' : goldBody ? '#fff3c4' : saved ? '#5BA3CC' : 'rgba(255,255,255,0.9)';
+        ctx.stroke();
+    } else {
+        ctx.strokeStyle = grad;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.stroke();
+    }
     ctx.restore();
 
     // Emoji centrerad i kroppen (oroterad), med ink-korrigering för WebKits
