@@ -139,10 +139,12 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
 
     return (
         // Vanligt blockinnehåll i kortets scrollcontainer — kortets sheet äger
-        // höjd/drag/scroll. pt-8 lyfter rubriken under drag-indikatorn som
-        // ligger absolut överst i kortet. data-group-list: EventCard känner
-        // igen väljarläget i DOM:en och mäter listans höjd (measureDefaultHeight).
-        <div className="pt-8" data-group-list>
+        // höjd/drag/scroll. pt-1: scrollcontainern bär redan pt-6 för den
+        // solida grip-zonen, så rubriken står 28 px ned - samma luft som
+        // vanliga kortets knapprad (Josef 30/9; pt-8 ovanpå pt-6 gav 56 px
+        // tomrum). data-group-list: EventCard känner igen väljarläget i DOM:en
+        // och mäter listans höjd (measureDefaultHeight).
+        <div className="pt-1" data-group-list>
             <div className="flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-zinc-700/70">
                 <div className="min-w-0 flex-1">
                     <span className="block text-base font-black text-slate-800 dark:text-zinc-100 truncate leading-tight">{placeName}</span>

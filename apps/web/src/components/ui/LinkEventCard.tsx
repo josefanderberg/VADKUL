@@ -445,10 +445,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                 chatten kom och puttade ut den — nu scrollar ALLT direkt ut
                 över kanten när kortet är fullt uppdraget. */}
             <div
-                // pt-4 (var pt-10): kortets scrollcontainer bär numera pt-6
-                // för den solida grip-zonen — totala luften till strecken är
-                // samma 40 px som förut.
-                className={`p-4 md:p-6 pt-4 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer'}`}
+                // pt-1 (var pt-4, dessförinnan pt-10): kortets scrollcontainer
+                // bär pt-6 för den solida grip-zonen, så luften ovanför
+                // knappraden är 28 px. Josef 30/9: 40 px var "en så stor
+                // padding i toppen" - knapparna står nu strax under strecken.
+                className={`p-4 md:p-6 pt-1 md:pt-1 flex flex-col w-full relative bg-card ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                 onClick={handleHeaderClick}
             >
                 {isAdmin && (
