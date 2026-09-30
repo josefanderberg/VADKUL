@@ -24,6 +24,7 @@ import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPi
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
+import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug } from '@/utils/organizerPages';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
@@ -2684,6 +2685,65 @@ export default function HomePage() {
     const showNotisBanner = notisBannerEligible && !notisBannerHidden && !authModal.open
         && promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn && !showSwedenOffer && !inCityJump
         && getNotisStatus() === 'default';
+
+    /**
+     * "VISA ALLA POPULÄRA EVENT I VECKAN" (Josef 30/9: "jag tror folk kanske
+     * säljs in mer på det än att det kommer syjuntor och annat"). När veckan
+     * har mer än 5 🔥 Populära i KARTVYN erbjuds ett tryck som byter till
+     * veckovy med Populära påslaget. Regeln i utils/popularWeekPrompt
+     * (testad). Räkningen = det man faktiskt får se efter trycket: veckan
+     * från vald dag, kartans ruta, samma populärregel som 🔥 (boost räknas),
+     * och ev. vald kategori. Samma slot och tystnadsregler som de andra
+     * botten-prompterna; åtgärdsprompterna, översiktspillen, Sverige-tipset
+     * och notisbannern går före - nytt-sedan-sist viker. Stängs med ✕, ett
+     * kartklick eller när den används, och kommer inte tillbaka under besöket.
+     */
+    const [popularWeekDismissed, setPopularWeekDismissed] = useState(false);
+    // Två tal: `qualifying` = riktiga KOMMANDE populära (grinden "mer än 5"),
+    // `shown` = exakt det dagväljarens veckorad visar efter trycket (samma
+    // fönster och filter som areaCounts.week med 🔥 på - inkl. användar-
+    // skapade, som alltid syns, och veckans redan passerade). Bannern lovar
+    // `shown`, så siffran stämmer med det man får se.
+    const popularWeek = useMemo(() => {
+        const none = { qualifying: 0, shown: 0 };
+        if (!promptContextQuiet || popularOnly || dayRangeDays >= WEEK_RANGE_MIN_DAYS || popularWeekDismissed) return none;
+        const nowMs = Date.now();
+        const start = new Date();
+        start.setDate(start.getDate() + dayOffset);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        let qualifying = 0;
+        let shown = 0;
+        for (const evt of events) {
+            if (!(evt.time >= start && evt.time <= end) || !inMapView(evt)) continue;
+            if (!matchesFilterFor(evt, mapCategory, mapSource)) continue;
+            const popular = !evt.userCreated && passesPopularFilter(evt, true);
+            if (!popular && !evt.userCreated) continue;
+            shown++;
+            if (popular && !isEventPast(evt, nowMs)) qualifying++;
+        }
+        return { qualifying, shown };
+    }, [promptContextQuiet, popularOnly, dayRangeDays, popularWeekDismissed, events, inMapView, dayOffset, matchesFilterFor, mapCategory, mapSource]);
+    const showPopularWeek = promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn
+        && !showSwedenOffer && !showNotisBanner && !inCityJump
+        && shouldOfferPopularWeek({
+            popularInWeek: popularWeek.qualifying,
+            popularOnly,
+            weekMode: dayRangeDays >= WEEK_RANGE_MIN_DAYS,
+            weekUnlocked,
+            otherFilter: !!mapOrganizer || !!mapSource,
+            dismissed: popularWeekDismissed,
+        });
+    const handleShowPopularWeek = useCallback(() => {
+        setPulseSuppressed(true);
+        setPopularWeekDismissed(true);
+        startTransition(() => {
+            setDayRangeDays(7);
+            setPopularOnly(true);
+        });
+    }, []);
     const dismissNotisBanner = useCallback(() => {
         setNotisBannerHidden(true);
         try {
@@ -4452,6 +4512,7 @@ export default function HomePage() {
                     // kartklicket (Josef 29/9) - den är en hälsning, inget
                     // man ska behöva sikta på ett litet ✕ för att bli av med.
                     setNewSinceDismissed(true);
+                    setPopularWeekDismissed(true);
                 }}
                 onUserPosChange={setUserPos}
                 starredEventIds={starredEventIds}
@@ -5068,7 +5129,35 @@ export default function HomePage() {
                 aldrig visas samtidigt). Ren hälsning, ingen åtgärdsprompt: ett
                 tryck VAR SOM HELST på den - eller på kartan (onMapClick) -
                 tystar den för resten av besöket (Josef 29/9; förut bara ✕). */}
-            {showNewSince && !showOverviewReturn && !showNotisBanner && (
+            {/* Veckans populära (Josef 30/9, se showPopularWeek): en rad -
+                "🔥 Visa alla N populära event i veckan →" - som byter till
+                veckovy med 🔥 på. ✕ eller ett kartklick stänger. */}
+            {showPopularWeek && (
+                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-white/50 pl-1 pr-1 py-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <button
+                            type="button"
+                            onClick={handleShowPopularWeek}
+                            className="flex items-center gap-2 rounded-full pl-3 pr-3 py-1.5 text-sm hover:bg-orange-50 active:scale-[0.98] transition"
+                        >
+                            <span aria-hidden>🔥</span>
+                            <span className="font-black text-[#c2410c]">
+                                Visa alla {popularWeek.shown} populära event i veckan →
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPopularWeekDismissed(true)}
+                            aria-label="Stäng"
+                            className="shrink-0 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {showNewSince && !showOverviewReturn && !showNotisBanner && !showPopularWeek && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <button
                         type="button"
