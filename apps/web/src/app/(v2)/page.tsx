@@ -25,6 +25,7 @@ import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/ut
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
+import { zoomInCenter } from '@/utils/zoomInCenter';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug } from '@/utils/organizerPages';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
@@ -2727,17 +2728,31 @@ export default function HomePage() {
     const showZoomIn = popularWeekQuiet && !nearbyIsEmpty && !nearbyAllPast && !showNotisBanner && !inCityJump
         && popularOnly && !mapOrganizer && !zoomInDismissed && !!zoomCity
         && mapZoom !== null && mapZoom < LABEL_TITLE_MIN_ZOOM;
-    // Målzoomen är titelgränsen + en halv (Josef: "så att man ser eventens
-    // titlar under eventmarkörerna och lite till"). Zoomnivå med flit: det är
-    // lagrets egen zoomgräns som avgör om titlarna syns, inte ett metermått.
+    // Målzoomen är titelgränsen + en och en halv (Josef: "så att man ser
+    // eventens titlar under eventmarkörerna och lite till"; 30/9 kväll ett
+    // steg till: "ännu mer inzoomad. ta en enhet mer inzoomat" - var + 0,5).
+    // Zoomnivå med flit: det är lagrets egen zoomgräns som avgör om titlarna
+    // syns, inte ett metermått.
+    // Målpunkten är MARKÖRERNAS mitt i orten, inte ortens mittpunkt (Josef
+    // 1/10: "centrera oss mer i den genomsnittliga mitt av de markörer som
+    // finns") - mitten av den tätaste klungan, se utils/zoomInCenter. Det
+    // som syns på kartan just nu (visibleEvents, 🔥 är på), kommande i
+    // första hand; har allt redan varit räknas de passerade.
     const handleZoomIn = useCallback(() => {
         if (!zoomCity) return;
         setZoomInDismissed(true);
         // Ett eget val: en sen platsuppgift får inte flyga "hem" på stadsnivå
         // och ta tillbaka zoomen (samma som när man tar i kartan).
         tourStartedBlindRef.current = false;
-        flyToPoint(zoomCity.lat, zoomCity.lng, zoomCity.name, LABEL_TITLE_MIN_ZOOM + 0.5);
-    }, [zoomCity, flyToPoint]);
+        const nowMs = Date.now();
+        const placed = visibleEvents.filter(hasValidCoords);
+        const upcoming = placed.filter(evt => !isEventPast(evt, nowMs));
+        const target = zoomInCenter(
+            (upcoming.length > 0 ? upcoming : placed).map(evt => ({ lat: evt.lat!, lng: evt.lng! })),
+            zoomCity,
+        );
+        flyToPoint(target.lat, target.lng, zoomCity.name, LABEL_TITLE_MIN_ZOOM + 1.5);
+    }, [zoomCity, flyToPoint, visibleEvents]);
 
     // Kartklicket stänger bara ett meddelande som faktiskt SYNS - annars
     // stängde klicket som avbryter landningen bannern innan den kommit upp.
