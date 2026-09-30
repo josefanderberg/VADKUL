@@ -10,6 +10,8 @@
  *
  * Skild från utils/cityPoints (291 SÖKBARA orter — de flesta saknar
  * stadssida) och lib/cityUtils (medlemssegmenteringens kommunlista).
+ * Ny stadssida här ⇒ lägg in orten i kontraktets CITIES också (ortvalet vid
+ * registreringen + helgtipset) — cityPagesCoverage.test fäller annars.
  */
 
 export type City = {

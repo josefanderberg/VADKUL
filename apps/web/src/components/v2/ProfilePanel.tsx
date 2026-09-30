@@ -105,6 +105,7 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
     // Min stad (stadssegmenterade utskick). '' = ingen stad vald/sparad.
     const [citySlug, setCitySlug] = useState('');
     const [cityBusy, setCityBusy] = useState(false);
+    const [cityInfoOpen, setCityInfoOpen] = useState(false);
     // "Jag har barn (0–13 år)" + barnens åldrar — styr STANDARDLÄGET för
     // kartans kategorifilter: utan barn göms Familj & barn bakom 🧸-opt-in-
     // cirkeln (utils/familyFilter), med barn syns kategorin som vanligt.
@@ -818,22 +819,45 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                         <span className="text-[10px] font-bold text-slate-400">via e-post</span>
                                     </button>
                                     {/* Min stad — styr vilka event vi lyfter fram i utskick.
-                                        GPS fyller i den automatiskt; ett val här vinner alltid. */}
-                                    <div className="w-full flex items-center gap-3 px-4 py-3">
-                                        <MapPin size={16} className="text-[#006AA7] shrink-0" />
-                                        <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Min stad</span>
-                                        <select
-                                            value={citySlug}
-                                            disabled={cityBusy}
-                                            onChange={(e) => handleCityChange(e.target.value)}
-                                            aria-label="Min stad"
-                                            className="max-w-[45%] px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 focus:border-[#006AA7] focus:outline-none disabled:opacity-50"
-                                        >
-                                            <option value="">Ingen stad</option>
-                                            {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
-                                                <option key={c.slug} value={c.slug}>{c.name}</option>
-                                            ))}
-                                        </select>
+                                        GPS fyller i den automatiskt; ett val här vinner alltid.
+                                        ⓘ fäller ut varför + vad man gör när orten saknas
+                                        (Tranås-kommentaren 30/9), samma förklaring som registreringen. */}
+                                    <div className="w-full flex flex-col gap-2 px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <MapPin size={16} className="text-[#006AA7] shrink-0" />
+                                            <span className="flex-1 flex items-center gap-1.5 text-sm font-bold text-slate-700 dark:text-slate-200">
+                                                Min stad
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCityInfoOpen(o => !o)}
+                                                    aria-expanded={cityInfoOpen}
+                                                    aria-controls="profile-city-info"
+                                                    aria-label="Varför frågar vi om stad?"
+                                                    className={`p-0.5 rounded-full transition-colors ${cityInfoOpen ? 'text-[#006AA7]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                                >
+                                                    <Info size={14} />
+                                                </button>
+                                            </span>
+                                            <select
+                                                value={citySlug}
+                                                disabled={cityBusy}
+                                                onChange={(e) => handleCityChange(e.target.value)}
+                                                aria-label="Min stad"
+                                                className="max-w-[45%] px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 focus:border-[#006AA7] focus:outline-none disabled:opacity-50"
+                                            >
+                                                <option value="">Ingen stad</option>
+                                                {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
+                                                    <option key={c.slug} value={c.slug}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        {cityInfoOpen && (
+                                            <p id="profile-city-info" className="pl-7 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                                                Staden styr helgtipset på torsdagar – det som händer i och runt orten.
+                                                Finns inte din ort? Välj den som ligger närmast och tipsa oss under
+                                                Problem eller feedback nedan så lägger vi till den.
+                                            </p>
+                                        )}
                                     </div>
                                     {/* Jag har barn (0–13 år) + barnens åldrar — styr
                                         kartans standardfilter: utan barn göms Familj &

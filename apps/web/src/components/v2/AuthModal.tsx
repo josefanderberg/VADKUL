@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, LogIn, UserPlus, Check } from 'lucide-react';
+import { X, LogIn, UserPlus, Check, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { CITIES, getCity } from '@/lib/cityUtils';
 import { DERIVED_CITY_KEY } from '@/hooks/useSaveUserCity';
@@ -59,6 +59,10 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
     // uppdateras) från "valde själv" (manual → GPS rör den aldrig).
     const [citySlug, setCitySlug] = useState('');
     const [cityTouched, setCityTouched] = useState(false);
+    // ⓘ bredvid stadsfältet: fäller ut varför vi frågar + vad man gör när
+    // orten saknas (Tranås-kommentaren 30/9). Stängd som standard — rutan
+    // ska vara lätt, texten är till för den som undrar.
+    const [cityInfoOpen, setCityInfoOpen] = useState(false);
     // "Jag har barn" — bara kryssrutan här (registreringen hålls lätt);
     // barnens åldrar kompletteras i profilpanelen. Styr kartans standardfilter
     // (Familj & barn auto-på för den som har barn).
@@ -83,7 +87,7 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
 
     // Stängd modal → tillbaka till login-läget, så en senare öppning aldrig
     // landar i ett kvarglömt kompletteringssteg.
-    useEffect(() => { if (!open) setMode('login'); }, [open]);
+    useEffect(() => { if (!open) { setMode('login'); setCityInfoOpen(false); } }, [open]);
 
     // Escape stänger modalen — standardbeteende för dialoger (tangentbord/SR).
     useEffect(() => {
@@ -221,6 +225,44 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
         }
     };
 
+    // Stadsfältet — SAMMA i registreringen och kompletteringssteget. Valfritt;
+    // gör att helgtipset kan visa event nära användaren. Förifylls från
+    // GPS-härledningen.
+    const cityField = (
+        <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+                <select
+                    value={citySlug}
+                    onChange={(e) => { setCitySlug(e.target.value); setCityTouched(true); }}
+                    aria-label="Stad"
+                    className={`flex-1 min-w-0 px-4 py-3 rounded-xl border border-white/10 bg-white/10 focus:border-[#FECC02]/70 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white ${citySlug ? 'text-white' : 'text-white/40'}`}
+                >
+                    <option value="">Stad (valfritt)</option>
+                    {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
+                        <option key={c.slug} value={c.slug}>{c.name}</option>
+                    ))}
+                </select>
+                <button
+                    type="button"
+                    onClick={() => setCityInfoOpen(o => !o)}
+                    aria-expanded={cityInfoOpen}
+                    aria-controls="auth-city-info"
+                    aria-label="Varför frågar vi om stad?"
+                    className={`shrink-0 w-12 flex items-center justify-center rounded-xl border bg-white/10 focus:border-[#FECC02]/70 focus:outline-none transition-colors ${cityInfoOpen ? 'border-[#FECC02]/70 text-[#FECC02]' : 'border-white/10 text-white/60 hover:text-white'}`}
+                >
+                    <Info size={18} />
+                </button>
+            </div>
+            {cityInfoOpen && (
+                <p id="auth-city-info" className="px-1 text-xs font-semibold leading-relaxed text-white/60">
+                    Staden styr helgtipset på torsdagar – det som händer i och runt orten.
+                    Finns inte din ort? Välj den som ligger närmast, eller hoppa över. Tipsa
+                    oss gärna under Problem eller feedback i profilen så lägger vi till den.
+                </p>
+            )}
+        </div>
+    );
+
     return (
         // Rutan bär SAMMA mörka platta-språk som stadsnamnet/dagväljaren på
         // kartan (Josef 31/8 — den mörkblå looken utbytt): slate-900/80 +
@@ -282,17 +324,7 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
                                 <option value="vill_ej_ange">Vill inte ange</option>
                             </select>
                         </div>
-                        <select
-                            value={citySlug}
-                            onChange={(e) => { setCitySlug(e.target.value); setCityTouched(true); }}
-                            aria-label="Stad"
-                            className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 focus:border-[#FECC02]/70 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white ${citySlug ? 'text-white' : 'text-white/40'}`}
-                        >
-                            <option value="">Stad (valfritt)</option>
-                            {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
-                                <option key={c.slug} value={c.slug}>{c.name}</option>
-                            ))}
-                        </select>
+                        {cityField}
                         <label className="flex items-center gap-2.5 px-1 cursor-pointer select-none">
                             <input
                                 type="checkbox"
@@ -394,19 +426,7 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
                                     <option value="vill_ej_ange">Vill inte ange</option>
                                 </select>
                             </div>
-                            {/* Stad (valfri) — gör att utskicken kan visa event nära
-                                användaren. Förifylls från GPS-härledningen. */}
-                            <select
-                                value={citySlug}
-                                onChange={(e) => { setCitySlug(e.target.value); setCityTouched(true); }}
-                                aria-label="Stad"
-                                className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 focus:border-[#FECC02]/70 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white ${citySlug ? 'text-white' : 'text-white/40'}`}
-                            >
-                                <option value="">Stad (valfritt)</option>
-                                {[...CITIES].sort((a, b) => a.name.localeCompare(b.name, 'sv')).map(c => (
-                                    <option key={c.slug} value={c.slug}>{c.name}</option>
-                                ))}
-                            </select>
+                            {cityField}
                             {/* "Jag har barn (0–13 år)" — lätt steg: bara kryss-
                                 rutan, åldrarna fylls i senare i profilen.
                                 Kryssrutan avgör om kartan visar familjeeventen
