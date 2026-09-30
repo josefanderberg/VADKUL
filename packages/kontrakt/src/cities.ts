@@ -64,6 +64,47 @@ export const CITIES: City[] = [
     // Efterfrågad av medlem vid registrering (12/9) — listan är också konto-
     // väljarens städer (AuthModal/ProfilePanel), inte bara segmentering.
     { slug: 'leksand',       name: 'Leksand',       lat: 60.7305, lng: 14.9970, region: 'dalarna', population: 16000 },
+    // ─── Alla orter med stadssida (webbens utils/cityPages) — 30/9 ──────────
+    // En Tranåsbo hittade inte sin ort vid registreringen, fast Tranås har en
+    // egen stadssida; närmaste i listan låg 56 km bort, och helgtipset räknar
+    // bara event inom 10 km. Varje stadssida ska gå att välja som ort — web-
+    // testet cityPagesCoverage vaktar det. Koordinater + folkmängd därifrån.
+    { slug: 'visby',         name: 'Visby',         lat: 57.64, lng: 18.30, region: 'gotland', population: 61000 },
+    { slug: 'skovde',        name: 'Skövde',        lat: 58.39, lng: 13.85, region: 'vastra-gotaland', population: 58000 },
+    { slug: 'kungsbacka',    name: 'Kungsbacka',    lat: 57.49, lng: 12.08, region: 'halland', population: 87000 },
+    { slug: 'varberg',       name: 'Varberg',       lat: 57.11, lng: 12.25, region: 'halland', population: 67000 },
+    { slug: 'norrtalje',     name: 'Norrtälje',     lat: 59.76, lng: 18.70, region: 'stockholm', population: 65000 },
+    { slug: 'marsta',        name: 'Märsta',        lat: 59.62, lng: 17.86, region: 'stockholm', population: 51000 },
+    { slug: 'akersberga',    name: 'Åkersberga',    lat: 59.48, lng: 18.30, region: 'stockholm', population: 48000 },
+    { slug: 'upplands-vasby', name: 'Upplands Väsby', lat: 59.52, lng: 17.91, region: 'stockholm', population: 48000 },
+    { slug: 'enkoping',      name: 'Enköping',      lat: 59.64, lng: 17.08, region: 'uppsala', population: 48000 },
+    { slug: 'angelholm',     name: 'Ängelholm',     lat: 56.25, lng: 12.86, region: 'skane', population: 44000 },
+    { slug: 'strangnas',     name: 'Strängnäs',     lat: 59.38, lng: 17.03, region: 'sodermanland', population: 40000 },
+    { slug: 'vastervik',     name: 'Västervik',     lat: 57.76, lng: 16.64, region: 'kalmar', population: 37000 },
+    { slug: 'kinna',         name: 'Kinna',         lat: 57.51, lng: 12.69, region: 'vastra-gotaland', population: 35000 },
+    { slug: 'varnamo',       name: 'Värnamo',       lat: 57.19, lng: 14.04, region: 'jonkoping', population: 35000 },
+    { slug: 'vallentuna',    name: 'Vallentuna',    lat: 59.53, lng: 18.08, region: 'stockholm', population: 34000 },
+    { slug: 'nodinge',       name: 'Nödinge',       lat: 57.90, lng: 12.05, region: 'vastra-gotaland', population: 33000 },
+    { slug: 'kungsangen',    name: 'Kungsängen',    lat: 59.48, lng: 17.75, region: 'stockholm', population: 32000 },
+    { slug: 'ystad',         name: 'Ystad',         lat: 55.43, lng: 13.82, region: 'skane', population: 31000 },
+    { slug: 'ljungby',       name: 'Ljungby',       lat: 56.83, lng: 13.94, region: 'kronoberg', population: 29000 },
+    { slug: 'stenungsund',   name: 'Stenungsund',   lat: 58.07, lng: 11.82, region: 'vastra-gotaland', population: 27000 },
+    { slug: 'laholm',        name: 'Laholm',        lat: 56.51, lng: 13.04, region: 'halland', population: 26000 },
+    { slug: 'arvika',        name: 'Arvika',        lat: 59.65, lng: 12.59, region: 'varmland', population: 25000 },
+    { slug: 'osthammar',     name: 'Östhammar',     lat: 60.26, lng: 18.37, region: 'uppsala', population: 22000 },
+    { slug: 'sjobo',         name: 'Sjöbo',         lat: 55.63, lng: 13.70, region: 'skane', population: 20000 },
+    { slug: 'tranas',        name: 'Tranås',        lat: 58.03, lng: 14.98, region: 'jonkoping', population: 19000 },
+    { slug: 'almhult',       name: 'Älmhult',       lat: 56.55, lng: 14.14, region: 'kronoberg', population: 18000 },
+    { slug: 'hoor',          name: 'Höör',          lat: 55.93, lng: 13.54, region: 'skane', population: 17000 },
+    { slug: 'solvesborg',    name: 'Sölvesborg',    lat: 56.05, lng: 14.58, region: 'blekinge', population: 17000 },
+    { slug: 'vimmerby',      name: 'Vimmerby',      lat: 57.67, lng: 15.86, region: 'kalmar', population: 15000 },
+    { slug: 'saffle',        name: 'Säffle',        lat: 59.13, lng: 12.92, region: 'varmland', population: 15000 },
+    { slug: 'trosa',         name: 'Trosa',         lat: 58.90, lng: 17.55, region: 'sodermanland', population: 14000 },
+    { slug: 'arboga',        name: 'Arboga',        lat: 59.39, lng: 15.84, region: 'vastmanland', population: 14000 },
+    { slug: 'olofstrom',     name: 'Olofström',     lat: 56.28, lng: 14.53, region: 'blekinge', population: 13000 },
+    { slug: 'borgholm',      name: 'Borgholm',      lat: 56.88, lng: 16.66, region: 'kalmar', population: 11000 },
+    { slug: 'markaryd',      name: 'Markaryd',      lat: 56.46, lng: 13.60, region: 'kronoberg', population: 10000 },
+    { slug: 'mullsjo',       name: 'Mullsjö',       lat: 57.92, lng: 13.88, region: 'jonkoping', population: 7000 },
 ];
 
 export const CITY_BY_SLUG = new Map(CITIES.map(c => [c.slug, c]));
