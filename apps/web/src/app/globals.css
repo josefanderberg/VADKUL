@@ -378,6 +378,12 @@
 @media (prefers-reduced-motion: reduce) {
   .map-portal { animation: none; }
 }
+/* På en VIT platta (kartans zoom-banner, 30/9): ljusa lägets blå även i
+   mörkt läge - mörkerlägets ljusblå försvinner mot vitt. */
+.dark .map-portal.map-portal-on-light {
+  background-image: linear-gradient(90deg,
+    #004B78 0%, #2b91cf 50%, #004B78 100%);
+}
 
 /* 🔥 Populära-chipset (Josef 22/9): samma vandrande gradient som .map-portal
    i navbaren, i eldens färger. Bara i vilande läge; valt chip är vit text på

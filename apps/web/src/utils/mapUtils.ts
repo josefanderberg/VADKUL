@@ -22,6 +22,11 @@ import type { EventCategoryType } from './categories';
  */
 export const WEEK_VIEW_MIN_ZOOM = 9;
 
+/** Från den här zoomen står eventets TITEL under markören (under den bara
+ *  kategorin). Bor här i stället för i V2Map så kartsidan kan läsa den utan
+ *  att dra in kartkomponenten - zoom-bannern (30/9) landar strax över den. */
+export const LABEL_TITLE_MIN_ZOOM = 13;
+
 /**
  * Zoom-nivån som visar ungefär `spanMeters` tvärs en yta som är `widthPx` bred,
  * vid en given latitud. MapLibre räknar zoom mot 512 px breda rutor, och en

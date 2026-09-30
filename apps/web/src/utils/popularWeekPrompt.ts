@@ -28,25 +28,3 @@ export function shouldOfferPopularWeek(s: PopularWeekPromptState): boolean {
     if (!s.weekUnlocked) return false;
     return s.popularInWeek >= POPULAR_WEEK_PROMPT_MIN;
 }
-
-export type LandingPulseState = {
-    /** Landningsläget (kartans tourPlaying) - varar tills man rör kartan. */
-    tourPlaying: boolean;
-    /** Man har själv valt period - pulsen är inte längre i vägen. */
-    pulseSuppressed: boolean;
-    /** Stadens puls har gått tillbaka till dag (pulseDoneNonce === tourCycleNonce). */
-    pulseDoneForCity: boolean;
-    /** Pulsen har växlat till veckan (weekShown satt). */
-    weekShown: boolean;
-};
-
-/**
- * Får populära-bannern visas med tanke på landningspulsen (dag -> vecka ->
- * dag)? Nej medan pulsen väntar på sin tur eller kör; ja så fort den gått
- * tillbaka till dag, ELLER när man rört kartan (landningsläget slut) - även
- * mitt i veckofasen, då man blir kvar på veckan (Josef 30/9).
- */
-export function landingPulseAllowsPrompt(s: LandingPulseState): boolean {
-    if (!s.tourPlaying || s.pulseSuppressed) return true;
-    return s.pulseDoneForCity && !s.weekShown;
-}

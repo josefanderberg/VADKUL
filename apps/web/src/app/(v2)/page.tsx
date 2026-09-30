@@ -24,7 +24,7 @@ import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPi
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
-import { landingPulseAllowsPrompt, shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
+import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug } from '@/utils/organizerPages';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
@@ -32,7 +32,7 @@ import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
 import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFromQuery } from '@/utils/eventSearch';
-import { WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
+import { LABEL_TITLE_MIN_ZOOM, WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
 import { readStartCity, writeStartCity } from '@/utils/startCity';
 import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
@@ -41,7 +41,6 @@ import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { shouldAutoBumpDay } from '@/utils/autoDayBump';
 import { normalizeTipUrl } from '@/utils/tipUrl';
 import { isNewSince, readAndStampVisit, NEW_SINCE_MIN_COUNT } from '@/utils/newSinceLastVisit';
-import { fitCamera, SWEDEN_BOUNDS, OVERVIEW_PADDING, SWEDEN_NUDGE_DELAY_MS, canOfferOverview, hasLeftOverview, readSwedenNudgeDone, markSwedenNudgeDone } from '@/utils/swedenOverview';
 import PostCreateNudge from '@/components/v2/PostCreateNudge';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
@@ -943,10 +942,6 @@ export default function HomePage() {
     // paintRoundNonce-nuläget: nästa kvitto EFTER den tillhör veckopushen.
     const pulseBackRef = useRef(1);
     const [weekShown, setWeekShown] = useState<{ nonce: number; paintBase: number } | null>(null);
-    // Stadens puls har gått klart (dag -> vecka -> tillbaka till dag). Veckans
-    // populära-bannern väntar på just det ögonblicket (Josef 30/9: "den ska
-    // komma upp i början när den växlat från dag till vecka och tillbaka").
-    const [pulseDoneNonce, setPulseDoneNonce] = useState(-1);
     useEffect(() => {
         if (!tourPlaying || pulseSuppressed) return;
         if (pulseArmedNonce !== tourCycleNonce) return;
@@ -1008,7 +1003,6 @@ export default function HomePage() {
         const hide = setTimeout(() => {
             setWeekShown(null);
             setDayRangeDays(pulseBackRef.current);
-            setPulseDoneNonce(tourCycleNonce);
             playTourHints();
         }, weekPulsePainted ? TOUR_PULSE_HOLD_MS : TOUR_PULSE_PAINT_FALLBACK_MS);
         return () => clearTimeout(hide);
@@ -1183,13 +1177,8 @@ export default function HomePage() {
     // Stopp-callback från V2Map: användaren drog/klickade → pausa bildspelet.
     // Blinket slutar där det står — dayRangeDays rörs INTE här, så den fas man
     // ser i stoppögonblicket är den man blir kvar i.
-    // Sant så fort man tagit i kartan själv (drag/tapp/klick) — Sverige-
-    // tipsets ena villkor (Josef 16/9: "när du har rört kartan en gång eller
-    // flera gånger"). Hjulzoom räknas inte hit, men den håller bildspelet
-    // igång och därmed prompt-slotten tyst ändå.
-    const [userTouchedMap, setUserTouchedMap] = useState(false);
+    // (Sverige-tipset, som räknade "har man tagit i kartan", är RIVET 30/9.)
     const handleMapUserInteraction = useCallback(() => {
-        setUserTouchedMap(true);
         // Har man tagit i kartan är vyn ens egen — en sen platsuppgift får inte
         // rycka iväg kameran efteråt.
         tourStartedBlindRef.current = false;
@@ -2609,45 +2598,12 @@ export default function HomePage() {
         return city.name;
     }, [cityTourTarget, boundsCityKey, mapCenter, mapZoom]);
 
-    /**
-     * SVERIGE-TIPSET (Josef 16/9): "när du har rört kartan en gång eller
-     * flera gånger … en rolig pop-up: vill du se en hel översiktsbild över
-     * Sverige, så att du ser hur många event som verkligen finns … gör den
-     * tjugo sekunder in, så kan du stänga ner den sen". Visas EN gång per
-     * enhet (flaggan i utils/swedenOverview), tidigast 20 s efter
-     * välkomstrutan och först när man tagit i kartan själv (userTouchedMap).
-     * Samma slot och tystnadsregler som de andra botten-prompterna:
-     * åtgärdsprompterna (tomt / allt har varit) vinner, nytt-sedan-sist får
-     * vika. Står man redan utzoomad finns inget att erbjuda.
-     *
-     * "Visa hela Sverige" = ett vanligt stadshopp (flyToPoint med egen zoom:
-     * frost → jumpTo → reveal-ankare → landningskvitto) till kameran som
-     * ramar in landet i den fria ytan mellan topplattan och dagväljaren
-     * (fitCamera — zoomen räknas ur viewporten, aldrig hårdkodad; på telefon
-     * blir det kartans golv 4). Vyn man lämnade sparas i overviewReturn och
-     * Tillbaka-pillen tar en hem med samma hopp. Zoomar man själv in igen
-     * förbi översikten är den lämnad och pillen försvinner. Pillen är den
-     * enda vägen tillbaka och vinner därför över ALLA andra prompter i
-     * slotten så länge man står i översikten.
-     */
-    const [swedenTimerOver, setSwedenTimerOver] = useState(false);
-    useEffect(() => {
-        if (!welcomeDone) return;
-        const t = setTimeout(() => setSwedenTimerOver(true), SWEDEN_NUDGE_DELAY_MS);
-        return () => clearTimeout(t);
-    }, [welcomeDone]);
-    // true tills flaggan lästs — tipset finns aldrig i server-HTML:n.
-    const [swedenNudgeDone, setSwedenNudgeDone] = useState(true);
-    useEffect(() => { setSwedenNudgeDone(readSwedenNudgeDone()); }, []);
+    // SVERIGE-TIPSET ("Visa hela Sverige" + Tillbaka-pillen, 16/9) är RIVET
+    // 30/9 (Josef: "den behövs inte"). Hjälpfilen utils/swedenOverview gick
+    // med det.
     // Mitt i ett stadshopp beskriver kartrutan förra vyn (samma vakt som
     // areaCounts/nytt-sedan-sist).
     const inCityJump = !!cityTourTarget && boundsCityKey !== cityTourTarget.key;
-    /** Vyn att återvända till från översikten — null = inte i översikten. */
-    const [overviewReturn, setOverviewReturn] = useState<{ lat: number; lng: number; zoom: number; name: string; overviewZoom: number } | null>(null);
-    const showOverviewReturn = overviewReturn !== null && promptContextQuiet && !inCityJump;
-    const showSwedenOffer = !swedenNudgeDone && swedenTimerOver && userTouchedMap
-        && promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn && !inCityJump
-        && mapZoom !== null && canOfferOverview(mapZoom);
 
     /**
      * NOTIS-BANNERN (Josef 21/9): "Vill du få helgtipsen för Växjö?" - bara i
@@ -2655,7 +2611,7 @@ export default function HomePage() {
      * i utils/notisBanner). Utvärderas EN gång, NOTIS_BANNER_DELAY_MS efter
      * välkomstrutan, så den aldrig syns i första sekunden av besöket.
      * Samma slot och tystnadsregler som de andra botten-prompterna:
-     * åtgärdsprompterna, översiktspillen och Sverige-tipset går före,
+     * åtgärdsprompterna går före, populära-/zoom-bannern och
      * nytt-sedan-sist får vika.
      *
      * Utloggad: knappen öppnar inloggningen, och efter den visas samma banner
@@ -2689,7 +2645,7 @@ export default function HomePage() {
     // man på notiserna via profilen eller gilla-nudgen mitt i besöket ska
     // bannern försvinna direkt.
     const showNotisBanner = notisBannerEligible && !notisBannerHidden && !authModal.open
-        && promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn && !showSwedenOffer && !inCityJump
+        && promptContextQuiet && !nearbyIsEmpty && !nearbyAllPast && !inCityJump
         && getNotisStatus() === 'default';
 
     /**
@@ -2700,27 +2656,31 @@ export default function HomePage() {
      * (testad). Räkningen = det man faktiskt får se efter trycket: veckan
      * från vald dag, kartans ruta, samma populärregel som 🔥 (boost räknas),
      * och ev. vald kategori. Samma slot och tystnadsregler som de andra
-     * botten-prompterna; åtgärdsprompterna, översiktspillen, Sverige-tipset
-     * och notisbannern går före - nytt-sedan-sist viker. Stängs med ✕, ett
-     * kartklick eller när den används, och kommer inte tillbaka under besöket.
+     * botten-prompterna; åtgärdsprompterna och notisbannern går före -
+     * nytt-sedan-sist viker. Stängs med ✕, ett kartklick eller när den
+     * används, och kommer tillbaka först i nästa STAD (stadssök/skylt,
+     * se cityDismissKey).
      */
     const [popularWeekDismissed, setPopularWeekDismissed] = useState(false);
-    // Bannerns tystnad: som promptContextQuiet, men landningsläget (tourPlaying,
-    // som varar tills man rör kartan) räcker inte som skäl att tiga - bannern
-    // ska upp DIREKT när landningspulsen gått tillbaka till dag. Under själva
-    // pulsen (och innan den körts) tiger den; har man valt period själv
-    // (pulseSuppressed) är pulsen inte längre i vägen.
-    // Rör man kartan mitt i veckofasen stoppas tourPlaying, hålltimern rivs
-    // och weekShown blir liggande - men pulsen är över och man står kvar på
-    // veckan. Då ska bannern upp (Josef 30/9). Regeln (testad) bor i
-    // utils/popularWeekPrompt.
-    const landingPulseSettled = landingPulseAllowsPrompt({
-        tourPlaying,
-        pulseSuppressed,
-        pulseDoneForCity: pulseDoneNonce === tourCycleNonce,
-        weekShown: !!weekShown,
-    });
-    const popularWeekQuiet = eventsSettled && mapPainted && landingPulseSettled
+    // Zoom-bannern (Josef 30/9): efter "Visa alla populära" - zooma in centralt
+    // över staden så långt att eventens titlar står under markörerna, lite till.
+    const [zoomInDismissed, setZoomInDismissed] = useState(false);
+    // Bannrarna gäller per STAD (Josef 30/9: "söker man på en stad och flyttas
+    // till en ny stad så ska den också komma upp"): ett nytt stadsnamn i
+    // kameramålet (stadssök, vägskylt, landningen) nollar stängt-läget.
+    // Zoom-hoppet landar i samma stad och nollar därför inget.
+    const cityDismissKey = cityTourTarget?.cityName ?? null;
+    useEffect(() => {
+        setPopularWeekDismissed(false);
+        setZoomInDismissed(false);
+    }, [cityDismissKey]);
+    // Bannrarnas tystnad: som promptContextQuiet men UTAN landningsläget
+    // (tourPlaying) - populära-bannern ska upp DIREKT när kartan landat och
+    // målats (Josef 30/9: "den kan visas direkt, och inte efter hela den
+    // dag-vecka-dag har gått"), även medan landningspulsen kör. Räkningen går
+    // på veckofönstret från vald dag och påverkas inte av pulsens växling.
+    // (Grinden som väntade ut pulsen, landingPulseAllowsPrompt, är riven.)
+    const popularWeekQuiet = eventsSettled && mapPainted
         && creationMode === 'idle' && !selectedEvent && !selectedWish && !searchQuery.trim();
     // Två tal: `qualifying` = riktiga KOMMANDE populära (grinden "mer än 5"),
     // `shown` = exakt det dagväljarens veckorad visar efter trycket (samma
@@ -2749,8 +2709,8 @@ export default function HomePage() {
         }
         return { qualifying, shown };
     }, [popularWeekQuiet, popularOnly, popularWeekDismissed, events, inMapView, dayOffset, matchesFilterFor, mapCategory, mapSource]);
-    const showPopularWeek = popularWeekQuiet && !nearbyIsEmpty && !nearbyAllPast && !showOverviewReturn
-        && !showSwedenOffer && !showNotisBanner && !inCityJump
+    const showPopularWeek = popularWeekQuiet && !nearbyIsEmpty && !nearbyAllPast
+        && !showNotisBanner && !inCityJump
         && shouldOfferPopularWeek({
             popularInWeek: popularWeek.qualifying,
             popularOnly,
@@ -2758,12 +2718,35 @@ export default function HomePage() {
             otherFilter: !!mapOrganizer || !!mapSource,
             dismissed: popularWeekDismissed,
         });
+    // ZOOM-BANNERN: 🔥 på (man har just valt att se alla populära), kartan
+    // under titel-zoomen och inget arrangörsfilter. Samma tystnad, slot och
+    // turordning som populära-bannern - de två kan aldrig synas samtidigt
+    // (den ena kräver 🔥 av, den andra på). Staden = närmsta ort till
+    // kartans mitt (samma uppslag som topplattan).
+    const zoomCity = useMemo(() => (mapCenter ? nearestCityPoint(mapCenter.lat, mapCenter.lng) : null), [mapCenter]);
+    const showZoomIn = popularWeekQuiet && !nearbyIsEmpty && !nearbyAllPast && !showNotisBanner && !inCityJump
+        && popularOnly && !mapOrganizer && !zoomInDismissed && !!zoomCity
+        && mapZoom !== null && mapZoom < LABEL_TITLE_MIN_ZOOM;
+    // Målzoomen är titelgränsen + en halv (Josef: "så att man ser eventens
+    // titlar under eventmarkörerna och lite till"). Zoomnivå med flit: det är
+    // lagrets egen zoomgräns som avgör om titlarna syns, inte ett metermått.
+    const handleZoomIn = useCallback(() => {
+        if (!zoomCity) return;
+        setZoomInDismissed(true);
+        // Ett eget val: en sen platsuppgift får inte flyga "hem" på stadsnivå
+        // och ta tillbaka zoomen (samma som när man tar i kartan).
+        tourStartedBlindRef.current = false;
+        flyToPoint(zoomCity.lat, zoomCity.lng, zoomCity.name, LABEL_TITLE_MIN_ZOOM + 0.5);
+    }, [zoomCity, flyToPoint]);
+
     // Kartklicket stänger bara ett meddelande som faktiskt SYNS - annars
     // stängde klicket som avbryter landningen bannern innan den kommit upp.
     const showPopularWeekRef = useRef(false);
     showPopularWeekRef.current = showPopularWeek;
+    const showZoomInRef = useRef(false);
+    showZoomInRef.current = showZoomIn;
     // Samma villkor som renderingen av nytt-sedan-sist längre ned.
-    showNewSinceRef.current = showNewSince && !showOverviewReturn && !showNotisBanner && !showPopularWeek;
+    showNewSinceRef.current = showNewSince && !showNotisBanner && !showPopularWeek && !showZoomIn;
     const handleShowPopularWeek = useCallback(() => {
         setPulseSuppressed(true);
         setPopularWeekDismissed(true);
@@ -2820,34 +2803,6 @@ export default function HomePage() {
             toast.error('Kunde inte aktivera notiser. Försök igen via profilen.');
         }
     }, [user, openLogin, notisCity]);
-
-    const dismissSwedenOffer = useCallback(() => {
-        markSwedenNudgeDone();
-        setSwedenNudgeDone(true);
-    }, []);
-    const showSwedenOverview = useCallback(() => {
-        if (!mapCenter || mapZoom === null) return;
-        markSwedenNudgeDone();
-        setSwedenNudgeDone(true);
-        const cam = fitCamera(SWEDEN_BOUNDS, { width: window.innerWidth, height: window.innerHeight }, OVERVIEW_PADDING);
-        // Namnet på vyn man lämnar: stadens om topplattan har en, annars
-        // närmsta ort (för "Tillbaka till X" och frostens "Blickar över X").
-        const name = liveCityName && liveCityName !== 'Sverige'
-            ? liveCityName
-            : nearestCityPoint(mapCenter.lat, mapCenter.lng).name;
-        setOverviewReturn({ lat: mapCenter.lat, lng: mapCenter.lng, zoom: mapZoom, name, overviewZoom: cam.zoom });
-        flyToPoint(cam.lat, cam.lng, 'Sverige', cam.zoom);
-    }, [mapCenter, mapZoom, liveCityName, flyToPoint]);
-    const returnFromOverview = useCallback(() => {
-        const back = overviewReturn;
-        if (!back) return;
-        setOverviewReturn(null);
-        flyToPoint(back.lat, back.lng, back.name, back.zoom);
-    }, [overviewReturn, flyToPoint]);
-    useEffect(() => {
-        if (!overviewReturn || inCityJump || mapZoom === null) return;
-        if (hasLeftOverview(mapZoom, overviewReturn.overviewZoom)) setOverviewReturn(null);
-    }, [overviewReturn, inCityJump, mapZoom]);
 
     // Eventen i KARTANS RUTA (dagens + sök-filtrerade), smalnade med 🔥-läget
     // men FÖRE kategorifiltret: 🔥-knappens badge och kategoriradens siffror
@@ -4543,6 +4498,7 @@ export default function HomePage() {
                     // (t.ex. det som avbryter landningen) ska inte stänga det.
                     if (showNewSinceRef.current) setNewSinceDismissed(true);
                     if (showPopularWeekRef.current) setPopularWeekDismissed(true);
+                    if (showZoomInRef.current) setZoomInDismissed(true);
                 }}
                 onUserPosChange={setUserPos}
                 starredEventIds={starredEventIds}
@@ -5030,7 +4986,7 @@ export default function HomePage() {
                 väljaren i botten (bottom-[228px] klarar väljarens ~130px från
                 bottom-[92px]) så de inte täcker varandra — rutan pekar ju på
                 växeln man i så fall ska trycka på. */}
-            {nearbyIsEmpty && !showOverviewReturn && (
+            {nearbyIsEmpty && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
                         <span className="text-2xl" aria-hidden>{popularOnly ? '🔥' : mapCategory ? EVENT_CATEGORIES[mapCategory].emoji : canOfferWeek ? '📅' : '🤷'}</span>
@@ -5136,7 +5092,7 @@ export default function HomePage() {
                 det räcker med bara visa imorgon"): förklaringstexten och
                 "Hitta på något ⚡" är borttagna - hela raden tar en till
                 nästa dag. */}
-            {nearbyAllPast && !showOverviewReturn && (
+            {nearbyAllPast && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <button
                         type="button"
@@ -5191,7 +5147,39 @@ export default function HomePage() {
                 </div>
             )}
 
-            {showNewSince && !showOverviewReturn && !showNotisBanner && !showPopularWeek && (
+            {/* Zoom-bannern (Josef 30/9, se showZoomIn): efter "Visa alla
+                populära" - en rad som zoomar in centralt över staden så
+                titlarna syns under markörerna. Samma form som populära-
+                bannern och samma vandrande text, i kartans blå (.map-portal
+                som navbarens länk - Josef 30/9: "den kan vara blå, fast med
+                samma effekt"). */}
+            {showZoomIn && zoomCity && (
+                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
+                    <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-white/50 pl-1 pr-1 py-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <button
+                            type="button"
+                            onClick={handleZoomIn}
+                            className="flex items-center gap-2 rounded-full pl-3 pr-3 py-1.5 text-sm hover:bg-sky-50 active:scale-[0.98] transition"
+                        >
+                            <span aria-hidden>🔍</span>
+                            <span className="font-black map-portal map-portal-on-light">
+                                Zooma in över {zoomCity.name}
+                            </span>
+                            <span aria-hidden className="font-black text-[#006AA7]">→</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setZoomInDismissed(true)}
+                            aria-label="Stäng"
+                            className="shrink-0 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {showNewSince && !showNotisBanner && !showPopularWeek && !showZoomIn && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <button
                         type="button"
@@ -5213,128 +5201,6 @@ export default function HomePage() {
                             <X className="w-4 h-4" />
                         </span>
                     </button>
-                </div>
-            )}
-
-            {/* Sverige-tipset (Josef 16/9): en rolig engångs-pop-up 20 s in i
-                besöket, när man tagit i kartan — "vill du se hela Sverige?".
-                Samma slot som prompterna ovan; turordningen i showSwedenOffer. */}
-            {showSwedenOffer && (
-                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
-                    <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl" aria-hidden>🇸🇪</span>
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-slate-800">
-                                    Vill du se hela Sverige?
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                    Zooma ut och se hur många event som händer i
-                                    landet just nu — sen tar vi dig tillbaka hit.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={dismissSwedenOffer}
-                                aria-label="Stäng"
-                                className="shrink-0 p-2 -m-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <div className="mt-2.5 flex justify-end">
-                            <button
-                                type="button"
-                                onClick={showSwedenOverview}
-                                className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
-                            >
-                                Visa hela Sverige
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Notis-bannern (Josef 21/9): bara i hemskärmsappen, bara när
-                webbläsaren aldrig fått frågan. Turordningen i showNotisBanner,
-                ✕ = "Inte nu" (14 dagars snooze, två nej = aldrig mer). */}
-            {showNotisBanner && (
-                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
-                    <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl" aria-hidden>🔔</span>
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-slate-800">
-                                    {notisCity ? `Vill du få helgtipsen för ${notisCity.city.name}?` : 'Vill du få notiser från VADKUL?'}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                    {!user
-                                        ? 'Logga in, så skickar vi helgens bästa event varje torsdag.'
-                                        : notisCity
-                                            ? 'En notis varje torsdag med helgens bästa event, och en påminnelse innan dina gillade event börjar.'
-                                            : 'En påminnelse innan dina gillade event börjar.'}
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={dismissNotisBanner}
-                                aria-label="Inte nu"
-                                className="shrink-0 p-2 -m-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <div className="mt-2.5 flex justify-end">
-                            <button
-                                type="button"
-                                onClick={acceptNotisBanner}
-                                disabled={notisBannerBusy}
-                                className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors disabled:opacity-60"
-                            >
-                                {user ? 'Slå på notiser 🔔' : 'Logga in'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* I översikten: siffran för hela landet + vägen tillbaka till vyn
-                man lämnade (Josef 16/9: "när du har kommit till översikt så
-                kan du bara klicka gå ner igen"). ✕ = stanna kvar utzoomad. */}
-            {showOverviewReturn && overviewReturn && (
-                <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
-                    <div className="pointer-events-auto rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl" aria-hidden>🗺️</span>
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-slate-800">
-                                    {periodCount > 0
-                                        ? `${periodCount.toLocaleString('sv-SE')} event ${promptDayLabel} i hela Sverige.`
-                                        : 'Hela Sverige i bild.'}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                    Zooma in var du vill — eller hoppa tillbaka dit du var.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setOverviewReturn(null)}
-                                aria-label="Stäng"
-                                className="shrink-0 p-2 -m-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <div className="mt-2.5 flex justify-end">
-                            <button
-                                type="button"
-                                onClick={returnFromOverview}
-                                className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
-                            >
-                                ↩ Tillbaka till {overviewReturn.name}
-                            </button>
-                        </div>
-                    </div>
                 </div>
             )}
 

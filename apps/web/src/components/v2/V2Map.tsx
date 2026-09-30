@@ -7,7 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Lock, Users, Flag, Map as MapIcon } from 'lucide-react';
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
-import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView } from '../../utils/mapUtils';
+import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView, LABEL_TITLE_MIN_ZOOM } from '../../utils/mapUtils';
 import { readStartCity } from '../../utils/startCity';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
 import { nextFront, overlapClusters, type OverlapPoint } from '../../utils/overlapCycle';
@@ -40,7 +40,6 @@ const HOVER_PEEK_MAX_EMOJI = 8;
 // från vilken den kapade eventtiteln tar över (minzoom + text-field-steget i
 // etikettlagret läser båda härifrån så de aldrig glider isär).
 const LABEL_CAT_MIN_ZOOM = 9;
-const LABEL_TITLE_MIN_ZOOM = 13;
 
 // ════════════════════════════════════════════════════════════════════════════
 // V2Map — kartan är appens hjärta. Grov karta över filen:
