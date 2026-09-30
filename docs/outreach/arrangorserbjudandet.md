@@ -38,6 +38,32 @@ Studion väljer mall själv och visar den ovanför texten ("Mall: …"). Antalen
 
 Siffrorna nämns bara när de är värda att visa: minst 50 visningar, och klicken bara från 10.
 
+### Så är mejlet uppbyggt (1/10)
+
+1. Hälsning och vem Josef är, med två av arrangörens **populäraste** kommande event som
+   exempel (🔥 enligt kartans klassning först, sedan högst popularitetspoäng). Pipelinen
+   väljer dem (`organizerStats` i apps/scraper), inte de närmaste i tid.
+2. **Arrangörskortet:** deras sida på vadkul.se med knappen *Se er sida*. Hur många event de
+   har på kartan **just nu** (och hur många av dem som är 🔥 populära) står för sig.
+   Visningar och klick står för sig med bildtexten "för era event från den senaste månaden
+   och framåt". Det är vad siffrorna mäter: totalt antal visningar och klick för event i
+   spegelns fönster (30 dagar bak och alla kommande). Visningar har ingen dagshink, så en
+   ren 30-dagarssiffra går inte att räkna ännu.
+3. Sidan är gratis och uppdateras varje natt. Be om en länk.
+4. **Paketen** ("Så kan ni få ut ännu mer av vadkul.se"):
+   - **Gratis** (grå ruta): egen sida, länk vidare till deras sajt och biljetter, på kartan
+     och stadssidorna.
+   - **Arrangör Plus** (blå ruta): logga på kartan, event framlyfta hela veckan, följare får
+     notis, månadsrapport.
+   - **Karta på er egen sajt** (blå ruta, bara kommuner och destinationsbolag).
+5. Frågan: "Vi öppnar Arrangör Plus för ett fåtal arrangörer först. Vill ni vara med från
+   början? Svara bara på det här mejlet, så berättar jag mer och vad det kostar." Inget pris
+   i första mejlet; det sätts när de första har svarat.
+6. Rättelser och avregistrering, hälsning, signatur.
+
+I studions textruta skrivs paketen som en **fetstilad** rad följd av rader som börjar med
+"- ". **Förhandsvisa** visar hur det ser ut hos mottagaren.
+
 ## Så jobbar du i Marknad
 
 1. **Välj arrangörer:** sortera på *Flest visningar*. Kolumnen ✓ visar vilka som har e-post.
@@ -62,7 +88,8 @@ Takt: högst 20 mejl om dagen. Studion stoppar vid 20.
   svar." Den som tackar nej får status Nej tack, och studion skickar inte till dem.
 - Högst en påminnelse.
 - Månadsrapporten går bara till dem som sagt ja.
-- Lova inget som inte finns: "Vi funderar på att erbjuda …" tills det är byggt.
+- Det betalda presenteras som nästa steg som öppnas för ett fåtal först, aldrig som något som
+  redan finns att köpa. Inget pris förrän någon har svarat.
 - Siffrorna knappas aldrig in för hand. De räknas varje natt av pipelinen.
 - Visningssiffrorna visas aldrig publikt på vadkul.se, bara för arrangören själv.
 
