@@ -77,6 +77,32 @@ export const VENUE_FIXES: VenueFix[] = [
         note: 'Kulturhuset Väven, Umeå — FB-rapport 25/9 (Skönsmon), "Väven" ur Sundsvalls-kön fick en namne i Sundsvall',
     },
     {
+        // Ordenshuset (IOGT-NTO), Skolgatan 48, Umeå. FB-kritik 30/9 ("Det
+        // händer i Umeå": "inget från Ordenshuset"): FB-eventen ("Ordenshuset
+        // Umeå", swingkvällarna) låg på 0,0 och syntes aldrig; Ticksters
+        // "Ordenshuset, Umeå" låg på den delade Umeå-punkten (63.8281, 20.2609).
+        // Bara "Ordenshuset" räcker inte — namnet finns i Skutskär, Vitsand m.fl.
+        // Koordinat: företagskatalogens (cylex) punkt för Skolgatan 48.
+        names: ['Ordenshuset Umeå', 'Ordenshuset, Umeå'],
+        city: 'Umeå',
+        lat: 63.8274329,
+        lng: 20.258368,
+        note: 'Ordenshuset, Skolgatan 48, Umeå — FB-kritik 30/9, swingkvällarna låg på 0,0',
+    },
+    {
+        // Ersboda Folkets Hus, Byttgränd 13 (Östra Ersboda centrum), Umeå.
+        // Samma FB-tråd 30/9 ("inget från Ersboda Folkets Hus"): 12 av 13
+        // Tickster-event (fredags-/lördagsdanserna) låg på den delade
+        // Umeå-punkten (63.8281, 20.2609) ~5 km från huset.
+        // Koordinat: Wikidata Q19631631 (63°51'28.148"N 20°20'8.362"E) — samma
+        // punkt som det enda redan korrekt placerade Ersboda-eventet.
+        names: ['Ersboda Folkets Hus', 'Ersboda Folketshus'],
+        city: 'Umeå',
+        lat: 63.857819,
+        lng: 20.335656,
+        note: 'Ersboda Folkets Hus, Byttgränd 13, Umeå — Wikidata Q19631631; FB-kritik 30/9, danserna låg mitt i stan',
+    },
+    {
         // Isaberg Mountain Resort, Hestra. Visit Isabergsregionens "Plats"-fält
         // (28/9) geokodades till en punkt vid Kisa, 60 km bort.
         // Koordinat: OSM-noden "Isaberg Mountain Resort, Transporten, Hestra".
