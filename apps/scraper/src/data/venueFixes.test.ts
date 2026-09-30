@@ -55,6 +55,25 @@ describe('applyVenueFixInPlace', () => {
     });
 });
 
+describe('Umeå-husen i venueFixes (FB-kritiken 30/9)', () => {
+    it('Ordenshusets FB- och Tickster-namn landar på Skolgatan 48', () => {
+        for (const name of ['Ordenshuset Umeå', 'Ordenshuset, Umeå']) {
+            expect(matchVenueFix(name)?.city, name).toBe('Umeå');
+        }
+    });
+
+    it('bara "Ordenshuset" matchar inte — namnet finns i flera orter', () => {
+        expect(matchVenueFix('Ordenshuset')).toBeNull();
+        expect(matchVenueFix('Ordenshuset, Fjärde Tvärgatan 12, Skutskär')).toBeNull();
+    });
+
+    it('Ersboda Folkets Hus i båda stavningarna', () => {
+        for (const name of ['Ersboda Folkets Hus', 'Ersboda Folketshus']) {
+            expect(matchVenueFix(name)?.lat, name).toBeCloseTo(63.8578, 3);
+        }
+    });
+});
+
 describe('hockeyarenorna i venueFixes (0,0-matcherna 28/9)', () => {
     // Exakt de namn swehockey/sportality levererade och som låg på 0,0.
     const ZERO_ZERO: Record<string, string> = {
