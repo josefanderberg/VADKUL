@@ -18,12 +18,21 @@
  * skridskor och handskar om man har — viss utrustning finns att låna.
  * Sluttiden står i beskrivningen: live-spåret läser inte endDate.
  *
+ * Omslaget är klubbens affisch (assets/oneoff-saffle-hockeykul.jpg, 900 px
+ * som pipelinens egna bilder). Den laddas upp under event-images/<admin>/ —
+ * samma mapp som webbens användarbilder — och INTE under scraped-events/:
+ * SQLite-spegeln hoppar över userCreated-event, så orphan-svepet i
+ * cleanup-storage-images skulle se affischen som föräldralös och radera den.
+ *
  * Kör:
  *   npx ts-node src/scripts/oneoff-saffle-hockeykul.ts --dry
  *   npx ts-node src/scripts/oneoff-saffle-hockeykul.ts
  */
 
-import { db } from '../config/firebase';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { db, bucket, STORAGE_BUCKET } from '../config/firebase';
 import { Timestamp } from 'firebase-admin/firestore';
 import { stamped } from '../utils/firestoreStamp';
 
@@ -45,6 +54,29 @@ const SOMASHALLEN = { lat: 59.1298, lng: 12.9018 };
  *  skriptet ger rätt tid oavsett maskinens tidszon. */
 const START = new Date('2026-10-10T10:00:00+02:00');
 
+const POSTER_FILE = path.join(__dirname, 'assets', 'oneoff-saffle-hockeykul.jpg');
+
+/** Laddar upp affischen (innehållsadresserad sökväg → idempotent) och
+ *  returnerar dess publika URL. */
+async function uploadPoster(buf: Buffer, objectPath: string): Promise<string> {
+    if (!bucket) throw new Error('Storage-bucket ej initialiserad.');
+    const file = bucket.file(objectPath);
+    const [exists] = await file.exists();
+    if (!exists) {
+        await file.save(buf, {
+            contentType: 'image/jpeg',
+            metadata: {
+                metadata: { sourceUrl: URL, uploadedAt: new Date().toISOString() },
+                // Innehållsadresserad sökväg — byter aldrig innehåll under samma namn.
+                cacheControl: 'public, max-age=31536000, immutable',
+            },
+            resumable: false,
+        });
+        await file.makePublic();
+    }
+    return `https://storage.googleapis.com/${STORAGE_BUCKET}/${objectPath}`;
+}
+
 async function main() {
     if (!db) { console.error('❌ Firestore ej initialiserat.'); process.exit(1); }
 
@@ -60,6 +92,13 @@ async function main() {
         console.log(`⏭  Finns redan: ${TITLE}`);
         process.exit(0);
     }
+
+    const poster = fs.readFileSync(POSTER_FILE);
+    const posterHash = crypto.createHash('sha1').update(poster).digest('hex').slice(0, 16);
+    const posterPath = `event-images/${ADMIN_UID}/saffle-hockeykul-${posterHash}.jpg`;
+    const coverImage = DRY
+        ? `(dry) https://storage.googleapis.com/${STORAGE_BUCKET}/${posterPath}`
+        : await uploadPoster(poster, posterPath);
 
     const data = stamped({
         title: TITLE,
@@ -83,6 +122,7 @@ async function main() {
             'handskar om du har — viss utrustning finns att låna.',
         // Inlägget säger inget om pris — hellre tomt än gissat "Gratis".
         price: null,
+        coverImage,
         createdAt: Timestamp.now(),
         isLocationVerified: true,
         status: 'published',
@@ -92,6 +132,7 @@ async function main() {
         console.log(`▸ ${START.toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' })}  ${TITLE}`);
         console.log(`    ${data.locationName}  [${data.lat}, ${data.lng}]  · ${data.hostName} · ${data.category}`);
         console.log(`    ${URL}`);
+        console.log(`    omslag: ${POSTER_FILE} (${(poster.length / 1024).toFixed(0)} kB) → ${posterPath}`);
         process.exit(0);
     }
 
