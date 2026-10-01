@@ -48,6 +48,16 @@
 }
 .feature-blink-blue { animation: feature-blink-blue 1s ease-in-out infinite; }
 
+/* "Hämtar beskrivning…" i eventkortet på kartan och i stadssidornas utfällda
+   event (Josef 1/10: "lugnt blinka så man ser att det är lite mer aktivt").
+   Tailwinds animate-pulse bleknade bara till halv styrka och syntes knappt.
+   Lugn andning, ingen stress: full styrka -> svag -> full på 1,4 s. */
+@keyframes loading-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+.loading-blink { animation: loading-blink 1.4s ease-in-out infinite; }
+
 /* DAGBLINKEN på kartans toppplatta (Josef 2/9): när dagen byts — av Nästa-
    knappens automatiska dagbyte eller ett dagsteg — ska dagens namn "blinka
    till" så man uppfattar bytet. ENGÅNGS (ingen infinite): texten svälls upp

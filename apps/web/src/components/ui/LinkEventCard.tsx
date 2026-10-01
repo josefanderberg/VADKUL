@@ -866,7 +866,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         <p data-event-description className="text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
                             {withRecoveredLineBreaks((linkEvent as any).description)
                                 || (descriptionsPending
-                                    ? <span className="animate-pulse text-slate-400 dark:text-zinc-500">Hämtar beskrivning…</span>
+                                    ? <span className="loading-blink text-slate-500 dark:text-zinc-400">Hämtar beskrivning…</span>
                                     : 'Ingen beskrivning tillgänglig.')}
                         </p>
                         

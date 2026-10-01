@@ -133,7 +133,10 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
     const faviconUrl = hostFaviconUrl(outlink ?? e.id);
     // Ticketmaster = biljettköp, inte anmälan (ägarbeslut 1/9): BOKA i guld.
     const tm = isTicketmasterEvent({ id: e.id, url: api?.url });
-    const text = descriptionText(pickDescription(api?.description, e.description), api === undefined);
+    const description = pickDescription(api?.description, e.description);
+    const text = descriptionText(description, api === undefined);
+    // "Hämtar beskrivning…" blinkar lugnt, som i kartans eventkort.
+    const descriptionPending = !description && api === undefined;
 
     // Vidarelänknings-statistiken (outreach-underlaget) — samma räknare som
     // kortets ANMÄL. Fire-and-forget; länken öppnas av <a> oavsett.
@@ -267,7 +270,9 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
             </div>
 
             <p className="mt-3 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
-                {text}
+                {descriptionPending
+                    ? <span className="loading-blink text-slate-500 dark:text-zinc-400">{text}</span>
+                    : text}
             </p>
 
             {/* Stora CTA:n under texten — samma som kortets, i CTA-storlek:
