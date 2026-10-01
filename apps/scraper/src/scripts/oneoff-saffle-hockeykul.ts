@@ -1,9 +1,10 @@
 #!/usr/bin/env ts-node
 /**
  * ENGÅNGS: Säffle HC:s Hockeykul 10/10 — "Prova på skridskor" för barn i
- * Somashallen. Josef hittade inlägget på klubbens FB-sida (postat 1/9) och
- * bad att det läggs in (2026-10-01). Finns inte i någon källa — klubben
- * annonserar bara på FB och svenskalag.se, och inlägget är inget FB-event.
+ * Somashallen. Tipsat av Christoffer Andersson i Messenger (2026-10-01) med
+ * länk till klubbens FB-inlägg (postat 1/9). Finns inte i någon källa —
+ * klubben annonserar bara på FB och svenskalag.se, och inlägget är inget
+ * FB-event.
  *
  * Samma spår som oneoff-gavle-fb-tips.ts (userCreated-live-spåret):
  *   • userCreated: true → läses LIVE av fetchUserCreatedEvents — ingen
@@ -33,8 +34,9 @@ const ADMIN_UID = 'H120TWAU4oTcQLsfqkIStXU6RAU2';
 
 const TITLE = 'Hockeykul – prova på skridskor';
 
-/** Klubbens sajt — inlägget självt är bara ett FB-inlägg, inget event. */
-const URL = 'https://www.svenskalag.se/safflehc';
+/** Klubbens FB-inlägg (delningslänken från tipset, utan mibextid-spårningen)
+ *  — inget FB-event finns, så inlägget är det närmaste en eventsida. */
+const URL = 'https://www.facebook.com/share/p/1DT3Mzxbzp/';
 
 /** Somashallen, Stjärngatan 1 (Höglunda), Säffle — koordinater enligt koordinater.se. */
 const SOMASHALLEN = { lat: 59.1298, lng: 12.9018 };
@@ -66,7 +68,7 @@ async function main() {
         hasSpecificTime: true,
         locationName: 'Somashallen, Säffle',
         extractedAddress: 'Stjärngatan 1, Säffle',
-        geocodedQuery: 'community-tips (Säffle HC:s FB-inlägg 2026-09-01, inlagt av Josef)',
+        geocodedQuery: 'community-tips (Messenger, tipsat av Christoffer Andersson — Säffle HC:s FB-inlägg 2026-09-01)',
         lat: SOMASHALLEN.lat,
         lng: SOMASHALLEN.lng,
         hostName: 'Säffle HC',
