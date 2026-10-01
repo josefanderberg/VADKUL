@@ -22,8 +22,8 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-24",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-01",
+      "emptyRetries": 6
     },
     "karlsborg": {
       "since": "2026-09-29",
@@ -46,8 +46,8 @@
     "nybro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-24",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-01",
+      "emptyRetries": 6
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",

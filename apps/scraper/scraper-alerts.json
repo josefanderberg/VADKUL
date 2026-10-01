@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-30T07:41:04.008Z",
+  "generatedAt": "2026-10-01T08:40:18.730Z",
   "counts": {
     "fel": 0,
     "varning": 34,
-    "nollkoordinatTotalt": 993
+    "nollkoordinatTotalt": 976
   },
   "alerts": [
     {
@@ -16,9 +16,9 @@
     {
       "level": "varning",
       "kind": "tyst",
-      "source": "ostra-goinge",
-      "since": "2026-09-22",
-      "message": "gav 63 event 2026-09-19, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+      "source": "rumskulla-hembygdsforening",
+      "since": "2026-09-17",
+      "message": "gav 1 event 2026-09-10, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -36,8 +36,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Korpen Vadstena",
-      "message": "8 av 10 kommande event ligger 2026-09-30 — sajtvitt datum i stället för eventets?"
+      "source": "Korpen Vänersborg",
+      "message": "8 av 13 kommande event ligger 2026-10-11 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Mora Kommun",
+      "message": "8 av 12 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -54,32 +60,26 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Visit Vemdalen",
-      "message": "30 av 48 kommande event ligger 2026-09-30 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Örebro läns museum",
       "message": "14 av 16 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "993 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Panora 83, NBV 42, Visit Vemdalen 40, Gotlands Museum 26, Förlösa-Kläckeberga församling 24"
+      "source": "976 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Panora 83, NBV 48, Gotlands Museum 26, Equmenia 23, Söndrum-Vapnö församling 21"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Korpen Umeå",
-      "message": "invariant-vakten larmar (12 av 60 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (12 av 54 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Mora Kommun",
-      "message": "invariant-vakten larmar (8 av 14 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 12 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -97,7 +97,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Stora Teatern",
-      "message": "invariant-vakten larmar (8 av 162 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 161 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
