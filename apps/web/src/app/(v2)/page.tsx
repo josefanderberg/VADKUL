@@ -487,8 +487,18 @@ export default function HomePage() {
     // Kontots sparade stad (users.citySlug), läst i samma hydrering - notis-
     // bannern lovar helgtips för DEN staden, det är den helgtipset skickas för.
     const [profileCitySlug, setProfileCitySlug] = useState<string | null>(null);
-    // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
-    const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
+    // Dagnyckel för att skilja dag-/intervallbyten från eventuppdateringar
+    // (formatet ägs av dagbytes-effekten; null = inte satt än, första varvet
+    // är ingen byte).
+    const prevDayKey = useRef<string | null>(null);
+    // Dagbytet som ett EGET val gör (djuplänk, sökträff, sparat-listan):
+    // måldagen märks här så dagbytes-heuristiken låter det valda eventet stå.
+    // Formatoberoende med flit — förr förhandsskrevs prevDayKey (`${offset}:1`),
+    // och när nyckeln fick arrangörsläget som tredje del (af902967, 29/9)
+    // slutade de matcha: djuplänkens kort byttes direkt mot "närmast mitten",
+    // vid kall start ingenting alls (kortet blinkade och stängdes), och en
+    // sökträff på en annan dag öppnade fel event.
+    const ownDaySwitchRef = useRef<number | null>(null);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
     const [daySwitchNonce, setDaySwitchNonce] = useState(0);
     // Bumpas vid intern kort-navigering (Nästa/Föregående/svep) → kameran står kvar
@@ -2316,12 +2326,22 @@ export default function HomePage() {
     // Nästa-knappens automatiska dagbyte (EventCard advanceToNextDay).
     useEffect(() => {
         const dayKey = `${dayOffset}:${dayRangeDays}:${organizerRange}`;
-        if (prevDayKey.current !== dayKey) {
+        if (prevDayKey.current === null) {
+            prevDayKey.current = dayKey;   // första varvet: ingen byte
+        } else if (prevDayKey.current !== dayKey) {
             prevDayKey.current = dayKey;
             // Ett begärt landningsevent (kortets Bakåt/Nästa över ett dagbyte)
             // gäller bara DETTA byte — läs och nolla oavsett vad som händer nedan.
             const wantedId = daySwitchSelectIdRef.current;
             daySwitchSelectIdRef.current = null;
+            // Ett eget val (djuplänk/sökträff) har redan valt eventet på den här
+            // dagen: rör varken valet eller kameran — precis som när prevDayKey
+            // förr förhandsskrevs och bytet aldrig syntes här. Förbrukas vid
+            // nästa byte oavsett vems det var (samma dag = inget byte; då
+            // ligger märkningen kvar ofarligt tills dagen byts).
+            const ownSwitch = ownDaySwitchRef.current;
+            ownDaySwitchRef.current = null;
+            if (ownSwitch === dayOffset) return;
             // Bildspelets blink växlar dag↔vecka en gång i halvsekunden. Det ska bara
             // ändra vad kartan VISAR — inte öppna ett eventkort per blink.
             if (tourPlayingRef.current) return;
@@ -3199,13 +3219,13 @@ export default function HomePage() {
 
     // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
     // till eventets dag, välj det (kameran flyger dit) och stäng panelen.
-    // prevDayKey markeras som hanterad så dagbytes-heuristiken inte byter bort
-    // vårt val mot närmaste-event-logiken.
+    // Dagbytet märks som eget (ownDaySwitchRef) så dagbytes-heuristiken inte
+    // byter bort vårt val mot närmaste-event-logiken.
     const jumpToEvent = useCallback((evt: LinkEvent) => {
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
         const offset = Math.floor((evt.time.getTime() - startOfToday.getTime()) / 86_400_000);
-        prevDayKey.current = `${offset}:1`;
+        ownDaySwitchRef.current = offset;
         // Panelerna stängs urgent (direkt visuell respons); dag+val är den
         // tunga omrenderingen och körs som transition.
         setSearchQuery('');
@@ -3467,7 +3487,7 @@ export default function HomePage() {
     const applyDeepLinkedEvent = useCallback((target: LinkEvent) => {
         const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
         const offset = Math.floor((target.time.getTime() - startOfToday.getTime()) / 86_400_000);
-        prevDayKey.current = `${offset}:1`;
+        ownDaySwitchRef.current = offset;
         setDayOffset(offset);
         setSelectedEvent(target);
         setFullOpenNonce(n => n + 1);
