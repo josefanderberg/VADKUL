@@ -61,6 +61,19 @@ export function parseStartCity(raw: string | null, nowMs: number): StartCity | n
     };
 }
 
+/**
+ * Djuplänkens startvy: `?plats=<lat>,<lng>[,zoom]` (stadssidornas kart-hero,
+ * arrangörssidans "Se alla på kartan", mejlens kartknapp). Vinner över den
+ * sparade staden. REN funktion; utan zoom blir det 11 (en innerstad), och
+ * zoomen hålls inom kartans 4-16 som den sparade stadens.
+ */
+export function parsePlatsParam(raw: string | null): { lat: number; lng: number; zoom: number } | null {
+    if (!raw) return null;
+    const [lat, lng, zoom] = raw.split(',').map(s => (s.trim() === '' ? NaN : Number(s)));
+    if (!isValidLatLng(lat, lng)) return null;
+    return { lat, lng, zoom: Number.isFinite(zoom) ? Math.min(16, Math.max(4, zoom)) : 11 };
+}
+
 /** Sparad stad, eller null (första besöket, rensad lagring, privat läge). */
 export function readStartCity(nowMs: number = Date.now()): StartCity | null {
     if (typeof window === 'undefined') return null;

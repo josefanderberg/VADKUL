@@ -8,7 +8,7 @@ import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Lock, Users, Fla
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView, LABEL_TITLE_MIN_ZOOM } from '../../utils/mapUtils';
-import { readStartCity } from '../../utils/startCity';
+import { parsePlatsParam, readStartCity } from '../../utils/startCity';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
 import { nextFront, overlapClusters, type OverlapPoint } from '../../utils/overlapCycle';
 import { isEventFeatured } from '../../services/linkEventService';
@@ -607,6 +607,9 @@ interface V2MapProps {
      *  försvinner") — lager-knappen, väskan och ladd-/bytessnurrorna göms.
      *  (Bar villkoret hette introGlide t.o.m. 31/8, då intro-kameran fanns.) */
     chromeHidden?: boolean;
+    /** ?plats= som sidan fångade när den monterades (null = ingen eller inte
+     *  fångad än). Läses BARA vid map-init - se där varför. */
+    startPlats?: string | null;
 }
 
 export default function V2Map({
@@ -647,6 +650,7 @@ export default function V2Map({
     onUserInteraction,
     onCityLandingDone,
     chromeHidden = false,
+    startPlats,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -2883,15 +2887,20 @@ export default function V2Map({
             mapContainerRef.current.clientHeight,
         );
         {
-            const plats = new URLSearchParams(window.location.search).get('plats');
-            if (plats) {
-                const [la, ln, z] = plats.split(',').map(Number);
-                if (Number.isFinite(la) && Number.isFinite(ln)) {
-                    startCenter = [ln, la];
-                    startZoom = Number.isFinite(z) ? Math.min(Math.max(z, 4), 16) : 11;
-                    revealAnchorPtRef.current = { lng: ln, lat: la };
-                }
-            } else {
+            // Sidan fångar ?plats= när den monteras och skickar ner den
+            // (startPlats): när den här dynamiskt importerade kartan monteras
+            // har sidans URL-synk ofta redan skrivit om adressfältet utan
+            // plats= (mätt 1/10: adressen omskriven efter 1,4 s, kartan
+            // monterad efter 2,8 s) - då öppnade kartan i den sparade staden.
+            // Inget fångat än (kartan monterades före sidans effekt) = läs
+            // adressfältet, som då inte hunnit skrivas om.
+            const plats = startPlats ?? new URLSearchParams(window.location.search).get('plats');
+            const djup = parsePlatsParam(plats);
+            if (djup) {
+                startCenter = [djup.lng, djup.lat];
+                startZoom = djup.zoom;
+                revealAnchorPtRef.current = { lng: djup.lng, lat: djup.lat };
+            } else if (!plats) {
                 // INGEN djuplänk: öppna i DIN STAD direkt (Josef 31/8 — "vi ska
                 // direkt blicka över staden man är i, inget intro"). Staden är
                 // den vi landade i förra besöket (writeStartCity i page.tsx);

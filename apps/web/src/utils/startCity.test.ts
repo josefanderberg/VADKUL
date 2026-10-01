@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseStartCity, START_CITY_MAX_AGE_MS } from './startCity';
+import { parsePlatsParam, parseStartCity, START_CITY_MAX_AGE_MS } from './startCity';
 
 // Kartan öppnar i den här staden vid nästa besök — allt som kommer ur
 // webbläsarlagringen är alltså kamerainput. En ogiltig koordinat in i MapLibre
@@ -46,5 +46,28 @@ describe('parseStartCity', () => {
     it('zoomen klampas till kartans spann', () => {
         expect(parseStartCity(JSON.stringify({ ...vaxjo, zoom: 1 }), NOW)?.zoom).toBe(4);
         expect(parseStartCity(JSON.stringify({ ...vaxjo, zoom: 22 }), NOW)?.zoom).toBe(16);
+    });
+});
+
+// ?plats= i djuplänkarna (stadssidornas kartbild, arrangörssidan, mejlen) -
+// samma krav som den sparade staden: en trasig koordinat fäller kartan.
+describe('parsePlatsParam', () => {
+    it('läser lat, lng och zoom', () => {
+        expect(parsePlatsParam('58.41,15.62,11')).toEqual({ lat: 58.41, lng: 15.62, zoom: 11 });
+    });
+
+    it('utan zoom blir det 11, zoomen hålls inom 4-16', () => {
+        expect(parsePlatsParam('58.41,15.62')).toEqual({ lat: 58.41, lng: 15.62, zoom: 11 });
+        expect(parsePlatsParam('58.41,15.62,2')?.zoom).toBe(4);
+        expect(parsePlatsParam('58.41,15.62,22')?.zoom).toBe(16);
+    });
+
+    it('saknat, tomt eller trasigt ger null', () => {
+        expect(parsePlatsParam(null)).toBeNull();
+        expect(parsePlatsParam('')).toBeNull();
+        expect(parsePlatsParam(',,')).toBeNull();          // Number('') = 0 får inte bli null island
+        expect(parsePlatsParam('58.41')).toBeNull();
+        expect(parsePlatsParam('linkoping')).toBeNull();
+        expect(parsePlatsParam('95,15.62,11')).toBeNull();
     });
 });

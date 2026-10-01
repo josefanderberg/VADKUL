@@ -3462,6 +3462,21 @@ export default function HomePage() {
     // dag/kategorier till URL:en med replaceState (ingen history-spam, ingen
     // Next-navigation). Att dela länken återskapar exakt vy.
     const urlApplied = useRef(false);
+    // ?plats= (stadssidornas kartbild, arrangörssidans och mejlens kartknapp)
+    // fångas när sidan monteras och skickas till V2Map. URL-synken nedan skriver
+    // om adressfältet utan plats= så fort eventen landat, och den dynamiskt
+    // importerade kartan monteras ofta EFTER det (mätt 1/10: adressen omskriven
+    // efter 1,4 s, kartan monterad efter 2,8 s). Då öppnade kartan i den sparade
+    // staden: Växjö-besökaren som klickade Linköpings kartknapp hamnade i Växjö,
+    // med arrangörsfiltret på 0 event i bild.
+    // I en EFFEKT, inte vid första renderingen: kommer man hit via en intern
+    // Link (arrangörssidans "Se alla på kartan") visar adressfältet förra sidan
+    // ända tills Next bytt historiken i commit-fasen. Monteras kartan före den
+    // här effekten (chunken redan laddad) läser den adressfältet själv.
+    const [startPlats, setStartPlats] = useState<string | null>(null);
+    useEffect(() => {
+        setStartPlats(new URLSearchParams(window.location.search).get('plats'));
+    }, []);
     // Sant när en delad länk styrde dag eller event — då ska auto-hoppet till
     // Imorgon (nedan) aldrig lägga sig i.
     const deepLinkedRef = useRef(false);
@@ -4549,6 +4564,7 @@ export default function HomePage() {
                 // redan över din stad (31/8: intro-kameran är borttagen).
                 chromeHidden={chromeHidden}
                 onUserInteraction={handleMapUserInteraction}
+                startPlats={startPlats}
             />
 
 
