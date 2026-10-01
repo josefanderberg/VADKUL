@@ -68,6 +68,7 @@ function core(s: string): string {
  *  - sparad är en motor-platshållare (PRO/ABF/Medborgarskolan) och färsk är riktig text ≥ 60 → färsk
  *  - sparad = färsk + kort påhängd svans (WP-taggsoppa) → färsk
  *  - sparad är kort platshållare (< 40 tecken) och färsk är ≥ 60 och minst dubbelt → färsk
+ *  - sparad är ett kapat utdrag ("…"/"..." sist) och färsk är hel text ≥ 100 tecken längre → färsk
  *  - annars null — omformuleringar i källan rör vi inte
  */
 export function pickBetterDescription(
@@ -102,6 +103,12 @@ export function pickBetterDescription(
     if (lastWs > 200 && fn.length > sc.length + 20 && fn.startsWith(sc.slice(0, lastWs))) return f;
 
     if (sn.length < 40 && fn.length >= 60 && fn.length >= sn.length * 2) return f;
+    // Sparad är källans UTTRYCKLIGA utdrag ("…" sist) och färsk är hela texten
+    // från samma sida, minst 100 tecken längre → färsk även om arrangören
+    // formulerat om början (Billetto 1/10: JSON-LD kapar vid ~230 tecken; i
+    // Rydaholm hade "mat och" blivit "mat, musik, dans och" sedan dess). Ett
+    // utdrag är aldrig bättre än helheten.
+    if (sc.length >= 80 && sn.length > sc.length && fn.length >= sc.length + 100 && core(f) === fn) return f;
     return null;
 }
 

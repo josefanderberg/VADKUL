@@ -25,6 +25,7 @@ describe('normalizeTitle', () => {
 describe('normalizeDescription', () => {
     it('tömmer Facebook-sidfoten', () => {
         expect(normalizeDescription('Integritet\n \n · Användarvillkor\n \n · Annonsering')).toBe('');
+        expect(normalizeDescription('Maximera ditt events framgång med Billetto – biljettplattformen som hjälper dig sälja fler biljetter, enkelt marknadsföra dina event och spara tid.')).toBe('');
     });
     it('strippar taggar och avkodar', () => {
         expect(normalizeDescription('<p>Konsert &amp; dans</p><p>Fri entré</p>')).toBe('Konsert & dans\nFri entré');

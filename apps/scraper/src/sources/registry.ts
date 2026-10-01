@@ -96,6 +96,10 @@ export const SOURCES: Source[] = [
             urlPatterns: [/^https:\/\/billetto\.se\/e\/[^/]+/],
             defaultCity: '',
             maxUrls: 400,
+            // JSON-LD:ns description är KAPAD (~230 tecken + "..."), hela
+            // texten står i sidans brödtext (1/10: 374 av 414 kommande event
+            // visade bara början, "…massor av skra...").
+            detailDescSelector: '.event-description',
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
