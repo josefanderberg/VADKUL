@@ -23,6 +23,9 @@
  *
  *   npx ts-node src/scripts/bulk-repair-centroids.ts --limit-names=15   # provsmak, dry
  *   npx ts-node src/scripts/bulk-repair-centroids.ts --commit           # hela, skriver
+ *   npx ts-node src/scripts/bulk-repair-centroids.ts --cities=Växjö,Linköping --commit
+ *        # bara kluster inom 3 km från städernas centroider (riktad läkning,
+ *        # Växjö/Linköping-rapporten 2/10)
  */
 import fs from 'fs';
 import { db } from '../config/firebase';
@@ -32,7 +35,7 @@ import {
 } from '../utils/sqliteHelper';
 import {
     geocodeVenueSweden, geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode,
-    isInNordic, deGenitiveFirstWord, distanceKm,
+    isInNordic, deGenitiveFirstWord, distanceKm, geocodeCityCentroid,
 } from '../utils/venueCoordinates';
 import { resolveVenueOverpass } from '../utils/overpassVenue';
 import { extractStreetAddress } from '../utils/swedishAddress';
@@ -42,6 +45,9 @@ import { cleanCityName } from './geo-refine';
 const COMMIT = process.argv.includes('--commit');
 const LIMIT_ARG = process.argv.find(a => a.startsWith('--limit-names='));
 const LIMIT_NAMES = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : Infinity;
+const CITIES_ARG = process.argv.find(a => a.startsWith('--cities='));
+const ONLY_CITIES = CITIES_ARG ? CITIES_ARG.split('=')[1].split(',').map(c => c.trim()).filter(Boolean) : [];
+const CITY_RADIUS_KM = 3;
 
 const LOCK_FILE = '/tmp/vadkul-bulk-repair-centroids.lock';
 const MIN_MOVE_M = 150;
@@ -179,6 +185,20 @@ async function main(): Promise<void> {
     }
     const totalNames = [...clusters.values()].reduce((s, c) => s + c.byName.size, 0);
     console.log(`${rows.length} event, ${clusters.size} kluster, ${totalNames} namngrupper att lösa`);
+
+    // --cities: bara kluster nära de angivna städernas centroider.
+    const centers: [number, number][] = [];
+    for (const name of ONLY_CITIES) {
+        const cc = await geocodeCityCentroid(name);
+        if (cc) centers.push(cc); else console.warn(`  ⚠️ okänd stad i --cities: ${name}`);
+    }
+    if (ONLY_CITIES.length > 0) {
+        for (const [k, c] of clusters) {
+            if (!centers.some(cc => distanceKm(c.lat, c.lng, cc[0], cc[1]) <= CITY_RADIUS_KM)) clusters.delete(k);
+        }
+        const n = [...clusters.values()].reduce((s, c) => s + c.byName.size, 0);
+        console.log(`--cities=${ONLY_CITIES.join(',')}: ${clusters.size} kluster, ${n} namngrupper kvar`);
+    }
 
     let namesTried = 0, namesHit = 0, eventsMoved = 0, learned = 0;
     const t0 = Date.now();

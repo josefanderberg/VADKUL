@@ -14,6 +14,12 @@
  *   3. kommande event som står på en gammal punkt OCH heter som en av
  *      punktens namn → flyttas (SQLite + Firestore via stamped). De stora
  *      husen flyttas även av venueFixes; det här tar resten.
+ *   4. Regionteatern Blekinge Kronobergs Växjöscen (Västergatan 22–24 enligt
+ *      teaterns sajt) — källan skriver bara "Regionteatern" + ort, så eventen
+ *      låg på stadscentroiden. OSM saknar husnumret; Nominatim ger gatu-
+ *      segmentet (Hovskulle), ~100 m noggrannhet → märks 'gata'. Registret
+ *      får "Regionteatern, Växjö" (stadsbunden — Karlshamnsscenen påverkas
+ *      inte; bare "Regionteatern" vore stadsblint i venueFixes).
  *
  *   npx ts-node src/scripts/oneoff-fix-vaxjo-handseed.ts            # torrkörning
  *   npx ts-node src/scripts/oneoff-fix-vaxjo-handseed.ts --apply
@@ -23,7 +29,7 @@
 
 import { db } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
-import { sqlite, setEventCoords } from '../utils/sqliteHelper';
+import { sqlite, setEventCoords, upsertKnownVenue } from '../utils/sqliteHelper';
 import { VAXJO_VENUES, distanceKm } from '../utils/venueCoordinates';
 
 const APPLY = process.argv.includes('--apply');
@@ -108,6 +114,37 @@ async function main(): Promise<void> {
         }
     }
     console.log(`✅ ${movedEv} kommande event ${APPLY ? 'flyttade' : 'skulle flyttas'}`);
+
+    // 4. Regionteatern, Växjö — gatusegmentet Västergatan (Hovskulle, 352 31).
+    const RT: [number, number] = [56.88274, 14.8045];
+    if (APPLY) upsertKnownVenue('Regionteatern, Växjö', RT[0], RT[1], 'Växjö', 'Västergatan 22–24 (gatunivå, Nominatim) 2026-10-02');
+    const vxoCentroid = { lat: 56.87872, lng: 14.80944 };
+    const rtRows = sqlite.prepare(`
+        SELECT url, firestoreId, title, locationName, lat, lng FROM link_events
+        WHERE (hidden IS NULL OR hidden = 0) AND datetime(time) >= datetime('now')
+          AND lower(trim(locationName)) IN ('regionteatern', 'regionteatern, växjö', 'regionteatern blekinge kronoberg',
+                                            'regionteatern blekinge kronoberg, scenen, växjö', 'regionteatern blekinge kronoberg, växjö')
+    `).all() as EvRow[];
+    let rtMoved = 0;
+    for (const e of rtRows) {
+        // Bara Växjö-eventen: de som står på stadens centroid/Stortorget-punkten.
+        if (distanceKm(e.lat, e.lng, vxoCentroid.lat, vxoCentroid.lng) > 0.3) continue;
+        console.log(`  🎭 ${(e.title ?? '').slice(0, 40).padEnd(40)} | ${e.locationName}`);
+        rtMoved++;
+        if (!APPLY) continue;
+        setEventCoords(e.url, RT[0], RT[1], 'Regionteatern, Västergatan 22, Växjö', 'gata');
+        if (db && e.firestoreId) {
+            try {
+                await db.collection('linkEvents').doc(e.firestoreId).update(stamped({
+                    lat: RT[0], lng: RT[1], isLocationVerified: true, geoPrecision: 'gata',
+                    geocodedQuery: 'Regionteatern, Västergatan 22, Växjö',
+                }));
+            } catch (err: any) {
+                if (err?.code !== 5) console.error(`  ⚠️ Firestore ${e.url}: ${err?.message}`);
+            }
+        }
+    }
+    console.log(`✅ Regionteatern: ${rtMoved} Växjö-event ${APPLY ? 'flyttade' : 'skulle flyttas'} till Västergatan`);
     process.exit(0);
 }
 
