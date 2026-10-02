@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows, stableIdKey, renameGhosts } from './dedupe-cross-source';
+import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows, stableIdKey, renameGhosts, sharesTitleTail, sameVenue, dateOnlyTwinLinks, compareScored } from './dedupe-cross-source';
 
 const base = {
     url: 'https://example.se/e/1',
@@ -301,5 +301,87 @@ describe('omdöpta event (stableIdKey + renameGhosts)', () => {
     it('ensam rad eller vanliga titeldubbletter berörs inte', () => {
         expect(renameGhosts([cur])).toEqual([]);
         expect(renameGhosts([base, { ...base, firestoreId: 'b', url: 'https://example.se/e/2' }])).toEqual([]);
+    });
+});
+
+// ─── Svansregeln + datumlösa tvillingar (Kulturhuset i Sävsjö, 2/10) ───────
+const KH = { lat: 57.40122, lng: 14.66196, geoPrecision: 'poi' };
+const row = (title: string, url: string, extra: Partial<typeof base & { hasSpecificTime: number; geoPrecision: string; time: string }> = {}) => ({
+    ...base, ...KH, title, url, time: '2026-10-17T17:00:00.000Z', locationName: 'Kulturhuset Sävsjö', hasSpecificTime: 1, ...extra,
+});
+
+describe('sharesTitleTail', () => {
+    it('etiketter framför samma titel', () => {
+        expect(sharesTitleTail('live pa bio macbeth', 'opera pa bio macbeth')).toBe(true);
+        expect(sharesTitleTail('macbeth', 'live pa bio macbeth')).toBe(true);
+        expect(sharesTitleTail('teater kvinnor och appeltrad', 'kvinnor och appeltrad')).toBe(true);
+        expect(sharesTitleTail('arkipelag', 'bio halvatta arkipelag')).toBe(true);
+    });
+
+    it('delad ort-/datumsvans med riktiga förled är två event', () => {
+        expect(sharesTitleTail('resemassan stockholm 16 17 oktober 2026', 'seniorfestivalen stockholm 16 17 oktober 2026')).toBe(false);
+    });
+
+    it('för kort svans, långt förled eller identiska titlar → nej', () => {
+        expect(sharesTitleTail('jazz', 'kvallens jazz')).toBe(false);                    // < 6 tecken
+        expect(sharesTitleTail('rasslattsdagen', 'kontaktcenter finns pa plats pa rasslattsdagen')).toBe(false); // 5 ord förled
+        expect(sharesTitleTail('macbeth', 'macbeth')).toBe(false);
+        expect(sharesTitleTail('julkonsert', 'konsert')).toBe(false);                    // inte vid ordgräns
+    });
+});
+
+describe('sameVenue', () => {
+    it('≤ 200 m och inga centroider', () => {
+        expect(sameVenue(KH, { lat: 57.4013, lng: 14.66199, geoPrecision: 'kallkoordinat' })).toBe(true);
+        expect(sameVenue(KH, { lat: 57.39885, lng: 14.66119, geoPrecision: 'gata' })).toBe(false);   // 270 m
+        expect(sameVenue({ ...KH, geoPrecision: 'stad-centroid' }, KH)).toBe(false);
+        expect(sameVenue(KH, { lat: 0, lng: 0, geoPrecision: null })).toBe(false);
+    });
+});
+
+describe('titleVariantLinks — svansregeln kräver samma hus', () => {
+    it('husets sajt + Nortic samma kväll länkas', () => {
+        const a = row('Live på Bio – Macbeth', 'https://kulturhuset.com/evenemang/live-pa-bio-macbeth/');
+        const b = row('Opera På Bio - Macbeth', 'https://tickets.nortic.se/ticket/event/86573#a0', { lat: 57.4013, lng: 14.66199 });
+        expect(titleVariantLinks([a, b])).toHaveLength(1);
+    });
+
+    it('samma titelsvans i ett ANNAT hus i stan länkas inte', () => {
+        const a = row('Live på Bio – Macbeth', 'https://a.se/1');
+        const b = row('Opera på bio - Macbeth', 'https://b.se/2', { lat: 57.4060, lng: 14.6700 });   // ~600 m
+        expect(titleVariantLinks([a, b])).toHaveLength(0);
+    });
+});
+
+describe('dateOnlyTwinLinks', () => {
+    const fhp = row('Macbeth', 'https://www.folketshusochparker.se/x', { hasSpecificTime: 0, time: '2026-10-17T12:00:00.000Z' });
+
+    it('datumlös rad länkas till kvällens tidsatta tvillingar (samma starttid)', () => {
+        const a = row('Live på Bio – Macbeth', 'https://kulturhuset.com/1');
+        const b = row('Opera På Bio - Macbeth', 'https://tickets.nortic.se/2');
+        expect(dateOnlyTwinLinks([fhp, a, b])).toHaveLength(1);
+    });
+
+    it('matiné + kvällsvisning: ingen länk (olika klockslag)', () => {
+        const a = row('Live på Bio – Macbeth', 'https://kulturhuset.com/1', { time: '2026-10-17T12:30:00.000Z' });
+        const b = row('Live på Bio – Macbeth', 'https://kulturhuset.com/2', { time: '2026-10-17T17:00:00.000Z' });
+        expect(dateOnlyTwinLinks([fhp, a, b])).toHaveLength(0);
+    });
+
+    it('annan dag eller annat hus: ingen länk', () => {
+        expect(dateOnlyTwinLinks([fhp, row('Live på Bio – Macbeth', 'https://k/1', { time: '2026-10-18T17:00:00.000Z' })])).toHaveLength(0);
+        expect(dateOnlyTwinLinks([fhp, row('Live på Bio – Macbeth', 'https://k/1', { lat: 57.4060, lng: 14.6700 })])).toHaveLength(0);
+    });
+});
+
+describe('compareScored — utslag vid lika poäng', () => {
+    it('klockslag före datumlöst, sedan arrangörens egen sida före återförsäljaren', () => {
+        const own = { r: row('Live på Bio – Macbeth', 'https://kulturhuset.com/evenemang/live-pa-bio-macbeth/', { hostName: 'Kulturhuset i Sävsjö' }), s: 26 };
+        const nortic = { r: row('Opera På Bio - Macbeth', 'https://tickets.nortic.se/ticket/event/86573#a0', { hostName: 'Kulturhuset i Sävsjö' }), s: 26 };
+        const dateOnly = { r: row('Macbeth', 'https://www.folketshusochparker.se/x', { hostName: 'Kulturhuset', hasSpecificTime: 0 }), s: 26 };
+        expect([dateOnly, nortic, own].sort(compareScored)[0]).toBe(own);
+        expect([dateOnly, nortic].sort(compareScored)[0]).toBe(nortic);
+        // högre poäng vinner alltid
+        expect([own, { ...dateOnly, s: 27 }].sort(compareScored)[0].s).toBe(27);
     });
 });

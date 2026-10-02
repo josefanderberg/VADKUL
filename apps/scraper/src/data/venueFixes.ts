@@ -397,6 +397,19 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 16.17405,
         note: 'Åby bibliotek, Hultvägen 2, Åby — OSM-nod 864465338; Götabiblioteken ankrade filialen på Linköpings centroid (2/10)',
     },
+    {
+        // Kulturhuset i Sävsjö / Röda Kvarn-salongen. Fem stavningar ur Nortic,
+        // kommunen och husets egen sajt; en av dem (gatugeokodad) låg 270 m
+        // söderut. Bare "Röda Kvarn" utelämnad — biografer i Orsa, Kalix m.fl.
+        names: [
+            'Kulturhuset Sävsjö', 'Kulturhuset i Sävsjö', 'Kulturhuset Sävsjö Röda Kvarn',
+            'Röda Kvarn, Kulturhuset Sävsjö', 'Röda Kvarn - Kulturhuset Sävsjö', 'Kulturhuset, Röda Kvarn, Sävsjö',
+        ],
+        city: 'Sävsjö',
+        lat: 57.40122,
+        lng: 14.66196,
+        note: 'Kulturhuset Sävsjö (Röda Kvarn) — OSM (overpass-seedens biografrad); arrangörsförfrågan 2/10',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */
