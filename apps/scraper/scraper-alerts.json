@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-01T08:40:18.730Z",
+  "generatedAt": "2026-10-02T05:15:01.819Z",
   "counts": {
     "fel": 0,
-    "varning": 34,
-    "nollkoordinatTotalt": 976
+    "varning": 32,
+    "nollkoordinatTotalt": 855
   },
   "alerts": [
     {
@@ -22,16 +22,21 @@
     },
     {
       "level": "varning",
-      "kind": "tyst",
-      "source": "sb-visitbastad-se",
-      "since": "2026-09-23",
-      "message": "gav 6 event 2026-09-20, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+      "kind": "datumkluster",
+      "source": "Artipelag",
+      "message": "20 av 21 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Astrid Lindgrens Värld",
       "message": "18 av 18 kommande event ligger 2026-10-16 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Hedemora Kommun",
+      "message": "12 av 20 kommande event ligger 2026-10-07 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -43,67 +48,43 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Mora Kommun",
-      "message": "8 av 12 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Panora",
-      "message": "65 av 83 kommande event ligger 2026-10-01 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Stora Teatern",
-      "message": "70 av 103 kommande event ligger 2026-10-01 — sajtvitt datum i stället för eventets?"
+      "message": "8 av 11 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Örebro läns museum",
-      "message": "14 av 16 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+      "message": "14 av 17 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "976 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Panora 83, NBV 48, Gotlands Museum 26, Equmenia 23, Söndrum-Vapnö församling 21"
+      "source": "855 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 42, Visit Vemdalen 31, Equmenia 23, Gotlands Museum 23, Medleymalmo 19"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Korpen Umeå",
-      "message": "invariant-vakten larmar (12 av 54 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (12 av 50 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Mora Kommun",
-      "message": "invariant-vakten larmar (8 av 12 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Panora",
-      "message": "invariant-vakten larmar (8 av 83 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 11 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (10 av 339 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (10 av 333 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
-      "source": "Stora Teatern",
-      "message": "invariant-vakten larmar (8 av 161 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Örebro läns museum",
-      "message": "invariant-vakten larmar (0 av 16 event på samma tidsstämpel) — se nattloggen"
+      "source": "Visit Ängelholm",
+      "message": "invariant-vakten larmar (9 av 85 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -195,6 +176,13 @@
       "source": "sb-kb-se",
       "since": "2026-09-29",
       "message": "i karantän sedan 2026-09-29: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "sb-visitbastad-se",
+      "since": "2026-10-02",
+      "message": "i karantän sedan 2026-10-02: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",

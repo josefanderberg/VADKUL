@@ -4,14 +4,14 @@
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-23",
-      "emptyRetries": 4
+      "lastRetry": "2026-10-02",
+      "emptyRetries": 5
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-25",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-02",
+      "emptyRetries": 6
     },
     "folk-goteborg": {
       "since": "2026-08-19",
@@ -69,6 +69,10 @@
       "since": "2026-09-29",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
+    "sb-visitbastad-se": {
+      "since": "2026-10-02",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -84,8 +88,8 @@
     "storsjoyran": {
       "since": "2026-09-18",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-25",
-      "emptyRetries": 1
+      "lastRetry": "2026-10-02",
+      "emptyRetries": 2
     },
     "tingsryd": {
       "since": "2026-08-19",
