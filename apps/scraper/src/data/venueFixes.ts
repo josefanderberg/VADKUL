@@ -103,6 +103,26 @@ export const VENUE_FIXES: VenueFix[] = [
         note: 'Ersboda Folkets Hus, Byttgränd 13, Umeå — Wikidata Q19631631; FB-kritik 30/9, danserna låg mitt i stan',
     },
     {
+        // Kulturhuset Saga (gamla Sagabiografen), Storgatan 52, Torshälla.
+        // FB 30/9 ("Evenemang i Sörmland", ägarens egen affisch): Ticksters
+        // "Kulturhuset Saga Torshälla" (Knogjärn, G&T-provningen, The Crown)
+        // låg på Eskilstunas stadspunkt (59.3717, 16.5051) ~6 km bort —
+        // Tickster anger kommunen som stad och geokodningen föll tillbaka på
+        // kommuncentroiden. Bara Torshälla-kvalificerade namn: "Saga" och
+        // "Kulturhuset Saga" finns på fler orter.
+        // Koordinat: KultuNauts platsregister (Storgatan 52, 59.4235/16.4709),
+        // ~230 m från Torshällas ortpunkt (Wikidata Q21608335) — i gamla stan.
+        names: [
+            'Kulturhuset Saga Torshälla', 'Kulturhuset Saga, Torshälla',
+            'Saga Torshälla', 'Saga, Torshälla',
+            'Saga Salongen Torshälla', 'Saga Salongen, Torshälla', 'Sagasalongen Torshälla',
+        ],
+        city: 'Eskilstuna',
+        lat: 59.4235,
+        lng: 16.4709,
+        note: 'Kulturhuset Saga, Storgatan 52, Torshälla (KultuNaut) — FB 30/9, Tickster-eventen låg på Eskilstunas stadspunkt',
+    },
+    {
         // Isaberg Mountain Resort, Hestra. Visit Isabergsregionens "Plats"-fält
         // (28/9) geokodades till en punkt vid Kisa, 60 km bort.
         // Koordinat: OSM-noden "Isaberg Mountain Resort, Transporten, Hestra".
