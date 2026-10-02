@@ -85,6 +85,13 @@ describe('firstWordPlaceQuery', () => {
         expect(firstWordPlaceQuery('Växjö domkyrka', 'Växjö')).toBeNull();
     });
 
+    it('stadens namn i genitiv är heller ingen by (Götabiblioteken 2/10)', () => {
+        expect(firstWordPlaceQuery('Linköpings huvudbibliotek', 'Linköping')).toBeNull();
+        expect(firstWordPlaceQuery('Växjös stadsbibliotek', 'Växjö')).toBeNull();
+        // ...men en annan orts genitiv är fortfarande en kandidat
+        expect(firstWordPlaceQuery('Borensbergs bibliotek', 'Linköping')).toBe('Borensbergs, Linköping');
+    });
+
     it('bara huvudsegmentet används, inte adress-svansen', () => {
         expect(firstWordPlaceQuery('Rottne bibliotek, Storgatan 3', 'Växjö')).toBe('Rottne, Växjö');
     });

@@ -1368,8 +1368,22 @@ export function extractFromHtml(html: string, url: string, defaultCity?: string,
     //    vilket på t.ex. Tickster är footerns kontorsadress ("Magasinsgatan 8",
     //    Arvika) — fel adress som visas för användaren i eventkortet, utan
     //    att behövas för geokodning (coords vinner alltid i runnern).
-    if (ev && !ev.address && !ev.coords) ev.address = fallbackAddress(html);
+    if (ev && !ev.address && !ev.coords) {
+        const a = fallbackAddress(html);
+        // Tickster-sidor UTAN kartlänk: regexen hittar då bara sidfotens
+        // kontorsadress. "Magasinsgatan 8, <stad>" geokodades först och gav
+        // stadscentroiden till 1 521 kommande event (2/10) — och visades som
+        // eventets adress. Platsen kommer i stället ur venue + ort.
+        if (a && !isVendorFooterAddress(a, url)) ev.address = a;
+    }
     return ev;
+}
+
+/** Biljettsajtens EGEN kontorsadress i sidfoten — aldrig eventets plats. */
+export function isVendorFooterAddress(address: string, pageUrl: string): boolean {
+    let host = '';
+    try { host = new URL(pageUrl).hostname.toLowerCase(); } catch { return false; }
+    return /(^|\.)tickster\.com$/.test(host) && /^\s*Magasinsgatan\s*8\b/i.test(address);
 }
 
 async function pMap<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Promise<R[]> {

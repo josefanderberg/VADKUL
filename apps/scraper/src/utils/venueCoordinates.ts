@@ -1,46 +1,53 @@
 import { upsertKnownVenue, lookupVenueExact, lookupVenueSmart, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet, lookupTatortNear, findTatortInText } from './sqliteHelper';
+import { cleanLocationName } from './text';
 
 // Växjö venue coordinates lookup table — källa för initial DB-seedning.
 // Lägg inte till nya venues här; använd manage-venues.ts eller known_venues-tabellen direkt.
+//
+// 2026-10-02: tabellen var HANDSKRIVEN (juni) — gissade punkter klumpade runt
+// Stortorget, 200 m–4 km fel (ägarrapport: domkyrkan/konserthuset/teatern).
+// Allt som går att verifiera är nu OSM-objektets punkt (5 decimaler); rader
+// med 4 decimaler är fortfarande ogranskade gissningar. Hovshaga Arena (okänd,
+// 4 km fel) och Quality Hotel Ekoxen (ligger i Linköping!) är borttagna.
+// oneoff-fix-vaxjo-handseed.ts synkar rättelserna till known_venues.
 export const VAXJO_VENUES: Record<string, [number, number]> = {
     // ─── Sports & Entertainment ────────────────────────────────────────────────
-    'Vida Arena': [56.8797, 14.7736],
-    'Vida arena': [56.8797, 14.7736],
-    'vida arena': [56.8797, 14.7736],
-    'Fortnox Arena': [56.8790, 14.7715],
-    'fortnox arena': [56.8790, 14.7715],
-    'Myresjöhus Arena': [56.8767, 14.7758],
-    'myresjöhus arena': [56.8767, 14.7758],
-    'Visma Arena': [56.8767, 14.7758],
-    'Hovshaga Arena': [56.8700, 14.7900],
+    'Vida Arena': [56.87966, 14.77277],
+    'Vida arena': [56.87966, 14.77277],
+    'vida arena': [56.87966, 14.77277],
+    'Fortnox Arena': [56.88230, 14.77604],
+    'fortnox arena': [56.88230, 14.77604],
+    'Myresjöhus Arena': [56.88009, 14.77684],
+    'myresjöhus arena': [56.88009, 14.77684],
+    'Visma Arena': [56.88009, 14.77684],
     'Campushallen': [56.8545, 14.8320],
     'campushallen': [56.8545, 14.8320],
     'Grönahuset': [56.8558, 14.8305],
 
     // ─── Culture & Music ────────────────────────────────────────────────────────
-    'Växjö Konserthus': [56.8778, 14.8089],
-    'Vaxjo Konserthus': [56.8778, 14.8089],
-    'växjö konserthus': [56.8778, 14.8089],
-    'Konserthuset': [56.8778, 14.8089],
-    'konserthuset': [56.8778, 14.8089],
-    'Konserthuset i Växjö': [56.8778, 14.8089],
+    'Växjö Konserthus': [56.88040, 14.80302],
+    'Vaxjo Konserthus': [56.88040, 14.80302],
+    'växjö konserthus': [56.88040, 14.80302],
+    'Konserthuset': [56.88040, 14.80302],
+    'konserthuset': [56.88040, 14.80302],
+    'Konserthuset i Växjö': [56.88040, 14.80302],
 
     'Nygatan 6': [56.8796, 14.8061],
     'nygatan 6': [56.8796, 14.8061],
 
-    'Växjö Teater': [56.8789, 14.8067],
-    'Vaxjo Teater': [56.8789, 14.8067],
-    'växjö teater': [56.8789, 14.8067],
-    'Teatern': [56.8789, 14.8067],
+    'Växjö Teater': [56.87986, 14.80348],
+    'Vaxjo Teater': [56.87986, 14.80348],
+    'växjö teater': [56.87986, 14.80348],
+    'Teatern': [56.87986, 14.80348],
 
-    'Palladium Folkets Bio Växjö': [56.8793, 14.8065],
-    'Palladium Växjö': [56.8793, 14.8065],
-    'Palladium': [56.8793, 14.8065],
-    'palladium': [56.8793, 14.8065],
+    'Palladium Folkets Bio Växjö': [56.87881, 14.80675],
+    'Palladium Växjö': [56.87881, 14.80675],
+    'Palladium': [56.87881, 14.80675],
+    'palladium': [56.87881, 14.80675],
 
-    'IOGT Vattentorget': [56.8770, 14.8115],
-    'iogt vattentorget': [56.8770, 14.8115],
-    'Vattentorget': [56.8770, 14.8115],
+    'IOGT Vattentorget': [56.87597, 14.81084],
+    'iogt vattentorget': [56.87597, 14.81084],
+    'Vattentorget': [56.87597, 14.81084],
 
     'Kulturhuset Prisma': [56.8783, 14.8050],
     'kulturhuset prisma': [56.8783, 14.8050],
@@ -49,8 +56,8 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
     'Nöjesfabriken': [56.8810, 14.8145],
     'nöjesfabriken': [56.8810, 14.8145],
 
-    'Filmstaden Växjö': [56.8800, 14.8090],
-    'filmstaden': [56.8800, 14.8090],
+    'Filmstaden Växjö': [56.87889, 14.79793],
+    'filmstaden': [56.87889, 14.79793],
 
     'Wasa Teater': [56.8789, 14.8067],
 
@@ -70,58 +77,57 @@ export const VAXJO_VENUES: Record<string, [number, number]> = {
     // ─── Parks & Outdoor ────────────────────────────────────────────────────────
     'Stadsparken': [56.8780, 14.8020],
     'stadsparken': [56.8780, 14.8020],
-    'Linnéparken': [56.8810, 14.8110],
-    'linnéparken': [56.8810, 14.8110],
+    'Linnéparken': [56.87656, 14.81273],
+    'linnéparken': [56.87656, 14.81273],
     'Växjösjön': [56.8750, 14.8050],
     'Evedals badplats': [56.8600, 14.8500],
     'Kronobergsruinen': [56.8820, 14.8400],
     'Kronobergs slottsruin': [56.8820, 14.8400],
 
     // ─── City Centre & Squares ──────────────────────────────────────────────────
-    'Stortorget': [56.8796, 14.8094],
-    'stortorget': [56.8796, 14.8094],
+    'Stortorget': [56.87852, 14.80935],
+    'stortorget': [56.87852, 14.80935],
     'Tegnérplatsen': [56.8792, 14.8085],
     'Rådhuset': [56.8790, 14.8082],
     'Rådhustorget': [56.8790, 14.8082],
-    'Residenset': [56.8800, 14.8080],
+    'Residenset': [56.87895, 14.80949],
 
     // ─── Restaurants & Cafés ────────────────────────────────────────────────────
-    'PM & Vänner': [56.8791, 14.8078],
-    'pm & vänner': [56.8791, 14.8078],
-    'PM och Vänner': [56.8791, 14.8078],
-    'Bishops Arms Växjö': [56.8793, 14.8085],
-    'Bishops Arms': [56.8793, 14.8085],
-    'bishops arms': [56.8793, 14.8085],
-    'Kafé de Luxe': [56.8800, 14.8060],
+    'PM & Vänner': [56.87900, 14.80410],
+    'pm & vänner': [56.87900, 14.80410],
+    'PM och Vänner': [56.87900, 14.80410],
+    'Bishops Arms Växjö': [56.87771, 14.80904],
+    'Bishops Arms': [56.87771, 14.80904],
+    'bishops arms': [56.87771, 14.80904],
+    'Kafé de Luxe': [56.87777, 14.80625],
     'Res Thai': [56.8798, 14.8072],
     'Södra Bar': [56.8780, 14.8070],
 
     // ─── Hotels ─────────────────────────────────────────────────────────────────
     'Elite Hotel Växjö': [56.8791, 14.8068],
     'Elite Hotel': [56.8791, 14.8068],
-    'Clarion Collection Hotel Cardinal': [56.8795, 14.8072],
-    'Hotel Cardinal': [56.8795, 14.8072],
+    'Clarion Collection Hotel Cardinal': [56.87854, 14.80525],
+    'Hotel Cardinal': [56.87854, 14.80525],
     'Clarion Hotel Växjö': [56.8795, 14.8072],
-    'Quality Hotel Ekoxen': [56.8800, 14.8040],
 
     // ─── Shopping & Markets ──────────────────────────────────────────────────────
-    'Grand Samarkand': [56.8900, 14.7950],
-    'Samarkand': [56.8900, 14.7950],
-    'samarkand': [56.8900, 14.7950],
-    'Teleborgscentrum': [56.8698, 14.8138],
+    'Grand Samarkand': [56.88521, 14.76620],
+    'Samarkand': [56.88521, 14.76620],
+    'samarkand': [56.88521, 14.76620],
+    'Teleborgscentrum': [56.85214, 14.82091],
 
     // ─── Community & Libraries ──────────────────────────────────────────────────
-    'Växjö Bibliotek': [56.8785, 14.8055],
-    'Stadsbiblioteket': [56.8785, 14.8055],
+    'Växjö Bibliotek': [56.88047, 14.80058],
+    'Stadsbiblioteket': [56.88047, 14.80058],
     'Folkets Park': [56.8830, 14.8030],
     'folkets park': [56.8830, 14.8030],
 
     // ─── Churches ───────────────────────────────────────────────────────────────
-    'Domkyrkan': [56.8793, 14.8098],
-    'Växjö Domkyrka': [56.8793, 14.8098],
+    'Domkyrkan': [56.87740, 14.81213],
+    'Växjö Domkyrka': [56.87740, 14.81213],
     'Heliga Kors kyrka': [56.8805, 14.8153],
 
-    'Teleborgshallen': [56.8570, 14.8210],
+    'Teleborgshallen': [56.84989, 14.82124],
     'Arabyvalen': [56.8870, 14.7930],
     'Bäckaslöv': [56.8740, 14.7950],
     'Växjö Cricket Club': [56.8870, 14.7930],
@@ -589,7 +595,11 @@ export function firstWordPlaceQuery(cleaned: string, city: string): string | nul
     if (words.length < 2) return null;
     const w = words[0].replace(/[^\p{L}\-]/gu, '');
     if (w.length < 4 || FIRST_WORD_STOP.test(w)) return null;
-    if (w.toLowerCase() === city.trim().toLowerCase()) return null;
+    // Stadens eget namn — även i genitiv ("Linköpings huvudbibliotek") — är
+    // ingen by: tätortsuppslaget gav stadscentroiden märkt som ort-centroid,
+    // och 48 Götabibliotek-event låg kvar mitt i stan (2/10).
+    const wl = w.toLowerCase(), cl = city.trim().toLowerCase();
+    if (wl === cl || wl === cl + 's') return null;
     return `${w}, ${city.trim()}`;
 }
 
@@ -650,7 +660,11 @@ export async function geocodeVenueSweden(
     // som "Fat Daves, Magasinsgatan 8, Malmö" (samma gatunamn finns i andra städer).
     // Församlings-/pastoratsegment strippas också — de får Nominatim att missa
     // platser den annars hittar ("Växjö domkyrka, Växjö stads- och domkyrkoförsamling").
-    const cleaned = stripParishSegments(rawQuery
+    // cleanLocationName: UI-rester ur källornas platsfält — "Linköping Konsert
+    // & Kongress (Öppnas i ett nytt fönster)" missade registret OCH Nominatim
+    // och föll till stadscentroiden (Visit Linköping, 2/10). Det sparade
+    // locationName sanerades redan; frågan gjorde det inte.
+    const cleaned = stripParishSegments(cleanLocationName(rawQuery)
         .replace(/Magasinsgatan\s*8\s*,?\s*\d{3}\s*\d{2}\s+Göteborg/gi, '')
         .replace(/Magasinsgatan\s*8\s*,\s*Göteborg\b/gi, '')
         .trim()
