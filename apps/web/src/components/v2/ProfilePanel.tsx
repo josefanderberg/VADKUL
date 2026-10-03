@@ -7,6 +7,7 @@ import { isSeriesEvent } from '@/utils/weeklySeries';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
+import { linkEventService } from '@/services/linkEventService';
 import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
 import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info } from 'lucide-react';
@@ -177,6 +178,18 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                     .filter((r): r is { eventId: string; appliedAt?: Timestamp } => typeof r.eventId === 'string')
                     .sort((a, b) => (b.appliedAt?.toMillis?.() ?? 0) - (a.appliedAt?.toMillis?.() ?? 0));
                 const byId = new Map(allEventsRef.current.map(e => [e.id, e]));
+                // Kartan laddar bara området runt sig (rutläget) — ett boostat
+                // skrapat event i en annan stad finns då inte i allEvents.
+                // Hämta de saknade styckvis så raden får titel och hopp.
+                const missing = receipts
+                    .map(r => r.eventId)
+                    .filter(id => id.includes('/') && !byId.has(id))
+                    .slice(0, 10);
+                if (missing.length) {
+                    const fetched = await linkEventService.ensureEvents(missing);
+                    for (const [id, e] of fetched) byId.set(id, e);
+                }
+                if (stale) return;
                 const seen = new Set<string>();
                 const out: MyBoost[] = [];
                 for (const r of receipts) {

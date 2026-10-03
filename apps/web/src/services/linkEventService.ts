@@ -7,6 +7,8 @@ import { getAuthHeaders } from '../lib/authHeaders';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildCardIndex } from '../utils/eventKey';
 import { timelineWindowRange, type TimelineWindowRange } from '../utils/timelineWindow';
+import { tilesForBounds, boundsCoveredBy, composeAreaRows, descBucketFor, type Bounds } from '../utils/eventTiles';
+import { apiEventToLinkEvent } from '../utils/eventSeed';
 
 /**
  * Är eventet boostat just nu? Sant om featuredUntil finns och ligger i framtiden.
@@ -193,7 +195,7 @@ const STATIC_HEADSTART_MS = 1500;
  * i samma tidszon bygger identiska from/to-strängar → CDN:en cachar EN slice
  * per dag. Fel/tomt svar → null (kartan väntar på fulla lagret som förut).
  */
-async function fetchTodaySlice(): Promise<LinkEvent[] | null> {
+async function fetchTodaySlice(): Promise<any[] | null> {
     try {
         // Boot-scriptet i (v2)/layout.tsx startar hämtningen redan i HTML-
         // parsningen (långt före hydreringen) — återanvänd dess promise om den
@@ -211,7 +213,7 @@ async function fetchTodaySlice(): Promise<LinkEvent[] | null> {
             data = await res.json();
         }
         if (!data?.events?.length) return null;
-        return mapDestinationsToLinkEvents(data.events);
+        return data.events;
     } catch {
         return null;
     }
@@ -224,7 +226,7 @@ async function fetchTodaySlice(): Promise<LinkEvent[] | null> {
 // deployen) slängs och API-slicen får ta det.
 const STOCKHOLM_DAY_FMT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }); // → 'ÅÅÅÅ-MM-DD'
 
-async function fetchTodayStatic(): Promise<LinkEvent[] | null> {
+async function fetchTodayStatic(): Promise<any[] | null> {
     try {
         const w = window as unknown as { __vadkulTodayStatic?: Promise<{ day?: string; events?: unknown[] } | null> };
         const data = w.__vadkulTodayStatic
@@ -232,7 +234,7 @@ async function fetchTodayStatic(): Promise<LinkEvent[] | null> {
             : await fetch('/events-today.json').then(r => (r.ok ? r.json() : null)).catch(() => null);
         if (!data?.events?.length) return null;
         if (data.day !== STOCKHOLM_DAY_FMT.format(new Date())) return null; // förlegad fil
-        return mapDestinationsToLinkEvents(data.events);
+        return data.events;
     } catch {
         return null;
     }
@@ -265,26 +267,73 @@ function releaseHeavyGateNow() {
     releaseHeavyGate?.();
 }
 
-// ── Beskrivningar hämtas först när någon öppnar ett eventkort ───────────────
-// descriptions-lagret är det största (~4 MB gzippat för 40k+ event) men
-// renderas BARA i ett öppet LinkEventCard. Räknare, markörer, listor och sök
-// bygger på destinations(+cards). Därför laddas lagret inte alls vid start —
-// LinkEventCard anropar requestDescriptions() vid mount, och först då hämtas
-// och mergas det (och följer därefter med i 5-minuterspollarna, där ETag/304
-// gör oförändrade omfrågningar nästan gratis). Besökare som aldrig öppnar ett
-// kort laddar aldrig lagret.
-let descriptionsRequested = false;
-let releaseDescriptionsGate: (() => void) | null = null;
-const descriptionsGate = new Promise<void>((res) => { releaseDescriptionsGate = res; });
+// ── Beskrivningar: EN hink i taget, först när ett kort öppnas ──────────────
+// descriptions-lagret är det största (~2 MB brotli för 47k event) men en
+// besökare läser bara de kort hen öppnar. I stället för hela lagret hämtas
+// HINKEN eventet ligger i (utils/eventTiles: DESC_BUCKETS hinkar på id:ts
+// hash, ~90 beskrivningar / några kB) — fasta URL:er, så CDN:en delar dem
+// mellan besökare. LinkEventCard begär sitt event (requestDescriptionFor),
+// EventCard förhämtar de närmaste Nästa-målen (prefetchDescriptions).
+// Hinkarna mergas in i kartans event av den aktiva prenumerationen.
+const descBuckets = new Map<number, Record<string, string>>();
+const descBucketInflight = new Map<number, Promise<void>>();
+// Den aktiva prenumerationens merge-krok (sätts i subscribeToAll).
+let onDescriptionsLanded: ((data: Record<string, string>) => void) | null = null;
+
+/** GET + JSON med ett omtag vid nätfel/5xx (kallstart som klipper svaret).
+ *  4xx är ett definitivt besked (okänd ruta, eventet finns inte) — inget
+ *  omtag; `definitive` skiljer det från "gick inte fram". */
+async function fetchJsonWithStatus(url: string): Promise<{ data: any; definitive: boolean }> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data) return { data, definitive: true };
+            } else if (res.status >= 400 && res.status < 500) {
+                return { data: null, definitive: true };
+            }
+        } catch { /* omtag nedan */ }
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+    }
+    return { data: null, definitive: false };
+}
+
+async function fetchJsonTwice(url: string): Promise<any> {
+    return (await fetchJsonWithStatus(url)).data;
+}
+
+function loadDescBucket(bucket: number, fallbackId?: string): Promise<void> {
+    if (descBuckets.has(bucket)) return Promise.resolve();
+    const existing = descBucketInflight.get(bucket);
+    if (existing) return existing;
+    const p = (async () => {
+        const data = await fetchJsonTwice(`/api/events/descriptions?bucket=${bucket}`);
+        let out: Record<string, string> = data?.data && typeof data.data === 'object' ? data.data : {};
+        if (!data && fallbackId) {
+            // Hinken gick inte att få (routen nere): djuplänks-API:t bär hela
+            // beskrivningen för ett enskilt event. Hinken räknas INTE som
+            // laddad — nästa kort i samma hink försöker igen.
+            const one = await fetchJsonTwice(`/api/event?id=${encodeURIComponent(fallbackId)}`);
+            const text = typeof one?.event?.description === 'string' ? one.event.description : '';
+            out = text ? { [fallbackId]: text } : {};
+        } else {
+            descBuckets.set(bucket, out);
+        }
+        if (Object.keys(out).length) onDescriptionsLanded?.(out);
+    })().finally(() => { descBucketInflight.delete(bucket); });
+    descBucketInflight.set(bucket, p);
+    return p;
+}
 
 // ── Kortlagret hämtas först när det BEHÖVS ─────────────────────────────────
 // cards (~1 MB brotli) bär bara kortfälten: bild, värd, pris, anmälda och
 // affiliate-länken. Markörer, räknare, dagslistor och kategorifilter bygger
 // helt på destinations — så lagret laddas inte alls vid start utan begärs av
-// (1) LinkEventCard vid mount (samma krok som descriptions) och (2) sökningen
-// (eventSearch matchar hostName + kortets url) vid första söktermen. Besökare
-// som bara tittar på kartan laddar aldrig lagret. Gaten är engångs; pollarna
-// tar med lagret först efter begäran, precis som descriptions.
+// (1) LinkEventCard vid mount och (2) sökningen (eventSearch matchar hostName
+// + kortets url) vid första söktermen. Besökare som bara tittar på kartan
+// laddar aldrig lagret. Gaten är engångs; pollarna tar med lagret först efter
+// begäran. I rutläget gäller samma sak per ruta.
 let cardsRequested = false;
 let releaseCardsGate: (() => void) | null = null;
 const cardsGate = new Promise<void>((res) => { releaseCardsGate = res; });
@@ -293,9 +342,9 @@ const cardsGate = new Promise<void>((res) => { releaseCardsGate = res; });
 // 1,21 mot 1,66 MB — och framför allt: säsongsscheman som skrapas in månader i
 // förväg landar i en svans som aldrig laddas). Fulla lagret begärs av sidan
 // via requestFullTimeline()/ensureTimelineCovers(): sökning (går över alla
-// dagar), datumbläddring nära fönsterkanten, djuplänk bortom fönstret — samt
-// härifrån när en aktiv boost ligger utanför fönstret (boost-löftet "syns
-// varje dag" får aldrig bero på fönstret). Gaten är engångs, som de andra.
+// dagar), datumbläddring nära fönsterkanten och djuplänk bortom fönstret.
+// (Aktiva boostar utanför fönstret hämtas styckvis, se ensureEvents.) Gaten
+// är engångs, som de andra. I rutläget gäller den rutornas tidslinje.
 let fullTimelineRequested = false;
 let releaseTimelineGate: (() => void) | null = null;
 const timelineGate = new Promise<void>((res) => { releaseTimelineGate = res; });
@@ -304,26 +353,64 @@ const timelineGate = new Promise<void>((res) => { releaseTimelineGate = res; });
 // följs av emit → re-render, så en getter räcker).
 let loadedHorizonMs: number | null = null;
 
-let signalDescriptionsSettled: (() => void) | null = null;
-// Löser ut när ett descriptions-svar behandlats (även tomt/misslyckat —
-// kortet ska visa "Ingen beskrivning tillgänglig", inte vänta för evigt).
-const descriptionsSettled = new Promise<void>((res) => { signalDescriptionsSettled = res; });
-
 let signalCardsSettled: (() => void) | null = null;
-// Samma för kortlagret: kortet visar bild-skelett tills ett cards-svar
-// behandlats - sedan finns bilden eller saknas den på riktigt.
+// Kortet visar bild-skelett tills ett cards-svar behandlats - sedan finns
+// bilden eller saknas den på riktigt.
 const cardsSettled = new Promise<void>((res) => { signalCardsSettled = res; });
 
-// Synkrona speglar av löftena: destinations-lagret sätter description/
-// coverImage till '' (inte undefined), så ett kort som öppnas EFTER att
-// lagren landat kan inte skilja "laddar" från "saknas" på värdet - det
-// frågar de här i stället (annars blinkar skelettet en frame i onödan).
-let descriptionsHaveSettled = false;
-descriptionsSettled.then(() => { descriptionsHaveSettled = true; });
+// Synkron spegel av löftet: destinations-lagret sätter coverImage till ''
+// (inte undefined), så ett kort som öppnas EFTER att lagret landat kan inte
+// skilja "laddar" från "saknas" på värdet - det frågar den här i stället
+// (annars blinkar skelettet en frame i onödan).
 let cardsHaveSettled = false;
 cardsSettled.then(() => { cardsHaveSettled = true; });
 
-async function fetchLayer(layerName: 'destinations' | 'cards' | 'descriptions'): Promise<any> {
+// ── RUTLÄGET: bara området runt kartan, inte hela landet ───────────────────
+// (utils/eventTiles + docs/egress-optimering.md.) Kartsidan slår på läget
+// (subscribeToAll med { area: true }) och berättar var kartan är
+// (setDataArea). Den aktiva prenumerationen hämtar de FASTA rutorna som täcker
+// området; landslagret (gamla vägen) tas bara när något verkligen behöver
+// hela Sverige: sökning, arrangörsfiltret, sparade-listan — eller en vy som
+// är för bred för rutor (> MAX_AREA_TILES), efter en kort fördröjning så att
+// första besökets Sverige-översikt (innan GPS-hoppet landar) inte drar hem
+// landet i onödan.
+interface AreaController {
+    want(tiles: string[]): void;
+    goNationwide(): Promise<void>;
+    covers(b: Bounds): boolean;
+    /** Ett tidigare krav (full tidslinje, kortlagret) har tillkommit. */
+    refresh(): void;
+}
+let activeArea: AreaController | null = null;
+// Senast begärda rutor — läggs på en prenumeration som startar efteråt.
+let lastAreaTiles: string[] | null = null;
+let nationwideWanted = false;
+let nationwideLanded = false;
+let wideTimer: ReturnType<typeof setTimeout> | null = null;
+let areaEverSet = false;
+// Bred vy (för många rutor) innan något område alls satts = första besökets
+// Sverige-översikt; GPS-/blindhoppet landar inom ~2,5 s (TOUR_GPS_WAIT_MS i
+// page.tsx). Efter det: en kort paus så att en utzoomning man ångrar inte
+// laddar landet.
+const FIRST_WIDE_VIEW_DELAY_MS = 4000;
+const WIDE_VIEW_DELAY_MS = 700;
+// Ingen setDataArea alls inom så här lång tid (kartan kom aldrig igång, eller
+// en sida som inte rapporterar området) → landslagret, som förut.
+const AREA_SILENCE_MS = 6000;
+
+// ── Enskilda event utanför det laddade datat (ensureEvents) ────────────────
+// Sparade event i en annan stad, djuplänkens event och aktiva boostar
+// bortom fönstret: hämtas ett och ett ur /api/event (CDN-cachat per id) i
+// stället för att dra hem hela landet eller hela tidslinjen.
+const extraEvents = new Map<string, LinkEvent>();
+const extraMisses = new Set<string>();
+const extraInflight = new Map<string, Promise<void>>();
+const EXTRA_MAX = 200;
+// Den aktiva prenumerationens koll "finns id:t redan?" + emit (subscribeToAll).
+let knownEventIds: (() => Set<string>) | null = null;
+let onExtrasLanded: (() => void) | null = null;
+
+async function fetchLayer(layerName: 'destinations' | 'cards'): Promise<any> {
     // 1. CDN-cachad server-route FÖRST (gzippad ~5:1, delas mellan alla
     // besökare via Hosting-CDN:en). 30s-pollen är också gratis här:
     // max-age=300 → webbläsaren svarar ur egen HTTP-cache utan nätverk i 5 min.
@@ -488,8 +575,10 @@ export const linkEventService = {
     /** Hela tidslinjen behövs (sökning, bläddring bortom fönstret, boost/
      *  djuplänk utanför). Idempotent; pollarna går över till fulla lagret. */
     requestFullTimeline() {
+        if (fullTimelineRequested) return;
         fullTimelineRequested = true;
         releaseTimelineGate?.();
+        activeArea?.refresh();
     },
 
     /** Slutet (epoch-ms) på laddad tidslinje — null när allt är inne. UI:t
@@ -517,9 +606,11 @@ export const linkEventService = {
      *  Landade lagren sent hann man scrolla ner i kortets lista, och
      *  beskrivningen tryckte ner raderna mitt framför ögonen (Josef 28/9). */
     requestCards(): Promise<void> {
+        const first = !cardsRequested;
         cardsRequested = true;
         releaseCardsGate?.();
         releaseHeavyGateNow();
+        if (first) activeArea?.refresh();
         return cardsSettled;
     },
 
@@ -529,31 +620,130 @@ export const linkEventService = {
         return cardsHaveSettled;
     },
 
-    /** Dito för requestDescriptions-löftet. */
-    descriptionsSettledNow(): boolean {
-        return descriptionsHaveSettled;
+    /** Har beskrivningen för `id` hämtats (eller visat sig saknas)? Synkron —
+     *  för kortets pending-initialiserare (destinations sätter description
+     *  till '', inte undefined, så värdet ensamt säger inget). */
+    descriptionSettledFor(id: string): boolean {
+        return descBuckets.has(descBucketFor(id));
     },
 
-    /** Ett eventkort har öppnats → descriptions-lagret behövs. Idempotent.
-     *  Löftet löser ut när första svaret behandlats (även tomt), så kortet
-     *  kan skilja "hämtas fortfarande" från "har ingen beskrivning".
-     *  Släpper målnings-gaten av samma skäl som requestCards ovan. */
-    requestDescriptions(): Promise<void> {
-        descriptionsRequested = true;
-        releaseDescriptionsGate?.();
-        releaseHeavyGateNow();
-        return descriptionsSettled;
+    /** Ett eventkort visar `id` → hämta hinken med dess beskrivning.
+     *  Idempotent per hink. Löftet löser ut när svaret behandlats (även
+     *  tomt/misslyckat), så kortet kan skilja "hämtas" från "saknas". */
+    requestDescriptionFor(id: string): Promise<void> {
+        return loadDescBucket(descBucketFor(id), id);
+    },
+
+    /** Förhämta hinkarna för event man troligen öppnar härnäst (Nästa-målen),
+     *  så beskrivningen redan finns när kortet byter event. */
+    prefetchDescriptions(ids: readonly string[]) {
+        const seen = new Set<number>();
+        for (const id of ids) {
+            const b = descBucketFor(id);
+            if (seen.has(b) || seen.size >= 3) continue;
+            seen.add(b);
+            void loadDescBucket(b);
+        }
+    },
+
+    /** Kartans dataområde (rutläget): bounds = allt kartan kan behöva visa
+     *  närmast — vyn + veckovyns cirkel, eller målet för ett stadshopp innan
+     *  kameran flugit dit. Rutorna läggs till (släpps aldrig); en vy som är
+     *  för bred för rutor ger landslagret efter en kort paus. */
+    setDataArea(b: Bounds) {
+        const tiles = tilesForBounds(b, 0);
+        if (tiles === null) {
+            if (!wideTimer && !nationwideWanted) {
+                wideTimer = setTimeout(() => {
+                    wideTimer = null;
+                    void linkEventService.requestNationwide();
+                }, areaEverSet ? WIDE_VIEW_DELAY_MS : FIRST_WIDE_VIEW_DELAY_MS);
+            }
+            return;
+        }
+        if (wideTimer) { clearTimeout(wideTimer); wideTimer = null; }
+        areaEverSet = true;
+        lastAreaTiles = lastAreaTiles ? Array.from(new Set([...lastAreaTiles, ...tiles])) : tiles;
+        activeArea?.want(tiles);
+    },
+
+    /** HELA Sverige behövs (sökning, arrangörsfiltret, sparade-listan).
+     *  Idempotent. Löser ut när landslagret (och kortlagret, om det är
+     *  begärt) landat — direkt utanför rutläget. */
+    requestNationwide(): Promise<void> {
+        nationwideWanted = true;
+        if (wideTimer) { clearTimeout(wideTimer); wideTimer = null; }
+        return activeArea ? activeArea.goNationwide() : Promise.resolve();
+    },
+
+    /** Är datat för vyn hämtat? Utanför rutläget alltid sant (då styr bara
+     *  eventsSettled + tidshorisonten). I rutläget: landslagret är inne,
+     *  eller varje ruta vyn rör är hämtad. Läses per render, som
+     *  timelineHorizonMs — varje landning följs av en emit. */
+    isAreaLoaded(b: Bounds | null | undefined): boolean {
+        if (!activeArea || !b) return true;
+        return activeArea.covers(b);
+    },
+
+    /** Antal event per svensk dag för HELA landet (välkomstrutan) — kartan
+     *  laddar bara sitt område och kan inte räkna landet själv. null vid fel. */
+    async fetchNationalDayCounts(): Promise<Record<string, number> | null> {
+        const data = await fetchJsonTwice('/api/events/destinations?counts=day');
+        return data?.perDay && typeof data.perDay === 'object' ? data.perDay : null;
+    },
+
+    /** Är landslagret inne (eller rutläget av)? */
+    isNationwide(): boolean {
+        return !activeArea || nationwideLanded;
+    },
+
+    /**
+     * Se till att de här eventen finns i kartans data även om deras ruta eller
+     * dag inte är hämtad: sparade event i en annan stad, djuplänkens event,
+     * boostar bortom fönstret. Okända id:n hämtas ett och ett ur /api/event
+     * (CDN-cachat per id) och läggs in tills de dyker upp i lagren. Löser ut
+     * med de event som hittades (redan kända ingår inte — läs dem ur listan).
+     * Användarskapade event finns aldrig i /api/event (de bor i Firestore och
+     * hämtas redan för hela landet) — de är redan kända.
+     */
+    async ensureEvents(ids: readonly string[]): Promise<Map<string, LinkEvent>> {
+        const known = knownEventIds?.() ?? new Set<string>();
+        // Bara SKRAPADE event (id = källans url): användarskapade hämtas redan
+        // för hela landet av Firestore-pollen — en styckhämtad kopia hade
+        // saknat serie-expansionen och skuggat pollens färskare version.
+        const todo = ids
+            .filter((id) => id && id.includes('://') && !known.has(id) && !extraEvents.has(id) && !extraMisses.has(id))
+            .slice(0, 50);
+        await Promise.all(todo.map((id) => {
+            const existing = extraInflight.get(id);
+            if (existing) return existing;
+            const p = (async () => {
+                const { data, definitive } = await fetchJsonWithStatus(`/api/event?id=${encodeURIComponent(id)}`);
+                const evt = data?.event ? apiEventToLinkEvent(data.event, id) : null;
+                if (evt && extraEvents.size < EXTRA_MAX) extraEvents.set(id, evt);
+                // Bara ett riktigt "finns inte" minns — ett nätfel frågas om nästa gång.
+                else if (!evt && definitive) extraMisses.add(id);
+            })().finally(() => { extraInflight.delete(id); });
+            extraInflight.set(id, p);
+            return p;
+        }));
+        if (todo.length) onExtrasLanded?.();
+        const out = new Map<string, LinkEvent>();
+        for (const id of ids) {
+            const e = extraEvents.get(id);
+            if (e) out.set(id, e);
+        }
+        return out;
     },
 
     // Hämta link events
     async getAll(onlyFuture = true): Promise<LinkEvent[]> {
         try {
-            // Destinations + cards parallellt; descriptions (största lagret)
-            // bara om något eventkort redan bett om det (se descriptions-gaten).
-            const [destData, cardsData, descData] = await Promise.all([
+            // Destinations + cards parallellt. Beskrivningarna kommer inte
+            // härifrån — de hämtas per hink när ett kort öppnas.
+            const [destData, cardsData] = await Promise.all([
                 fetchLayer('destinations'),
                 cardsRequested ? fetchLayer('cards') : Promise.resolve(null),
-                descriptionsRequested ? fetchLayer('descriptions') : Promise.resolve(null),
             ]);
 
             if (!destData) return [];
@@ -562,10 +752,6 @@ export const linkEventService = {
 
             if (cardsData) {
                 events = mergeCardsWithDestinations(events, cardsData.events || []);
-            }
-
-            if (descData && descData.data) {
-                events = mergeDescriptionsWithEvents(events, descData.data);
             }
 
             return events;
@@ -869,22 +1055,25 @@ export const linkEventService = {
         // "laddat"-besked i stället för att gissa med timers → "Inga event den här
         // dagen" kan aldrig blinka förbi innan datan faktiskt hämtats.
         onInitialLoad?: () => void,
+        // area: RUTLÄGET (kartsidan) — bara rutorna runt setDataArea-området,
+        // landslagret först när requestNationwide/en för bred vy kräver det.
+        opts?: { area?: boolean },
     ): () => void {
         let active = true;
         let baseEvents: LinkEvent[] = [];   // sammanslagna aggregat-lager (utan user-events)
         let userEvents: LinkEvent[] = [];   // senast hämtade användarskapade event
         let boostOverlay: Map<string, Date> = new Map(); // skrapat eventId → featuredUntil (eventBoosts)
-        // Engångsvakt: descriptions-gatens efterhäng får bara kopplas en gång
-        // per prenumeration (varje 5-min-poll går annars in här på nytt och
+        // Engångsvakt: gatens efterhäng får bara kopplas en gång per
+        // prenumeration (varje 5-min-poll går annars in här på nytt och
         // staplar identiska hämtningar som alla fyrar när gaten släpps).
-        let descriptionsWaiterAttached = false;
         let cardsWaiterAttached = false;
         let timelineWaiterAttached = false;
-        // Senast hämtade kort-/beskrivningslager: när destinations BYTS UT
-        // (fönster → full tidslinje) måste mergen göras om — annars tappade
-        // alla event sina bilder/beskrivningar i bytet.
+        // Senast hämtade kortlager + beskrivningshinkar: när destinations BYTS
+        // UT (fönster → full tidslinje, ruta → land) måste mergen göras om —
+        // annars tappade alla event sina bilder/beskrivningar i bytet.
         let latestCards: any[] | null = null;
         let latestDescs: Record<string, string> | null = null;
+        for (const data of descBuckets.values()) latestDescs = { ...(latestDescs ?? {}), ...data };
         const withMerges = (evts: LinkEvent[]): LinkEvent[] => {
             let out = evts;
             if (latestCards) out = mergeCardsWithDestinations(out, latestCards);
@@ -896,7 +1085,20 @@ export const linkEventService = {
             if (initialLoadSignaled || !active) return;
             initialLoadSignaled = true;
             onInitialLoad?.();
+            ensureBoostedEvents();
         };
+        // Boost-löftet ("syns varje dag t.o.m. featuredUntil") får inte klippas
+        // av fönstret eller rutorna: ett boostat event som lagren inte bär
+        // (bortom horisonten, eller i en annan del av landet) hämtas styckvis
+        // (ensureEvents) — förut drog det hem HELA tidslinjen åt alla besökare.
+        // Boostarna är en handfull; väntar in första laddningen så att event
+        // som ändå är på väg i lagren inte hämtas dubbelt.
+        function ensureBoostedEvents() {
+            if (!initialLoadSignaled || !boostOverlay.size) return;
+            const known = new Set(baseEvents.map((e) => e.id));
+            const missing = [...boostOverlay.keys()].filter((id) => !known.has(id));
+            if (missing.length) void linkEventService.ensureEvents(missing);
+        }
 
         // Slå ihop bas-lager + användarevent och skicka till UI:t.
         function emit() {
@@ -905,6 +1107,13 @@ export const linkEventService = {
             // guldnål/stickyness/sortering funkar exakt som för boostade
             // användarevent. Utgångna boostar filtreras här — ingen städning.
             let base = baseEvents;
+            // Styckhämtade event (ensureEvents) som lagren inte bär — än.
+            if (extraEvents.size) {
+                const known = new Set(base.map((e) => e.id));
+                const add: LinkEvent[] = [];
+                for (const e of extraEvents.values()) if (!known.has(e.id)) add.push(e);
+                if (add.length) base = [...base, ...add];
+            }
             if (boostOverlay.size) {
                 const nowMs = Date.now();
                 base = base.map((e) => {
@@ -952,7 +1161,7 @@ export const linkEventService = {
                 fetchTodayStatic().then((slice) => {
                     if (!active || realDestLanded || todayLevel >= 1 || baseEvents.length || !slice) return;
                     todayLevel = 1;
-                    baseEvents = slice;
+                    baseEvents = mapDestinationsToLinkEvents(slice);
                     emit();
                 });
                 fetchTodaySlice().then((slice) => {
@@ -962,7 +1171,7 @@ export const linkEventService = {
                     if (!active || realDestLanded || todayLevel >= 2 || !slice) return;
                     if (baseEvents.length && todayLevel === 0) return;
                     todayLevel = 2;
-                    baseEvents = slice;
+                    baseEvents = mapDestinationsToLinkEvents(slice);
                     emit();
                 });
                 staticTimer = setTimeout(async () => {
@@ -1000,6 +1209,7 @@ export const linkEventService = {
                 if (!active || !destData) return;
 
                 baseEvents = withMerges(mapDestinationsToLinkEvents(destData.events || []));
+                nationwideLanded = true;
                 emit();
 
                 // Full tidslinje på begäran: engångs-waiter (som cards/desc).
@@ -1027,16 +1237,13 @@ export const linkEventService = {
                 // moment 22 och allt väntade ut säkerhetsnätet.
                 signalInitialLoad();
 
-                // 2. Cards + descriptions — men först när kartan målat klart
-                // (eller säkerhetsnätet gått): ska inte konkurrera med tiles +
-                // prickar om bandbredden. INGET av lagren hämtas här om det inte
-                // begärts — se cards- respektive descriptions-gaten ovan.
+                // 2. Cards — men först när kartan målat klart (eller
+                // säkerhetsnätet gått): ska inte konkurrera med tiles + prickar
+                // om bandbredden. Hämtas inte alls om det inte begärts (se
+                // kort-gaten). Beskrivningarna går egen väg (hinkar per kort).
                 await awaitHeavyLayersGate();
                 if (!active) return;
-                const [cardsData, descData] = await Promise.all([
-                    cardsRequested ? fetchLayer('cards') : Promise.resolve(null),
-                    descriptionsRequested ? fetchLayer('descriptions') : Promise.resolve(null),
-                ]);
+                const cardsData = cardsRequested ? await fetchLayer('cards') : null;
                 if (!active) return;
                 if (cardsRequested) {
                     if (cardsData) {
@@ -1066,31 +1273,6 @@ export const linkEventService = {
                         }
                     });
                 }
-                if (descriptionsRequested) {
-                    if (descData && descData.data) {
-                        latestDescs = descData.data;
-                        baseEvents = mergeDescriptionsWithEvents(baseEvents, descData.data);
-                        emit();
-                    }
-                    // Även tomt/misslyckat svar räknas som "avgjort" — kortet
-                    // visar då sin vanliga fallbacktext; nästa poll försöker om.
-                    signalDescriptionsSettled?.();
-                } else if (!descriptionsWaiterAttached) {
-                    descriptionsWaiterAttached = true;
-                    descriptionsGate.then(async () => {
-                        if (!active) return;
-                        try {
-                            const dd = await fetchLayer('descriptions');
-                            if (active && dd && dd.data) {
-                                latestDescs = dd.data;
-                                baseEvents = mergeDescriptionsWithEvents(baseEvents, dd.data);
-                                emit();
-                            }
-                        } finally {
-                            signalDescriptionsSettled?.();
-                        }
-                    });
-                }
             } catch (err) {
                 console.error("Error loading events progressively:", err);
                 // Fallback to standard SQLite getAll
@@ -1101,6 +1283,7 @@ export const linkEventService = {
                         // statisk-JSON-först redan hunnit rita.
                         if (!evts.length && baseEvents.length) return;
                         baseEvents = evts;
+                        if (evts.length) nationwideLanded = true;
                         emit();
                     });
                 }
@@ -1138,16 +1321,7 @@ export const linkEventService = {
                 lastUserFullFetchMs = Date.now();
             }
             boostOverlay = boosts;
-            // Boost-löftet ("syns varje dag t.o.m. featuredUntil") får inte
-            // klippas av fönstret: en betald boost på ett event bortom
-            // horisonten tvingar fram hela tidslinjen. Boostarna är en
-            // handfull — kollen är O(events) och körs per 30 s-poll.
-            if (loadedHorizonMs !== null && boosts.size) {
-                const known = new Set(baseEvents.map((e) => e.id));
-                for (const id of boosts.keys()) {
-                    if (!known.has(id)) { linkEventService.requestFullTimeline(); break; }
-                }
-            }
+            ensureBoostedEvents();
             emit();
         }
 
@@ -1181,13 +1355,193 @@ export const linkEventService = {
             }
         }
 
-        // Initial: ladda allt direkt.
-        loadAggregates();
+        // ── Rutläget (opts.area) ─────────────────────────────────────────────
+        // Rader per ruta, rå destinations-form (mappas i recomposeArea).
+        const areaMode = !!opts?.area;
+        let nationwide = !areaMode;                    // landslagrets väg (från start, eller begärd)
+        let nationwidePromise: Promise<void> | null = null;
+        const tileDest = new Map<string, any[]>();
+        const tileCards = new Map<string, any[]>();
+        const tileFull = new Set<string>();            // rutor hämtade med HELA tidslinjen
+        const tileWindow = new Map<string, string>();  // fönstrets fromIso vid hämtningen (dygnsbytet)
+        const wanted = new Set<string>();
+        let todayRows: any[] = [];                      // dagens landsslice: första målningen
+        let todayRowsDay: string | null = null;         // svensk dag slicen gäller
+        let areaSyncing = false;
+        let areaSyncAgain = false;
+        let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+        let coverMemo: { key: string; result: boolean } | null = null;
+
+        function tileUrl(layer: 'destinations' | 'cards', tile: string, full: boolean, range: TimelineWindowRange) {
+            return full
+                ? `/api/events/${layer}?tile=${tile}`
+                : `/api/events/${layer}?from=${encodeURIComponent(range.fromIso)}&to=${encodeURIComponent(range.toIso)}&tile=${tile}`;
+        }
+
+        function recomposeArea(range: TimelineWindowRange) {
+            // Landslagret har tagit över — rutorna får inte skriva över det.
+            if (nationwideLanded) return;
+            const cards: any[] = [];
+            for (const c of tileCards.values()) cards.push(...c);
+            if (tileCards.size) latestCards = cards;
+            baseEvents = withMerges(mapDestinationsToLinkEvents(composeAreaRows(todayRows, tileDest)));
+            const allFull = tileDest.size > 0 && [...tileDest.keys()].every((t) => tileFull.has(t));
+            loadedHorizonMs = fullTimelineRequested && allFull ? null : range.toMs;
+            coverMemo = null;
+        }
+
+        /** Hämta det som saknas för de önskade rutorna (refreshAll = pollen:
+         *  allt om, ETag/304 gör oförändrade rutor nästan gratis). Körs en åt
+         *  gången; krav som tillkommer under tiden tas i ett varv till. */
+        async function syncArea(refreshAll = false) {
+            if (nationwide || !active) return;
+            if (areaSyncing) { areaSyncAgain = true; return; }
+            areaSyncing = true;
+            try {
+                let refresh = refreshAll;
+                do {
+                    areaSyncAgain = false;
+                    const range = timelineWindowRange();
+                    const full = fullTimelineRequested;
+                    const withCards = cardsRequested;
+                    const jobs = [...wanted].map((tile) => {
+                        const needDest = refresh || !tileDest.has(tile)
+                            || (full ? !tileFull.has(tile) : (!tileFull.has(tile) && tileWindow.get(tile) !== range.fromIso));
+                        const needCards = withCards && (needDest || !tileCards.has(tile));
+                        return { tile, needDest, needCards };
+                    }).filter((j) => j.needDest || j.needCards);
+                    refresh = false;
+                    if (!jobs.length) break;
+                    const results = await Promise.all(jobs.map(async (j) => {
+                        const [d, c] = await Promise.all([
+                            j.needDest ? fetchJsonTwice(tileUrl('destinations', j.tile, full, range)) : Promise.resolve(null),
+                            j.needCards ? fetchJsonTwice(tileUrl('cards', j.tile, full, range)) : Promise.resolve(null),
+                        ]);
+                        return { ...j, d, c };
+                    }));
+                    if (!active || nationwide) return;
+                    let failed = false;
+                    for (const r of results) {
+                        if (r.needDest) {
+                            if (!r.d) { failed = true; continue; }
+                            tileDest.set(r.tile, Array.isArray(r.d.events) ? r.d.events : []);
+                            tileWindow.set(r.tile, range.fromIso);
+                            if (full) tileFull.add(r.tile); else tileFull.delete(r.tile);
+                        }
+                        // Misslyckat kortsvar: rutan står utan kort tills nästa
+                        // varv/poll — "avgjort" ändå, så skelettet inte pulserar.
+                        if (r.needCards && r.c) tileCards.set(r.tile, Array.isArray(r.c.events) ? r.c.events : []);
+                    }
+                    recomposeArea(range);
+                    emit();
+                    if (withCards) signalCardsSettled?.();
+                    if (failed) {
+                        // Rutvägen svarar inte (routen nere, kallstart som
+                        // klipper svaret) → landslagrets väg, som har den
+                        // statiska reserven. Hellre allt än tomt.
+                        void goNationwide();
+                        return;
+                    }
+                    if ([...wanted].every((t) => tileDest.has(t))) signalInitialLoad();
+                } while (areaSyncAgain);
+            } finally {
+                areaSyncing = false;
+            }
+        }
+
+        function goNationwide(): Promise<void> {
+            if (!nationwidePromise) {
+                nationwide = true;
+                if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+                nationwidePromise = loadAggregates();
+            }
+            return nationwidePromise;
+        }
+
+        // Dagens landsslice (statisk fil + API, som förut) ritar första
+        // prickarna innan området är känt — och står kvar UTANFÖR de laddade
+        // rutorna (composeAreaRows), så dagens prickar finns över hela landet.
+        function startTodaySlices() {
+            let todayLevel = 0;
+            const take = (level: number) => (rows: any[] | null) => {
+                if (!active || !rows || todayLevel >= level || nationwideLanded) return;
+                todayLevel = level;
+                todayRows = rows;
+                todayRowsDay = STOCKHOLM_DAY_FMT.format(new Date());
+                recomposeArea(timelineWindowRange());
+                emit();
+            };
+            fetchTodayStatic().then(take(1));
+            fetchTodaySlice().then(take(2));
+        }
+
+        const controller: AreaController = {
+            want(tiles) {
+                if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+                let added = false;
+                for (const t of tiles) if (!wanted.has(t)) { wanted.add(t); added = true; }
+                if (added) void syncArea();
+            },
+            goNationwide,
+            covers(b) {
+                if (nationwideLanded) return true;
+                const key = `${b.west}|${b.south}|${b.east}|${b.north}`;
+                if (coverMemo?.key === key) return coverMemo.result;
+                const result = boundsCoveredBy(b, new Set(tileDest.keys()));
+                coverMemo = { key, result };
+                return result;
+            },
+            // En mikrotask senare: sökningen/arrangörsfiltret begär kort +
+            // full tidslinje + landet i SAMMA tick — landsbegäran ska hinna
+            // före, annars hämtades rutornas kort i onödan först.
+            refresh() { queueMicrotask(() => { void syncArea(); }); },
+        };
+
+        // Beskrivningshinkar och styckhämtade event landar via modulens krokar.
+        onDescriptionsLanded = (data) => {
+            if (!active) return;
+            latestDescs = { ...(latestDescs ?? {}), ...data };
+            baseEvents = mergeDescriptionsWithEvents(baseEvents, data);
+            emit();
+        };
+        knownEventIds = () => {
+            const ids = new Set(baseEvents.map((e) => e.id));
+            for (const e of userEvents) ids.add(e.id);
+            return ids;
+        };
+        onExtrasLanded = () => { if (active) emit(); };
+
+        // Initial laddning.
+        if (areaMode) {
+            nationwideLanded = false;
+            activeArea = controller;
+            startTodaySlices();
+            if (nationwideWanted) void goNationwide();
+            else if (lastAreaTiles) controller.want(lastAreaTiles);
+            else {
+                silenceTimer = setTimeout(() => {
+                    silenceTimer = null;
+                    if (active && !wanted.size) void goNationwide();
+                }, AREA_SILENCE_MS);
+            }
+        } else {
+            loadAggregates();
+        }
         loadUserEvents();
 
         // Aggregaten ändras ~1×/dygn (efter scrape) → glesa pollen till 5 min;
-        // index-doc-cachen gör dessutom oförändrade pollar nästan gratis.
-        const aggregateInterval = setInterval(loadAggregates, 5 * 60 * 1000);
+        // ETag/304 gör dessutom oförändrade pollar nästan gratis. Rutläget
+        // frågar om sina rutor (och byter fönster vid dygnsskiftet).
+        const aggregateInterval = setInterval(() => {
+            if (nationwide) { void loadAggregates(); return; }
+            // Dygnsskiftet: gårdagens "idag"-slice får inte ligga kvar som
+            // prickar utanför rutorna (rutorna själva byter fönster nedan).
+            if (todayRowsDay && todayRowsDay !== STOCKHOLM_DAY_FMT.format(new Date())) {
+                todayRows = [];
+                todayRowsDay = null;
+            }
+            void syncArea(true);
+        }, 5 * 60 * 1000);
         // Användarevent kan dyka upp när som helst → behåll snabb 30 s-takt.
         // Takten är kvar, det är KOSTNADEN per varv som är borta.
         const userInterval = setInterval(pollUserEvents, 30000);
@@ -1207,6 +1561,11 @@ export const linkEventService = {
             active = false;
             clearInterval(aggregateInterval);
             clearInterval(userInterval);
+            if (silenceTimer) clearTimeout(silenceTimer);
+            if (activeArea === controller) activeArea = null;
+            onDescriptionsLanded = null;
+            knownEventIds = null;
+            onExtrasLanded = null;
             if (typeof document !== 'undefined') {
                 document.removeEventListener('visibilitychange', onVisibilityChange);
             }
