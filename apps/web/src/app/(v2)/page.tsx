@@ -35,7 +35,9 @@ import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoin
 import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFromQuery } from '@/utils/eventSearch';
 import { LABEL_TITLE_MIN_ZOOM, WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
-import { readStartCity, writeStartCity } from '@/utils/startCity';
+import { readStartCity, writeStartCity, parsePlatsParam } from '@/utils/startCity';
+import { circleBounds, unionBounds } from '@/utils/eventTiles';
+import { sumDayCounts } from '@/utils/dayCounts';
 import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
@@ -523,6 +525,14 @@ export default function HomePage() {
     // Tom-läget håller tyst tills dess — annars hann prompten påstå "inget här"
     // medan ladda-pillen fortfarande sa "Ritar ut eventen…".
     const [mapPainted, setMapPainted] = useState(false);
+    // Rutläget: är rutorna under kartans ruta hämtade? Läses per render (som
+    // tidshorisonten) — varje landning följs av en emit → re-render. En vy
+    // vars rutor inte landat är "laddar", aldrig "tomt": alla vakter nedan
+    // som annars bara frågar eventsSettled frågar eventsSettledHere.
+    const areaLoaded = linkEventService.isAreaLoaded(mapBounds);
+    const eventsSettledHere = eventsSettled && areaLoaded;
+    // Landslagret inne (sökningens/arrangörens siffror räknar hela landet).
+    const nationwideNow = linkEventService.isNationwide();
     const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [newEventTitle, setNewEventTitle] = useState('');
     const [newEventTime, setNewEventTime] = useState('');           // datetime-local-sträng
@@ -932,10 +942,10 @@ export default function HomePage() {
     const [pulseArmedNonce, setPulseArmedNonce] = useState(-1);
     useEffect(() => {
         if (!tourPlaying || pulseSuppressed) return;
-        if (!welcomeDone || !eventsSettled || !mapPainted) return;
+        if (!welcomeDone || !eventsSettledHere || !mapPainted) return;
         if (!cityTourTarget || landedTourKey !== cityTourTarget.key) return;
         setPulseArmedNonce(n => (n === tourCycleNonce ? n : tourCycleNonce));
-    }, [tourPlaying, pulseSuppressed, welcomeDone, eventsSettled, mapPainted, cityTourTarget, landedTourKey, tourCycleNonce]);
+    }, [tourPlaying, pulseSuppressed, welcomeDone, eventsSettledHere, mapPainted, cityTourTarget, landedTourKey, tourCycleNonce]);
 
     // Målat-kvittot från V2Map (onPaintRoundDone): bumpas varje gång en
     // push-runda faktiskt målats klart på skärmen. Ref-spegeln låter timers
@@ -1305,11 +1315,36 @@ export default function HomePage() {
             // Definitivt besked = även en äkta tom dag (0 aggregat-event) räknas
             // som "siffran är klar" — annars stod badgen på "…" för evigt.
             setDayCountReady(true);
-        });
+        }, { area: true });
         // Säkerhetsnät om nätverket HÄNGER (fetch som aldrig resolvar → ingen signal):
         // efter 15 s räknas det ändå som laddat så spinnern inte snurrar för evigt.
         const hangGuard = setTimeout(() => { setEventsLoaded(true); setEventsSettled(true); setDayCountReady(true); }, 15000);
         return () => { unsubscribe(); clearTimeout(hangGuard); };
+    }, []);
+    // RUTLÄGET (utils/eventTiles, docs/egress-optimering.md): servicen hämtar
+    // bara de fasta rutorna runt kartan, inte hela Sverige. Oftast vet vi
+    // redan vid mount var kartan öppnar — ?plats= eller den sparade staden,
+    // samma källor som V2Map:s startvy — så rutorna hämtas parallellt med
+    // kartans uppstart i stället för efter den. (Djuplänkar flyger till
+    // eventet och arrangörsfiltret behöver hela landet — de tar sina egna
+    // vägar.)
+    useEffect(() => {
+        try {
+            const q = new URLSearchParams(window.location.search);
+            // Arrangörsfiltret behöver hela landet, hela tidslinjen och
+            // kortlagret ändå — begär allt direkt, så varken kartans rutor
+            // eller landets 14-dagarsfönster hämtas i onödan först.
+            if (q.has('arrangor')) {
+                linkEventService.requestFullTimeline();
+                void linkEventService.requestCards();
+                void linkEventService.requestNationwide();
+                return;
+            }
+            if (q.has('event')) return;
+            const plats = q.get('plats');
+            const start = plats ? parsePlatsParam(plats) : readStartCity();
+            if (start) linkEventService.setDataArea(circleBounds(start.lat, start.lng, WEEK_AREA_MIN_RADIUS_KM));
+        } catch { /* ingen URL/lagring — kartans ruta tar det */ }
     }, []);
 
     // (KVÄLLSLANDNINGEN 13/9 låg här - ersatt 24/9 av auto-hoppet till
@@ -1498,6 +1533,22 @@ export default function HomePage() {
             Math.max(WEEK_AREA_MIN_RADIUS_KM, Math.ceil(viewRadiusKm / 5) * 5)
         }`
         : null;
+    // Rutläget: kartans DATAOMRÅDE = vyn + veckovyns cirkel kring mitten
+    // (minst WEEK_AREA_MIN_RADIUS_KM, samma radie som veckoläget ritar) —
+    // dag→vecka-pulsen vid landningen ska aldrig vänta på en ny hämtning.
+    // Rutorna läggs bara till; en vy som är för bred för rutor (utzoomat
+    // över landet) ger landslagret efter en kort paus.
+    useEffect(() => {
+        if (!mapBounds || !mapCenter) return;
+        const radius = Math.max(WEEK_AREA_MIN_RADIUS_KM, viewRadiusKm);
+        linkEventService.setDataArea(unionBounds(mapBounds, circleBounds(mapCenter.lat, mapCenter.lng, radius)));
+    }, [mapBounds, mapCenter, viewRadiusKm]);
+    // Stadshopp (GPS-landning, skylt, stadssök, djuplänk): målet är känt i
+    // cityTourTarget långt före moveend — hämta dess rutor medan kameran flyger.
+    useEffect(() => {
+        if (!cityTourTarget) return;
+        linkEventService.setDataArea(circleBounds(cityTourTarget.lat, cityTourTarget.lng, WEEK_AREA_MIN_RADIUS_KM));
+    }, [cityTourTarget]);
     // Perioden som URVAL, med startdag som argument: används av filteredEvents
     // (aktuell period) OCH av förbakningen (nästa/föregående period — se
     // prebakeEvents nedan). Samma regler oavsett vilken period som skivas.
@@ -1978,8 +2029,10 @@ export default function HomePage() {
         if (searchQ) {
             linkEventService.requestCards();
             // Sökningen går över ALLA dagar ("Håkan Hellström om tre veckor")
-            // — fönsterdatat räcker inte, hämta hela tidslinjen.
+            // — fönsterdatat räcker inte, hämta hela tidslinjen. Och över
+            // hela landet: rutorna runt kartan räcker inte heller.
             linkEventService.requestFullTimeline();
+            void linkEventService.requestNationwide();
         }
     }, [searchQ]);
     // Arrangörsfiltret behöver också värdnamnen (kortlagret) och hela
@@ -1989,7 +2042,10 @@ export default function HomePage() {
         if (!organizerSlug) return;
         linkEventService.requestFullTimeline();
         let alive = true;
-        linkEventService.requestCards().then(() => { if (alive) setOrganizerCardsReady(true); });
+        // Arrangörens event finns var som helst i landet — rutorna runt
+        // kartan räcker inte. Redo när BÅDE kortlagret och landslagret landat.
+        Promise.all([linkEventService.requestCards(), linkEventService.requestNationwide()])
+            .then(() => { if (alive) setOrganizerCardsReady(true); });
         return () => { alive = false; };
     }, [organizerSlug]);
     // Ny arrangör = börja om på Alla.
@@ -2087,7 +2143,7 @@ export default function HomePage() {
     // Siffrorna i arrangörsläget är klara först när BÅDE värdnamnen (kort-
     // lagret) och hela tidslinjen landat - annars klättrar de (27 -> 47)
     // medan resten av veckorna laddas. Till dess visas "…".
-    const organizerCountsReady = organizerCardsReady && timelineHorizonMs === null;
+    const organizerCountsReady = organizerCardsReady && timelineHorizonMs === null && nationwideNow;
     // Väljaren i arrangörsläget: från Alla -> den dag/vecka väljaren står
     // på; därefter växlar den dag <-> vecka som vanligt (utan zoomlåset -
     // arrangörens vecka är ingen områdesvy).
@@ -2136,7 +2192,9 @@ export default function HomePage() {
         const start = new Date(); start.setHours(0, 0, 0, 0);
         const end = new Date(start); end.setDate(end.getDate() + 7);
         const matchText = searchCity && searchText ? searchText : undefined;
-        const pool = eventsSettled
+        // Hela landet krävs (sökningen begär det) — med bara rutorna runt
+        // kartan hade en annan ort räknats som tom.
+        const pool = eventsSettled && nationwideNow
             ? events.filter(evt =>
                 matchesFilter(evt) && hasValidCoords(evt) && evt.time >= start && evt.time < end
                 && (!matchText || eventSearchTier(evt, matchText) >= 0))
@@ -2148,7 +2206,7 @@ export default function HomePage() {
                 ? pool.filter(evt => haversineKm(city.lat, city.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM).length
                 : null,
         }));
-    }, [searchQuery, searchCity, searchText, events, eventsSettled, matchesFilter]);
+    }, [searchQuery, searchCity, searchText, events, eventsSettled, nationwideNow, matchesFilter]);
 
     // Tidsfönstret: visas en dag bortom den laddade horisonten är datat inte
     // "settled" för den vyn — kartan visar sin vanliga "Laddar fler event…"-
@@ -2156,13 +2214,13 @@ export default function HomePage() {
     // landat. ensureTimelineCovers-effekten uppe vid dagvalet har redan
     // begärt den (timelineHorizonMs deklareras där).
     const eventsSettledForView = useMemo(() => {
-        if (!eventsSettled) return false;
+        if (!eventsSettledHere) return false;
         if (timelineHorizonMs == null) return true;
         const end = new Date();
         end.setHours(0, 0, 0, 0);
         end.setDate(end.getDate() + dayOffset + dayRangeDays);
         return end.getTime() <= timelineHorizonMs;
-    }, [eventsSettled, timelineHorizonMs, dayOffset, dayRangeDays]);
+    }, [eventsSettledHere, timelineHorizonMs, dayOffset, dayRangeDays]);
 
     // FÖRBAKNINGS-underlag till kartan (Josef 13/9 "gör det också"): nästa och
     // föregående periods event genom SAMMA kedja som kartans events-prop
@@ -2250,25 +2308,36 @@ export default function HomePage() {
     /** Tom-promptens knapp: tipsa om något man VET händer (inget konto krävs). */
     const startTipHere = useCallback(() => startCreateHere('tip'), [startCreateHere]);
 
+    // Välkomstmodalens siffror gäller HELA SVERIGE ("N event den närmaste
+    // veckan i hela Sverige"), men kartan laddar bara området runt sig
+    // (rutläget). Landets antal per dag kommer därför från servern (~1 kB)
+    // när rutan öppnas; användarskapade event (som kartan alltid har för
+    // hela landet) läggs på. Tills svaret landat — eller om landslagret
+    // ändå är inne — räknas kartans egna event som förut.
+    const [nationalDayCounts, setNationalDayCounts] = useState<Record<string, number> | null>(null);
+    useEffect(() => {
+        if (!welcomeOpen || nationalDayCounts) return;
+        let alive = true;
+        linkEventService.fetchNationalDayCounts().then((c) => { if (alive && c) setNationalDayCounts(c); });
+        return () => { alive = false; };
+    }, [welcomeOpen, nationalDayCounts]);
+    const countFromToday = useCallback((days: number) => {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(end.getDate() + days);
+        const inRange = (evt: LinkEvent) => evt.time >= start && evt.time < end;
+        if (!nationalDayCounts || nationwideNow) return events.filter(inRange).length;
+        return sumDayCounts(nationalDayCounts, start, days)
+            + events.filter(evt => evt.userCreated && inRange(evt)).length;
+    }, [events, nationalDayCounts, nationwideNow]);
     // Antal event totalt för idag (oavsett filter) för välkomstmodalen
-    const todayEventCount = useMemo(() => {
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const endOfToday = new Date();
-        endOfToday.setHours(23, 59, 59, 999);
-        return events.filter(evt => evt.time >= startOfToday && evt.time <= endOfToday).length;
-    }, [events]);
+    const todayEventCount = useMemo(() => countFromToday(1), [countFromToday]);
 
     // Antal event den närmaste veckan (oavsett filter) — välkomstmodalens
     // huvudsiffra (Josef 11/8): dagssiffran sålde inte databasens storlek,
     // veckovolymen gör det.
-    const weekEventCount = useMemo(() => {
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 7);
-        return events.filter(evt => evt.time >= start && evt.time < end).length;
-    }, [events]);
+    const weekEventCount = useMemo(() => countFromToday(7), [countFromToday]);
 
     // ("Börjar inom en timme"-räknaren i välkomstmodalen är borttagen —
     // ägarbeslut 26/8: rutan ska inte visa den infon.)
@@ -2435,6 +2504,10 @@ export default function HomePage() {
         // stad som står i rubriken. Zoom och panorering rör inte nyckeln, så
         // siffrorna får uppdatera sig fritt medan man utforskar.
         if (cityTourTarget && boundsCityKey !== cityTourTarget.key) return null;
+        // Rutläget: vyns rutor inte hämtade än → "…", inte 0 (allt som
+        // läser null — tom-/allt-har-varit-prompterna, veckoerbjudandet,
+        // auto-hoppet till imorgon — väntar då in datat).
+        if (!areaLoaded) return null;
         const start = new Date();
         start.setDate(start.getDate() + dayOffset);
         start.setHours(0, 0, 0, 0);
@@ -2466,7 +2539,7 @@ export default function HomePage() {
             dayAllPastAt: latestPastAt(day),
             weekAllPastAt: latestPastAt(week),
         };
-    }, [cityTourTarget, mapBounds, boundsCityKey, inMapView, dayOffset, events, matchesFilter]);
+    }, [cityTourTarget, mapBounds, boundsCityKey, areaLoaded, inMapView, dayOffset, events, matchesFilter]);
 
     /**
      * Får en botten-prompt synas just nu? Delad grind för BÅDA prompterna
@@ -2485,10 +2558,10 @@ export default function HomePage() {
      * något annat pågår — skapa-flödet, ett öppet kort eller en aktiv sökning.
      */
     const promptContextQuiet = useMemo(() => (
-        eventsSettled && mapPainted && !tourPlaying
+        eventsSettledHere && mapPainted && !tourPlaying
         && creationMode === 'idle' && !selectedEvent && !selectedWish
         && !searchQuery.trim()
-    ), [eventsSettled, mapPainted, tourPlaying, creationMode, selectedEvent, selectedWish, searchQuery]);
+    ), [eventsSettledHere, mapPainted, tourPlaying, creationMode, selectedEvent, selectedWish, searchQuery]);
 
     /**
      * "Här händer ingenting"-läget: stadsrutans siffra för valt läge är NOLL.
@@ -2701,7 +2774,7 @@ export default function HomePage() {
     // dag-vecka-dag har gått"), även medan landningspulsen kör. Räkningen går
     // på veckofönstret från vald dag och påverkas inte av pulsens växling.
     // (Grinden som väntade ut pulsen, landingPulseAllowsPrompt, är riven.)
-    const popularWeekQuiet = eventsSettled && mapPainted
+    const popularWeekQuiet = eventsSettledHere && mapPainted
         && creationMode === 'idle' && !selectedEvent && !selectedWish && !searchQuery.trim();
     // Två tal: `qualifying` = riktiga KOMMANDE populära (grinden "mer än 5"),
     // `shown` = exakt det dagväljarens veckorad visar efter trycket (samma
@@ -3113,6 +3186,16 @@ export default function HomePage() {
     // gräns som SavedPanel/kartan: start + 1 h, kl 20 för event utan klockslag).
     // Passerade sparade räknas som HISTORIK och ska inte blåsa upp
     // hjärt-badgen / "Sparade event"-räknaren — de ligger under Historik i panelen.
+    // Rutläget: ett sparat event i en annan del av landet (eller bortom
+    // tidsfönstret) finns inte i rutorna — hämta det styckvis, annars
+    // försvann det tyst ur sparade-listan och hjärt-räknaren. De senast
+    // sparade räcker (äldre sparningar har oftast passerat och finns inte i
+    // datat alls; varje id kostar ett litet uppslag).
+    useEffect(() => {
+        if (!eventsSettled || !savedEventIds.size) return;
+        void linkEventService.ensureEvents([...savedEventIds].slice(-30));
+    }, [eventsSettled, savedEventIds]);
+
     const activeSavedCount = useMemo(() => {
         const nowMs = Date.now();
         let n = 0;
@@ -3488,6 +3571,9 @@ export default function HomePage() {
     // Nu ligger id:t kvar här och prövas om vid varje events-uppdatering tills
     // det hittas eller datat är definitivt klart (eventsSettled).
     const pendingEventIdRef = useRef<string | null>(null);
+    // Djuplänks-id vars styckuppslag (ensureEvents) är klart — först då får
+    // "hittades inte"-toasten gå (eventets ruta kan annars bara vara ohämtad).
+    const [deepLinkLookupDone, setDeepLinkLookupDone] = useState<string | null>(null);
 
     // Djuplänksöppningen sker i HELSKÄRM (Josef 29/8): den som klickat ett
     // event på en stadssida ska se hela eventet direkt — kortet täcker skärmen
@@ -3624,6 +3710,10 @@ export default function HomePage() {
             applyDeepLinkedEvent(target);
         } else if (eventId) {
             pendingEventIdRef.current = eventId;
+            // Rutläget: eventet kan ligga i en ruta som inte hämtats (kameran
+            // har inte flugit dit än — eller kan inte, utan koordinater). Slå
+            // upp det styckvis; "hittades inte" först när uppslaget är klart.
+            void linkEventService.ensureEvents([eventId]).then(() => setDeepLinkLookupDone(eventId));
         }
         if (!target && !Number.isNaN(dag)) {
             setDayOffset(dag);
@@ -3647,11 +3737,11 @@ export default function HomePage() {
         if (target) {
             pendingEventIdRef.current = null;
             applyDeepLinkedEvent(target);
-        } else if (eventsSettled) {
+        } else if (eventsSettled && deepLinkLookupDone === id) {
             pendingEventIdRef.current = null;
             toast('Eventet i länken kunde inte hittas — det kan ha passerat eller tagits bort.', { icon: '🤷' });
         }
-    }, [events, eventsSettled, applyDeepLinkedEvent]);
+    }, [events, eventsSettled, deepLinkLookupDone, applyDeepLinkedEvent]);
 
     useEffect(() => {
         if (!urlApplied.current) return;   // skriv inte förrän ev. inkommande länk applicerats
