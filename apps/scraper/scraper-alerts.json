@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-02T05:15:01.819Z",
+  "generatedAt": "2026-10-03T06:36:03.176Z",
   "counts": {
     "fel": 0,
     "varning": 32,
-    "nollkoordinatTotalt": 855
+    "nollkoordinatTotalt": 820
   },
   "alerts": [
     {
@@ -35,8 +35,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Hedemora Kommun",
-      "message": "12 av 20 kommande event ligger 2026-10-07 — sajtvitt datum i stället för eventets?"
+      "source": "Göteborg & Co",
+      "message": "12 av 20 kommande event ligger 2026-10-03 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -48,7 +48,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Mora Kommun",
-      "message": "8 av 11 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
+      "message": "8 av 13 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -59,8 +59,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "855 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 42, Visit Vemdalen 31, Equmenia 23, Gotlands Museum 23, Medleymalmo 19"
+      "source": "820 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 42, Gotlands Museum 29, Visit Vemdalen 28, Equmenia 22, Medleymalmo 20"
     },
     {
       "level": "varning",
@@ -72,19 +72,19 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Mora Kommun",
-      "message": "invariant-vakten larmar (8 av 11 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 13 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (10 av 333 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (10 av 319 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Visit Ängelholm",
-      "message": "invariant-vakten larmar (9 av 85 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 89 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",

@@ -16,8 +16,8 @@
     "folk-goteborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-24",
-      "emptyRetries": 4
+      "lastRetry": "2026-10-03",
+      "emptyRetries": 5
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
@@ -40,8 +40,8 @@
     "nordmaling": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-24",
-      "emptyRetries": 4
+      "lastRetry": "2026-10-03",
+      "emptyRetries": 5
     },
     "nybro": {
       "since": "2026-08-19",
@@ -52,8 +52,8 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-26",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-03",
+      "emptyRetries": 6
     },
     "prins-eugens-waldemarsudde": {
       "since": "2026-09-29",
@@ -62,8 +62,8 @@
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-26",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-03",
+      "emptyRetries": 6
     },
     "sb-kb-se": {
       "since": "2026-09-29",
@@ -94,8 +94,8 @@
     "tingsryd": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-24",
-      "emptyRetries": 4
+      "lastRetry": "2026-10-03",
+      "emptyRetries": 5
     },
     "turteatern": {
       "since": "2026-09-29",
