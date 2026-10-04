@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-03T06:36:03.176Z",
+  "generatedAt": "2026-10-04T06:46:12.613Z",
   "counts": {
     "fel": 0,
-    "varning": 32,
-    "nollkoordinatTotalt": 820
+    "varning": 31,
+    "nollkoordinatTotalt": 784
   },
   "alerts": [
     {
@@ -35,12 +35,6 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Göteborg & Co",
-      "message": "12 av 20 kommande event ligger 2026-10-03 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Korpen Vänersborg",
       "message": "8 av 13 kommande event ligger 2026-10-11 — sajtvitt datum i stället för eventets?"
     },
@@ -59,14 +53,14 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "820 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 42, Gotlands Museum 29, Visit Vemdalen 28, Equmenia 22, Medleymalmo 20"
+      "source": "784 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 39, Gotlands Museum 25, Visit Vemdalen 24, Equmenia 22, Medleymalmo 19"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Korpen Umeå",
-      "message": "invariant-vakten larmar (12 av 50 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (12 av 56 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -78,13 +72,13 @@
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (10 av 319 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (10 av 313 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
-      "source": "Visit Ängelholm",
-      "message": "invariant-vakten larmar (8 av 89 event på samma tidsstämpel) — se nattloggen"
+      "source": "Visit Vemdalen",
+      "message": "invariant-vakten larmar (0 av 29 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
