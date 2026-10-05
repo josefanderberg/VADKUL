@@ -1927,6 +1927,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
         // Värm också upp de närmaste i listan (för swipe / "nära dig"-klick).
         const candidates = [...upcoming, ...nearbyEvents.slice(0, 3).map(n => n.evt)];
+        // Beskrivningarna hämtas hinkvis per kort — förhämta Nästa-målens
+        // hinkar så texten redan finns när kortet byter event.
+        linkEventService.prefetchDescriptions(
+            candidates.filter(e => !e.userCreated && !e.description).map(e => e.id),
+        );
 
         const seen = new Set<string>();
         for (const evt of candidates) {

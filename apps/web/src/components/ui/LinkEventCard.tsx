@@ -23,7 +23,7 @@ import { recordEventClick, getEventLikes } from '../../services/eventStatsServic
 import { displayedLikeCount } from '../../utils/likeCount';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import toast from 'react-hot-toast';
 
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
@@ -115,20 +115,28 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
     const revealStep = alwaysExpanded ? 2 : internalRevealStep;
 
-    // Beskrivningslagret laddas först när ett kort faktiskt öppnas (störst av
-    // aggregaten — ska inte belasta besökare som aldrig öppnar ett kort).
-    // Mergen pekar om selectedEvent i page.tsx → description dyker upp här
-    // via props när svaret landat; descriptionsPending styr bara fallbacktexten.
+    // Beskrivningen hämtas först när kortet visar eventet — en HINK i taget
+    // (linkEventService.requestDescriptionFor, ~90 beskrivningar), inte hela
+    // lagret. Mergen pekar om selectedEvent i page.tsx → description dyker upp
+    // här via props när svaret landat; pending styr bara fallbacktexten.
     // Destinations-lagret sätter description/coverImage till '' (inte
-    // undefined), så "saknas" kan bara avgöras när respektive lager landat -
-    // därav settledNow-frågorna. (`=== undefined`-kollen som stod här gjorde
-    // att pending aldrig blev sann: "Ingen beskrivning tillgänglig." stod
-    // där redan medan lagret hämtades.)
-    const [descriptionsPending, setDescriptionsPending] = useState(
-        () => !linkEvent.userCreated
-            && !(linkEvent as any).description
-            && !linkEventService.descriptionsSettledNow(),
+    // undefined), så "saknas" kan bara avgöras när svaret landat - därav
+    // settled-frågorna. (`=== undefined`-kollen som stod här gjorde att
+    // pending aldrig blev sann: "Ingen beskrivning tillgänglig." stod där
+    // redan medan lagret hämtades.)
+    // PER EVENT-ID: kortet återanvänds när Nästa byter event (ingen key per
+    // event), och nästa event kan ligga i en hink som inte hämtats än.
+    // Pending härleds i render: hinken var inte hämtad när kortet började
+    // visa eventet, och nådperioden efter svaret (se nedan) har inte gått ut.
+    const descAlreadySettled = useMemo(
+        () => linkEventService.descriptionSettledFor(linkEvent.id),
+        [linkEvent.id],
     );
+    const [descReleasedId, setDescReleasedId] = useState<string | null>(null);
+    const descriptionsPending = !linkEvent.userCreated
+        && !(linkEvent as { description?: string }).description
+        && !descAlreadySettled
+        && descReleasedId !== linkEvent.id;
     // Kortlagret (bild/värd/pris/affiliate-länk) är också lazy - tills det
     // landat visar bildytan ett skelett i stället för att se ut som att
     // eventet saknar bild.
@@ -137,29 +145,37 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
             && !linkEvent.coverImage
             && !linkEventService.cardsSettledNow(),
     );
+    // NÅDPERIODEN efter settle: löftet löser i samma veva som servicens emit,
+    // men emit-datan når kortet via en transition-render som kan committa
+    // EFTER settle-mikrotasken — släpptes pending direkt blinkade bildytan
+    // bort en cykel (224 px) innan den mergade coverImage-proppen hann fram.
+    // Finns bilden byts skelettet sömlöst när proppen landar; saknas den
+    // kollapsar ytan en gång när nådperioden gått ut.
+    const SETTLE_GRACE_MS = 1200;
     useEffect(() => {
         let mounted = true;
-        // Ett öppnat kort är signalen att hämta lagren; mergen pekar om
-        // selectedEvent i page.tsx per id. NÅDPERIODEN efter settle: löftet
-        // löser i samma veva som servicens emit, men emit-datan når kortet
-        // via en transition-render som kan committa EFTER settle-mikrotasken
-        // — släpptes pending direkt blinkade bildytan bort en cykel (224 px)
-        // innan den mergade coverImage-proppen hann fram. Finns bilden byts
-        // skelettet sömlöst när proppen landar; saknas den kollapsar ytan
-        // en gång när nådperioden gått ut.
-        const SETTLE_GRACE_MS = 1200;
+        // Ett öppnat kort är signalen att hämta kortlagret; mergen pekar om
+        // selectedEvent i page.tsx per id.
         linkEventService.requestCards().then(() => {
             setTimeout(() => { if (mounted) setCardsPending(false); }, SETTLE_GRACE_MS);
         });
-        linkEventService.requestDescriptions().then(() => {
-            setTimeout(() => { if (mounted) setDescriptionsPending(false); }, SETTLE_GRACE_MS);
-        });
-        // Säkerhetsnät: hänger nätet ska kortet inte stå på "Hämtar…" för evigt.
-        const guard = setTimeout(() => {
-            if (mounted) { setDescriptionsPending(false); setCardsPending(false); }
-        }, 12000);
+        // Säkerhetsnät: hänger nätet ska kortet inte stå på skelett för evigt.
+        const guard = setTimeout(() => { if (mounted) setCardsPending(false); }, 12000);
         return () => { mounted = false; clearTimeout(guard); };
     }, []);
+    const descEventId = linkEvent.id;
+    const descSkip = !!linkEvent.userCreated || descAlreadySettled;
+    useEffect(() => {
+        if (descSkip) return;
+        let mounted = true;
+        const release = () => { if (mounted) setDescReleasedId(descEventId); };
+        linkEventService.requestDescriptionFor(descEventId).then(() => {
+            setTimeout(release, SETTLE_GRACE_MS);
+        });
+        // Säkerhetsnät: hänger nätet ska kortet inte stå på "Hämtar…" för evigt.
+        const guard = setTimeout(release, 12000);
+        return () => { mounted = false; clearTimeout(guard); };
+    }, [descEventId, descSkip]);
 
     // VADKUL-värdat = skapat här UTAN länk (anmälan sker på sidan). Användar-
     // skapade event MED länk är TIPS — de presenteras som vanliga länk-event
