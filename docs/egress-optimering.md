@@ -355,11 +355,22 @@ kortet" är borta.
 valideras vid läsning — en halvskriven fil fick förut gunzip att kasta i
 slice-vägarna (503).
 
+**Uppmätt i produktion 5/10 efter deployen** (Stockholm, riktig webbläsare):
+kartan ~0,52 MB API-data (9 rutor ~0,24 MB + dagsfil + dags-API-slice +
+landsräkning), mot ~1,45 MB före; ett öppnat kort +~80 kB mot +~3,4 MB.
+
+**Dagsdatat (5/10, efter):** `events-today.json` (~130 kB br) och
+API-dagsslicen (~150 kB) hämtades båda för varje besökare — efter rutläget
+mer än hälften av kartans data. Nu hämtas API-slicen bara när den statiska
+filen saknas eller är förlegad (besök före morgondeployen), både i
+boot-scriptet ((v2)/layout.tsx) och i rutläget (`startTodaySlices`). Inom
+området tar färska rutor ändå över direkt.
+
 **Kvar (ej byggt):** sökningen kan få en server-endpoint i stället för
 landslagret (sök är det vanligaste skälet att ladda hela landet nu);
-`events-today.json` + API-dagsslicen hämtas båda för alla (~0,1 MB var) —
-API-slicen behövs bara när den statiska är förlegad; bildernas tumnaglar
-(punkt 4, "omkomprimering") gäller fortfarande.
+bildernas tumnaglar (punkt 4, "omkomprimering") gäller fortfarande.
+Stads-/arrangörssidorna (745 i sitemapen, Stockholm 261 kB, de flesta
+60–70 kB) är INTE en stor post — en hel crawl är några tiotal MB.
 
 ### ✅ 6. Död vikt — borttagen 11/9 (ingick i etapp 3)
 
