@@ -106,6 +106,51 @@ describe('rutläget', () => {
         unsub();
     });
 
+    it('seedArea (första besöket): rutorna förhämtas och tyst-fallbacken tar aldrig hela landet', async () => {
+        vi.useFakeTimers();
+        try {
+            const svc = await freshService();
+            // Samma ordning som sidan: prenumerationen startar (tyst-timern
+            // armeras), sedan förhämtar mount-effekten blindstartsstaden.
+            const unsub = svc.subscribeToAll(true, () => {}, undefined, { area: true });
+            svc.seedArea(sthlmArea);
+            // Långt förbi AREA_SILENCE_MS - kartan har ännu inte rapporterat
+            // någon vy (långsam mobil), men rutorna är begärda så landet ska
+            // INTE hämtas.
+            await vi.advanceTimersByTimeAsync(10000);
+            const dest = calls.filter((c) => c.startsWith('/api/events/destinations'));
+            expect(dest.length).toBeGreaterThan(0);
+            expect(dest.every((c) => c.includes('tile='))).toBe(true);
+            expect(svc.isNationwide()).toBe(false);
+            unsub();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('seedArea rör inte wide-fallbackens frist: Sverige-vyn efter en seed väntar fortfarande', async () => {
+        vi.useFakeTimers();
+        try {
+            const svc = await freshService();
+            const unsub = svc.subscribeToAll(true, () => {}, undefined, { area: true });
+            svc.seedArea(sthlmArea);
+            // Kartan laddar klart och rapporterar Sverige-översikten (första
+            // besökets startvy). Blindhoppet landar inom ~2,5 s - fristen för
+            // första vyn (4 s) får inte ha kortats av seeden.
+            svc.setDataArea({ west: 10, south: 55, east: 24, north: 69 });
+            await vi.advanceTimersByTimeAsync(2500);
+            expect(svc.isNationwide()).toBe(false);
+            // Stadshoppet landar -> bara rutor, wide-timern töms.
+            svc.setDataArea(sthlmArea);
+            await vi.advanceTimersByTimeAsync(10000);
+            expect(svc.isNationwide()).toBe(false);
+            expect(calls.filter((c) => c.startsWith('/api/events/destinations')).every((c) => c.includes('tile='))).toBe(true);
+            unsub();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('beskrivningen hämtas som EN hink och mergas in i eventet', async () => {
         const svc = await freshService();
         let last: LinkEvent[] = [];

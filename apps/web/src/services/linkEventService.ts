@@ -667,6 +667,23 @@ export const linkEventService = {
         activeArea?.want(tiles);
     },
 
+    /** Förhämtning INNAN kartan rapporterat sin vy: första besökets
+     *  blindstartsstad (ingen sparad stad, ingen ?plats=). Begär områdets
+     *  rutor som setDataArea, men rör INTE wide-fallbackens tillstånd
+     *  (areaEverSet/wideTimer) - kartans Sverige-översikt vid load ska
+     *  fortfarande få hela FIRST_WIDE_VIEW_DELAY_MS på sig innan landet
+     *  hämtas. Att rutorna begärs gör samtidigt att tyst-fallbacken
+     *  (AREA_SILENCE_MS -> hela landet, ~1 MB) aldrig går av bara för att
+     *  kartan laddar långsamt (långsam mobil, WebGL-strul). Landar kameran
+     *  sedan i en annan stad läggs dess rutor till som vanligt - det här är
+     *  en liten, begränsad förhämtning, aldrig ett fel. */
+    seedArea(b: Bounds) {
+        const tiles = tilesForBounds(b, 0);
+        if (tiles === null) return;
+        lastAreaTiles = lastAreaTiles ? Array.from(new Set([...lastAreaTiles, ...tiles])) : tiles;
+        activeArea?.want(tiles);
+    },
+
     /** HELA Sverige behövs (sökning, arrangörsfiltret, sparade-listan).
      *  Idempotent. Löser ut när landslagret (och kortlagret, om det är
      *  begärt) landat — direkt utanför rutläget. */

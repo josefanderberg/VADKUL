@@ -1344,6 +1344,18 @@ export default function HomePage() {
             const plats = q.get('plats');
             const start = plats ? parsePlatsParam(plats) : readStartCity();
             if (start) linkEventService.setDataArea(circleBounds(start.lat, start.lng, WEEK_AREA_MIN_RADIUS_KM));
+            else if (!plats) {
+                // FÖRSTA BESÖKET: ingen sparad stad och ingen ?plats=. Kameran
+                // blindstartar i TOUR_CITIES[0] om platstjänsten inte hinner
+                // svara (vanligast på mobil) - förhämta DEN stadens rutor, så
+                // att tyst-fallbacken i rutläget (6 s utan område -> hela
+                // landets 14-dagarsfönster, ~1 MB) aldrig går av bara för att
+                // kartan laddar långsamt. Svarar platstjänsten med en annan
+                // stad läggs dess rutor till vid landningen som vanligt;
+                // förhämtningen är en liten begränsad merkostnad, inte ett fel.
+                const c = TOUR_CITIES[0];
+                linkEventService.seedArea(circleBounds(c.lat, c.lng, WEEK_AREA_MIN_RADIUS_KM));
+            }
         } catch { /* ingen URL/lagring — kartans ruta tar det */ }
     }, []);
 
