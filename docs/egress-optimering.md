@@ -369,6 +369,17 @@ området tar färska rutor ändå över direkt.
 **Kvar (ej byggt):** sökningen kan få en server-endpoint i stället för
 landslagret (sök är det vanligaste skälet att ladda hela landet nu);
 bildernas tumnaglar (punkt 4, "omkomprimering") gäller fortfarande.
+
+**PNG-omslagen (5/10):** stickprov 119 omslag ur bucketen — PNG:erna var
+13 % av omslagen men **47 % av bytena** (snitt 563 kB, flera på 1–2 MB;
+övriga ~100 kB). Optimeraren behöll alla PNG:er med alfakanal som PNG, men
+11 av 15 hade en alfakanal där varje pixel ändå är ogenomskinlig (2/3 av
+PNG-bytena). `utils/pngAlpha` (beroendefri PNG-läsare, zlib) avgör det, och
+sådana PNG:er blir nu jpeg som foto-PNG:erna. Befintliga objekt: kör
+`oneoff-recompress-storage-images --only-png --min-bytes=40000 [--apply]`
+på minin (sips finns bara på macOS). Väntat: ~en fjärdedel av omslagens
+bytes. OBS: objekten är immutable-cachade — besökare som redan har en bild
+behåller den, nya får de mindre bytesen.
 Stads-/arrangörssidorna (745 i sitemapen, Stockholm 261 kB, de flesta
 60–70 kB) är INTE en stor post — en hel crawl är några tiotal MB.
 

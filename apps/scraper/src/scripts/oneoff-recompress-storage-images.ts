@@ -16,7 +16,15 @@
  * cache. Vinstvakten i optimeraren (≥15 % mindre + avkodbart) gör att
  * tveksamma objekt lämnas orörda. sourceUrl-metadatan bevaras.
  *
- * Kör:  npx ts-node src/scripts/oneoff-recompress-storage-images.ts [--apply] [--limit=N] [--min-bytes=150000] [--concurrency=N]
+ * Kör:  npx ts-node src/scripts/oneoff-recompress-storage-images.ts [--apply] [--limit=N] [--min-bytes=150000] [--concurrency=N] [--only-png]
+ *
+ * ANDRA VARVET (5/10, --only-png): optimeraren gör numera även PNG:er med
+ * en OANVÄND alfakanal (varje pixel ogenomskinlig — utils/pngAlpha) till
+ * jpeg. Stickprov 5/10: PNG:erna var 13 % av omslagen men 47 % av bytena,
+ * och 11 av 15 hade oanvänd alfa. --only-png laddar bara ner .png-objekten
+ * (som fortfarande bär PNG-bytes) i stället för allt över tröskeln:
+ *   npx ts-node src/scripts/oneoff-recompress-storage-images.ts --only-png --min-bytes=40000            (torrkörning)
+ *   npx ts-node src/scripts/oneoff-recompress-storage-images.ts --only-png --min-bytes=40000 --apply
  */
 
 import { bucket } from '../config/firebase';
@@ -30,6 +38,7 @@ const arg = (n: string, d: number) => {
 const LIMIT = arg('limit', Infinity);
 const MIN_BYTES = arg('min-bytes', 150_000);
 const CONCURRENCY = arg('concurrency', 6);
+const ONLY_PNG = process.argv.includes('--only-png');
 const CACHE = 'public, max-age=31536000, immutable';
 
 async function main() {
@@ -37,6 +46,9 @@ async function main() {
     const [all] = await bucket.getFiles({ prefix: 'scraped-events/' });
     const targets = all
         .filter((f) => Number(f.metadata.size) > MIN_BYTES && /\.(jpe?g|png)$/i.test(f.name))
+        // Bara objekt som fortfarande bär PNG-bytes (en .png-sökväg kan redan
+        // ha skrivits om till jpeg av första varvet — contentType följer bytes).
+        .filter((f) => !ONLY_PNG || String(f.metadata.contentType || '').toLowerCase().includes('png'))
         .sort((a, b) => Number(b.metadata.size) - Number(a.metadata.size))
         .slice(0, Number.isFinite(LIMIT) ? LIMIT : undefined);
 
