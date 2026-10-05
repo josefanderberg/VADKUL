@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-04T06:46:12.613Z",
+  "generatedAt": "2026-10-05T05:18:05.568Z",
   "counts": {
     "fel": 0,
-    "varning": 31,
-    "nollkoordinatTotalt": 784
+    "varning": 30,
+    "nollkoordinatTotalt": 739
   },
   "alerts": [
     {
@@ -42,7 +42,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Mora Kommun",
-      "message": "8 av 13 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
+      "message": "8 av 10 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -53,32 +53,26 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "784 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 39, Gotlands Museum 25, Visit Vemdalen 24, Equmenia 22, Medleymalmo 19"
+      "source": "739 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 39, Visit Vemdalen 24, Gotlands Museum 24, Equmenia 22, Medleymalmo 19"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Korpen Umeå",
-      "message": "invariant-vakten larmar (12 av 56 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (12 av 52 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Mora Kommun",
-      "message": "invariant-vakten larmar (8 av 13 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 10 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
       "message": "invariant-vakten larmar (10 av 313 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Visit Vemdalen",
-      "message": "invariant-vakten larmar (0 av 29 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
