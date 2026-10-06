@@ -143,6 +143,40 @@ Appen är tvåspråkig (sv/en). **VADKUL saknar i stort sett allt detta.**
 **J. Profil** — publik profil + smakprofil; styr vilka event som syns; dölj enskilda event;
 upptäck vilka som kommer via delade profiler.
 
+## 2b-ii. GUI-genomgång från skärmbilder (mobil, 6/10)
+
+Josef tog 11 skärmbilder av happymap.se i mobil-Safari (Växjö/Linköping). Bilderna ligger inte i
+repot (publikt). Det här är vad de visar, yta för yta, och hur det står mot vår karta i dag.
+
+| Yta | happymap | VADKUL i dag |
+|---|---|---|
+| Landning | Mörk Nordenkarta med **värmekarta** över eventtätheten (ända ut till Danmark/Finland) och "Upptäck event i **Uppsala**" där stadsnamnet växlar | Kartan öppnar direkt i din stad, välkomstruta med veckans antal (ägarbeslut: inget intro, ingen Sverigeöversikt) |
+| Första val | Modal "Vad händer nära dig?" → **Visa event nära mig** (GPS) eller **Välj en ort** (sök + 12 snabbval + "Hela Sverige") | Tyst GPS → närmaste stad; stadssök i sökpanelen |
+| Onboarding | **"Vad vill du få förslag på?"** — 16 intressen i färgade cirklar, **utan konto**, "Vi använder det för förslagen i Upptäck", Hoppa över / Logga in | Ingen intresseonboarding ("Tips för dig" borttagen på ägarbeslut) |
+| Navigering | **5-flikars tabbar**: Karta · Planer/Kalender · Chatt · Upptäck · Profil | Allt på kartan: profil · dagplatta · sök upptill, + och 🔥 nertill (ägarbeslut 15/9) |
+| Kartan | Mörk basemap. **Runda kategorifärgade markörer med ikon + titel i kategorifärgen**, små omärkta prickar för resten; vid låg zoom **värmekarta** och **temperatur per ort** utsatt på kartan | Nöjesfältet (ljus), droppbrickor med emoji, 50 tända närmast, etiketter från zoom 9/13, multibrickor, guldboost |
+| Hörnknappar | **+ nere till vänster** (som vi), **Min plats nere till höger**, **Logga in-pill uppe till höger**, header-pill "Happymap · Stad · ☀ 12°" | + nere till vänster, 🔥 nere till höger, Min plats dold, profil uppe till vänster |
+| Filter | Egen filtersida: **Tid och datum**, **Pris: Gratis / Max 200 SEK**, **16 kategorier med flerval** (ring + bock), Rensa, "Visa resultat"; valda chips ligger kvar i sökfältet, Filter-knapp med räknare (5) | Dagväljare i botten; **en kategori åt gången** i sökpanelen (ägarbeslut 16/9); 11 kategorier; inget prisfilter |
+| Lista | Fullständigt listläge: miniatyr (bild, annars kategoriikon i kategorifärg), "Idag · Tid ej angiven", titel, **lokal · avstånd (3,3 km)**, chips: kategori, **"↻ Varje tisdag"**, **"75 SEK" / "Pris okänt"**, dagavdelare IMORGON | Listan under kortet (Månaden · Populärt, 30 dagar), avstånd i kortet, "Gratis"-etikett i stadssidornas listor |
+| Eventsida | **Helsida** (inte ark): kategori · Gratis, titel, tid + **väder för eventet (☁ 6°)**, **"↻ 9 datum till ›"**, **🔔 Påminn mig**, beskrivning, **arrangörsrad med foto → arrangörssida**, plats · 1,8 km · **Visa på kartan · Hitta hit ↗**, **Kalender ›**, prisrad, sticky **"Jag kommer" + "Intresserad"**, dela, meny | Bottenark med fyra stopp, ♥ (sparat + påminnelse, kräver konto), ANMÄL/BOKA, Dela, Rapportera, chatt, serie-etikett i härkomstraden; kalenderexport finns som död kod |
+| Väder | Genomgående: header-pill, **temperatur per ort på kartan**, per event, och en **hel prognossida** (timme för timme + tio dygn med nederbörd) | Inget |
+
+**Vad skärmarna betyder för planen (fört in i `produktplan-2026-10.md`):**
+
+- **Prisfilter = Gratis + maxbelopp**, inte bara gratis (B1). De skriver dessutom **"Pris okänt"** öppet där vi
+  tiger — överväg samma ärlighet, det gör "Gratis" trovärdigare.
+- **Väder är mer än en rad i kortet**: temperatur i stadsplattan + per event är billigt (samma SMHI-anrop);
+  per-ort-temperaturer på kartan och en prognossida är nice-to-have (B2).
+- **"Jag kommer" + "Intresserad" sida vid sida** — exakt uppdelningen i beslut 1: ♥ ≈ Intresserad/sparat,
+  "Jag kommer" som egen knapp. Stärker rekommendationen.
+- **"Hitta hit"** (vägbeskrivning från koordinaterna) och **arrangörsrad med bild som länkar till
+  arrangörssidan** — vi har 2 000+ arrangörssidor men kortet visar bara värdnamnet som filter. Timmar (B5b).
+- **Flerval + 16 kategorier** (Nattliv, Karaoke, Film, Quiz, Föreläsningar, Festivaler …) är ett
+  **ägarbeslut**: 16/9 låste en kategori åt gången, och taxonomin bor i `@vadkul/kontrakt` (delas med
+  appen). En finare taxonomi skulle tömma vår `other` (5 004 event) — beslut 8.
+- **Värmekarta, tabbar och intresseonboarding** står medvetet utanför planen: Sverigeöversikten och
+  "Tips för dig" är borttagna på ägarbeslut, och en tabbar bryter "allt på kartan". Noterat, inte föreslaget.
+
 ## 2c. Arrangörs-CMS ("profi"-sidan) — djupdyk
 
 Deras `/for-arrangorer` är ett förvånansvärt moget självbetjänings-CMS — **utan konto, utan mellanhand**:
@@ -170,9 +204,9 @@ Vi saknar ansökningsflödet, QR-affischen, webbmärket, listexport, reducerat-p
 happymap har en **riktig mobilapp** — `/beta` ("Hämta Happymap") plus en iOS-listning i App Store
 ("HappyMaps", id6762518859). VADKUL är PWA (native-appen är bara en plan i `docs/app-plattform-plan.md`).
 
-> Not: live-skärmdumpar av deras kart-GUI gick inte att ta — deras host (Vercel) blockerar
-> automatiserade webbläsare. Analysen ovan bygger på deras publikt serverade klientkod och sidor,
-> inte på skärmavläsning eller deras backend.
+> Not: egna live-skärmdumpar gick inte att ta — deras host (Vercel) blockerar automatiserade
+> webbläsare. Avsnitt 2b bygger på deras publikt serverade klientkod och sidor; avsnitt 2b-ii på
+> Josefs egna skärmbilder 6/10. Inget kommer från deras backend.
 
 ## 3. Vad VI har som de sannolikt inte har (våra styrkor)
 

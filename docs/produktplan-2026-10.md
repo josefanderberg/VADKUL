@@ -70,12 +70,16 @@ Fakta från registerkollen 6/10 (449 källor):
 
 Alla inom ramen för kart-ui-besluten: inget nytt på kartytan, filtret bor i sökpanelen, botten-dockan rörs inte.
 
-- **B1. Gratis-filter.** Chip "Gratis" i `CategoryChipRow` (sökpanelen, en-åt-gången-logiken) + SEO-sida
+- **B1. Prisfilter: Gratis + maxbelopp.** Chip "Gratis" i `CategoryChipRow` (sökpanelen, en-åt-gången-
+  logiken) och ett "Max 200 kr"-läge (happymaps filter har exakt de två), + SEO-sida
   `/evenemang/[stad]/gratis` som tionde "kategori" i `categoryChips.ts`/`[kategori]`-routen med samma
-  trösklar och sitemap-regler. Happymap har 971 gratis i Stockholm — vi har sannolikt fler när priset är
-  ifyllt. *Beror på A4.* 1–2 dagar.
-- **B2. Väder (SMHI).** SMHI:s öppna punktprognos (ingen nyckel, ingen Firestore-egress) per valt event
-  inom 10 dygn: en rad "☀️ 14° · uppehåll" under tid/plats i kortet, cache i `sessionStorage`. 1–2 dagar.
+  trösklar och sitemap-regler. Visa **"Pris okänt"** öppet i kort och listor där vi i dag tiger — det gör
+  "Gratis" trovärdigt. Happymap har 971 gratis i Stockholm — vi har sannolikt fler när priset är ifyllt.
+  *Beror på A4.* 2 dagar.
+- **B2. Väder (SMHI).** SMHI:s öppna punktprognos (ingen nyckel, ingen Firestore-egress). Steg 1: en rad
+  "☀️ 14° · uppehåll" vid tiden i kortet för event inom 10 dygn + temperatur i stadsplattan (samma anrop),
+  cache i `sessionStorage`. 1–2 dagar. Steg 2 (nice-to-have, happymap har det): temperatur per ort på
+  kartan vid låg zoom och en prognossida (timme för timme + tio dygn). Kartlagret rör kartytan → kart-ui.
 - **B3. Platssidor `/plats/[stad]/[lokal]`.** Återanvänd arrangörssidans maskineri (`/arrangor/[slug]`,
   ISR 6 h, noindex < 20) men nycklat på `locationName` + geo-kluster, tröskel ≥ 5 event. Ger "Nalen
   program"/"Debaser kalender"-sökningarna, som happymap äger i dag. 3–4 dagar.
@@ -83,6 +87,9 @@ Alla inom ramen för kart-ui-besluten: inget nytt på kartytan, filtret bor i s�
   kortets knapprad. En halv dag.
 - **B5. Följ arrangör.** "Följ" på arrangörssidan och vid värdnamnet → push när arrangören får nytt event
   (samma FCM-väg som `eventReminders`). Vår motsvarighet till deras "följ serie". 3 dagar.
+- **B5b. Hitta hit + arrangörslänk i kortet.** "Hitta hit ↗" (Apple/Google Maps-länk från lat/lng) bredvid
+  platsen, och värdnamnet som **länk till arrangörssidan** (med bild när `coverImage`/logga finns) — i dag
+  är värdnamnet bara ett filter fast sidorna finns. En halv dag.
 
 ### Spår 3 — Tillsammans: det minsta sociala lagret (horisont B)
 
@@ -206,7 +213,8 @@ reviderade i samma PR som det här dokumentet.
 ## 3. Beslut som är dina
 
 1. **♥ eller egen knapp?** Ska ♥ betyda "jag kommer", eller behåller vi ♥ = sparat och lägger "Jag kommer"
-   som egen knapp? Rek: egen knapp (happymap skiljer också på sparat och kommer).
+   som egen knapp? Rek: egen knapp. Skärmbilderna 6/10 bekräftar att happymap har **"Jag kommer" och
+   "Intresserad" sida vid sida** i eventsidan — ♥ ≈ Intresserad, "Jag kommer" egen.
 2. **Personalisering.** "Tips för dig"-sektionen är borttagen på ägarbeslut. Happymaps smakprofil är ett
    nytt beslut. Rek: vänta — "vänner kommer" är bättre personalisering än en smakprofil i vår storlek.
 3. **Hotjar** kvar eller bort?
@@ -216,6 +224,11 @@ reviderade i samma PR som det här dokumentet.
 7. **Plattformsavgift på biljetter/anmälningar:** 0 % som happymap (ren förtroendeposition), eller
    t.ex. 3–5 % + Stripes avgift (intäkt som skalar med arrangörerna)? Rek: starta på 0 % med avgiften
    byggd men avstängd, slå på när volymen finns — kommunicera det öppet från dag ett.
+8. **Kategorier: flerval och finare taxonomi?** 16/9 låste *en* kategori åt gången i sökpanelen. Happymap
+   kör flerval över 16 kategorier (Nattliv, Karaoke, Film, Quiz, Föreläsningar, Festivaler …); vår taxonomi
+   är 11 och bor i `@vadkul/kontrakt` (delas med appen och audit-daemonen), och `other` rymmer 5 004 event.
+   Rek: behåll en-åt-gången i UI:t tills vidare, men **utöka taxonomin** med 3–4 nycklar som tömmer `other`
+   (Film, Föreläsning, Nattliv, Festival) — det är pipeline + kontrakt, inte kartyta.
 
 ## 4. Mätpunkter
 
@@ -253,6 +266,8 @@ reviderade i samma PR som det här dokumentet.
 | 19 | **App v1.1** API + konton + Sign in with Apple + kontoradering | 6 | 3–4 v | v1.0 ute |
 | 20 | C6 boost i appen via IAP + kvittoverifiering | 4 | 1 v | 19, beslut 6 |
 | 21 | C5 i appen (in-app-webbläsare/Stripe RN) + spår 3 i appen | 4/6 | 1–2 v | 18, 19 |
+| 22 | B5b Hitta hit + arrangörslänk i kortet | 2 | 0,5 d | — |
+| 23 | Taxonomi-utökning (beslut 8): kontrakt + audit-daemon + omklassning av `other` | 1 | 3–4 d | beslut 8 |
 
 **Reviderad prioritet (6/10):** appen (17) startar omedelbart och går parallellt med horisont A —
 den är inte beroende av något annat spår. Steg 18 lyfts före spår 3, eftersom betalning för
