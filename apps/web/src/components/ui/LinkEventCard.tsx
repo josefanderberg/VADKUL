@@ -1,6 +1,6 @@
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { eventOutlink } from '@/utils/eventExpand';
-import { Trash2, Clock, MapPin, Ticket, Share2, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil, X, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil, X, Search as SearchIcon, Image as ImageIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
@@ -101,6 +101,12 @@ interface LinkEventCardProps {
     onBackToGroup?: () => void;
     /** Antal i gruppen — bara för pilens title/aria. */
     backToGroupCount?: number;
+    /** Sök/filter-ikonen längst till vänster i knappraden (ägarbeslut 7/10:
+     *  "vi ska bara ha sök- och filter-ikonen i toppen av eventkortet") —
+     *  fäller ut kortsöket + kategorichipsen (EventCard äger blocket). */
+    onToggleSearch?: () => void;
+    /** Ikonens aktiva läge: blocket är öppet, eller ett filter/sök är på. */
+    searchActive?: boolean;
     /** Stjärn-gåvan ⭐: eventet har redan (någons) stjärna → guld-indikator. */
     hasStar?: boolean;
     /** Inloggad + oanvänd stjärna (och eventet inte passerat) → ⭐-knappen är
@@ -109,7 +115,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, onToggleSearch, searchActive = false, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
@@ -391,30 +397,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         onPlaceStar?.();
     };
 
-    // Dela eventet: native share-dialog på mobil, annars kopiera länken.
-    // ALLA event delas som /e/<slug> — den sidan serverar eventets EGEN
-    // delningsbild och OG-taggar till FB/Messenger och skickar människor
-    // vidare till kartan. User-skapade event fick /e/ först 15/9 (Firestore-
-    // fallbacken i shareData): deras gamla /?event=-länkar normaliserades av
-    // Facebook till og:url = nakna startsidan, så förhandsvisningskortet
-    // tappade queryn. Ett veckoserietillfälle ("<docId>__2026-09-18") delas
-    // på seriens DOKUMENT-id — det är det /e/-uppslaget och /?event= löser.
-    const handleShare = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const shareId = linkEvent.userCreated ? linkEvent.id.split('__')[0] : linkEvent.id;
-        const shareUrl = `${window.location.origin}/e/${eventShareSlug(shareId)}`;
-        try {
-            if (navigator.share) {
-                await navigator.share({ title: linkEvent.title, url: shareUrl });
-                return;
-            }
-            await navigator.clipboard.writeText(shareUrl);
-            toast.success('Länk kopierad!');
-        } catch {
-            // Avbruten share-dialog är inget fel — gör inget.
-        }
-    };
+    // (handleShare är BORTTAGEN 7/10 med dela-knappen — delningen bor i
+    // RSVP-footerns Bjud med, som bygger samma /e/<slug>-länk med
+    // inbjudningsparametrarna. Se handleInviteFriend i (v2)/page.tsx.)
 
     const handleHeaderClick = () => {
         // I chatt-/listvyn är innehållet dolt — reveal-stegning vore ett no-op
@@ -521,7 +506,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         sektionen respektive närhetslistan (som annars ligger
                         långt ner och sällan nås via scroll). Tydligt på/av-läge:
                         fylld blå när vyn är aktiv. */}
-                    {(onBackToGroup || onToggleActivityView || onToggleNearbyView) ? (
+                    {(onBackToGroup || onToggleActivityView || onToggleNearbyView || onToggleSearch) ? (
                         <div className="shrink-0 flex items-center gap-1.5">
                             {/* TILLBAKA TILL MULTIEVENT-LISTAN (Josef 1/9) —
                                 längst till vänster, före Lista-toggeln, så
@@ -573,6 +558,28 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 >
                                     <List size={13} />
                                     Lista
+                                </button>
+                            )}
+                            {/* SÖK/FILTER-IKONEN (ägarbeslut 7/10: "vi ska
+                                bara ha sök- och filter-ikonen i toppen av
+                                eventkortet, allra till vänster"): fäller ut
+                                kortsöket + kategorichipsen. Blå prick när ett
+                                filter eller en sökning är på — samma språk som
+                                navbarens filterknapp. Ersätter det alltid
+                                synliga sökfältet (6/10-versionen). */}
+                            {onToggleSearch && (
+                                <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSearch(); }}
+                                    aria-pressed={searchActive}
+                                    aria-label={searchActive ? 'Sök och filtrera — på' : 'Sök och filtrera i listan'}
+                                    title="Sök och filtrera i listan"
+                                    className={`relative w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 ${
+                                        searchActive
+                                            ? 'bg-[#006AA7] border-[#006AA7] text-white'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
+                                    }`}
+                                >
+                                    <SearchIcon size={14} />
                                 </button>
                             )}
                         </div>
@@ -630,34 +637,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                 ) : null}
                             </button>
                         )}
-                        {/* Dela-knapp i knappraden mellan hjärtat och ANMÄL
-                            (Josef 21/8) — samma runda formspråk som hjärtat.
-                            Native share-dialog på mobil, annars kopieras länken
-                            (handleShare, samma som dela-knappen i botten). */}
-                        <button
-                            onClick={handleShare}
-                            aria-label="Dela eventet"
-                            title="Dela eventet"
-                            className="w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 bg-white border-slate-200 text-slate-400 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-500 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
-                        >
-                            <Share2 size={15} />
-                        </button>
-                        {/* Kortets primära CTA — får inte se billig ut bredvid de
-                            runda pillerna: helrundad, gradient i flaggblått med
-                            inre ljuskant och pil som glider vid hover (ägarens
-                            begäran 19/8: "syns lite mer"). h-8 som grannarna så
-                            knappraden håller höjden. */}
-                        {linkEvent.url && (
-                            <button
-                                onClick={handleVisitSite}
-                                className={`group/anmal shrink-0 h-8 pl-3.5 pr-2.5 rounded-full text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md ring-1 ring-inset hover:shadow-lg active:scale-[0.97] transition-all ${tmEvent
-                                    ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 shadow-amber-900/30 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
-                                    : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-sky-900/30 ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'}`}
-                            >
-                                {tmEvent ? 'BOKA' : 'ANMÄL'}
-                                <ArrowRight size={13} className="shrink-0 transition-transform group-hover/anmal:translate-x-0.5" />
-                            </button>
-                        )}
+                        {/* DELA-KNAPPEN ÄR BORTTAGEN (ägarbeslut 7/10: "ta
+                            bort delaknappen, vi har ju den längst ner redan")
+                            — Bjud med i RSVP-footern delar eventet, med
+                            inbjudningslänken. Lägg inte tillbaka den.
+                            ANMÄL/BOKA-pillret flyttade samtidigt NER till
+                            footern ("anmäl direkt i anslutning till det") —
+                            stora CTA:n under beskrivningen är kvar. */}
                     </div>
                 </div>
 

@@ -5,6 +5,9 @@ import { isVadkulHostedEvent, LinkEvent, type EventRsvpStatus } from '../../type
 import EventRsvpFooter from './EventRsvpFooter';
 import CardMoreRows, { type OrganizerRowData } from './CardMoreRows';
 import { Search, X as XIcon } from 'lucide-react';
+import { eventOutlink } from '@/utils/eventExpand';
+import { isTicketmasterEvent } from '@/utils/ticketmasterEvent';
+import { recordEventClick } from '@/services/eventStatsService';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { dupKey, groupListDuplicates } from '../../utils/groupDups';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
@@ -965,11 +968,14 @@ interface EventCardProps {
      *  sidan skickar en färdig CategoryChipRow (tone="light"), så kortet
      *  varken räknar eller håller eget state. */
     filterChips?: ReactNode;
+    /** Kartfiltret är på (kategorier/🔥/källa) — sök/filter-ikonen i kortets
+     *  knapprad lyser blått även med blocket stängt (7/10). */
+    cardFilterOn?: boolean;
     /** Stadssidelänken under arrangörsraden — samma mål som topplattan. */
     cityLink?: { href: string; label: string };
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -1031,9 +1037,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // vanligt") — hela-rader-snäppet (2/9) landade på 290 px eftersom
     // raderna slutar på 290/353, och en halv rad i vikningen visar dessutom
     // att listan går att scrolla. Ryms hela listan blir kortet lägre.
-    // 379 sedan 6/10: kortsöket högst upp (44 px: h-9 = 36 + pb-2 = 8) växte
-    // det vanliga kortets default — väljarlistan ska öppna lika högt (16/9).
-    const CHOOSER_DEFAULT_PX = 379;
+    // Tillbaka på 335 sedan 7/10: kortsöket är ihopfällt bakom ikonen i
+    // knappraden som default, så det vanliga kortets öppningshöjd är åter
+    // header + bildremsa (16/9-måttet).
+    const CHOOSER_DEFAULT_PX = 335;
     // Bildremsan under Värd/Pris-raden i standardhöjden (se measureDefaultHeight).
     const DEFAULT_STRIP_PX = 122;
 
@@ -1287,6 +1294,19 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         updateHeightVh(Math.max(heightVhRef.current, SIDE_HEIGHT_VH));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sideMode, selectedEvent]);
+
+    // ANMÄL/BOKA i footern (ägarbeslut 7/10: "fixa så anmäl är direkt i
+    // anslutning till det" — pillret i knappraden är borttaget): samma
+    // schema-vakt (eventOutlink) och klickstatistik som knappradens knapp
+    // hade. Guld för Ticketmaster (1/9-beslutet). null = inget utlänks-CTA
+    // (VADKUL-värdade event anmäls i kortet).
+    const footerCta = useMemo(() => {
+        if (!selectedEvent?.url) return null;
+        const href = eventOutlink(selectedEvent.id, selectedEvent.url);
+        if (!href) return null;
+        const gold = isTicketmasterEvent(selectedEvent);
+        return { href, gold, label: gold ? 'BOKA' : 'ANMÄL' };
+    }, [selectedEvent]);
 
     // KOMMER/INTRESSERAD-FOOTERN (6/10) visas i infovyn när kortet står ÖVER
     // kompaktläget: i kompaktläget skulle plattan täcka tid/plats-raden som
@@ -1821,7 +1841,26 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Lever kvar vid eventbyte (man bläddrar bland sina träffar) och nollas
     // när kortet stängs.
     const [cardSearchQ, setCardSearchQ] = useState('');
-    useEffect(() => { if (!selectedEvent) setCardSearchQ(''); }, [selectedEvent]);
+    // SEDAN 7/10 fäller SÖK/FILTER-IKONEN i knappraden ut blocket (ägarbeslut:
+    // "vi ska bara ha sök- och filter-ikonen i toppen av eventkortet") — det
+    // alltid synliga fältet från 6/10 är ersatt, och kortets default-höjd är
+    // tillbaka på 335.
+    const [cardSearchOpen, setCardSearchOpen] = useState(false);
+    const cardSearchInputRef = useRef<HTMLInputElement>(null);
+    const handleToggleCardSearch = () => {
+        setCardSearchOpen(open => {
+            const next = !open;
+            // Stänga = släpp sökningen (chips-filtret lever sitt eget liv och
+            // syns som brickor under dagplattan). Öppna = fokusera fältet.
+            if (!next) handleCardSearch('');
+            else setTimeout(() => cardSearchInputRef.current?.focus(), 60);
+            return next;
+        });
+    };
+    useEffect(() => {
+        if (!selectedEvent) { setCardSearchQ(''); setCardSearchOpen(false); }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEvent]);
     const cardQNorm = cardSearchQ.trim().toLowerCase();
     const matchesCardSearch = useMemo(() => {
         if (!cardQNorm) return null;
@@ -2956,17 +2995,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         touchAction: 'pan-y'
                     }}
                 >
-                    {/* KORTSÖKET högst upp (ägarbeslut 6/10: "högst upp på
-                        eventkorten, så man direkt kan söka efter event i
-                        listan"). MEDVETET inte sticky: flikraden (top-0) och
-                        dagrubrikerna (top-11) äger sticky-kedjan, och att
-                        skriva växlar ändå till listvyn med scrollen i topp.
-                        Inte i väljarläget (innehållet ÄR listan). */}
-                    {!chooserActive && selectedEvent && (
-                        <div className="bg-card px-4 md:px-6 pb-2">
+                    {/* KORTSÖKET (6/10; IHOPFÄLLT bakom sök/filter-ikonen i
+                        knappraden sedan 7/10): fältet + chipsen visas bara
+                        när ikonen slagits på. MEDVETET inte sticky: flikraden
+                        (top-0) och dagrubrikerna (top-11) äger sticky-kedjan,
+                        och att skriva växlar ändå till listvyn med scrollen i
+                        topp. Inte i väljarläget (innehållet ÄR listan). */}
+                    {!chooserActive && selectedEvent && cardSearchOpen && (
+                        <div className="bg-card px-4 md:px-6 pb-2 animate-in fade-in slide-in-from-top-1 duration-150">
                             <div className="flex items-center gap-2 h-9 rounded-full bg-slate-100 dark:bg-zinc-800 border border-border px-3">
                                 <Search size={14} className="shrink-0 text-slate-400" aria-hidden />
                                 <input
+                                    ref={cardSearchInputRef}
                                     type="text"
                                     value={cardSearchQ}
                                     onChange={e => handleCardSearch(e.target.value)}
@@ -2988,10 +3028,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         </div>
                     )}
                     {/* KATEGORICHIPSEN i kortet (ägarbeslut 6/10, ersätter
-                        Lista-ikonens jobb): SAMMA filter som kartan — ett val
-                        här smalnar listan nedanför OCH kartan bakom. Sidan
-                        äger raden (filterChips), kortet bara visar den. */}
-                    {!chooserActive && selectedEvent && filterChips}
+                        Lista-ikonens jobb; bakom sök/filter-ikonen sedan
+                        7/10): SAMMA filter som kartan — ett val här smalnar
+                        listan nedanför OCH kartan bakom. Sidan äger raden
+                        (filterChips), kortet bara visar den. */}
+                    {!chooserActive && selectedEvent && cardSearchOpen && filterChips}
                     {/* VÄLJARLÄGET: innehållet ÄR väljarlistan tills man valt
                         (Josef 31/8) — sen renderas det vanliga kortet nedan. */}
                     {chooserActive && groupChoice ? (
@@ -3063,6 +3104,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // ut genom att rensa sökningen. Kategorichipsen under
                         // sökfältet ersätter ikonens jobb.
                         onToggleNearbyView={undefined}
+                        // Sök/filter-ikonen (7/10): fäller ut kortsöket +
+                        // chipsen; lyser när blocket är öppet, en sökning
+                        // skrivits eller kartfiltret är på.
+                        onToggleSearch={handleToggleCardSearch}
+                        searchActive={cardSearchOpen || cardQNorm !== '' || cardFilterOn}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
                         // Passerade event kan inte stjärnmärkas — stjärnan vore
                         // förbrukad direkt (den lyser bara tills eventet varit).
@@ -3170,6 +3216,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         onInvite={() => onInviteFriend?.(selectedEvent)}
                         invite={cardInvite && cardInvite.eventId === selectedEvent.id ? { fran: cardInvite.fran } : null}
                         onDismissInvite={onDismissInvite}
+                        cta={footerCta}
+                        onVisitCta={() => recordEventClick({
+                            id: selectedEvent.id,
+                            url: selectedEvent.url,
+                            title: selectedEvent.title,
+                            hostName: selectedEvent.hostName,
+                        })}
                     />
                 )}
                 {coachStage !== 'off' && cardView === 'info' && !chooserActive && (

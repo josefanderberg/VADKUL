@@ -5916,6 +5916,9 @@ export default function HomePage() {
                 // följer med som ?q=) — ägarbeslut 6/10.
                 organizerRow={cardOrganizerRow}
                 cityLink={{ href: cityLink.href, label: cityLink.label }}
+                // Sök/filter-ikonen i knappraden lyser när kartfiltret är på
+                // (7/10) — arrangörsfiltret räknas inte (egen banner).
+                cardFilterOn={popularOnly || mapCategories.size > 0 || mapSource !== null}
                 // Kategorichipsen i kortet (6/10, ersätter Lista-ikonen):
                 // SAMMA filter och siffror som sökpanelen — ett val smalnar
                 // listan i kortet och kartan bakom, och persisteras som

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, UserPlus, X } from 'lucide-react';
+import { ArrowRight, Check, UserPlus, X } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { EventRsvpStatus, LinkEvent } from '@/types';
@@ -21,6 +21,11 @@ interface EventRsvpFooterProps {
      *  du följer med". fran = inbjudarens uid (kan saknas). */
     invite?: { fran: string | null } | null;
     onDismissInvite?: () => void;
+    /** ANMÄL/BOKA längst till höger (7/10: "anmäl direkt i anslutning till
+     *  det") — flyttad hit från knappraden. Guld = Ticketmaster (BOKA). */
+    cta?: { href: string; label: string; gold: boolean } | null;
+    /** Klickstatistiken (recordEventClick) — fire-and-forget hos föräldern. */
+    onVisitCta?: () => void;
 }
 
 // Sessionscache för inbjudarnamnen (users är publikt läsbar) — en läsning per
@@ -76,7 +81,7 @@ const BTN_OFF = 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 bor
  * — anonyma sessioner räknas och visas som grå avatar. Döljs i kompaktläget
  * (EventCard) så sträck-stoppet fortfarande visar titel + tid.
  */
-export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, invite, onDismissInvite }: EventRsvpFooterProps) {
+export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, invite, onDismissInvite, cta = null, onVisitCta }: EventRsvpFooterProps) {
     // Räknarna: samma läsning/cache som hjärtats siffra (getEventEngagement).
     // Egna tryck justeras ±1 lokalt (displayedLikeCount är generell:
     // bas + var-jag-med-vid-hämtning / är-jag-med-nu).
@@ -152,10 +157,10 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
                     små profilbilder, anonyma som grå siluett. */}
                 {faces.length > 0 && (
                     <div className="flex items-center shrink-0 -space-x-2" aria-label={`${faces.length} personer har svarat`}>
-                        {faces.slice(0, 4).map(f => <FaceDot key={f.uid} face={f} />)}
-                        {faces.length > 4 && (
+                        {faces.slice(0, 3).map(f => <FaceDot key={f.uid} face={f} />)}
+                        {faces.length > 3 && (
                             <span className="w-6 h-6 rounded-full border-2 border-card bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-300 flex items-center justify-center text-[9px] font-black">
-                                +{faces.length - 4}
+                                +{faces.length - 3}
                             </span>
                         )}
                     </div>
@@ -192,9 +197,27 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
                     title="Bjud med någon"
                     className={`${BTN} ${BTN_OFF}`}
                 >
+                    {/* Ikon-bara sedan 7/10: ANMÄL/BOKA tog platsen i raden
+                        (och delningen bor HÄR sedan dela-knappen i knappraden
+                        revs samma dag). */}
                     <UserPlus size={14} strokeWidth={2.5} aria-hidden />
-                    <span className="hidden sm:inline">Bjud med</span>
                 </button>
+                {cta && (
+                    <a
+                        href={cta.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={onVisitCta}
+                        className={`pointer-events-auto shrink-0 inline-flex items-center gap-1 rounded-full pl-3 pr-2 py-1.5 text-xs font-black uppercase tracking-wider shadow-md ring-1 ring-inset transition active:scale-95 ${
+                            cta.gold
+                                ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
+                                : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'
+                        }`}
+                    >
+                        {cta.label}
+                        <ArrowRight size={13} aria-hidden />
+                    </a>
+                )}
             </div>
         </div>
     );
