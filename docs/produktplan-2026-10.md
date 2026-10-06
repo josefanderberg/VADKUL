@@ -21,6 +21,10 @@ Strategin i tre meningar:
    överallt. Mät **LOKALA arrangörer** per stad och "är söndagen tom?". Täpp utbyteshålen först.
 3. **Möt positioneringshotet med transparens, inte med att bli ideella.** Gratis för användare, inga banners
    (redan ägarbeslut), intäkter = boost + märkta biljettlänkar — säg det öppet.
+4. **Ta betalt direkt av användarna — även i appen — och få ut appen fort.** (Styrning 6/10.) Biljetter,
+   anmälningar och avgifter för verkliga event ska kunna betalas i VADKUL utan butiksavgift; boost och
+   eventuellt medlemskap säljs både på webben och i appen. Appen lanseras som läs-app först (v1.0),
+   konton/API följer som v1.1. Reglerna och vägen står i spår 4 och spår 6.
 
 ## 1. Färdplanen — fem spår, tre horisonter
 
@@ -118,8 +122,36 @@ hangouts/planer kräver notis-inkorg, rösträkning och moderering. Omprövas n�
 - **C4. "Det här är mitt event" (arrangörs-claim)** på skrapade event → konto kopplas till `hostName` →
   automatiskt mejl med klickstatistik (`eventStats`/`outreachStats` finns) + boost-erbjudande. Vår
   motsvarighet till deras organizer claims — med intäktskrok. ~1 vecka.
-- **C5. Ansöknings-anmälan** (frågor, Ja/Kanske/Nej, reducerat pris) — **inte nu.** Bygg först när vi
-  har > 50 VADKUL-arrangerade event/månad.
+- **C5. Betalning för verkliga event direkt i VADKUL (webb + app).** Biljett, anmälningsavgift eller
+  deltagaravgift för "Jag arrangerar"-event betalas i kortet via **Stripe Connect** (arrangören onboardas
+  som connected account, pengarna går till arrangören, Stripe är den licensierade betalningsinstitutet —
+  vi håller aldrig medel, jfr PSD2) med **Swish + kort + Apple/Google Pay** som betalsätt (Stripe stöder
+  Swish i Sverige). Vi kan ta en **plattformsavgift** per transaktion (`application_fee`), eller köra 0 %
+  som happymap — **[beslut 7]**. Samma Checkout-/webhook-mönster som boosten (`createBoostCheckout`,
+  `firestore-stripe-payments`), så det mesta av kedjan finns. Deltagarlistan (C2) blir kvittot.
+  ~1–2 veckor webb, +3–4 dagar i appen (öppnas i in-app-webbläsare eller Stripes RN-SDK).
+- **C6. Boost i appen.** Boost är en digital tjänst som konsumeras i appen → i butiken gäller IAP eller
+  externa betalningar med butiksprovision (se rutan nedan). Rek: **IAP-produkter för boost dag/vecka/månad
+  (15 % under Small Business Program)** för konverteringens skull, och behåll Stripe på webben till 0 %.
+  Backend: en `applyEventBoost`-väg till för verifierade App Store-/Play-kvitton (server-side
+  verifiering, aldrig lita på klienten). **[beslut 6]**. ~1 vecka efter att konton finns i appen (v1.1).
+- **C7. Ansöknings-anmälan** (frågor, Ja/Kanske/Nej, reducerat pris) — **inte nu.** Bygg först när vi
+  har > 50 VADKUL-arrangerade event/månad. Betalningen i C5 fungerar med först-till-kvarn redan.
+
+> **Butiksreglerna, läget 6 oktober 2026** (verifierade mot aktuella källor, se PR-beskrivningen —
+> **kontrollera igen vid inlämning, de ändras ofta**):
+> - **Apple, verkliga varor/tjänster (riktlinje 3.1.3 e):** betalning för fysiska varor och tjänster som
+>   konsumeras utanför appen — **eventbiljetter nämns uttryckligen** — *får inte* gå via IAP utan ska
+>   tas med andra betalsätt (Apple Pay, kort, Swish). **Ingen Apple-provision.** Det är C5:s grund.
+> - **Apple, digitalt (boost, medlemskap):** IAP 30 % / **15 % Small Business** (< 1 M USD/år). Nya
+>   EU-villkoren (annonserade aug 2026, gäller från 1 okt 2026) tillåter externa betalningar och IAP
+>   sida vid sida, men tar **10–20 % provision även på externa köp** — så "länka ut för att slippa
+>   Apple" sparar nästan inget längre. Plattformsplanens gamla skäl för "aldrig i appen" är därmed borta;
+>   kvar är bara UX och provisionen.
+> - **Google Play (EES, från 30 juni 2026):** serviceavgift **10 %** på första 1 M USD på *alla*
+>   digitala transaktioner (även externa länkar/alternativ fakturering) + 5 % faktureringsavgift bara
+>   om Play Billing används. Verkliga varor/tjänster omfattas inte alls av Plays betalpolicy.
+> - **Sverige = EU/EES** — det är dessa villkor som gäller oss, inte de amerikanska (Epic-domarna).
 
 ### Spår 5 — Positionering & förtroende (horisont A, mest beslut)
 
@@ -130,11 +162,44 @@ hangouts/planer kräver notis-inkorg, rösträkning och moderering. Omprövas n�
 - **Lyft kvalitetsmåtten de inte visar:** verifierad plats (97 %), bild, pris, kategori. "Nära dig i realtid"
   (visionen i `PM.md`) + kvalitet är vårt budskap.
 
+### Spår 6 — Appen, påskyndad (horisont A–B)
+
+**Läget i `vadkul-app` 6/10** (HEAD `4cdb537`, senast pushad 29/9) är längre än plattformsplanens
+fas 2-text: karta med nöjesfälts-stilen och teardrop-brickor, GPS-regionval, eventkort som dragbart
+bottenark med ANMÄL + Dela och samma innehåll som webbens kort, mörkt läge, "fler event"-lista med
+MÅNADEN/POPULÄRT, flikar, dagväljare, städer, sök, profil, webbens kromlayout + stadssidor, `eas init`
+med Android-konfig (`se.vadkul.app`, expo-dev-client), **kontraktet publicerat** (`@vadkul/kontrakt@0.1.0`
+på npm — fas 2:s största blockerare är borta). **Saknas:** iOS-bygge/TestFlight, Sentry/Crashlytics,
+AASA/assetlinks (djuplänkar), auth, push, API, butiksmaterial.
+
+**Snabbaste trovärdiga vägen: dela lanseringen i två.**
+
+- **v1.0 — läs-appen (mål: butikerna inom 4–6 veckor).** Inga konton → ingen kontoradering (5.1.1 v)
+  och inget API krävs. Egenvärde mot regel 4.2 (inte ett webbskal): native karta, **lokala favoriter**
+  (AsyncStorage, utan konto), **regionpush "helgtips"** via FCM-topics per län (klienten prenumererar
+  själv på `helgtips-<region>`; digesten får en topic-sändning bredvid dagens per-användare-push — liten
+  backend-ändring), djuplänkar `/e/` via AASA/assetlinks, Dela. ANMÄL/BOKA länkar ut som i dag.
+  Checklista: (1) EAS iOS-bygge + Apple Developer-konto + TestFlight, (2) Sentry in, (3) AASA +
+  assetlinks.json upp på vadkul.se, (4) `@react-native-firebase/messaging` + topics, (5) App Privacy /
+  Data Safety-deklarationer (utan konton är de korta), (6) butiksmaterial — skärmbilder kan tas ur dev-bygget,
+  (7) granskning. CARTO-villkoren för mobil (plan §9.2) verifieras i (1).
+- **v1.1 — konton, socialt, betalning (plattformsplanens fas 3, direkt efter).** Hono-API:t,
+  App Check, Firebase Auth **inkl. Sign in with Apple** (krav 4.8 så fort Google-inloggning finns),
+  kontoradering, sparade/stjärnor/påminnelser synkade, push-tokens per användare, spår 3:s vänner/kommer/
+  bjud in, C5-betalning i kortet och C6-boost via IAP. JS-ändringar går ut via EAS Update utan ny
+  butiksgranskning; auth/IAP är native-moduler och kräver ett nytt bygge — planera det som v1.1-bygget.
+
+**Två saker att ändra nu:** `vadkul-app/CLAUDE.md` har den hårda regeln "APPEN SÄLJER INGENTING" —
+den ska skrivas om till "verkliga tjänster utanför IAP, digitalt via IAP, aldrig egen prislogik i
+klienten" (det repot har jag bara läsrätt till i den här sessionen). Och plattformsplanen §1/§6/§7 är
+reviderade i samma PR som det här dokumentet.
+
 ## 2. Vad vi medvetet inte gör
 
 - **Hangouts, presence, DM, röstplaner** — annan produkt, hög kostnad, moderering. Omprövas efter spår 3.
 - **Jaga råa eventantal** — paraplybrus. LOKALA-andelen är måttet.
-- **Native app före API:t** — plattformsplanen gäller; det sociala byggs som endpoints så appen ärver det.
+- **Vänta med appen tills API:t är klart** — tvärtom: app v1.0 är en läs-app utan konton och behöver inget
+  API (plattformsplanen §7 säger redan det). Det sociala och boost i appen byggs som endpoints och kommer i v1.1.
 - **Återinföra borttagna kartfunktioner** — kart-ui-listan står fast.
 - **Smakprofil/rekommendationer** — se beslut 2 nedan.
 
@@ -147,6 +212,10 @@ hangouts/planer kräver notis-inkorg, rösträkning och moderering. Omprövas n�
 3. **Hotjar** kvar eller bort?
 4. **Var bor "Vänner ska på"?** Listan under kortet har två låsta flikar (23/9). Rek: profilpanelen i v1.
 5. **Kurser** med fast startdatum in eller inte (A6)?
+6. **Boost i appen:** IAP (15 %) för konvertering, eller bara webben (0 %) med länk? Rek: IAP i v1.1.
+7. **Plattformsavgift på biljetter/anmälningar:** 0 % som happymap (ren förtroendeposition), eller
+   t.ex. 3–5 % + Stripes avgift (intäkt som skalar med arrangörerna)? Rek: starta på 0 % med avgiften
+   byggd men avstängd, slå på när volymen finns — kommunicera det öppet från dag ett.
 
 ## 4. Mätpunkter
 
@@ -179,6 +248,15 @@ hangouts/planer kräver notis-inkorg, rösträkning och moderering. Omprövas n�
 | 14 | C4 arrangörs-claim | 4 | 1 v | — |
 | 15 | C2 export + väntelista | 4 | 2 d | — |
 | 16 | B5 följ arrangör | 2 | 3 d | — |
+| 17 | **App v1.0** läs-app: iOS-bygge, Sentry, AASA, topic-push, butiksmaterial, granskning | 6 | 4–6 v (parallellt med 1–9) | — |
+| 18 | C5 betalning för verkliga event (Stripe Connect + Swish), webb | 4 | 1–2 v | beslut 7 |
+| 19 | **App v1.1** API + konton + Sign in with Apple + kontoradering | 6 | 3–4 v | v1.0 ute |
+| 20 | C6 boost i appen via IAP + kvittoverifiering | 4 | 1 v | 19, beslut 6 |
+| 21 | C5 i appen (in-app-webbläsare/Stripe RN) + spår 3 i appen | 4/6 | 1–2 v | 18, 19 |
+
+**Reviderad prioritet (6/10):** appen (17) startar omedelbart och går parallellt med horisont A —
+den är inte beroende av något annat spår. Steg 18 lyfts före spår 3, eftersom betalning för
+verkliga event är intäkt utan butiksavgift och återanvänder boost-kedjan.
 
 Steg 1–9 är horisont A och kan gå parallellt (minin tar 1–2, webben 3–9). Allt som rör ren logik får
 tester i samma veva, och berörd apps tester + `tsc --noEmit` körs innan något rapporteras klart (CLAUDE.md).
