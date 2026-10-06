@@ -16,13 +16,13 @@ interface CreateEventButtonProps {
 }
 
 /**
- * Skapa/tipsa/önska — kartnål-med-plus DIREKT UNDER PROFILKNAPPEN uppe till
- * vänster (ägarbeslut 24/9: "den att man skapar event den kan vara under
- * profilknappen"). Bodde där 14/8–15/9 också, och i botten-dockans vänstra
- * hörn 15/9–24/9 (🔥-knappen i högra hörnet revs samma dag — 🔥 är ett chip
- * i sökpanelen). Formspråket: blå gradient, gul kant. Den pulserande guld-
- * glöden (gold-glow-pulse) är BORTTAGEN 29/9 (Josef: "gör så den slutar
- * blinka gult"). 44 px — samma storlek som profil och sök.
+ * Skapa/tipsa/önska — kartnål-med-plus i ÖVRE HÖGRA HÖRNET (ägarbeslut 7/10:
+ * "ha lägg till + som en knapp längst upp åt höger" — tog sökknappens hörn
+ * när sök/filter revs från kartan). Historik: under profilknappen 24/9–7/10
+ * (och 14/8–15/9), botten-dockans vänstra hörn 15/9–24/9. Formspråket: blå
+ * gradient, gul kant. Den pulserande guld-glöden (gold-glow-pulse) är
+ * BORTTAGEN 29/9 (Josef: "gör så den slutar blinka gult"). 44 px — samma
+ * storlek som profilknappen.
  *
  * z-[1090] = samma som dagväljaren → hamnar under eventkortet (1250) när ett
  * kort är uppe, precis som väljaren. I placerings-läget är knappen bekräfta-
@@ -86,11 +86,14 @@ export default function CreateEventButton({
     const label = creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska';
 
     return (
-        // Samma kolumn som toppraden (FloatingNavbar: top-6 + px-4 +
-        // max-w-[1400px] mx-auto) så + står i lod under profilknappen även på
-        // bred skärm. top-[80px] = profilens 24 + 44 px + 12 px luft.
-        <div className={`fixed inset-x-0 top-[80px] px-4 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} pointer-events-none`}>
-            <div className="max-w-[1400px] mx-auto flex items-center gap-2">
+        // ÖVRE HÖGRA HÖRNET sedan 7/10 (ägarbeslut: "ha lägg till + som en
+        // knapp längst upp åt höger, sen ta bort den under profilen" — tog
+        // sökknappens gamla hörn när den revs). Samma kolumn som toppraden
+        // (top-6 + px-4 + max-w-[1400px] mx-auto) så + står i linje med
+        // profilknappen även på bred skärm; flex-row-reverse lägger knappen
+        // vid högerkanten med etiketten till VÄNSTER om den.
+        <div className={`fixed inset-x-0 top-6 px-4 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} pointer-events-none`}>
+            <div className="max-w-[1400px] mx-auto flex flex-row-reverse items-center gap-2">
                 <button
                     ref={plusBtnRef}
                     type="button"

@@ -12,7 +12,6 @@ import { categoryLabel } from '@/components/v2/v2MapLabel';
 import HoverLabel from '@/components/v2/HoverLabel';
 import AuthModal from '@/components/v2/AuthModal';
 import EventCard from '@/components/v2/EventCard';
-import SearchResults from '@/components/v2/SearchResults';
 import SavedPanel from '@/components/v2/SavedPanel';
 import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
@@ -4348,26 +4347,20 @@ export default function HomePage() {
                 rutan stängs (och deras egna fade-in-animationer spelar då upp,
                 så kromet tonar in i stället för att smälla fram). */}
 
-            {/* 1. Svävande transparent Navbar överst — bara profil + sök (15/9) */}
+            {/* 1. Svävande transparent Navbar överst — BARA profilen sedan
+                7/10 (ägarbeslut: "vi kan ju ta bort sök och filter på kartan",
+                kortets sök/filter-ikon tog över jobbet; + bor i högra hörnet). */}
             {!chromeHidden && (
             <FloatingNavbar
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                closeSearchNonce={closeSearchNonce}
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
-                onSearchOpenChange={setSearchOpen}
-                // Pricken på filterknappen — arrangörsfiltret räknas inte,
-                // det har sin egen banner under stadsplattan.
-                filterActive={popularOnly || mapCategories.size > 0 || mapSource !== null}
             />
             )}
 
-            {/* 1b. SKAPA-KNAPPEN under profilen uppe till vänster (ägarbeslut
-                24/9 — bodde i botten-dockans vänstra hörn 15/9–24/9). 🔥-knappen
-                i nedre högra hörnet är RIVEN samma dag: 🔥 Populära är första
-                chippet i sökpanelens kategorirad. Ligger under eventkortet
-                (z-1090, som väljaren). */}
+            {/* 1b. SKAPA-KNAPPEN i ÖVRE HÖGRA hörnet (ägarbeslut 7/10: "ha
+                lägg till + som en knapp längst upp åt höger, sen ta bort den
+                under profilen" — tog söks gamla hörn). Ligger under
+                eventkortet (z-1090, som väljaren). */}
             {!chromeHidden && (
             <CreateEventButton
                 creationMode={creationMode}
@@ -4407,7 +4400,12 @@ export default function HomePage() {
             // styr inflygningens animation OCH övergångarna — hovern ska vara
             // lika kvick som knapparna (200 ms).
             // tourHint 'city' = visningsrundans sista steg: samma hover-läge i 4 s.
-            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
+            // KOMPAKT ENRAD sedan 7/10 (ägarbeslut: "ändra plats och storlek
+            // på Växjö IDAG det ser kanske bättre ut"): dagen och staden på
+            // SAMMA rad ("IDAG · VÄXJÖ") i en slimmare pill — tvåradersplattan
+            // (dagen stort, staden under, 2/9–7/10) tog mer höjd än den gav.
+            // Platsen är kvar i mitten överst: hörnen ägs av profil och +.
+            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex items-baseline gap-2 rounded-full backdrop-blur-md px-5 py-2 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
                 tourHint === 'city' ? 'bg-slate-900/90 scale-105' : 'bg-slate-900/80 hover:bg-slate-900/90 hover:scale-105'
             }`}
             style={{ transitionDuration: '200ms' }}
@@ -4433,16 +4431,18 @@ export default function HomePage() {
             )}
             <span
                 key={`day-${dayFlashNonce}`}
-                className={`block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
+                className={`block first-letter:uppercase text-base sm:text-lg font-black tracking-tight text-white leading-none sm:leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
             >
                 {mapOrganizer && organizerRange === 'all'
                     ? 'Alla'
                     : getDayLabel(dayOffset, mapOrganizer ? organizerDays : effectiveRangeDays)}
             </span>
-            {/* Staden som liten underrad: plattan är länken till stadens
-                egen /evenemang-sida (cityLink; indexet som fallback — Googles
-                väg in i stadshierarkin), och namnet säger vart den leder. */}
-            <span className="mt-1 block text-[11px] font-bold uppercase tracking-wider text-white/70 leading-none">
+            <span aria-hidden className="text-white/40 text-sm leading-none">·</span>
+            {/* Staden efter dagen (enraden 7/10): plattan är länken till
+                stadens egen /evenemang-sida (cityLink; indexet som fallback —
+                Googles väg in i stadshierarkin), och namnet säger vart den
+                leder. */}
+            <span className="block text-[11px] font-bold uppercase tracking-wider text-white/75 leading-none">
                 {liveCityName ?? 'Sverige'}
             </span>
             <span className="sr-only">{cityLink.label}</span>
@@ -4852,29 +4852,12 @@ export default function HomePage() {
                 Klick hoppar till kommentarens event (samma väg som sök/sparat).
                 Ligger nere medan välkomstrutan är uppe, som allt annat krom. */}
 
-            {/* 1c. Sökträffar: STÄDER överst (klick flyger dit) och därunder
-                event ur alla kommande dagar (klick hoppar till eventets dag). */}
-            <SearchResults
-                query={searchQuery}
-                results={searchResults}
-                onPick={jumpToEvent}
-                cities={cityHits}
-                onPickCity={handlePickSearchCity}
-                open={searchOpen}
-                chips={
-                    <CategoryChipRow
-                        counts={categoryChipCounts}
-                        selected={mapCategories}
-                        onToggle={handleToggleMapCategory}
-                        sourceCounts={sourceChipCounts}
-                        selectedSource={mapSource}
-                        onSelectSource={handleSelectMapSource}
-                        popular={popularAvailable || popularOnly ? { on: popularOnly, count: popularChipCount, onToggle: handleTogglePopular } : undefined}
-                    />
-                }
-                cityName={searchCity?.name}
-                highlightQuery={searchText}
-            />
+            {/* (1c. SÖKPANELEN/SearchResults är BORTTAGEN 7/10 med sök-
+                knappen — kortets sök/filter-ikon äger sök + chips numera.
+                Stadssöket försvann med den (medvetet, Josefs beslut efter
+                påpekande); stadshopp sker via kartan/topplattan. Sökmaskineriet
+                (searchQuery/searchResults/cityHits) står kvar orört för en
+                framtida väg in.) */}
 
             {/* 1d. Sparade event — öppnas från profilpanelens Sparade-rad */}
             <SavedPanel
