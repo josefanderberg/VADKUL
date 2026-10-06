@@ -82,8 +82,8 @@
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-29",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-06",
+      "emptyRetries": 6
     },
     "storsjoyran": {
       "since": "2026-09-18",
