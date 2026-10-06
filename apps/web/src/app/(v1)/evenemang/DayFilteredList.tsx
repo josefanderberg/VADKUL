@@ -535,6 +535,15 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     const { user } = useAuth();
     const [authOpen, setAuthOpen] = useState(false);
     const [nowTs, setNowTs] = useState(0);
+    // Sökterm från kartan (?q=, 6/10) — appliceras först efter mount så
+    // serverns HTML är hel och crawlbar; se qMatch nedan.
+    const [searchQ, setSearchQ] = useState('');
+    useEffect(() => {
+        try {
+            const q = new URLSearchParams(window.location.search).get('q');
+            if (q && q.trim()) setSearchQ(q.trim());
+        } catch { /* ingen sökning */ }
+    }, []);
     // Dagar vars "har redan varit"-sektion är uppfälld.
     const [openPast, setOpenPast] = useState<Set<string>>(new Set());
     // Dagar vars bildlösa svans är uppfälld — se IMGLESS_SHOWN.
@@ -666,9 +675,18 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     // är alltid false där).
     const popMatch = (e: ListedEvent) =>
         !popularOnly || e.pop === true || (e.dups ?? []).some(d => d.pop === true);
+    // SÖKET FRÅN KARTAN (6/10): kortsökets term följer med hit som ?q= och
+    // filtrerar raderna (titel + plats) tills chippen under rubriken kryssas
+    // bort — "ett sök kan välja att behållas när man kommer till sidan".
+    // Läses först efter mount (effekten vid nowTs) så serverns HTML förblir
+    // hel och crawlbar; en grupprad matchar om något tillfälle gör det.
+    const qNorm = searchQ.trim().toLowerCase();
+    const qMatchOne = (e: { title: string; place?: string }) =>
+        e.title.toLowerCase().includes(qNorm) || (e.place ?? '').toLowerCase().includes(qNorm);
+    const qMatch = (e: ListedEvent) => !qNorm || qMatchOne(e) || (e.dups ?? []).some(qMatchOne);
     // En grupprad räknas som "har varit" först när ALLA tillfällen passerat —
     // annars försvinner kvällens sagostund för att morgonens redan varit.
-    const rowMatch = (e: ListedEvent) => catMatch(e) && popMatch(e);
+    const rowMatch = (e: ListedEvent) => catMatch(e) && popMatch(e) && qMatch(e);
     const rowPast = (e: ListedEvent) => isPast(e) && (e.dups ?? []).every(isPast);
     // Från nu och framåt: passerade rader göms bakom "har redan varit".
     const shownDays = visDays
@@ -687,7 +705,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
 
     // Filterbyte → börja om från första dagen i det nya urvalet, och fäll
     // ihop det öppna eventet (raden kan ha filtrerats bort).
-    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, category, sourceOnly]);
+    useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, category, sourceOnly, searchQ]);
 
     // NÄSTA DAG-PILEN i dagrubriken (Josef 31/8): hoppar/scrollar till nästa
     // dags rubrik. Nästa dag kan vara OAVTÄCKT (dag-för-dag-avtäckningen
@@ -760,6 +778,29 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                 heron. (Timfiltret försvann helt i och med detta.) */}
 
             {children}
+
+            {/* SÖKCHIPPEN (6/10): kartans kortsök följde med hit som ?q= och
+                filtrerar listan — ett tryck släpper sökningen. "Ett sök kan
+                VÄLJA att behållas": chippen är valet, krysset är nej tack. */}
+            {qNorm && (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setSearchQ('');
+                        // Städa adressen så en omladdning inte tar tillbaka sökningen.
+                        try {
+                            const url = new URL(window.location.href);
+                            url.searchParams.delete('q');
+                            window.history.replaceState(null, '', url.pathname + (url.search || ''));
+                        } catch { /* adressen står kvar — filtret är ändå släppt */ }
+                    }}
+                    aria-label={`Visar bara träffar på "${searchQ}" — tryck för att visa allt`}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#006AA7] text-white px-3.5 py-1.5 text-xs font-black shadow-sm hover:bg-[#005590] active:scale-95 transition"
+                >
+                    🔎 Sök: {searchQ}
+                    <span aria-hidden className="font-black">✕</span>
+                </button>
+            )}
 
             <div className="mt-6 flex flex-col gap-10">
                 {renderDays.map((day, di) => {

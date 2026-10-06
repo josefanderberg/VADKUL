@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment } from 'react';
-import { isVadkulHostedEvent, LinkEvent } from '../../types';
+import { isVadkulHostedEvent, LinkEvent, type EventRsvpStatus } from '../../types';
+import EventRsvpFooter from './EventRsvpFooter';
+import CardMoreRows, { type OrganizerRowData } from './CardMoreRows';
+import { Search, X as XIcon } from 'lucide-react';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { dupKey, groupListDuplicates } from '../../utils/groupDups';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
@@ -946,9 +949,23 @@ interface EventCardProps {
      *  äger vyn). Kortet delar dem i dagar från den visade dagen och framåt
      *  (utils/popularList). Utelämnad = gamla närhetslistan utan flikrad. */
     viewEvents?: LinkEvent[];
+    /** KOMMER/INTRESSERAD-FOOTERN (6/10, spår 3): eget svar för det VALDA
+     *  eventet + handlers. Utan onSetRsvp → ingen footer. */
+    myRsvp?: EventRsvpStatus | null;
+    onSetRsvp?: (evt: LinkEvent, status: EventRsvpStatus) => void;
+    /** Bjud med någon: sätter Kommer + öppnar delningsarket (sidan äger flödet). */
+    onInviteFriend?: (evt: LinkEvent) => void;
+    /** Inbjudningsbannern (?inb=1&fran=): visas när eventId matchar det valda. */
+    cardInvite?: { eventId: string; fran: string | null } | null;
+    onDismissInvite?: () => void;
+    /** "Fler från samma arrangör"-raden (6/10) — sidan räknar fram den över
+     *  ALLA laddade dagar (kortets events-prop är dagfiltrerad). */
+    organizerRow?: OrganizerRowData | null;
+    /** Stadssidelänken under arrangörsraden — samma mål som topplattan. */
+    cityLink?: { href: string; label: string };
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -1010,7 +1027,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // vanligt") — hela-rader-snäppet (2/9) landade på 290 px eftersom
     // raderna slutar på 290/353, och en halv rad i vikningen visar dessutom
     // att listan går att scrolla. Ryms hela listan blir kortet lägre.
-    const CHOOSER_DEFAULT_PX = 335;
+    // 379 sedan 6/10: kortsöket högst upp (44 px: h-9 = 36 + pb-2 = 8) växte
+    // det vanliga kortets default — väljarlistan ska öppna lika högt (16/9).
+    const CHOOSER_DEFAULT_PX = 379;
     // Bildremsan under Värd/Pris-raden i standardhöjden (se measureDefaultHeight).
     const DEFAULT_STRIP_PX = 122;
 
@@ -1233,6 +1252,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         return Math.max(10, Math.min(60, Math.round(vh)));
     };
     const measureCollapsedHeight = (): number => measureCompactHeight() ?? COLLAPSED_HEIGHT_VH;
+
+    // KOMMER/INTRESSERAD-FOOTERN (6/10) visas i infovyn när kortet står ÖVER
+    // kompaktläget: i kompaktläget skulle plattan täcka tid/plats-raden som
+    // stoppet finns till för att visa (30/9-beslutet). heightVh är den
+    // committade höjden (uppdateras när gesten tystnat), så footern blinkar
+    // inte under själva draget.
+    const rsvpFooterVisible = useMemo(() => {
+        if (!selectedEvent || !onSetRsvp || chooserActive || cardView !== 'info') return false;
+        const compact = measureCompactHeight();
+        return compact === null ? heightVh > 26 : heightVh > compact + 3;
+        // measureCompactHeight läser DOM — heightVh i deps räcker som trigger,
+        // sträcket flyttar sig bara när innehållet byts (selectedEvent).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEvent, onSetRsvp, chooserActive, cardView, heightVh]);
 
     // Default-höjd när ett kort öppnas: visa HELA headern (titel, tid, plats,
     // värd, pris) + en remsa av bilden — så man direkt ser värden OCH lite av
@@ -1741,12 +1774,35 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         return haversineKm(userPos.lat, userPos.lng, selectedEvent.lat, selectedEvent.lng);
     }, [userPos, selectedEvent]);
 
+    // KORTSÖKET (ägarbeslut 6/10: "högst upp på eventkorten, så man direkt
+    // kan söka efter event i listan"): fritextfilter över listan under kortet
+    // — titel, plats och värd. Att skriva växlar till listvyn så träffarna
+    // syns direkt; termen följer med till stadssidan som ?q= (CardMoreRows).
+    // Lever kvar vid eventbyte (man bläddrar bland sina träffar) och nollas
+    // när kortet stängs.
+    const [cardSearchQ, setCardSearchQ] = useState('');
+    useEffect(() => { if (!selectedEvent) setCardSearchQ(''); }, [selectedEvent]);
+    const cardQNorm = cardSearchQ.trim().toLowerCase();
+    const matchesCardSearch = useMemo(() => {
+        if (!cardQNorm) return null;
+        return (e: LinkEvent) =>
+            e.title.toLowerCase().includes(cardQNorm)
+            || (e.locationName ?? '').toLowerCase().includes(cardQNorm)
+            || (e.hostName ?? '').toLowerCase().includes(cardQNorm);
+    }, [cardQNorm]);
+    const handleCardSearch = (value: string) => {
+        setCardSearchQ(value);
+        // Första tecknet: öppna listvyn (full höjd) så träffarna syns direkt.
+        if (value.trim() && !cardSearchQ.trim() && cardView !== 'nearby') handleToggleView('nearby');
+    };
+
     // Sortera övriga event efter avstånd från valt event (närmst först).
     const nearbyEvents = useMemo(() => {
         if (!selectedEvent) return [] as { evt: LinkEvent; distanceKm: number | null }[];
         const anchorHasCoords = hasValidCoords(selectedEvent);
         const list = events
-            .filter(e => e.id !== selectedEvent.id && !discardedEventIds.has(e.id))
+            .filter(e => e.id !== selectedEvent.id && !discardedEventIds.has(e.id)
+                && (!matchesCardSearch || matchesCardSearch(e)))
             .map(evt => {
                 const distanceKm = anchorHasCoords && hasValidCoords(evt)
                     ? haversineKm(selectedEvent.lat, selectedEvent.lng, evt.lat, evt.lng)
@@ -1759,7 +1815,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             .filter(n => n.distanceKm !== null && n.distanceKm <= MAX_NEARBY_DISTANCE_KM);
         list.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
         return list;
-    }, [events, selectedEvent, discardedEventIds]);
+    }, [events, selectedEvent, discardedEventIds, matchesCardSearch]);
 
     // Dela upp närliggande event: kommande (ej passerade) visas direkt, medan de
     // som redan varit läggs under en hopfällbar flik. now gör att gränsen flyttar
@@ -1829,7 +1885,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (!viewEvents) return { all: empty, popular: empty };
         const nowDate = new Date(now);
         const from = userPos ?? (selectedEvent && hasValidCoords(selectedEvent) ? { lat: selectedEvent.lat, lng: selectedEvent.lng } : null);
-        const kept = viewEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id);
+        const kept = viewEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id
+            && (!matchesCardSearch || matchesCardSearch(e)));
         const build = (include?: (e: LinkEvent) => boolean) => {
             const days = eventDays(kept, Math.max(0, dayOffset), nowDate, e => isEventPast(e, now), include).map(day => {
                 const items = day.events.map(evt => ({
@@ -1848,7 +1905,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         };
         return { all: build(), popular: build(e => isPopularListed(e, now)) };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewEvents, discardedEventIds, selectedEvent, dayOffset, now, userPos, imagesOnlyList]);
+    }, [viewEvents, discardedEventIds, selectedEvent, dayOffset, now, userPos, imagesOnlyList, matchesCardSearch]);
     const activeTabDays = tabDays[listTab].days;
     const activeTabRowTotal = useMemo(() => activeTabDays.reduce((n, d) => n + d.rows.length, 0), [activeTabDays]);
     const visibleTabDays = useMemo(() => takeRows(activeTabDays, daysVisibleCount), [activeTabDays, daysVisibleCount]);
@@ -2833,6 +2890,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     // solida zonen i viloläget och scrollar in UNDER den.
                     className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar pt-6"
                     style={{
+                        // Footern (Kommer/Intresserad) ligger ovanpå botten —
+                        // luft så listans sista rad kan scrollas fram ovanför.
+                        paddingBottom: rsvpFooterVisible ? 56 : undefined,
                         // Innehållet scrollar FÖRST när kortet vuxit till taket.
                         // Under det tar kortets drag-handler gesten → hela
                         // behållaren åker upp/ner i stället för att scrolla
@@ -2847,6 +2907,37 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         touchAction: 'pan-y'
                     }}
                 >
+                    {/* KORTSÖKET högst upp (ägarbeslut 6/10: "högst upp på
+                        eventkorten, så man direkt kan söka efter event i
+                        listan"). MEDVETET inte sticky: flikraden (top-0) och
+                        dagrubrikerna (top-11) äger sticky-kedjan, och att
+                        skriva växlar ändå till listvyn med scrollen i topp.
+                        Inte i väljarläget (innehållet ÄR listan). */}
+                    {!chooserActive && selectedEvent && (
+                        <div className="bg-card px-4 md:px-6 pb-2">
+                            <div className="flex items-center gap-2 h-9 rounded-full bg-slate-100 dark:bg-zinc-800 border border-border px-3">
+                                <Search size={14} className="shrink-0 text-slate-400" aria-hidden />
+                                <input
+                                    type="text"
+                                    value={cardSearchQ}
+                                    onChange={e => handleCardSearch(e.target.value)}
+                                    placeholder="Sök event i listan…"
+                                    aria-label="Sök event i listan under kortet"
+                                    className="flex-1 min-w-0 bg-transparent outline-none text-sm text-slate-800 dark:text-zinc-100 placeholder:text-slate-400"
+                                />
+                                {cardSearchQ && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setCardSearchQ('')}
+                                        aria-label="Rensa sökningen"
+                                        className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+                                    >
+                                        <XIcon size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
                     {/* VÄLJARLÄGET: innehållet ÄR väljarlistan tills man valt
                         (Josef 31/8) — sen renderas det vanliga kortet nedan. */}
                     {chooserActive && groupChoice ? (
@@ -2919,6 +3010,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         canPlaceStar={canPlaceStar && !isEventPast(selectedEvent, Date.now())}
                         onPlaceStar={onPlaceStar ? () => onPlaceStar(selectedEvent.id) : undefined}
                     />
+                    {/* FLER FRÅN SAMMA ARRANGÖR + stadssidelänken (6/10) —
+                        bara i infovyn; i listvyn dominerar listan. */}
+                    {cardView === 'info' && cityLink && (
+                        <CardMoreRows
+                            organizerRow={organizerRow}
+                            onSelect={evt => onSelectEvent(evt)}
+                            cityLink={cityLink}
+                            searchQ={cardSearchQ}
+                        />
+                    )}
                     {/* Chatt per event — KRÄVER KONTO för att ens läsas
                         (Josef 31/8): utloggade ser en låst rad "Logga in för
                         att se chatten" som öppnar auth-modalen.
@@ -2999,8 +3100,21 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     ytan runt pillen inte fångar scroll/tap.
                     Bara i infovyn — i listvyn ÄR man redan i närhetslistan och
                     i chatt-vyn finns ingen lista att scrolla till. */}
+                {/* KOMMER/INTRESSERAD + BJUD MED (ägarbeslut 6/10): fast footer
+                    i botten av arket. Gömd i kompaktläget (rsvpFooterVisible)
+                    och i väljar-/chatt-/listvyn. */}
+                {rsvpFooterVisible && selectedEvent && onSetRsvp && (
+                    <EventRsvpFooter
+                        event={selectedEvent}
+                        myRsvp={myRsvp}
+                        onSetRsvp={(status) => onSetRsvp(selectedEvent, status)}
+                        onInvite={() => onInviteFriend?.(selectedEvent)}
+                        invite={cardInvite && cardInvite.eventId === selectedEvent.id ? { fran: cardInvite.fran } : null}
+                        onDismissInvite={onDismissInvite}
+                    />
+                )}
                 {coachStage !== 'off' && cardView === 'info' && !chooserActive && (
-                    <div className="absolute inset-x-0 bottom-4 z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className={`absolute inset-x-0 ${rsvpFooterVisible ? 'bottom-16' : 'bottom-4'} z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                         <button
                             type="button"
                             onClick={() => coachMarkerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}

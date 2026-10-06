@@ -29,7 +29,17 @@ export default function MapRedirect({ event }: { event: ShareEvent }) {
                 coverImage: event.coverImage,
             });
         }
-        router.replace(`/?event=${encodeURIComponent(event.id)}`);
+        // Inbjudningsparametrarna (6/10): /e/<slug>?inb=1&fran=<uid> ska nå
+        // kartan — de visar "X undrar om du följer med"-bannern i kortets
+        // footer. Bara de kända nycklarna förs vidare (ingen öppen passthrough).
+        const incoming = new URLSearchParams(window.location.search);
+        let extra = '';
+        if (incoming.get('inb') === '1') {
+            extra += '&inb=1';
+            const fran = incoming.get('fran');
+            if (fran && /^[A-Za-z0-9]{10,64}$/.test(fran)) extra += `&fran=${encodeURIComponent(fran)}`;
+        }
+        router.replace(`/?event=${encodeURIComponent(event.id)}${extra}`);
     }, [router, event]);
     return null;
 }

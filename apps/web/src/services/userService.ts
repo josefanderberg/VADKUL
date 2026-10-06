@@ -122,6 +122,26 @@ export const userService = {
     await setDoc(doc(db, 'users', uid), { savedEventIds: arrayRemove(id) }, { merge: true });
   },
 
+  // Kommer/Intresserad (6/10): egna svaret speglas på kontot som sparlistan,
+  // så det följer med mellan enheter. Det publika svaret bor i eventRsvps.
+  async getRsvpEventIds(uid: string): Promise<{ going: string[]; interested: string[] }> {
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      const data = snap.exists() ? snap.data() as { goingEventIds?: unknown; interestedEventIds?: unknown } : null;
+      const list = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+      return { going: list(data?.goingEventIds), interested: list(data?.interestedEventIds) };
+    } catch (e) {
+      console.warn('Kunde inte läsa kommer/intresserad:', e);
+      return { going: [], interested: [] };
+    }
+  },
+  async setRsvpEventIds(uid: string, going: string[], interested: string[]): Promise<void> {
+    await setDoc(doc(db, 'users', uid), {
+      goingEventIds: going.slice(-500),
+      interestedEventIds: interested.slice(-500),
+    }, { merge: true });
+  },
+
   // Lägg till eller uppdatera omdöme
   async addReview(targetUid: string, review: { rating: number; comment: string; reviewer: UserProfile }) {
     const userRef = doc(db, 'users', targetUid);

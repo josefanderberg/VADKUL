@@ -569,11 +569,15 @@ service cloud.firestore {
       allow read: if true;
       // clicksByDay (14/9): dagshinkarna bakom arrangörsmejlens 7/30-fönster.
       // likes (27/9): gilla-räknaren vid hjärtat på eventkortet.
+      // going/interested (6/10): Kommer/Intresserad-räknarna i kortets footer
+      // (deltan från utils/rsvpTransition; svaret själv bor i eventRsvps nedan).
       allow create: if request.resource.data.keys()
-          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes'])
+          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes', 'going', 'interested'])
         && request.resource.data.eventId is string
         && (!('views' in request.resource.data) || request.resource.data.views is number)
         && (!('likes' in request.resource.data) || request.resource.data.likes is number)
+        && (!('going' in request.resource.data) || request.resource.data.going is number)
+        && (!('interested' in request.resource.data) || request.resource.data.interested is number)
         && (!('clicks' in request.resource.data) || request.resource.data.clicks is number)
         && (!('clicksByMonth' in request.resource.data) || request.resource.data.clicksByMonth is map)
         && (!('clicksByDay' in request.resource.data) || request.resource.data.clicksByDay is map)
@@ -581,10 +585,12 @@ service cloud.firestore {
         && (!('domain' in request.resource.data) || request.resource.data.domain is string)
         && (!('title' in request.resource.data) || request.resource.data.title is string);
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes'])
+          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes', 'going', 'interested'])
         && request.resource.data.eventId is string
         && (!('views' in request.resource.data) || request.resource.data.views is number)
         && (!('likes' in request.resource.data) || request.resource.data.likes is number)
+        && (!('going' in request.resource.data) || request.resource.data.going is number)
+        && (!('interested' in request.resource.data) || request.resource.data.interested is number)
         && (!('clicks' in request.resource.data) || request.resource.data.clicks is number)
         && (!('clicksByMonth' in request.resource.data) || request.resource.data.clicksByMonth is map)
         && (!('clicksByDay' in request.resource.data) || request.resource.data.clicksByDay is map)
@@ -592,6 +598,24 @@ service cloud.firestore {
         && (!('domain' in request.resource.data) || request.resource.data.domain is string)
         && (!('title' in request.resource.data) || request.resource.data.title is string);
       allow delete: if false;
+    }
+
+    // KOMMER/INTRESSERAD-SVAREN (6/10, spår 3): eventRsvps/{slug}/svar/{uid}
+    // — slug är eventShareSlug(eventId), samma som eventStats (skrapade
+    // events rå-id är en URL och ogiltigt som doc-id). Publik läsning för
+    // avatarraden i kortet. Var och en skriver BARA sitt eget svar — även
+    // ANONYMA sessioner (Josef: inbjudna från t.ex. Facebook utan konto ska
+    // räknas med; de saknar namn/bild och visas som grå avatar). Räknarna
+    // bor i eventStats.going/.interested ovan.
+    match /eventRsvps/{slug}/svar/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['eventId', 'status', 'name', 'photoURL', 'createdAt'])
+        && request.resource.data.eventId is string
+        && request.resource.data.status in ['going', 'interested']
+        && (!('name' in request.resource.data) || request.resource.data.name is string)
+        && (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string);
+      allow delete: if isOwner(uid);
     }
 
     // 19. OUTREACH-KONTAKTER (FB-grupper, arrangörer, medlemslistan)

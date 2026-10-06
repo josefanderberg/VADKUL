@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { EventWish, LinkEvent } from '@/types';
+import { EventWish, LinkEvent, type EventRsvpStatus } from '@/types';
 import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
@@ -19,14 +19,17 @@ import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
-import { recordEventView, recordEventLike } from '@/services/eventStatsService';
+import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
+import { setRsvpStatus } from '@/services/rsvpService';
+import { nextRsvp, rsvpCountDeltas, rsvpShareId } from '@/utils/rsvpTransition';
+import { eventShareSlug } from '@/utils/eventShareSlug';
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { zoomInCenter } from '@/utils/zoomInCenter';
-import { isFromOrganizer, organizerHref, organizerNameFromSlug } from '@/utils/organizerPages';
+import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug } from '@/utils/organizerPages';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
@@ -386,6 +389,15 @@ export default function HomePage() {
     // aggregaten gett kortet en plats.
     const deepLinkFlewRef = useRef(false);
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
+    // KOMMER/INTRESSERAD (6/10, spår 3): eget svar per event-id, ömsesidigt
+    // uteslutande - ett id ligger i högst ett av seten (utils/rsvpTransition).
+    // Kräver INGET konto: anonyma sessioner räknas med (som tips). Publika
+    // svaret (avatarer) bor i eventRsvps, räknarna i eventStats.
+    const [goingEventIds, setGoingEventIds] = useState<Set<string>>(new Set());
+    const [interestedEventIds, setInterestedEventIds] = useState<Set<string>>(new Set());
+    // Inbjudningsbannern (?event=...&inb=1&fran=<uid>): visas i kortets footer
+    // tills den stängs eller ett ANNAT event väljs.
+    const [cardInvite, setCardInvite] = useState<{ eventId: string; fran: string | null } | null>(null);
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
     // Spridningsmodalen efter skapat event (dela → boost) — sätts vid lyckat
@@ -1678,6 +1690,54 @@ export default function HomePage() {
         return () => clearTimeout(t);
     }, [savedEventIds, user]);
 
+    // Kommer/Intresserad överlever omladdning — samma mönster som sparade.
+    useEffect(() => {
+        try {
+            const raw = JSON.parse(localStorage.getItem('vadkul_rsvp_events') ?? 'null');
+            if (raw && typeof raw === 'object') {
+                if (Array.isArray(raw.going) && raw.going.length) setGoingEventIds(new Set(raw.going));
+                if (Array.isArray(raw.interested) && raw.interested.length) setInterestedEventIds(new Set(raw.interested));
+            }
+        } catch { /* korrupt localStorage — börja om tomt */ }
+    }, []);
+    useEffect(() => {
+        localStorage.setItem('vadkul_rsvp_events', JSON.stringify({
+            going: [...goingEventIds], interested: [...interestedEventIds],
+        }));
+    }, [goingEventIds, interestedEventIds]);
+
+    // Inloggad: Kommer/Intresserad synkas till users/{uid} (union vid
+    // inloggning, debouncad spegel) — precis som sparade event ovan.
+    const rsvpSyncReady = useRef(false);
+    const goingRef = useRef(goingEventIds);
+    goingRef.current = goingEventIds;
+    const interestedRef = useRef(interestedEventIds);
+    interestedRef.current = interestedEventIds;
+    useEffect(() => {
+        rsvpSyncReady.current = false;
+        if (!user) return;
+        let cancelled = false;
+        (async () => {
+            const remote = await userService.getRsvpEventIds(user.uid);
+            if (cancelled) return;
+            const going = new Set([...goingRef.current, ...remote.going]);
+            // Ömsesidigt uteslutande även efter union: Kommer vinner vid krock.
+            const interested = new Set([...interestedRef.current, ...remote.interested].filter(id => !going.has(id)));
+            rsvpSyncReady.current = true;
+            setGoingEventIds(going);
+            setInterestedEventIds(interested);
+        })();
+        return () => { cancelled = true; };
+    }, [user]);
+    useEffect(() => {
+        if (!user || !rsvpSyncReady.current) return;
+        const t = setTimeout(() => {
+            userService.setRsvpEventIds(user.uid, [...goingEventIds], [...interestedEventIds]).catch(err =>
+                console.warn('Kunde inte synka kommer/intresserad:', err));
+        }, 800);
+        return () => clearTimeout(t);
+    }, [goingEventIds, interestedEventIds, user]);
+
     // Skapa event på riktigt: skrivs till Firestore (reglerna begränsar formen)
     // och dyker upp direkt på kartan via optimistisk insättning (pollen plockar
     // sedan upp samma event från Firestore inom 30 s).
@@ -2087,6 +2147,25 @@ export default function HomePage() {
         const nowMs = Date.now();
         return events.filter(evt => isFromOrganizer(evt.hostName, evt.id, organizerSlug) && !isEventPast(evt, nowMs));
     }, [events, organizerSlug]);
+    // "Fler från samma arrangör"-raden i kortet (6/10): det VALDA eventets
+    // arrangör, över ALLA laddade dagar (kortets events-prop är dagfiltrerad).
+    // Max 12 i tidsordning — samma urval som arrangörssidan (isFromOrganizer).
+    // hostName landar när kortlagret mergats (kortet begär det vid mount).
+    const cardOrganizerRow = useMemo(() => {
+        if (!selectedEvent || selectedEvent.userCreated) return null;
+        const slug = organizerPageSlug(selectedEvent.hostName, selectedEvent.id);
+        if (!slug) return null;
+        const nowMs = Date.now();
+        const rows = events
+            .filter(evt => evt.id !== selectedEvent.id
+                && isFromOrganizer(evt.hostName, evt.id, slug)
+                && !isEventPast(evt, nowMs))
+            .sort((a, b) => (a.time?.getTime() ?? 0) - (b.time?.getTime() ?? 0))
+            .slice(0, 12);
+        if (rows.length === 0) return null;
+        const name = (selectedEvent.hostName ?? '').replace(/\s+/g, ' ').trim() || organizerNameFromSlug(slug);
+        return { slug, name, rows };
+    }, [selectedEvent, events]);
     // Ligger eventet i perioden som börjar `offset` dagar fram och är `days`
     // dagar lång? Samma dygnsgränser som periodSlice (lokal midnatt).
     const inPeriod = useCallback((evt: LinkEvent, offset: number, days: number) => {
@@ -3098,6 +3177,67 @@ export default function HomePage() {
         startTransition(() => setMapOrganizer({ slug, name }));
     }, []);
 
+    // KOMMER/INTRESSERAD (6/10, spår 3): optimistiskt — seten styr UI:t
+    // direkt, svarsdokumentet (eventRsvps) och räknardeltan (eventStats)
+    // skrivs i bakgrunden. INGET konto krävs: anonyma sessioner räknas med
+    // ("okända från typ facebook ska räknas med"), utan namn/bild.
+    const handleSetRsvp = useCallback(async (evt: LinkEvent, pressed: EventRsvpStatus) => {
+        const prev: EventRsvpStatus | null = goingEventIds.has(evt.id) ? 'going'
+            : interestedEventIds.has(evt.id) ? 'interested' : null;
+        const next = nextRsvp(prev, pressed);
+        setGoingEventIds(ids => {
+            const n = new Set(ids);
+            if (next === 'going') n.add(evt.id); else n.delete(evt.id);
+            return n;
+        });
+        setInterestedEventIds(ids => {
+            const n = new Set(ids);
+            if (next === 'interested') n.add(evt.id); else n.delete(evt.id);
+            return n;
+        });
+        // Räknaren på SERIENS dokument för veckoserietillfällen — samma id
+        // som svarsdokumentet och delningslänken (rsvpShareId).
+        recordEventRsvpCount(rsvpShareId(evt.id, evt.userCreated), rsvpCountDeltas(prev, next));
+        try {
+            const uid = await ensureTipIdentity();
+            await setRsvpStatus(evt.id, evt.userCreated, uid, next, {
+                name: user?.displayName || null,
+                photoURL: user?.photoURL || null,
+            });
+        } catch (err) {
+            // Svarsdokumentet nådde inte fram (offline/regler) — det egna
+            // läget står kvar lokalt och synkas via users-spegeln senare.
+            console.warn('Kunde inte spara svaret:', err);
+        }
+    }, [goingEventIds, interestedEventIds, ensureTipIdentity, user]);
+
+    // BJUD MED (6/10): den som bjuder markeras själv som Kommer ("man visar
+    // att man kommer när man delar den") och delningsarket öppnas med
+    // inbjudningslänken /e/<slug>?inb=1&fran=<uid> — mottagaren får bannern i
+    // kortets footer och svarar utan konto. /e/-sidan för frågeparametrarna
+    // vidare till kartan (MapRedirect).
+    const handleInviteFriend = useCallback(async (evt: LinkEvent) => {
+        if (!goingEventIds.has(evt.id)) void handleSetRsvp(evt, 'going');
+        const shareId = rsvpShareId(evt.id, evt.userCreated);
+        const fran = user ? `&fran=${encodeURIComponent(user.uid)}` : '';
+        const url = `${window.location.origin}/e/${eventShareSlug(shareId)}?inb=1${fran}`;
+        const text = `Följer du med på ${evt.title}?`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: evt.title, text, url });
+                return;
+            }
+            await navigator.clipboard.writeText(`${text} ${url}`);
+            toast.success('Inbjudningslänk kopierad!');
+        } catch { /* avbruten delning är inget fel */ }
+    }, [goingEventIds, handleSetRsvp, user]);
+
+    // Bannern gäller det inbjudna eventet — väljer man ett ANNAT släcks den.
+    useEffect(() => {
+        if (!cardInvite || !selectedEvent) return;
+        if (selectedEvent.id !== cardInvite.eventId) setCardInvite(null);
+    }, [selectedEvent, cardInvite]);
+
     // Byt visad dag/intervall — från dagväljaren eller återställningsknappen.
     // Ett medvetet dagval är att ta över rodret: stoppa bildspelet, annars
     // skulle nästa blink skriva över valet efter någon sekund.
@@ -3786,6 +3926,16 @@ export default function HomePage() {
         const arrangor = params.get('arrangor');
         if (arrangor && /^[a-z0-9-]{2,80}$/.test(arrangor)) setMapOrganizer({ slug: arrangor, name: null });
         const dag = parseInt(params.get('dag') ?? '', 10);
+        // Inbjudan (6/10): ?inb=1 på en eventlänk visar bannern i kortets
+        // footer; ?fran=<uid> ger inbjudarens namn (users är publikt läsbar).
+        const inviteEventId = params.get('event');
+        if (inviteEventId && params.get('inb') === '1') {
+            const fran = params.get('fran');
+            setCardInvite({
+                eventId: inviteEventId,
+                fran: fran && /^[A-Za-z0-9]{10,64}$/.test(fran) ? fran : null,
+            });
+        }
         const dagar = parseInt(params.get('dagar') ?? '', 10);
         const eventId = params.get('event');
         // Redan ett event-ID i länken (hittat eller ej) räknas som djuplänk —
@@ -5747,6 +5897,20 @@ export default function HomePage() {
                 onPlaceStar={handlePlaceStar}
                 fullOpenNonce={fullOpenNonce}
                 viewEvents={listViewEvents}
+                // Kommer/Intresserad-footern (6/10, spår 3) + Bjud med +
+                // inbjudningsbannern (?inb=1).
+                myRsvp={selectedEvent
+                    ? (goingEventIds.has(selectedEvent.id) ? 'going'
+                        : interestedEventIds.has(selectedEvent.id) ? 'interested' : null)
+                    : null}
+                onSetRsvp={handleSetRsvp}
+                onInviteFriend={handleInviteFriend}
+                cardInvite={cardInvite}
+                onDismissInvite={() => setCardInvite(null)}
+                // Fler från samma arrangör + stadssidelänken (kortsökets term
+                // följer med som ?q=) — ägarbeslut 6/10.
+                organizerRow={cardOrganizerRow}
+                cityLink={{ href: cityLink.href, label: cityLink.label }}
             />
 
         </main>
