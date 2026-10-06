@@ -90,28 +90,46 @@ Alla inom ramen för kart-ui-besluten: inget nytt på kartytan, filtret bor i s�
 - **B5b. Hitta hit + arrangörslänk i kortet.** "Hitta hit ↗" (Apple/Google Maps-länk från lat/lng) bredvid
   platsen, och värdnamnet som **länk till arrangörssidan** (med bild när `coverImage`/logga finns) — i dag
   är värdnamnet bara ett filter fast sidorna finns. En halv dag.
+- **B5c. Chatten läsbar utloggad.** Läsning öppen för alla (skriva kräver konto som i dag, `EventCard.tsx:2923`),
+  och de senaste raderna renderas i `/e/`-sidan. happymap visar kommentarer publikt. En dag inkl. regler.
+- **B5d. Förtroendestämpel i kortet.** "Från <källdomän> · kontrollerad <datum>" i härkomstraden — nattkedjan
+  kontrollerar varje källa, så aggregatets `updatedAt` (eller ett `ls`-fält per event) räcker. En halv dag.
+- **B5e. "Mer på <lokal>".** En rad i kortet med lokalens övriga kommande event (`locationName`, samma
+  `viewEvents`-underlag som listan). Rör kortets innehåll, inte dess stopp — kart-ui-reglerna gäller. En dag.
 
 ### Spår 3 — Tillsammans: det minsta sociala lagret (horisont B)
 
 **Princip:** bygg det som gör ett event bättre att gå på *med någon* — inte en ny social app. Ingen
 presence-GPS, inga hangouts, inga DM, inga röstplaner i v1.
 
+**Ordning, reviderad 6/10 kväll efter Josefs skärmbilder: B8 → B6 → B7.** happymaps "Fråga någon" är en
+vanlig delningslänk via telefonens delningsark — mottagaren svarar utan app, och vängrafen växer ur
+accepterade inbjudningar. Vi gör likadant: inbjudan först (vi har redan native share av `/e/`-länken och
+en anonym session), vänner som biprodukt, "vänner kommer" sist.
+
 **Grund som redan finns:** Firestore-regler för `users/{uid}/friends` (incoming/outgoing-modell), `chats`
 (participants), `notifications` (recipientId), `presence`, `waitlist`; `attendees` på events; FCM-push;
 eventchatt per event; ♥ med räknare. **Ingen klientkod** använder vänner/chats/presence — allt är rester.
 Bygg som API-endpoints enligt plattformsplanen (`/v1/…`) + typer i `@vadkul/kontrakt`, så appen får det gratis.
 
-- **B6. Vänner via länk.** Vänförfrågan genom delbar länk/QR (`/v/[kod]` → `?van=`), accept i profilpanelen.
-  `users/{uid}/friends/{friendId}` `{status: incoming | outgoing | accepted}`; Cloud Function `acceptFriend`
-  gör dubbelskrivningen atomisk. **Ingen personsökning i v1** (spam, integritet). ~1 vecka.
+- **B6. Vänner — ur inbjudningarna.** När någon svarar Ja/Kanske på en inbjudan (B8) och har/skaffar konto
+  blir ni vänner automatiskt (`users/{uid}/friends/{friendId}` `{status: accepted, via: inbjudan}`); en
+  separat vänförfrågan via länk/QR (`/v/[kod]`) finns också, accept i profilpanelen. Cloud Function
+  `acceptFriend` gör dubbelskrivningen atomisk. **Ingen personsökning i v1** (spam, integritet). ~3 dagar
+  ovanpå B8.
 - **B7. "Jag kommer" på alla event + "Vänner kommer".** I dag: ♥ = sparat (påminnelse 1 h), anmälan bara
   för VADKUL-arrangerade. Lägg explicit "Jag kommer"-knapp i kortets knapprad → `eventRsvps/{eventId}/{uid}`
   + spegel i `users/{uid}/going`. Kortet visar "👥 2 vänner kommer" — **bara ömsesidiga vänner, aldrig
   publikt**, reglage i Inställningar ("Visa vänner vad jag ska på", standard på). Profilpanelens sparade-vy får
   "Vänner ska på". ~1 vecka.
-- **B8. Bjud in en vän till ett event.** "Bjud in" i knappraden → välj vänner → push "Josef bjöd in dig till
-  X fredag" → Ja/Kanske/Nej. `/e/[slug]?fran=<uid>` så utloggade mottagare landar rätt och får "Skapa konto för
-  att svara". Ingen gruppchatt i v1 — eventchatten finns redan och duger som "er chatt". ~1 vecka.
+- **B8. "Fråga någon" — inbjudan via delningslänk, utan vängraf.** Kort i eventkortet: "Gå tillsammans —
+  fråga någon du känner om de vill följa med." Knappen öppnar **native share** med `/e/[slug]?fran=<uid>&inb=<kod>`
+  (vi har redan delningsflödet i `LinkEventCard`). Mottagaren landar på `/e/`-sidan → kartan med kortet
+  öppet och en rad "Josef undrar om du följer med · Ja / Kanske / Nej" — **svar kräver inget konto**
+  (anonym session som för tips; svaret knyts till kontot om hen skapar ett). Ja-sägare syns i kortet
+  ("Du + Anna går"), och eventchatten (finns redan) blir "er chatt" — ingen ny chatt i v1. Push till
+  inbjudaren vid svar (FCM finns). Kontrakt + `/v1/invites`-endpoint så appen ärver det. ~1 vecka.
+  **Startar först i spår 3** — kräver bara konton för inbjudaren.
 - **B9. Integritet i samma veva.** `/integritet` är redan inaktuell (hjärtan, Min plats, stad på kontot) —
   skriv om den när vänner landar. All vänsynlighet ömsesidig och avstängbar.
 
@@ -128,7 +146,11 @@ hangouts/planer kräver notis-inkorg, rösträkning och moderering. Omprövas n�
 - **C3. Boost dag/månad.** Backend klar, bara Stripe-priserna saknas. En halv dag.
 - **C4. "Det här är mitt event" (arrangörs-claim)** på skrapade event → konto kopplas till `hostName` →
   automatiskt mejl med klickstatistik (`eventStats`/`outreachStats` finns) + boost-erbjudande. Vår
-  motsvarighet till deras organizer claims — med intäktskrok. ~1 vecka.
+  motsvarighet till deras organizer claims — med intäktskrok. ~1 vecka. **Tillägg efter skärmbilderna:**
+  happymap löser det som ett skapa-flöde ("Ny arrangörssida": namn med dubblettkoll "vi visar om ni redan
+  finns hos oss", ort, en rad, intressen, webbplats, bild — och "Ställe" för bar/scen/kafé). Vår variant:
+  i +-flödet lägg "Arrangör/ställe" som tredje val → sök mot `hostName`/`locationName` → finns den: claim;
+  annars: skapa sida som får skrapade event matchade på namn. Återanvänder arrangörssidorna och B3.
 - **C5. Betalning för verkliga event direkt i VADKUL (webb + app).** Biljett, anmälningsavgift eller
   deltagaravgift för "Jag arrangerar"-event betalas i kortet via **Stripe Connect** (arrangören onboardas
   som connected account, pengarna går till arrangören, Stripe är den licensierade betalningsinstitutet —
@@ -254,9 +276,9 @@ reviderade i samma PR som det här dokumentet.
 | 7 | C1 affisch + märke | 4 | 2–3 d | — |
 | 8 | B3 platssidor | 2 | 3–4 d | — |
 | 9 | Spår 5 sida + Hotjar-beslut | 5 | 1–2 d | beslut 3 |
-| 10 | B6 vänner | 3 | 1 v | beslut 1, 4 |
-| 11 | B7 kommer / vänner kommer | 3 | 1 v | B6 |
-| 12 | B8 bjud in | 3 | 1 v | B6, B7 |
+| 10 | B8 "Fråga någon" — inbjudan via delningslänk | 3 | 1 v | beslut 1 |
+| 11 | B6 vänner ur inbjudningarna (+ länk/QR) | 3 | 3 d | B8 |
+| 12 | B7 kommer / vänner kommer | 3 | 1 v | B6, beslut 4 |
 | 13 | B9 integritetspolicy | 3 | 1 d | B6–B8 |
 | 14 | C4 arrangörs-claim | 4 | 1 v | — |
 | 15 | C2 export + väntelista | 4 | 2 d | — |
@@ -268,6 +290,9 @@ reviderade i samma PR som det här dokumentet.
 | 21 | C5 i appen (in-app-webbläsare/Stripe RN) + spår 3 i appen | 4/6 | 1–2 v | 18, 19 |
 | 22 | B5b Hitta hit + arrangörslänk i kortet | 2 | 0,5 d | — |
 | 23 | Taxonomi-utökning (beslut 8): kontrakt + audit-daemon + omklassning av `other` | 1 | 3–4 d | beslut 8 |
+| 24 | B5c chatten läsbar utloggad | 2 | 1 d | — |
+| 25 | B5d förtroendestämpel "Från · kontrollerad" | 2 | 0,5 d | — |
+| 26 | B5e "Mer på <lokal>" i kortet | 2 | 1 d | — |
 
 **Reviderad prioritet (6/10):** appen (17) startar omedelbart och går parallellt med horisont A —
 den är inte beroende av något annat spår. Steg 18 lyfts före spår 3, eftersom betalning för

@@ -161,6 +161,26 @@ repot (publikt). Det här är vad de visar, yta för yta, och hur det står mot 
 | Eventsida | **Helsida** (inte ark): kategori · Gratis, titel, tid + **väder för eventet (☁ 6°)**, **"↻ 9 datum till ›"**, **🔔 Påminn mig**, beskrivning, **arrangörsrad med foto → arrangörssida**, plats · 1,8 km · **Visa på kartan · Hitta hit ↗**, **Kalender ›**, prisrad, sticky **"Jag kommer" + "Intresserad"**, dela, meny | Bottenark med fyra stopp, ♥ (sparat + påminnelse, kräver konto), ANMÄL/BOKA, Dela, Rapportera, chatt, serie-etikett i härkomstraden; kalenderexport finns som död kod |
 | Väder | Genomgående: header-pill, **temperatur per ort på kartan**, per event, och en **hel prognossida** (timme för timme + tio dygn med nederbörd) | Inget |
 
+**Andra omgången (7 skärmar, Växjö): eventsidan i botten, skapa-flödet och inbjudan**
+
+| Yta | happymap | VADKUL i dag |
+|---|---|---|
+| Eventsidans botten | "Drop-in.", "Från 10 år." i texten; **arrangörsrad med bild**; plats · 1,2 km · Visa på kartan · **Hitta hit**; **Kalender**; pris; **"Mer info ↗"** (utlänk till källan) | Härkomstrad + ANMÄL/BOKA-utlänk, ingen kalender, ingen Hitta hit |
+| **Miljö** | Rad "Miljö · Inomhus/Utomhus" per event (styr vädrets relevans) | Finns inte |
+| **Gå tillsammans** | Grönt kort: "Fråga någon du känner om de vill följa med. De som säger ja syns här, och ni får en egen chatt om kvällen." Knappen **"Fråga någon"** öppnar **telefonens delningsark** (SMS, Snapchat …) — **"De behöver inte appen för att svara."** | Ingen inbjudan. Native share finns (delar `/e/`-länken) |
+| **Jag kommer** | Toast "Du kommer · sparat i Planer · Ångra"; knappen blir "✓ Du kommer"; **Intresserad** bredvid | ♥ = sparat + påminnelse (kräver konto) |
+| **Kommentarer** | Publikt synliga under eventet ("Inga kommentarer än. Skriv den första.") | Chatten kräver inloggning **även för att läsa** |
+| Utforska mer | Sök-chips med nyckelord ur eventet ("Digitalt", "Läslov") | Inget |
+| **Mer på <lokal>** | Karusell med lokalens övriga event (bild, tid, chips "✓ Du kommer", "Gratis"), **× för "inte intresserad"** | Multibricka för samma koordinat, ingen "mer här"-rad i kortet |
+| **Källa + färskhet** | **"Från bibliotek.vaxjo.se · kontrollerad idag"** | Källdomänen syns i sök, ingen "kontrollerad"-stämpel |
+| **Skapa (+)** | Fyra typer: **Häng** ("Spontant. Nu eller snart. Vänner ser var du är och hakar på"), **Event** ("Öppet för alla eller bara vänner"), **Arrangörssida** ("Artist, förening, kår eller klubb"), **Ställe** ("Bar, scen, kafé eller lokal") — "Ett ställe kan också lägga upp egna event" | + → placera på kartan → Jag arrangerar / Tipsa / Önska |
+| Ny arrangörssida | Namn (**"Skriv namnet så visar vi om ni redan finns hos oss"** = dubblettkoll mot skrapade arrangörer), Ort, en rad, **Intressen** (flerval), Webbplats, Bild (sidans banner), "Skapa sidan" | Arrangörssidor genereras ur skrapdata (2 000+); ingen självbetjäning |
+
+**Den viktigaste lärdomen i omgång två: inbjudan kräver ingen vängraf.** "Fråga någon" är en vanlig
+delningslänk via telefonens delningsark; mottagaren svarar utan app, och de som säger ja hamnar på
+eventet med en egen chatt. Vängrafen växer *ur* accepterade inbjudningar — inte tvärtom. Det vänder
+ordningen i vårt spår 3 (se planen).
+
 **Vad skärmarna betyder för planen (fört in i `produktplan-2026-10.md`):**
 
 - **Prisfilter = Gratis + maxbelopp**, inte bara gratis (B1). De skriver dessutom **"Pris okänt"** öppet där vi
@@ -176,6 +196,16 @@ repot (publikt). Det här är vad de visar, yta för yta, och hur det står mot 
   appen). En finare taxonomi skulle tömma vår `other` (5 004 event) — beslut 8.
 - **Värmekarta, tabbar och intresseonboarding** står medvetet utanför planen: Sverigeöversikten och
   "Tips för dig" är borttagna på ägarbeslut, och en tabbar bryter "allt på kartan". Noterat, inte föreslaget.
+- **Inbjudan via delningslänk först, vänner sedan** (B8 före B6) — vi har redan native share av `/e/`-länken
+  och en anonym session för tips, så mottagaren kan svara utan konto precis som hos dem.
+- **Chatten läsbar utloggad** (skriva kräver konto) — deras kommentarer syns för alla; våra kräver inloggning
+  för att ens läsa. Billigt och bra för både engagemang och SEO (B5c).
+- **"Från <domän> · kontrollerad <datum>"** i kortet — förtroendestämpel som vi kan ge nästan gratis, nattkedjan
+  kontrollerar ju varje källa (B5d).
+- **"Mer på <lokal>"** i kortet — vi har `locationName`, det är en filtrerad rad (B5e).
+- **Miljö inomhus/utomhus** — audit-daemonen kan klassa det; gör vädret (B2) relevant i rätt kort.
+- **Självbetjänad arrangörs-/ställesida med dubblettkoll mot skrapade arrangörer** — exakt vår C4-claim,
+  men som ett skapa-flöde. Deras "Ställe" = vår B3 platssida + självbetjäning.
 
 ## 2c. Arrangörs-CMS ("profi"-sidan) — djupdyk
 
