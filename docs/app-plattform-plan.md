@@ -13,11 +13,17 @@ mobilappen (React Native/Expo), och det här repot som fortsatt hem för webben 
   push-notiser ("event nära dig i helgen"), sparade favoriter. Det användarna frågar efter.
 - **API:t (api.vadkul.se)** — en versionerad HTTP-yta som båda klienterna talar med för
   allt autentiserat. Läsdata (eventflödet) fortsätter gå via CDN-aggregat, inte via API-anrop.
-- **Betalningar (boost)** — sker **aldrig i appen**. Appen säljer inget, visar inga priser
-  och länkar inte till köp; arrangörer boostar på webben (mejl efter skapat event → länk).
-  Det håller oss utanför Apples IAP-krav (jfr Metas boosted posts) och kräver noll ändring
-  i Stripe-flödet. Omprövas först om datan visar att mobilköp behövs (då: IAP, Small
-  Business Program 15 %).
+- **Betalningar — REVIDERAT 6/10** (ägarbeslut: "ta betalt direkt av användarna, även i appen").
+  Den gamla regeln "aldrig i appen" byggde på att en utlänk slapp Apples provision; med Apples
+  EU-villkor från 1 okt 2026 (10–20 % även på externa köp) är det skälet borta. Nu gäller:
+  **(a) Verkliga tjänster** — biljett/anmälan/avgift för event som konsumeras utanför appen —
+  tas med Stripe Connect (Swish, kort, Apple/Google Pay) **utanför IAP, utan butiksprovision**
+  (Apple 3.1.3 e kräver det; Play-policyn omfattar inte fysiska tjänster). **(b) Digitalt**
+  (boost, ev. medlemskap) — IAP i appen (15 % Small Business), Stripe på webben; kvitton
+  verifieras server-side och `applyEventBoost` får en butiksväg bredvid Stripe-vägen.
+  **(c) Belopp och priser ägs alltid av backend** — klienten visar, bestämmer aldrig.
+  Betalning kommer i app v1.1 (konton krävs); v1.0 är en läs-app. Hela resonemanget och
+  regelläget: `produktplan-2026-10.md`, spår 4 och 6.
 
 ### Vad som INTE ändras
 
@@ -175,7 +181,7 @@ via blob-vägen, så flödet går samma väg som huvudlagren):
 | API8 (injection) | zod-validering av all input; inga strängbyggda queries (Admin SDK är parametriserat); URL-fält valideras mot scheman (returnUrl-allowlisten i boost behålls). |
 | Secrets | Som idag: Functions `secrets: [...]`, aldrig i repo. App-repot har **inga** hemligheter alls — bara publika Firebase-configvärden. |
 | Mobil (MASVS) | Ingen känslig data i AsyncStorage okrypterat (expo-secure-store för tokens), certifikatspinning bedöms i fas 2, inga API-nycklar med skrivbehörighet i bundlen. |
-| Betalning | Belopp/pris ägs av backend (redan löst i `createBoostCheckout`); appen exponerar inte köpytan alls. |
+| Betalning | Belopp/pris ägs av backend (redan löst i `createBoostCheckout`). Från v1.1: IAP-kvitton verifieras server-side (App Store Server API / Play Developer API) innan `featuredUntil` sätts; Stripe Connect-webhooks signaturverifieras som i dag. Klienten får aldrig sätta belopp. |
 | Beroenden | Dependabot + `npm audit` i CI i båda repona; lockfiles committade. |
 
 `/security-review` körs på API-fasens PR innan den mergas.
@@ -237,7 +243,8 @@ deploy-skillen ses över i fas 3 (nya functions-exporten). Inget annat i infra �
   (expo-notifications-tokens) valdes bort: den hade gett en ANDRA sändväg att
   underhålla parallellt med FCM.
 - **Butiksgranskning (regel 4.2):** appens egenvärde = push nära dig, offline-favoriter,
-  native karta — inte ett webbskal. Ingen köpyta, inga priser, ingen "boost"-text.
+  native karta — inte ett webbskal. **v1.0 har ingen köpyta** (läs-app); från v1.1 säljs
+  boost via IAP och verkliga event via Stripe — se §1 (reviderat 6/10).
 - **CI:** typecheck + vitest på ren logik + EAS-bygge på tag. Egen `CLAUDE.md` med
   appens regler (bl.a. betalningsregeln ovan).
 
@@ -264,6 +271,22 @@ fas 2. Krascher och API-fel ska synas: Crashlytics (eller Sentry) in i appen fr�
 fas 2, strukturerade fel-loggar i API:t från fas 3 — inga tysta haverier.
 
 ---
+
+### 7b. Reviderad ordning 6/10 — påskyndad lansering
+
+Ägarbeslut 6/10: "komma ut med en app så fort vi känner oss redo — påskynda". Läget i
+`vadkul-app` (HEAD `4cdb537`) är längre än fas 2-raden ovan: karta, eventkort, dag/vecka,
+sök, profil, stadssidor, mörkt läge, EAS-konfig och **kontraktet publicerat på npm** (§9.1 ✅).
+Saknas: iOS-bygge/TestFlight, Sentry, AASA/assetlinks, auth, push, API.
+
+| Steg | Innehåll | Klart när |
+|---|---|---|
+| **v1.0 läs-app** (ersätter "2 → 3 → 4") | Inga konton, inget API. Lokala favoriter (AsyncStorage), regionpush via FCM-**topics** (`helgtips-<region>`, digesten får en topic-sändning), djuplänkar via AASA/assetlinks, Sentry, butiksmaterial, Privacy/Data Safety utan konton. CARTO-mobilvillkoren (§9.2) verifieras här. | live i App Store + Play, mål 4–6 veckor |
+| **v1.1 konton + betalning** (= fas 3 + betalning) | Hono-API, App Check, Firebase Auth inkl. Sign in with Apple, kontoradering (5.1.1 v), sparade/påminnelser/push-tokens, boost via IAP, verkliga event via Stripe Connect, vänner/kommer/bjud in (produktplanens spår 3). Native-moduler → nytt bygge; JS därefter via EAS Update. | funktionsparitet med inloggad webb, inkl. köp |
+| 5. Webbmigrering | oförändrad | lågprio |
+
+`vadkul-app/CLAUDE.md`:s regel "APPEN SÄLJER INGENTING" skrivs om i det repot till: verkliga
+tjänster utanför IAP, digitalt via IAP, priser aldrig i klienten.
 
 ## 8. Övervägda alternativ (granskningsrundan 25/9)
 
