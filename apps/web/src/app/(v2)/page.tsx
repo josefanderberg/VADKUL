@@ -5917,6 +5917,23 @@ export default function HomePage() {
                 // följer med som ?q=) — ägarbeslut 6/10.
                 organizerRow={cardOrganizerRow}
                 cityLink={{ href: cityLink.href, label: cityLink.label }}
+                // Kategorichipsen i kortet (6/10, ersätter Lista-ikonen):
+                // SAMMA filter och siffror som sökpanelen — ett val smalnar
+                // listan i kortet och kartan bakom, och persisteras som
+                // vanligt (utils/mapFilter + users.mapFilter).
+                filterChips={
+                    <CategoryChipRow
+                        tone="light"
+                        wheel={false}
+                        counts={categoryChipCounts}
+                        selected={mapCategories}
+                        onToggle={handleToggleMapCategory}
+                        sourceCounts={sourceChipCounts}
+                        selectedSource={mapSource}
+                        onSelectSource={handleSelectMapSource}
+                        popular={popularAvailable || popularOnly ? { on: popularOnly, count: popularChipCount, onToggle: handleTogglePopular } : undefined}
+                    />
+                }
             />
 
         </main>

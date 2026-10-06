@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment, type ReactNode } from 'react';
 import { isVadkulHostedEvent, LinkEvent, type EventRsvpStatus } from '../../types';
 import EventRsvpFooter from './EventRsvpFooter';
 import CardMoreRows, { type OrganizerRowData } from './CardMoreRows';
@@ -961,11 +961,15 @@ interface EventCardProps {
     /** "Fler från samma arrangör"-raden (6/10) — sidan räknar fram den över
      *  ALLA laddade dagar (kortets events-prop är dagfiltrerad). */
     organizerRow?: OrganizerRowData | null;
+    /** Kategorichipsen i kortet (6/10): SAMMA filter som kartan/sökpanelen —
+     *  sidan skickar en färdig CategoryChipRow (tone="light"), så kortet
+     *  varken räknar eller håller eget state. */
+    filterChips?: ReactNode;
     /** Stadssidelänken under arrangörsraden — samma mål som topplattan. */
     cityLink?: { href: string; label: string };
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -1830,6 +1834,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         setCardSearchQ(value);
         // Första tecknet: öppna listvyn (full höjd) så träffarna syns direkt.
         if (value.trim() && !cardSearchQ.trim() && cardView !== 'nearby') handleToggleView('nearby');
+        // Tömd sökning lämnar listvyn (höjden behålls) — Lista-ikonen i
+        // knappraden är BORTTAGEN (6/10), så rensningen är vägen tillbaka.
+        if (!value.trim() && cardSearchQ.trim() && cardView === 'nearby') setCardView('info');
     };
 
     // Sortera övriga event efter avstånd från valt event (närmst först).
@@ -2970,7 +2977,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 {cardSearchQ && (
                                     <button
                                         type="button"
-                                        onClick={() => setCardSearchQ('')}
+                                        onClick={() => handleCardSearch('')}
                                         aria-label="Rensa sökningen"
                                         className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
                                     >
@@ -2980,6 +2987,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             </div>
                         </div>
                     )}
+                    {/* KATEGORICHIPSEN i kortet (ägarbeslut 6/10, ersätter
+                        Lista-ikonens jobb): SAMMA filter som kartan — ett val
+                        här smalnar listan nedanför OCH kartan bakom. Sidan
+                        äger raden (filterChips), kortet bara visar den. */}
+                    {!chooserActive && selectedEvent && filterChips}
                     {/* VÄLJARLÄGET: innehållet ÄR väljarlistan tills man valt
                         (Josef 31/8) — sen renderas det vanliga kortet nedan. */}
                     {chooserActive && groupChoice ? (
@@ -3045,7 +3057,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         onBackToGroup={cardView === 'info' ? onBackToGroup : undefined}
                         backToGroupCount={backToGroupCount}
                         nearbyView={cardView === 'nearby'}
-                        onToggleNearbyView={nearbyEvents.length > 0 || tabDays.all.count > 0 ? () => handleToggleView('nearby') : undefined}
+                        // LISTA-IKONEN BORTTAGEN (ägarbeslut 6/10, Josef: "då
+                        // ska den lista-ikonen försvinna, och man ska se
+                        // kategorierna") — in i listan via kortsöket/scrollen,
+                        // ut genom att rensa sökningen. Kategorichipsen under
+                        // sökfältet ersätter ikonens jobb.
+                        onToggleNearbyView={undefined}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
                         // Passerade event kan inte stjärnmärkas — stjärnan vore
                         // förbrukad direkt (den lyser bara tills eventet varit).

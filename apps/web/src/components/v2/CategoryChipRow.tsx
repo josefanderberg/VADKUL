@@ -18,8 +18,29 @@ export const SOURCE_EMOJI: Record<string, string> = {
 };
 
 const CHIP = 'shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors';
-const CHIP_ON = 'bg-white text-slate-900';
-const CHIP_IDLE = 'bg-white/10 text-white/85 hover:bg-white/20';
+// Mörk ton = sökpanelen (vald = vit platta med mörk text — guld betyder boost
+// på kartan). Ljus ton = eventkortet (6/10): vald = kartblå platta med vit
+// text, samma språk som kortets Kommer-knapp.
+const TONES = {
+    dark: {
+        on: 'bg-white text-slate-900',
+        idle: 'bg-white/10 text-white/85 hover:bg-white/20',
+        popOn: 'bg-white text-[#c2410c]',
+        label: 'text-white/45',
+        countOn: 'text-slate-500',
+        countIdle: 'text-white/45',
+        empty: 'text-white/55',
+    },
+    light: {
+        on: 'bg-[#006AA7] text-white',
+        idle: 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700',
+        popOn: 'bg-[#c2410c] text-white',
+        label: 'text-slate-400 dark:text-zinc-500',
+        countOn: 'text-white/70',
+        countIdle: 'text-slate-400 dark:text-zinc-500',
+        empty: 'text-slate-400',
+    },
+} as const;
 
 interface CategoryChipRowProps {
     /** Event per kategori i kartans ruta, räknade med alla filter utom själva
@@ -38,6 +59,10 @@ interface CategoryChipRowProps {
      *  botten-dockans högra hörn). Ett eget läge som kan kombineras med en
      *  kategori; utelämnad = inget chip (inga pop-flaggor i lagret). */
     popular?: { on: boolean; count: number; onToggle: () => void };
+    /** Färgton: 'dark' (sökpanelen, default) eller 'light' (eventkortet, 6/10). */
+    tone?: 'dark' | 'light';
+    /** Scrollhjul i sidled (HScrollRow). AV i eventkortet — kortet äger hjulet. */
+    wheel?: boolean;
 }
 
 /**
@@ -65,8 +90,9 @@ interface CategoryChipRowProps {
  * Själva rullningen bor i HScrollRow (delad med eventkortets rader).
  */
 export default function CategoryChipRow({
-    counts, selected, onToggle, sourceCounts, selectedSource, onSelectSource, popular,
+    counts, selected, onToggle, sourceCounts, selectedSource, onSelectSource, popular, tone = 'dark', wheel = true,
 }: CategoryChipRowProps) {
+    const t = TONES[tone];
     const chips = useMemo(() => planMapCategoryChips(KEYS, counts, selected), [counts, selected]);
     // Fler är utfälld när man själv öppnat den — ELLER när en källa är vald,
     // så valet alltid syns och går att släppa i raden.
@@ -89,25 +115,25 @@ export default function CategoryChipRow({
 
     return (
         <div className="px-4 pt-2.5 pb-3">
-            <span className="block mb-2 text-[10px] font-black uppercase tracking-widest text-white/45">
+            <span className={`block mb-2 text-[10px] font-black uppercase tracking-widest ${t.label}`}>
                 Visa bara
             </span>
             {/* -mx-4/px-4: raden rullar ända ut till panelens kanter. */}
-            <HScrollRow ref={scrollRef} wheel className="-mx-4 px-4 gap-2">
+            <HScrollRow ref={scrollRef} wheel={wheel} className="-mx-4 px-4 gap-2">
                 {popular && (
                     <button
                         type="button"
                         aria-pressed={popular.on}
                         onClick={popular.onToggle}
-                        className={`${CHIP} ${popular.on ? 'bg-white text-[#c2410c]' : CHIP_IDLE}`}
+                        className={`${CHIP} ${popular.on ? t.popOn : t.idle}`}
                     >
                         <span aria-hidden>🔥</span>
                         Populära
-                        <span className={`tabular-nums ${popular.on ? 'text-slate-500' : 'text-white/45'}`}>{popular.count}</span>
+                        <span className={`tabular-nums ${popular.on ? t.countOn : t.countIdle}`}>{popular.count}</span>
                     </button>
                 )}
                 {chips.length === 0 && !popular && (
-                    <span className="shrink-0 text-xs text-white/55">Inga kategorier i vyn</span>
+                    <span className={`shrink-0 text-xs ${t.empty}`}>Inga kategorier i vyn</span>
                 )}
                 {chips.map(({ key, count }) => {
                     const cat = key as EventCategoryType;
@@ -118,11 +144,11 @@ export default function CategoryChipRow({
                             type="button"
                             aria-pressed={on}
                             onClick={() => onToggle(cat)}
-                            className={`${CHIP} ${on ? CHIP_ON : CHIP_IDLE}`}
+                            className={`${CHIP} ${on ? t.on : t.idle}`}
                         >
                             <span aria-hidden>{EVENT_CATEGORIES[cat].emoji}</span>
                             {categoryLabel(cat)}
-                            <span className={`tabular-nums ${on ? 'text-slate-500' : 'text-white/45'}`}>{count}</span>
+                            <span className={`tabular-nums ${on ? t.countOn : t.countIdle}`}>{count}</span>
                         </button>
                     );
                 })}
@@ -132,7 +158,7 @@ export default function CategoryChipRow({
                         aria-expanded={showSources}
                         aria-label={showSources ? 'Dölj fler källor' : 'Visa fler källor: Svenska kyrkan, PRO och Korpen'}
                         onClick={() => setMoreOpen(o => !o)}
-                        className={`${CHIP} ${selectedSource ? CHIP_ON : CHIP_IDLE}`}
+                        className={`${CHIP} ${selectedSource ? t.on : t.idle}`}
                     >
                         Fler
                         <ChevronRight size={12} className={`transition-transform ${showSources ? 'rotate-180' : ''}`} aria-hidden />
@@ -146,11 +172,11 @@ export default function CategoryChipRow({
                             type="button"
                             aria-pressed={on}
                             onClick={() => onSelectSource(on ? null : s.key)}
-                            className={`${CHIP} ${on ? CHIP_ON : CHIP_IDLE}`}
+                            className={`${CHIP} ${on ? t.on : t.idle}`}
                         >
                             <span aria-hidden>{SOURCE_EMOJI[s.key] ?? '•'}</span>
                             {s.label}
-                            <span className={`tabular-nums ${on ? 'text-slate-500' : 'text-white/45'}`}>{sourceCounts.get(s.key) ?? 0}</span>
+                            <span className={`tabular-nums ${on ? t.countOn : t.countIdle}`}>{sourceCounts.get(s.key) ?? 0}</span>
                         </button>
                     );
                 })}
