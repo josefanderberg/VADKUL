@@ -2149,22 +2149,28 @@ export default function HomePage() {
     }, [events, organizerSlug]);
     // "Fler från samma arrangör"-raden i kortet (6/10): det VALDA eventets
     // arrangör, över ALLA laddade dagar (kortets events-prop är dagfiltrerad).
-    // Max 12 i tidsordning — samma urval som arrangörssidan (isFromOrganizer).
-    // hostName landar när kortlagret mergats (kortet begär det vid mount).
+    // Max 12 i tidsordning. Har arrangören en arrangörssida används SIDANS
+    // urval (isFromOrganizer) + direktlänken dit; annars (biljettplattformar,
+    // opt-in-källor, användarskapade) matchas på VÄRDNAMNET rakt av och
+    // länken utelämnas — raden ska synas även utan sida (Josef 6/10: "ser
+    // inte den arrangörslistan"). hostName landar när kortlagret mergats
+    // (kortet begär det vid mount).
     const cardOrganizerRow = useMemo(() => {
-        if (!selectedEvent || selectedEvent.userCreated) return null;
-        const slug = organizerPageSlug(selectedEvent.hostName, selectedEvent.id);
-        if (!slug) return null;
+        if (!selectedEvent) return null;
+        const name = (selectedEvent.hostName ?? '').replace(/\s+/g, ' ').trim();
+        const slug = selectedEvent.userCreated ? null : organizerPageSlug(selectedEvent.hostName, selectedEvent.id);
+        if (!slug && name.length < 3) return null;
+        const nameNorm = name.toLowerCase();
+        const sameHost = (evt: LinkEvent) => slug
+            ? isFromOrganizer(evt.hostName, evt.id, slug)
+            : (evt.hostName ?? '').replace(/\s+/g, ' ').trim().toLowerCase() === nameNorm;
         const nowMs = Date.now();
         const rows = events
-            .filter(evt => evt.id !== selectedEvent.id
-                && isFromOrganizer(evt.hostName, evt.id, slug)
-                && !isEventPast(evt, nowMs))
+            .filter(evt => evt.id !== selectedEvent.id && sameHost(evt) && !isEventPast(evt, nowMs))
             .sort((a, b) => (a.time?.getTime() ?? 0) - (b.time?.getTime() ?? 0))
             .slice(0, 12);
         if (rows.length === 0) return null;
-        const name = (selectedEvent.hostName ?? '').replace(/\s+/g, ' ').trim() || organizerNameFromSlug(slug);
-        return { slug, name, rows };
+        return { slug, name: name || organizerNameFromSlug(slug ?? '') || 'arrangören', rows };
     }, [selectedEvent, events]);
     // Ligger eventet i perioden som börjar `offset` dagar fram och är `days`
     // dagar lång? Samma dygnsgränser som periodSlice (lokal midnatt).

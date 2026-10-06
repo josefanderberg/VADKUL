@@ -5,10 +5,13 @@ import HScrollRow from '@/components/ui/HScrollRow';
 import { getDayLabel } from '@/components/v2/FloatingNavbar';
 import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 import { organizerHref } from '@/utils/organizerPages';
+import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import type { LinkEvent } from '@/types';
 
 export interface OrganizerRowData {
-    slug: string;
+    /** null = arrangören har ingen arrangörssida (biljettplattform/opt-in/
+     *  användarskapad) — raden visas ändå, utan sidlänken. */
+    slug: string | null;
     name: string;
     rows: LinkEvent[];
 }
@@ -61,34 +64,56 @@ export default function CardMoreRows({ organizerRow, onSelect, cityLink, searchQ
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400 truncate">
                             Fler från {organizerRow.name}
                         </span>
-                        <a
-                            href={organizerHref(organizerRow.slug)}
-                            className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#006AA7] dark:text-sky-400 hover:underline"
-                        >
-                            Arrangörssidan
-                            <ArrowRight size={11} aria-hidden />
-                        </a>
+                        {organizerRow.slug && (
+                            <a
+                                href={organizerHref(organizerRow.slug)}
+                                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#006AA7] dark:text-sky-400 hover:underline"
+                            >
+                                Arrangörssidan
+                                <ArrowRight size={11} aria-hidden />
+                            </a>
+                        )}
                     </div>
                     {/* -mx/px: raden rullar ända ut till kortets kanter, som
                         tid/plats-raden. data-hscroll (inuti HScrollRow) låter
                         kortets gestlogik släppa vågräta svep hit. */}
                     <HScrollRow className="-mx-4 md:-mx-6 px-4 md:px-6 gap-2">
-                        {organizerRow.rows.map(evt => (
-                            <button
-                                key={evt.id}
-                                type="button"
-                                onClick={() => onSelect(evt)}
-                                className="shrink-0 w-44 text-left rounded-xl border border-border bg-slate-50 dark:bg-zinc-800/60 px-3 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition"
-                            >
-                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-                                    <span aria-hidden className="text-sm leading-none">{eventEmoji(evt)}</span>
-                                    {dayAndTime(evt)}
-                                </span>
-                                <span className="block mt-0.5 text-xs font-bold text-slate-800 dark:text-zinc-100 leading-snug line-clamp-2">
-                                    {evt.title}
-                                </span>
-                            </button>
-                        ))}
+                        {organizerRow.rows.map(evt => {
+                            // Bild i brickan (Josef 6/10: "det ska ju vara
+                            // bilder i dem också om det finns, fast i en
+                            // fyrkant åt vänster") — emoji-fyrkant som reserv.
+                            const img = usableImageUrl(evt.coverImage);
+                            return (
+                                <button
+                                    key={evt.id}
+                                    type="button"
+                                    onClick={() => onSelect(evt)}
+                                    className="shrink-0 w-56 text-left rounded-xl border border-border bg-slate-50 dark:bg-zinc-800/60 p-2 flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition"
+                                >
+                                    {img ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={img}
+                                            alt=""
+                                            loading="lazy"
+                                            className="shrink-0 w-12 h-12 rounded-lg object-cover bg-slate-200 dark:bg-zinc-700"
+                                        />
+                                    ) : (
+                                        <span aria-hidden className="shrink-0 w-12 h-12 rounded-lg bg-slate-100 dark:bg-zinc-800 border border-border flex items-center justify-center text-xl leading-none">
+                                            {eventEmoji(evt)}
+                                        </span>
+                                    )}
+                                    <span className="flex-1 min-w-0">
+                                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400 truncate">
+                                            {dayAndTime(evt)}
+                                        </span>
+                                        <span className="block mt-0.5 text-xs font-bold text-slate-800 dark:text-zinc-100 leading-snug line-clamp-2">
+                                            {evt.title}
+                                        </span>
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </HScrollRow>
                 </div>
             )}

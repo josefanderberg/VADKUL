@@ -7,6 +7,7 @@ import { eventEmoji, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { nearestCityPoint } from '@/utils/cityPoints';
 import { getDayLabel } from './FloatingNavbar';
+import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 
 // ── Gruppväljaren i EVENTKORTET ─────────────────────────────────────────────
 // Ersätter multi-event-listan som svävade över kartan (V2MapGroupList,
@@ -100,36 +101,77 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
     const sharedVenue = firstName !== '' && events.every(ev => (ev.locationName?.trim() || '') === firstName);
     const placeName = sharedVenue ? firstName : nearestCityPoint(events[0].lat, events[0].lng).name;
 
-    // En eventrad: emoji, titel, klockslag · kategorinamn (+ "har varit" på
-    // passerade). Kategorinamnet till höger om klockslaget (Josef 26/8) —
-    // samma nyckelupplösning som eventEmoji: okänd/utebliven kategori → Övrigt.
-    const row = (ev: LinkEvent, isPast: boolean) => {
+    // En eventrad. SEDAN 6/10 (ägarbeslut: "vi kan visa så som de ser ut på
+    // stadssidorna? att man ser bilder direkt om det finns"): event MED
+    // omslagsbild ritas som BILDKORT — bilden överst (h-28, som stadssidornas
+    // rader och kortets närhetslista) med emoji + titel i gradienten och
+    // tid/kategori-raden under. Bildlösa event behåller den kompakta
+    // emoji-raden. usableImageUrl filtrerar skräp-URL:er (delvis trasiga i
+    // skrapet). Klicket väljer eventet precis som förut.
+    const infoRow = (ev: LinkEvent, isPast: boolean, isSel: boolean) => {
         const tid = ev.time && ev.hasSpecificTime !== false
             ? ev.time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
             : '';
         const catKey = (ev.category && ev.category in EVENT_CATEGORIES ? ev.category : 'other') as EventCategoryType;
         const catLabel = EVENT_CATEGORIES[catKey].label;
+        return (
+            <span className={`flex items-center gap-1 text-[11px] font-semibold ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-zinc-400'}`}>
+                {tid && <Clock size={10} className="shrink-0" />}
+                {tid && <span className="shrink-0 tabular-nums">{`kl ${tid}`}</span>}
+                <span className="min-w-0 truncate">{tid ? `· ${catLabel}` : catLabel}</span>
+                {isPast && <span className="shrink-0">· har varit</span>}
+            </span>
+        );
+    };
+    const row = (ev: LinkEvent, isPast: boolean) => {
         const isSel = selectedEvent?.id === ev.id;
+        const img = usableImageUrl(ev.coverImage);
+        // Markerad rad = blå med vit kant (ring-inset, ingen layout-shift) —
+        // samma "vald = vit-kantad" som markören på kartan, så man ser vilken
+        // frame brickan stod på. Passerad rad dämpas (samma 50 % som kartans
+        // nål-prickar).
+        const selClasses = isSel ? 'ring-2 ring-inset ring-white z-10' : '';
+        if (img) {
+            return (
+                <li key={ev.id}>
+                    <button
+                        type="button"
+                        onClick={() => onSelect(ev)}
+                        className={`relative w-full text-left transition-colors ${selClasses}${isPast && !isSel ? ' opacity-50' : ''} ${isSel ? 'bg-[#006AA7]' : 'hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700'}`}
+                    >
+                        <span className="relative block h-28 w-full overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={img}
+                                alt=""
+                                loading="lazy"
+                                className="absolute inset-0 w-full h-full object-cover"
+                            />
+                            <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                            <span className="absolute bottom-2 left-4 right-4 flex items-end gap-2">
+                                <span className="shrink-0 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-base leading-none" aria-hidden>{eventEmoji(ev)}</span>
+                                <span className="flex-1 min-w-0 text-white font-bold text-sm leading-snug line-clamp-2 drop-shadow">{ev.title}</span>
+                            </span>
+                        </span>
+                        <span className="px-4 py-2 flex items-center gap-3">
+                            <span className="flex-1 min-w-0">{infoRow(ev, isPast, isSel)}</span>
+                            <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-white' : 'text-slate-400'}`} />
+                        </span>
+                    </button>
+                </li>
+            );
+        }
         return (
             <li key={ev.id}>
                 <button
                     type="button"
                     onClick={() => onSelect(ev)}
-                    // Markerad rad = blå med vit kant (ring-inset, ingen layout-
-                    // shift) — samma "vald = vit-kantad" som markören på kartan,
-                    // så man ser vilken frame brickan stod på. Passerad rad
-                    // dämpas (samma 50 % som kartans nål-prickar).
-                    className={`relative w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7] ring-2 ring-inset ring-white z-10' : 'hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700'}${isPast && !isSel ? ' opacity-50' : ''}`}
+                    className={`relative w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${isSel ? `bg-[#006AA7] ${selClasses}` : 'hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700'}${isPast && !isSel ? ' opacity-50' : ''}`}
                 >
                     <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100 dark:bg-zinc-800'}`} aria-hidden>{eventEmoji(ev)}</span>
                     <span className="flex-1 min-w-0">
                         <span className={`block font-bold text-sm truncate ${isSel ? 'text-white' : 'text-slate-800 dark:text-zinc-100'}`}>{ev.title}</span>
-                        <span className={`flex items-center gap-1 text-[11px] font-semibold ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-zinc-400'}`}>
-                            {tid && <Clock size={10} className="shrink-0" />}
-                            {tid && <span className="shrink-0 tabular-nums">{`kl ${tid}`}</span>}
-                            <span className="min-w-0 truncate">{tid ? `· ${catLabel}` : catLabel}</span>
-                            {isPast && <span className="shrink-0">· har varit</span>}
-                        </span>
+                        {infoRow(ev, isPast, isSel)}
                     </span>
                     <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-white' : 'text-slate-400'}`} />
                 </button>

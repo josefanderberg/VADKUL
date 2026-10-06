@@ -1078,6 +1078,23 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // grip-zonen (h-6 = 24px) ovanför scroll-containern.
     const heightVhRef = useRef(PEEK_HEIGHT_VH);
     const sheetRef = useRef<HTMLDivElement | null>(null);
+    // SIDOPANELSLÄGET (ägarbeslut 6/10, Josef: "på datorn när man har den
+    // tillräckligt bred skärm så bara sätt eventkortet på sidan"): på
+    // xl-skärmar (≥1280 px) dockar kortet som en HÖG PANEL till vänster i
+    // stället för bottenark i mitten. Drag- och hjulsnäppen är AV (gesterna
+    // returnerar tidigt; updateHeightVh klampar upp alla öppningshöjder, bara
+    // stängningen släpps igenom) — innehållet scrollar direkt, och stads-/
+    // arrangörslänkarna (CardMoreRows) nås utan att dra upp något.
+    const SIDE_HEIGHT_VH = 80;
+    const [sideMode, setSideMode] = useState(false);
+    const sideModeRef = useRef(false);
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 1280px)');
+        const apply = () => { sideModeRef.current = mq.matches; setSideMode(mq.matches); };
+        apply();
+        mq.addEventListener('change', apply);
+        return () => mq.removeEventListener('change', apply);
+    }, []);
     /**
      * live = mitt i en pågående gest (hjul/drag). Då skrivs höjden DIREKT till
      * DOM via --sheet-h i stället för via setState (Josef 31/8: "det känns
@@ -1089,6 +1106,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
      * cardExpanded-tröskeln och resten av React ser samma sanning.
      */
     const updateHeightVh = (vh: number, live = false) => {
+        // Sidopanelen (xl): kortet står alltid högt — alla öppnings- och
+        // snäpphöjder klampas upp till panelhöjden; bara stängningen (≤8 vh,
+        // closeCard:s glid) släpps igenom.
+        if (sideModeRef.current && vh > 8) vh = Math.max(vh, SIDE_HEIGHT_VH);
         heightVhRef.current = vh;
         if (live) {
             sheetRef.current?.style.setProperty('--sheet-h', `${vh}vh`);
@@ -1253,6 +1274,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     };
     const measureCollapsedHeight = (): number => measureCompactHeight() ?? COLLAPSED_HEIGHT_VH;
 
+    // Sidopanelen: när läget slås PÅ (skärmen breddas eller ett kort öppnas
+    // på bred skärm) reser sig kortet till panelhöjden direkt — klampen i
+    // updateHeightVh håller den sedan.
+    useEffect(() => {
+        if (!sideMode || !selectedEvent) return;
+        setIsAnimating(true);
+        updateHeightVh(Math.max(heightVhRef.current, SIDE_HEIGHT_VH));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sideMode, selectedEvent]);
+
     // KOMMER/INTRESSERAD-FOOTERN (6/10) visas i infovyn när kortet står ÖVER
     // kompaktläget: i kompaktläget skulle plattan täcka tid/plats-raden som
     // stoppet finns till för att visa (30/9-beslutet). heightVh är den
@@ -1412,7 +1443,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const onTouchStart = (e: TouchEvent) => {
             // maxVhRef, inte MAX_HEIGHT_VH: effekten binds en gång per valt
             // event, taket följer viewporten (rotation/storlek).
-            dragsSheet = !chooserActiveRef.current && heightVhRef.current < maxVhRef.current - 5;
+            // Sidopanelen (xl, 6/10): svep scrollar alltid innehållet — drar
+            // aldrig panelen (touchskärm på bred laptop/surfplatta).
+            dragsSheet = !sideModeRef.current && !chooserActiveRef.current && heightVhRef.current < maxVhRef.current - 5;
             const row = (e.target as HTMLElement).closest('[data-hscroll]') as HTMLElement | null;
             inHScroll = !!row && row.scrollWidth > row.clientWidth + 1;
             hscrollDecided = false;
@@ -1481,6 +1514,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const sc = scrollContainerRef.current;
         if (!sc) return;
         const onWheel = (e: WheelEvent) => {
+            // Sidopanelen (xl, 6/10): inga hjulsnäpp — hjulet scrollar
+            // innehållet direkt, som i vilken panel som helst.
+            if (sideModeRef.current) return;
             const h = heightVhRef.current;
             // deltaMode: 0 = px, 1 = rader (Firefox med mus), 2 = sidor.
             const px = e.deltaMode === 1 ? e.deltaY * 16
@@ -2145,6 +2181,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         if (e.button !== 0) return;
+        // Sidopanelen (xl, 6/10): ingen drag-gest alls — panelen står där den
+        // står, klick och innehållsscroll fungerar som i en vanlig panel.
+        if (sideModeRef.current) return;
         didDragRef.current = false;
 
         const target = e.target as HTMLElement;
@@ -2602,8 +2641,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
         {/* z-[1250]: kortet ligger över ALLT kartkrom — kategorikolumnen (1150),
             stadsrutan (1090), navbaren (1160). Bara modaler (1300) går över. */}
-        <div className="fixed bottom-0 left-0 right-0 z-[1250] flex flex-col items-center px-4 pointer-events-none" style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
-            <div className="w-full max-w-4xl flex justify-between items-center mb-4">
+        {/* SIDOPANELEN (6/10): på xl med öppet kort dockar hela kolumnen
+            (navrad + kort) till VÄNSTER som en 400 px panel i stället för
+            centrerat bottenark — kartan ligger fri till höger. */}
+        <div className={`fixed bottom-0 left-0 right-0 z-[1250] flex flex-col ${sideMode && selectedEvent ? 'items-start' : 'items-center'} px-4 pointer-events-none`} style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
+            <div className={`w-full ${sideMode && selectedEvent ? 'max-w-[400px]' : 'max-w-4xl'} flex justify-between items-center mb-4`}>
 
                 {/* Vänster: verktygs-pill (dagväljaren är flyttad till toppen). */}
                 <div className="flex items-center gap-2 pointer-events-auto">
@@ -2814,7 +2856,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
             {/* Draggable bottom sheet card container — visas bara när ett event är valt */}
             {selectedEvent ? (
-            <div className="w-full max-w-4xl">
+            <div className={`w-full ${sideMode ? 'max-w-[400px]' : 'max-w-4xl'}`}>
             <div
                 ref={sheetRef}
                 className={`relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)] overflow-hidden border border-border/10${scrollNudgeActive ? ' scroll-nudge-anim' : ''}`}
