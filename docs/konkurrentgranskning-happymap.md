@@ -238,6 +238,173 @@ happymap har en **riktig mobilapp** — `/beta` ("Hämta Happymap") plus en iOS-
 > webbläsare. Avsnitt 2b bygger på deras publikt serverade klientkod och sidor; avsnitt 2b-ii på
 > Josefs egna skärmbilder 6/10. Inget kommer från deras backend.
 
+## 2e. Checklista: allt de har mot vad vi har
+
+_Legend: ✅ har · ◐ delvis · ❌ saknas · ❓ inte sett (frågor längst ner). Källa: 18 skärmbilder 6/10,
+publik klientkod, /about och /for-arrangorer. Kolumnen "Vi" gäller webben i dag._
+
+### Karta & upptäckt
+
+| Funktion | happymap | Vi | Kommentar |
+|---|:---:|:---:|---|
+| Karta med event (MapLibre) | ✅ | ✅ | |
+| Mörk kartstil | ✅ | ❌ | Vårt UI följer OS, men kartan är alltid ljus (nöjesfältet, ägarbeslut 4/9) |
+| Värmekarta vid låg zoom | ✅ | ❌ | Sverigeöversikt borttagen på ägarbeslut |
+| Landningssida med värmekarta + växlande stadsnamn | ✅ | ❌ | Vi öppnar direkt i din stad (ägarbeslut) |
+| "Visa event nära mig" (GPS) | ✅ | ✅ | Hos oss tyst vid start |
+| Min plats-knapp | ✅ | ❌ | Dold hos oss (`{false && …}`) |
+| Ortväljare med snabbval + sök | ✅ | ✅ | Vi: 291 orter i sök |
+| "Hela Sverige"-läge | ✅ | ❌ | |
+| Temperatur i stadsplattan | ✅ | ❌ | |
+| Temperatur per ort på kartan | ✅ | ❌ | |
+| Väder per event | ✅ | ❌ | |
+| Prognossida (timme + tio dygn) | ✅ | ❌ | |
+| Markörer med kategorifärg + ikon + titel i färg | ✅ | ◐ | Vi: emoji-droppar, kategorinamn från zoom 9, titel från 13 |
+| Listläge med dagavdelare | ✅ | ◐ | Vår lista ligger under kortet (Månaden · Populärt) |
+| Avstånd till event | ✅ | ✅ | |
+| Dag/vecka-väljare | ◐ | ✅ | De har datumfilter; vi dag/vecka-platta + kalender |
+| Populärt-filter (🔥) | ❓ | ✅ | |
+| Boost-/guldbrickor | ❌ | ✅ | |
+
+### Filter & sök
+
+| Funktion | happymap | Vi | Kommentar |
+|---|:---:|:---:|---|
+| Kategorifilter | ✅ | ✅ | |
+| Flerval av kategorier | ✅ | ❌ | En åt gången hos oss (ägarbeslut 16/9) |
+| Antal kategorier | 16 | 11 | De: Nattliv, Karaoke, Film, Quiz, Föreläsningar, Festivaler extra |
+| Prisfilter: Gratis | ✅ | ❌ | |
+| Prisfilter: maxbelopp | ✅ | ❌ | |
+| Datumfilter | ✅ | ✅ | |
+| Valda filter som chips i sökfältet + räknare | ✅ | ◐ | Vi: en bricka under dagplattan |
+| Fritextsök (titel/plats/arrangör) | ✅ | ✅ | Vi även ort-tolkning "jazz göteborg" |
+| "Utforska mer"-nyckelord ur eventet | ✅ | ❌ | |
+| Arrangörsfilter | ❓ | ✅ | |
+| Opt-in-källor (kyrkan, PRO, Korpen) | ❌ | ✅ | De visar allt rakt av |
+
+### Eventsida / kort
+
+| Funktion | happymap | Vi | Kommentar |
+|---|:---:|:---:|---|
+| Helsides eventsida | ✅ | ◐ | Vi: bottenark med fyra stopp |
+| Bild, tid, plats, beskrivning | ✅ | ✅ | |
+| Återkommande: "9 datum till" med navigering | ✅ | ◐ | Vi: serie-etikett, ingen datumnavigering |
+| Påminn mig | ✅ | ◐ | Via ♥, kräver konto |
+| Arrangörsrad med bild → arrangörssida | ✅ | ◐ | Sidorna finns, kortet länkar inte dit |
+| Visa på kartan | ✅ | ✅ | |
+| Hitta hit (vägbeskrivning) | ✅ | ❌ | |
+| Lägg i kalender | ✅ | ❌ | Död kod finns (`calendarLinks.ts`) |
+| Pris | ✅ | ◐ | Vi: text när känt (20 % av eventen) |
+| "Pris okänt" öppet | ✅ | ❌ | |
+| Mer info-utlänk till källan | ✅ | ✅ | ANMÄL/BOKA |
+| Miljö inomhus/utomhus | ✅ | ❌ | |
+| "Jag kommer" på alla event | ✅ | ❌ | Vi: anmälan bara för VADKUL-event |
+| "Intresserad" | ✅ | ◐ | ♥ gilla/spara |
+| Gå tillsammans / "Fråga någon" (inbjudan via delningslänk, svar utan app) | ✅ | ❌ | |
+| Vilka kommer / vänner kommer | ✅ | ◐ | Deltagarlista bara för VADKUL-event |
+| Kommentarer synliga för alla | ✅ | ◐ | Vår chatt kräver inloggning även för läsning |
+| "Mer på <lokal>" | ✅ | ◐ | Multibricka för samma koordinat |
+| × "inte intresserad" på kort | ✅ | ❌ | |
+| Källa + "kontrollerad idag" | ✅ | ◐ | Härkomstrad finns, ingen kontrollstämpel |
+| Dela | ✅ | ✅ | |
+| Delningssida med OG-bild per event | ❓ | ✅ | |
+| Rapportera event | ❓ | ✅ | Troligen i "…"-menyn hos dem |
+| Boosta eventet | ❌ | ✅ | |
+| Stjärnmärkning | ❌ | ✅ | |
+
+### Konto & socialt
+
+| Funktion | happymap | Vi | Kommentar |
+|---|:---:|:---:|---|
+| Konto (e-post/Google) | ✅ | ✅ | Deras inloggningssätt ej sett |
+| Utforska utan konto | ✅ | ✅ | |
+| Intresseonboarding utan konto | ✅ | ❌ | "Tips för dig" borttagen hos oss |
+| Smakprofil / "För dig" / "Tonight for you" | ✅ | ❌ | |
+| Vänner + vänförfrågningar | ✅ | ❌ | Firestore-regler finns, ingen UI |
+| Nära vänner | ✅ | ❌ | |
+| Blockera | ✅ | ❌ | |
+| Närvaro "Aktiv nu" | ✅ | ❌ | |
+| Inbjudningar till event | ✅ | ❌ | |
+| Privata event (bara vänner) | ✅ | ❌ | |
+| Häng (spontan träff, vänner ser var du är) | ✅ | ❌ | |
+| Planer (gruppbeslut med röstning) | ✅ | ❌ | |
+| "Planer"-flik = min agenda | ✅ | ◐ | Sparade event i profilpanelen |
+| Gruppchatt / DM | ✅ | ❌ | Eventchatt finns |
+| Chatt-flik | ✅ | ❌ | |
+| Notisinkorg (förfrågningar, inbjudningar, uppdateringar) | ✅ | ❌ | |
+| Push: påminnelse före event | ✅ | ✅ | |
+| Push: väderlarm för utomhusplan | ✅ | ❌ | |
+| Push: veckans helgtips | ❓ | ✅ | |
+| Följ serie / arrangör | ✅ | ❌ | |
+| Inbjudningslänk / referral | ✅ | ❌ | Rester i koden |
+| Publik profil | ✅ | ❌ | |
+| Dela plats med vänner (opt-in) | ✅ | ❌ | |
+| Önskningar ("det här vill jag skulle hända") | ❌ | ✅ | |
+| Delta/anmäl på VADKUL-event med deltagarlista | ❌ | ✅ | De har anmälan också (se arrangör) |
+
+### Skapa & arrangör
+
+| Funktion | happymap | Vi | Kommentar |
+|---|:---:|:---:|---|
+| Skapa event | ✅ | ✅ | |
+| Skapa Häng | ✅ | ❌ | |
+| Event bara för vänner | ✅ | ❌ | |
+| Tipsa event utan konto | ❓ | ✅ | |
+| Önska event | ❌ | ✅ | |
+| Självbetjänad arrangörssida | ✅ | ❌ | Våra genereras ur skrapdata |
+| Dubblettkoll mot skrapade arrangörer vid skapande | ✅ | ❌ | |
+| Skapa Ställe (lokalsida) | ✅ | ❌ | |
+| Platssidor per lokal | ✅ | ❌ | |
+| Arrangörssidor | ✅ | ✅ | Vi: 2 000+ |
+| QR-affisch | ✅ | ❌ | |
+| Webbmärke | ✅ | ❌ | |
+| Tipsa om en plats (URL → krypare) | ✅ | ◐ | Vi: tips med länk per event |
+| Anmälan först till kvarn | ✅ | ✅ | |
+| Ansökningsanmälan med frågor, Ja/Kanske/Nej | ✅ | ❌ | |
+| Väntelista | ✅ | ❌ | Regel finns |
+| Reducerat pris "i mån av plats" | ✅ | ❌ | |
+| Flera tider att välja | ✅ | ❌ | |
+| Betalning direkt till arrangör (Swish/kort), 0 avgift | ✅ | ❌ | Planerat (C5) |
+| Deltagarlista export | ✅ | ◐ | Lista finns, ingen export |
+| Boost (betald framlyftning) | ❌ | ✅ | |
+| Biljettaffiliate (Ticketmaster) | ❌ | ✅ | |
+| Arrangörsmejl med klickstatistik | ❌ | ✅ | Manuellt hos oss |
+
+### Plattform & positionering
+
+| Funktion | happymap | Vi | Kommentar |
+|---|:---:|:---:|---|
+| Native iOS-app | ✅ | ❌ | MVP finns i `vadkul-app` |
+| Android-app | ❓ | ❌ | De har `/beta` |
+| PWA (installbar) | ◐ | ✅ | De har manifest; installprompt ej sett |
+| SEO: stadssidor | ✅ | ✅ | 1 156 orter mot 71 |
+| SEO: kategorisidor per stad | ✅ | ✅ | |
+| SEO: gratis-sidor per stad | ✅ | ❌ | |
+| SEO: platssidor | ✅ | ❌ | |
+| SEO: arrangörssidor | ✅ | ✅ | |
+| Delningsbilder per stad/kategori | ❓ | ✅ | |
+| Grannländer | ✅ | ❌ | |
+| Egna kart-tiles | ✅ | ◐ | CARTO; pmtiles-reserv finns |
+| Mörkt läge i UI | ✅ | ✅ | |
+| Tvåspråkig (sv/en) | ✅ | ❌ | |
+| "Ideell · noll annonser · noll spårare" | ✅ | ❌ | Vi: Hotjar, Analytics, affiliate, boost |
+| Integritetspolicy | ✅ | ◐ | Vår är inaktuell |
+
+### Inte sett än (frågor till Josef)
+
+1. **Planer-fliken** inloggad — hur ser agendan ut, och en plan med röstning?
+2. **Chatt-fliken** — trådlista, gruppchatt från "Gå tillsammans".
+3. **Upptäck-fliken** — "För dig"/"Tonight for you"-flödet efter intressevalet.
+4. **Profilen** — publik profil, smakprofil, inställningar (närvaro, "visa vad jag ska på").
+5. **Skapa Häng** — formuläret och hur den syns på kartan för vänner.
+6. **Skapa Event** — fälten, "bara vänner", bilduppladdning.
+7. **Ställe-sidan** och **arrangörssidan som besökare** (program, QR-affisch, märke).
+8. **Mottagarens vy** när man får en "Fråga någon"-länk utan konto.
+9. **Inloggningen** — e-post/Google/Apple/magisk länk?
+10. **Betalflödet** för ett betal-event (Swish-steget).
+11. **Notisinkorgen** och vilka push-notiser som finns (helgtips?).
+12. **Veckovy / populärt** — finns något motsvarande 🔥?
+
 ## 3. Vad VI har som de sannolikt inte har (våra styrkor)
 
 - **Boost** — betald framlyftning (monetisering de uttryckligen avstår).
