@@ -141,6 +141,16 @@ export const userService = {
       interestedEventIds: interested.slice(-500),
     }, { merge: true });
   },
+  // En ENSKILD svarsändring från stadssidorna (7/10): arrayUnion/arrayRemove
+  // av samma skäl som addSavedEventId ovan — stadssidan ser bara sin egen
+  // enhets localStorage och får inte skriva över svar gjorda på andra
+  // enheter. Ett svar i taget: läggs i den nya listan, tas ur den andra.
+  async applyRsvpEventId(uid: string, id: string, next: 'going' | 'interested' | null): Promise<void> {
+    await setDoc(doc(db, 'users', uid), {
+      goingEventIds: next === 'going' ? arrayUnion(id) : arrayRemove(id),
+      interestedEventIds: next === 'interested' ? arrayUnion(id) : arrayRemove(id),
+    }, { merge: true });
+  },
 
   // Lägg till eller uppdatera omdöme
   async addReview(targetUid: string, review: { rating: number; comment: string; reviewer: UserProfile }) {

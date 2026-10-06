@@ -14,9 +14,31 @@ import { descriptionText, eventOutlink, hostFaviconUrl, pickDescription } from '
 import { recordEventClick } from '@/services/eventStatsService';
 import { linkEventService, type RsvpAttendee } from '@/services/linkEventService';
 import { useAuth } from '@/context/AuthContext';
+import { useEventRsvp } from '@/hooks/useEventRsvp';
 import EventChatPanel from '@/components/v2/EventChatPanel';
+import HScrollRow from '@/components/ui/HScrollRow';
+import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import type { ListedEvent } from './DayFilteredList';
 import { organizerHref } from '@/utils/organizerPages';
+
+/** En bricka i "Fler från samma arrangör"-raden (7/10) — plockad ur stadens
+ *  redan laddade lista av DayFilteredList (organizerRowFor). repId/dayKey
+ *  behövs för hoppet: utfällningen sitter på REPRESENTANTENS rad. */
+export interface ExpandedOrganizerItem {
+    id: string;
+    repId: string;
+    dayKey: string;
+    dayLabel: string;
+    title: string;
+    emoji: string;
+    coverImage?: string;
+    clock: string | null;
+}
+export interface ExpandedOrganizerRow {
+    slug: string | null;
+    name: string;
+    items: ExpandedOrganizerItem[];
+}
 
 // Inloggningsmodalen laddas först när något faktiskt kräver konto (RSVP/chatt)
 // — stadssidorna är SEO-ytor och ska inte bära den i förstabundlen.
@@ -35,7 +57,7 @@ const AuthModal = dynamic(() => import('@/components/v2/AuthModal'), { ssr: fals
 // texten och kortets utlänk (för Ticketmaster: affiliate-redirecten, som id:t
 // saknar). Ingen Firestore-läsning från klienten.
 
-export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick, hosted = false }: {
+export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick, hosted = false, organizerRow = null, onPickOrganizerEvent }: {
     e: Omit<ListedEvent, 'dups'>;
     /** Sant när det utfällda är ett av gruppradens ÖVRIGA tillfällen (dups)
      *  — då står titeln med i panelen, eftersom radens rubrik är
@@ -51,6 +73,12 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
      *  sidan (RSVP-knapp + vilka som kommer), som på kartkortet (Josef 6/9).
      *  Bara spotlight-raderna kan vara hosted; daglistans rader är skrapade. */
     hosted?: boolean;
+    /** "Fler från samma arrangör" (7/10, Josef: "precis som i eventkorten på
+     *  kartan") — DayFilteredList räknar fram raden ur stadens lista. */
+    organizerRow?: ExpandedOrganizerRow | null;
+    /** Brickklick: hoppar till det eventet i listan (avtäcker dagen, fäller
+     *  ut och scrollar dit — DayFilteredList äger mekanismen). */
+    onPickOrganizerEvent?: (item: ExpandedOrganizerItem) => void;
 }) {
     const rootRef = useRef<HTMLDivElement>(null);
     // undefined = svaret väntas, null = miss/fel (kapade texten får duga).
@@ -144,6 +172,11 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
         if (!outlink) return;
         recordEventClick({ id: e.id, url: outlink, title: e.title, hostName: e.hostName ?? undefined });
     };
+
+    // KOMMER/INTRESSERAD (7/10): samma svar som kartkortets footer — delad
+    // localStorage-nyckel, samma eventRsvps/eventStats-skrivningar, inget
+    // konto krävs (anonym session). Skilt från hosted-ANMÄLAN ovan.
+    const rsvp = useEventRsvp(e.id, hosted);
 
     // CHATT-GRINDEN (Josef 6/9, justerad samma dag): bara VADKUL-värdade
     // event grindas på anmälan (RSVP:n bor här på sidan). Externa event har
@@ -269,6 +302,45 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                 )}
             </div>
 
+            {/* KOMMER/INTRESSERAD (7/10) — samma svar och räknare som kart-
+                kortets footer (hooks/useEventRsvp): ömsesidigt uteslutande,
+                inget konto krävs. Hosted-anmälan (riktiga platser) är kvar
+                som egen knapp längre ner. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    aria-pressed={rsvp.my === 'going'}
+                    onClick={() => void rsvp.press('going')}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
+                        rsvp.my === 'going'
+                            ? 'bg-[#006AA7] text-white border-[#005590] shadow-md'
+                            : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40'
+                    }`}
+                >
+                    <Check size={14} strokeWidth={3} aria-hidden />
+                    Kommer
+                    {rsvp.goingCount !== null && rsvp.goingCount > 0 && (
+                        <span className={`tabular-nums ${rsvp.my === 'going' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.goingCount}</span>
+                    )}
+                </button>
+                <button
+                    type="button"
+                    aria-pressed={rsvp.my === 'interested'}
+                    onClick={() => void rsvp.press('interested')}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
+                        rsvp.my === 'interested'
+                            ? 'bg-[#006AA7] text-white border-[#005590] shadow-md'
+                            : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40'
+                    }`}
+                >
+                    <span aria-hidden>🤔</span>
+                    Intresserad
+                    {rsvp.interestedCount !== null && rsvp.interestedCount > 0 && (
+                        <span className={`tabular-nums ${rsvp.my === 'interested' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.interestedCount}</span>
+                    )}
+                </button>
+            </div>
+
             <p className="mt-3 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
                 {descriptionPending
                     ? <span className="loading-blink text-slate-500 dark:text-zinc-400">{text}</span>
@@ -348,6 +420,48 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* FLER FRÅN SAMMA ARRANGÖR (7/10, Josef: "precis som i event-
+                korten på kartan"): sidledsrullande brickor med bild-fyrkant
+                till vänster (emoji som reserv). Klick hoppar till det eventet
+                i listan. Länken till arrangörssidan bor i värdnamnet överst. */}
+            {organizerRow && organizerRow.items.length > 0 && (
+                <div className="mt-4">
+                    <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400 truncate">
+                        Fler från {organizerRow.name}
+                    </p>
+                    <HScrollRow className="-mx-4 px-4 gap-2">
+                        {organizerRow.items.map(item => {
+                            const img = usableImageUrl(item.coverImage);
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => onPickOrganizerEvent?.(item)}
+                                    className="shrink-0 w-56 text-left rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2 flex items-center gap-2.5 hover:border-[#006AA7]/40 active:scale-[0.98] transition"
+                                >
+                                    {img ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={img} alt="" loading="lazy" className="shrink-0 w-12 h-12 rounded-lg object-cover bg-slate-200 dark:bg-zinc-700" />
+                                    ) : (
+                                        <span aria-hidden className="shrink-0 w-12 h-12 rounded-lg bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-xl leading-none">
+                                            {item.emoji}
+                                        </span>
+                                    )}
+                                    <span className="flex-1 min-w-0">
+                                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400 truncate first-letter:uppercase">
+                                            {item.dayLabel}{item.clock ? ` kl ${item.clock}` : ''}
+                                        </span>
+                                        <span className="block mt-0.5 text-xs font-bold text-slate-800 dark:text-zinc-100 leading-snug line-clamp-2">
+                                            {item.title}
+                                        </span>
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </HScrollRow>
                 </div>
             )}
 

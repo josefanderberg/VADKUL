@@ -19,7 +19,7 @@ import { displayedLikeCount } from '@/utils/likeCount';
 // Kartans ettords-kategorietiketter (Musik, Sport, Familj …) — kategori-
 // chipet nere till höger på raden (Josef 2/9), vänster om statusbadgen.
 import { categoryLabel } from '@/components/v2/v2MapLabel';
-import EventExpanded from './EventExpanded';
+import EventExpanded, { type ExpandedOrganizerItem, type ExpandedOrganizerRow } from './EventExpanded';
 import EventInfoRow from './EventInfoRow';
 
 // Inloggningsmodalen (samma som kartans) — laddas först när någon utloggad
@@ -300,7 +300,7 @@ function DupList({ dups, repTitle, onPick, activeId }: {
     );
 }
 
-function EventRow({ e, dimmed, isSaved, likeCount = 0, onToggleSave, nowTs, expandedId, onToggleExpand, dayLabel }: {
+function EventRow({ e, dimmed, isSaved, likeCount = 0, onToggleSave, nowTs, expandedId, onToggleExpand, dayLabel, organizerRowFor, onPickOrganizerEvent }: {
     e: ListedEvent;
     dimmed?: boolean;
     isSaved: boolean;
@@ -317,6 +317,10 @@ function EventRow({ e, dimmed, isSaved, likeCount = 0, onToggleSave, nowTs, expa
     onToggleExpand: (id: string, anchor?: HTMLElement | null) => void;
     /** Dagrubriken ("torsdag 9 juli") — panelens datumrad. */
     dayLabel: string;
+    /** "Fler från samma arrangör" i utfällningen (7/10) — föräldern räknar
+     *  fram raden ur stadens lista; brickklicket hoppar dit. */
+    organizerRowFor?: (e: Omit<ListedEvent, 'dups'>) => ExpandedOrganizerRow | null;
+    onPickOrganizerEvent?: (item: ExpandedOrganizerItem) => void;
 }) {
     const [imgFailed, setImgFailed] = useState(false);
     const liRef = useRef<HTMLLIElement>(null);
@@ -349,6 +353,8 @@ function EventRow({ e, dimmed, isSaved, likeCount = 0, onToggleSave, nowTs, expa
             dayLabel={dayLabel}
             onClose={() => onToggleExpand(shown.id, liRef.current)}
             onMapClick={() => seedMapHandoff(shown)}
+            organizerRow={organizerRowFor ? organizerRowFor(shown) : null}
+            onPickOrganizerEvent={onPickOrganizerEvent}
         />
     );
     // AFFILIATE-RADEN (Josef 10/9): guldkant + BOKA i guld vänster om hjärtat
@@ -387,7 +393,7 @@ function EventRow({ e, dimmed, isSaved, likeCount = 0, onToggleSave, nowTs, expa
     // contain-intrinsic-size håller scrollhöjden någorlunda stabil.
     if (hasImage) {
         return (
-            <li ref={liRef} className={`relative overflow-hidden [contain-intrinsic-size:auto_10rem] ${liBase}`}>
+            <li ref={liRef} data-row-id={e.id} className={`relative overflow-hidden [contain-intrinsic-size:auto_10rem] ${liBase}`}>
                 <Link href={e.href} className="block" onClick={ev => pick(ev, e)} aria-expanded={expanded}>
                     <div className="relative">
                         {/* Ingen höjdanimation: EventExpanded mäter panelens läge
@@ -447,7 +453,7 @@ function EventRow({ e, dimmed, isSaved, likeCount = 0, onToggleSave, nowTs, expa
     // så li:t är en kolumn med radinnehållet i en egen flex-div. Panelen
     // (EventExpanded) ligger sist i kolumnen.
     return (
-        <li ref={liRef} className={`[contain-intrinsic-size:auto_4.5rem] ${liBase}`}>
+        <li ref={liRef} data-row-id={e.id} className={`[contain-intrinsic-size:auto_4.5rem] ${liBase}`}>
             <div className="flex items-stretch">
                 <Link href={e.href} className="flex-1 min-w-0 flex items-start gap-3 pl-4 py-3" onClick={ev => pick(ev, e)} aria-expanded={expanded}>
                     <span className="shrink-0 w-9 h-9 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-lg leading-none mt-0.5" aria-hidden>{e.emoji}</span>
@@ -703,6 +709,75 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     const renderDays = shownDays.slice(0, dayLimit);
     const hasMoreDays = renderDays.length < shownDays.length;
 
+    // ── FLER FRÅN SAMMA ARRANGÖR i utfällningen (7/10, Josef: "precis som i
+    // eventkorten på kartan") ─────────────────────────────────────────────
+    // Brickorna plockas ur stadens redan laddade lista: ALLA kommande dagar
+    // (freshDays, inte bara periodens) men bara rader som klarar kategori-/
+    // 🔥-/sökfiltret — ett brickklick ska alltid kunna landa på en rad som
+    // faktiskt går att visa. Perioden hanteras i hoppet (sel byts till Alla
+    // när måldagen inte visas). hostSlug matchar som arrangörssidan; utan
+    // slug (biljettplattform m.m.) matchas värdnamnet rakt av.
+    const organizerRowFor = (target: Omit<ListedEvent, 'dups'>): ExpandedOrganizerRow | null => {
+        const name = (target.hostName ?? '').replace(/\s+/g, ' ').trim();
+        const slug = target.hostSlug ?? null;
+        if (!slug && name.length < 3) return null;
+        const nameNorm = name.toLowerCase();
+        const matches = (c: { hostSlug?: string; hostName: string | null }) => (slug
+            ? c.hostSlug === slug
+            : (c.hostName ?? '').replace(/\s+/g, ' ').trim().toLowerCase() === nameNorm);
+        const items: ExpandedOrganizerItem[] = [];
+        outer: for (const d of freshDays) {
+            for (const r of d.events) {
+                if (!rowMatch(r)) continue;
+                for (const cand of [r as Omit<ListedEvent, 'dups'>, ...(r.dups ?? [])]) {
+                    if (cand.id === target.id || !matches(cand) || isPast(cand)) continue;
+                    items.push({
+                        id: cand.id, repId: r.id, dayKey: d.key, dayLabel: d.label,
+                        title: cand.title, emoji: cand.emoji, coverImage: cand.coverImage, clock: cand.clock,
+                    });
+                    if (items.length >= 12) break outer;
+                }
+            }
+        }
+        return items.length > 0 ? { slug, name: name || 'arrangören', items } : null;
+    };
+
+    // Hoppet från en arrangörsbricka: måldagen kan vara OAVTÄCKT (dag-för-
+    // dag-avtäckningen) eller utanför den valda perioden. pendingJumpRef
+    // överlever sel-bytet — reset-effekten ovan nollar expandedId/revealed på
+    // sel-ändring, och hopp-effekten (deklarerad EFTER den) applicerar målet
+    // i samma varv, när dagen väl finns i shownDays.
+    const pendingJumpRef = useRef<ExpandedOrganizerItem | null>(null);
+    const [rowScrollId, setRowScrollId] = useState<string | null>(null);
+    const jumpToOrganizerEvent = (item: ExpandedOrganizerItem) => {
+        pendingJumpRef.current = item;
+        if (!shownDays.some(d => d.key === item.dayKey)) setSel({ kind: 'period', period: 'all' });
+        // Stäng nuvarande utfällning direkt — triggar också en render när
+        // perioden redan var rätt.
+        setExpandedId(null);
+    };
+    useEffect(() => {
+        const jump = pendingJumpRef.current;
+        if (!jump) return;
+        const di = shownDays.findIndex(d => d.key === jump.dayKey);
+        if (di < 0) return; // sel-bytet har inte slagit igenom än — nästa varv
+        pendingJumpRef.current = null;
+        setRevealed(r => Math.max(r, di + 1));
+        setExpandedId(jump.id);
+        setRowScrollId(jump.repId);
+    });
+    // Scrolla till målraden när den står i DOM (avtäckningen kan ta en render
+    // till) — radens övre kant strax under toppnaven, som panelens egen
+    // under-vecket-kompensation (~120 px).
+    useEffect(() => {
+        if (!rowScrollId) return;
+        const el = document.querySelector(`li[data-row-id="${CSS.escape(rowScrollId)}"]`);
+        if (!el) return;
+        setRowScrollId(null);
+        const top = el.getBoundingClientRect().top + window.scrollY - 120;
+        window.scrollTo({ top: Math.max(0, top), behavior: 'instant' as ScrollBehavior });
+    });
+
     // Filterbyte → börja om från första dagen i det nya urvalet, och fäll
     // ihop det öppna eventet (raden kan ha filtrerats bort).
     useEffect(() => { setRevealed(1); setExpandedId(null); }, [sel, category, sourceOnly, searchQ]);
@@ -897,13 +972,13 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                             )}
                             <ul className="flex flex-col gap-2">
                                 {pastOpen && day.past.map(e => (
-                                    <EventRow key={e.id} e={e} dimmed isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
+                                    <EventRow key={e.id} e={e} dimmed isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} organizerRowFor={organizerRowFor} onPickOrganizerEvent={jumpToOrganizerEvent} />
                                 ))}
                                 {withImg.map(e => (
-                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
+                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} organizerRowFor={organizerRowFor} onPickOrganizerEvent={jumpToOrganizerEvent} />
                                 ))}
                                 {shownImgless.map(e => (
-                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} />
+                                    <EventRow key={e.id} e={e} isSaved={saved.has(e.id)} likeCount={rowLikes(e)} onToggleSave={toggleSave} nowTs={nowTs} expandedId={expandedId} onToggleExpand={toggleExpand} dayLabel={day.label} organizerRowFor={organizerRowFor} onPickOrganizerEvent={jumpToOrganizerEvent} />
                                 ))}
                                 {nowTs !== 0 && imglessMore > 0 && (
                                     <li>

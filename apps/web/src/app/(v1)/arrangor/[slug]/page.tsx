@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { svList } from '../../evenemang/cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd } from '../../evenemang/EventList';
 import TopNav from '../../evenemang/TopNav';
-import { cityMapHref } from '../../evenemang/CityMapHero';
+import CityMapHero, { cityMapHref } from '../../evenemang/CityMapHero';
 import { DayFilterProvider } from '../../evenemang/dayFilter';
 import { getOrganizer, getNationalUpcomingCountRuntime, type Organizer } from '../organizerData';
 import { ORGANIZER_PAGE_INDEX_MIN, organizerHref } from '@/utils/organizerPages';
@@ -117,6 +117,13 @@ export default async function OrganizerPage({ params }: { params: Promise<{ slug
                 </div>
 
                 <DayFilterProvider>
+                    {/* KART-HERON (7/10, Josef: "kan vi inte bara ha en karta
+                        också inne på arrangören ... så man kan se eventen
+                        utplacerade"): samma förrenderade stadsbild + levande
+                        brickor som stadssidorna, fast med BARA arrangörens
+                        event. Periodchipsen i heron styr listan nedanför via
+                        samma delade dagfilter. */}
+                    {home && <CityMapHero city={home} events={o.events} recommended={[]} />}
                     <EventDayList events={o.events} cityName={home?.name ?? o.name} />
                 </DayFilterProvider>
 

@@ -36,3 +36,19 @@ export function rsvpCountDeltas(
 export function rsvpShareId(eventId: string, userCreated: boolean | undefined): string {
     return userCreated ? eventId.split('__')[0] : eventId;
 }
+
+/** localStorage-nyckeln för eget svar — DELAD mellan kartan ((v2)/page.tsx)
+ *  och stadssidorna (hooks/useEventRsvp): {going: string[], interested: string[]}. */
+export const RSVP_EVENTS_KEY = 'vadkul_rsvp_events';
+
+/** Tolka lagringsvärdet — ren och defensiv, som parseMapFilter. */
+export function parseRsvpLocal(raw: string | null): { going: string[]; interested: string[] } {
+    const empty = { going: [] as string[], interested: [] as string[] };
+    if (!raw) return empty;
+    let obj: unknown;
+    try { obj = JSON.parse(raw); } catch { return empty; }
+    if (!obj || typeof obj !== 'object') return empty;
+    const list = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+    const { going, interested } = obj as Record<string, unknown>;
+    return { going: list(going), interested: list(interested) };
+}

@@ -28,7 +28,7 @@ export default function CityMapHeroMarkers({ markers, bigMapHref }: {
     /** Stora kartan centrerad på staden — dit går klick på kartbotten. */
     bigMapHref: string;
 }) {
-    const { sel, category } = useDayFilter();
+    const { sel, category, popularOnly } = useDayFilter();
     // Urvalet är klockberoende ("har varit") → får inte köras vid SSR, då
     // skulle serverns och klientens HTML kunna skilja sig. Samma mönster som
     // daglistans nowTs.
@@ -40,9 +40,12 @@ export default function CityMapHeroMarkers({ markers, bigMapHref }: {
         return pickHeroMarkers(markers, {
             dayKeys: sel.kind === 'period' ? periodKeys(sel.period) : [sel.key],
             category,
+            // 🔥-chippet smalnar heron som listan (7/10: "inne på stadssidan
+            // ska ju de event man vill se visas").
+            popularOnly,
             now: Date.now(),
         });
-    }, [mounted, markers, sel, category]);
+    }, [mounted, markers, sel, category, popularOnly]);
 
     return (
         <>

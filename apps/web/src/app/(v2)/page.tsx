@@ -21,7 +21,7 @@ import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
 import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
 import { setRsvpStatus } from '@/services/rsvpService';
-import { nextRsvp, rsvpCountDeltas, rsvpShareId } from '@/utils/rsvpTransition';
+import { nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY } from '@/utils/rsvpTransition';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
@@ -1691,17 +1691,16 @@ export default function HomePage() {
     }, [savedEventIds, user]);
 
     // Kommer/Intresserad överlever omladdning — samma mönster som sparade.
+    // Nyckeln är DELAD med stadssidornas svar (hooks/useEventRsvp).
     useEffect(() => {
         try {
-            const raw = JSON.parse(localStorage.getItem('vadkul_rsvp_events') ?? 'null');
-            if (raw && typeof raw === 'object') {
-                if (Array.isArray(raw.going) && raw.going.length) setGoingEventIds(new Set(raw.going));
-                if (Array.isArray(raw.interested) && raw.interested.length) setInterestedEventIds(new Set(raw.interested));
-            }
+            const local = parseRsvpLocal(localStorage.getItem(RSVP_EVENTS_KEY));
+            if (local.going.length) setGoingEventIds(new Set(local.going));
+            if (local.interested.length) setInterestedEventIds(new Set(local.interested));
         } catch { /* korrupt localStorage — börja om tomt */ }
     }, []);
     useEffect(() => {
-        localStorage.setItem('vadkul_rsvp_events', JSON.stringify({
+        localStorage.setItem(RSVP_EVENTS_KEY, JSON.stringify({
             going: [...goingEventIds], interested: [...interestedEventIds],
         }));
     }, [goingEventIds, interestedEventIds]);
