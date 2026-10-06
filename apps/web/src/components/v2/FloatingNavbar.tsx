@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Search, X } from 'lucide-react';
+import { User, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import HoverLabel from './HoverLabel';
 
@@ -19,6 +19,9 @@ interface FloatingNavbarProps {
     /** Sökfältet fälls ut/ihop — sidan visar kategoriraden i sökpanelen så
      *  fort fältet är öppet, även utan söktext (16/9). */
     onSearchOpenChange?: (open: boolean) => void;
+    /** Kartfiltret är på (kategorier/🔥/källa) — filterknappen får en prick,
+     *  samma blå som profilknappens inloggad-prick. */
+    filterActive?: boolean;
     /* (Hjärtknappen "Sparade" låg här. BORTTAGEN 22/8, Josef: gilla-knappen
        ska inte finnas för utloggade — och för inloggade var den redan ersatt
        av Sparade-raden i profilpanelen, så props savedCount/onToggleSaved
@@ -66,11 +69,15 @@ export default function FloatingNavbar({
     onLoginClick,
     onOpenProfile,
     onSearchOpenChange,
+    filterActive = false,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
     const [searchOpen, setSearchOpen] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
-
+    // Filterknappens öppning (6/10) ska INTE fokusera fältet alls — man kom
+    // för chipsen, inte för att skriva, och ett fokus kan dra upp tangent-
+    // bordet över panelen på Android.
+    const skipFocusRef = useRef(false);
 
     // Fokusera sökfältet när det öppnas — numera bara en RESERV för öppningar
     // som inte går via klicket (mobiltangentbordet kräver det synkrona fokuset
@@ -78,6 +85,7 @@ export default function FloatingNavbar({
     // öppnar ALDRIG tangentbordet på iOS).
     useEffect(() => {
         if (searchOpen) {
+            if (skipFocusRef.current) { skipFocusRef.current = false; return; }
             setTimeout(() => searchInputRef.current?.focus(), 50);
         }
     }, [searchOpen]);
@@ -233,6 +241,31 @@ export default function FloatingNavbar({
                                 eventsökning (användarkommentar 10/8). */}
                             {!searchOpen && <HoverLabel>Sök och filtrera</HoverLabel>}
                         </div>
+                        {/* FILTERKNAPPEN i lod under sök (ägarbeslut 6/10:
+                            "Fixa en tydligare filter" — chipraden bakom 🔍 var
+                            för gömd). Speglar + under profilen: samma kolumn,
+                            samma 44 px. Öppnar sökpanelen där kategoriraden
+                            bor, MEN utan att fokusera fältet — ett filterklick
+                            ska inte dra upp mobiltangentbordet över panelen.
+                            Pricken = filtret är på (samma blå som profilens
+                            inloggad-prick). Göms när fältet är öppet — då
+                            syns chipsen redan. */}
+                        {!searchOpen && (
+                            <div className="flex flex-row-reverse items-center gap-2 pointer-events-none">
+                                <button
+                                    type="button"
+                                    onClick={() => { skipFocusRef.current = true; setSearchOpen(true); }}
+                                    aria-label={filterActive ? 'Filtrera kartan — ett filter är på' : 'Filtrera kartan'}
+                                    className="peer pointer-events-auto relative h-11 w-11 flex items-center justify-center bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200"
+                                >
+                                    <SlidersHorizontal size={19} className="text-slate-700" aria-hidden />
+                                    {filterActive && (
+                                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
+                                    )}
+                                </button>
+                                <HoverLabel>Filtrera</HoverLabel>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

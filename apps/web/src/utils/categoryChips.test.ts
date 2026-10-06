@@ -60,7 +60,7 @@ describe('planMapCategoryChips', () => {
 
     it('flest först, nollor dolda, Övrigt sist', () => {
         const counts = new Map([['music', 3], ['sport', 9], ['other', 20], ['food', 3]]);
-        expect(planMapCategoryChips(MAP_KEYS, counts, null)).toEqual([
+        expect(planMapCategoryChips(MAP_KEYS, counts, new Set())).toEqual([
             { key: 'sport', count: 9 },
             { key: 'music', count: 3 },
             { key: 'food', count: 3 },
@@ -68,16 +68,17 @@ describe('planMapCategoryChips', () => {
         ]);
     });
 
-    it('vald kategori följer med även på noll, så den går att släppa', () => {
-        const plan = planMapCategoryChips(MAP_KEYS, new Map([['music', 2]]), 'stage');
+    it('valda kategorier följer med även på noll, så de går att släppa', () => {
+        const plan = planMapCategoryChips(MAP_KEYS, new Map([['music', 2]]), new Set(['stage', 'sport']));
         expect(plan).toEqual([
             { key: 'music', count: 2 },
             { key: 'stage', count: 0 },
+            { key: 'sport', count: 0 },
         ]);
     });
 
     it('tom vy utan val ger inga chips', () => {
-        expect(planMapCategoryChips(MAP_KEYS, new Map(), null)).toEqual([]);
+        expect(planMapCategoryChips(MAP_KEYS, new Map(), new Set())).toEqual([]);
     });
 });
 

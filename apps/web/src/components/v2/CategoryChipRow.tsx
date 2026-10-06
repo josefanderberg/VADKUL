@@ -23,11 +23,12 @@ const CHIP_IDLE = 'bg-white/10 text-white/85 hover:bg-white/20';
 
 interface CategoryChipRowProps {
     /** Event per kategori i kartans ruta, räknade med alla filter utom själva
-     *  kategorivalet — alltså vad kartan visar om man trycker på chippet. */
+     *  kategorivalet — alltså vad kategorin bidrar med om chippet är valt. */
     counts: ReadonlyMap<string, number>;
-    selected: EventCategoryType | null;
-    /** null = släpp filtret. */
-    onSelect: (category: EventCategoryType | null) => void;
+    /** Valda kategorier (FLERVAL sedan 6/10, tom mängd = visa alla). */
+    selected: ReadonlySet<string>;
+    /** Togglar kategorin i valet; null = släpp alla. */
+    onToggle: (category: EventCategoryType | null) => void;
     /** Event per Fler-källa i vyn (Svenska kyrkan, PRO, Korpen). */
     sourceCounts: ReadonlyMap<string, number>;
     selectedSource: string | null;
@@ -43,9 +44,10 @@ interface CategoryChipRowProps {
  * Kategorifiltret i SÖKPANELEN (ägarbeslut 16/9). Kolumnen till höger revs
  * 15/9 för att få ner antalet knappar, men användare saknade filtret ("bara
  * få upp sport eller musik") — så det bor nu bakom sökknappen och syns så
- * fort sökfältet är öppet. EN sak åt gången: tryck = bara den, tryck igen =
- * alla. Kortnamnen är samma ord som under kartans markörer.
- * Vald = vit platta med mörk text — guld betyder boost på kartan.
+ * fort sökfältet är öppet. FLERVAL sedan 6/10 (ägarbeslut, efter happymap-
+ * genomgången): varje tryck togglar sin kategori, flera kan vara valda
+ * samtidigt, inga valda = alla. Kortnamnen är samma ord som under kartans
+ * markörer. Vald = vit platta med mörk text — guld betyder boost på kartan.
  *
  * 🔥 POPULÄRA står FÖRST (ägarbeslut 24/9): 🔥-knappen i kartans nedre högra
  * hörn är riven och filtret bor här. Det är ett eget läge (popularOnly i
@@ -63,7 +65,7 @@ interface CategoryChipRowProps {
  * Själva rullningen bor i HScrollRow (delad med eventkortets rader).
  */
 export default function CategoryChipRow({
-    counts, selected, onSelect, sourceCounts, selectedSource, onSelectSource, popular,
+    counts, selected, onToggle, sourceCounts, selectedSource, onSelectSource, popular,
 }: CategoryChipRowProps) {
     const chips = useMemo(() => planMapCategoryChips(KEYS, counts, selected), [counts, selected]);
     // Fler är utfälld när man själv öppnat den — ELLER när en källa är vald,
@@ -109,13 +111,13 @@ export default function CategoryChipRow({
                 )}
                 {chips.map(({ key, count }) => {
                     const cat = key as EventCategoryType;
-                    const on = selected === cat;
+                    const on = selected.has(cat);
                     return (
                         <button
                             key={key}
                             type="button"
                             aria-pressed={on}
-                            onClick={() => onSelect(on ? null : cat)}
+                            onClick={() => onToggle(cat)}
                             className={`${CHIP} ${on ? CHIP_ON : CHIP_IDLE}`}
                         >
                             <span aria-hidden>{EVENT_CATEGORIES[cat].emoji}</span>
