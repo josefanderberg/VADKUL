@@ -18,15 +18,14 @@ import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
-import { eventDays, isPopularListed, takeRows } from '@/utils/popularList';
+import { eventDays, isPopularListed, LIST_HORIZON_DAYS, takeRows } from '@/utils/popularList';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List, ZoomOut } from 'lucide-react';
 
-/** Listflikarnas horisont (Josef 24/9: "vi fokuserar mest på kommande
- *  månaden"). Kartan laddar bara tidsfönstret (14 dagar, utils/timelineWindow);
- *  resten hämtas när man scrollar förbi det (requestFullTimeline). */
-const LIST_HORIZON_DAYS = 30;
+// Listflikarnas horisont (LIST_HORIZON_DAYS, utils/popularList). Kartan laddar
+// bara tidsfönstret (14 dagar, utils/timelineWindow); resten hämtas när man
+// scrollar förbi det (requestFullTimeline).
 
 // Default event-längd när vi inte har en explicit sluttid — används för Pågår/Har varit.
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;

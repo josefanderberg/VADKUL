@@ -24,6 +24,7 @@ import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPi
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
+import { inListWindow, isPopularListed } from '@/utils/popularList';
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { zoomInCenter } from '@/utils/zoomInCenter';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug } from '@/utils/organizerPages';
@@ -3041,13 +3042,28 @@ export default function HomePage() {
         }
     }, [user, openLogin, notisCity]);
 
-    // Eventen i KARTANS RUTA (dagens + sök-filtrerade), smalnade med 🔥-läget
-    // men FÖRE kategorifiltret: 🔥-knappens badge och kategoriradens siffror
-    // räknar härifrån. (Hette categoryPanelEvents t.o.m. 15/9, sedan
-    // popularButtonEvents.)
+    // Eventen i KARTANS RUTA, smalnade med 🔥-läget men FÖRE kategorifiltret:
+    // kategoriradens siffror (🔥 + kategorierna) räknar härifrån. (Hette
+    // categoryPanelEvents t.o.m. 15/9, sedan popularButtonEvents.)
+    // SAMMA TIDSFÖNSTER SOM LISTANS FLIKAR sedan 7/10 (Josef: "22 populära
+    // … sen står det något annat samtidigt. hur kan de skilja sig åt alla"):
+    // raden räknade den visade dagen, flikarna månaden och bannern veckan,
+    // så 🔥 3 stod mot POPULÄRT · 32. Nu = från den visade dagen inom
+    // LIST_HORIZON_DAYS, passerade bort (utils/popularList inListWindow), och
+    // utan det öppna eventet - fliken visar det inte heller. Sök/arrangör
+    // smalnar som förut (searchFilteredEvents); utan dem räknas alla laddade
+    // dagar, inte bara periodens slice. Veckobannern säger själv "i veckan".
     const viewEvents = useMemo(
-        () => searchFilteredEvents.filter(e => inMapView(e) && passesPopularFilter(e, popularOnly)),
-        [searchFilteredEvents, inMapView, popularOnly],
+        () => {
+            const now = new Date();
+            const nowMs = now.getTime();
+            const base = searchQ || organizerEvents ? searchFilteredEvents : events;
+            return base.filter(e => e.id !== selectedEvent?.id
+                && inMapView(e)
+                && passesPopularFilter(e, popularOnly)
+                && inListWindow(e, dayOffset, now, evt => isEventPast(evt, nowMs)));
+        },
+        [searchQ, organizerEvents, searchFilteredEvents, events, selectedEvent, inMapView, popularOnly, dayOffset],
     );
     // Eventkortets listflikar Alla · 🔥 Populärt (Josef 23/9, 24/9): eventen
     // i KARTANS RUTA som passerar kartans filter, ALLA dagar — inte bara den
@@ -3112,9 +3128,14 @@ export default function HomePage() {
     // snapshoten, 5-min-API-cachen) saknar fältet helt — då döljs cirkeln i
     // stället för att erbjuda ett filter som tömmer kartan.
     const popularAvailable = useMemo(() => events.some(e => e.pop), [events]);
-    // 🔥-chippets siffra: pop-flaggade i kartans ruta (det 🔥-knappens badge
-    // räknade t.o.m. 24/9).
-    const popularChipCount = useMemo(() => viewEvents.reduce((n, e) => n + (e.pop ? 1 : 0), 0), [viewEvents]);
+    // 🔥-chippets siffra = Populärt-flikens (Josef 7/10: "den filterknappen där
+    // det står populära = hur många som står åt höger om månaden"): samma
+    // populärregel som fliken (pop-flaggan ELLER aktiv boost) och samma
+    // kartfilter, så en vald kategori smalnar båda.
+    const popularChipCount = useMemo(() => {
+        const nowMs = Date.now();
+        return viewEvents.reduce((n, e) => n + (isPopularListed(e, nowMs) && matchesFilter(e) ? 1 : 0), 0);
+    }, [viewEvents, matchesFilter]);
 
     // Dag-/kategori-/eventval renderar om stora träd (kortet, listorna) och
     // triggar kartans GL-uppdateringar — som transitions är omrenderingen
