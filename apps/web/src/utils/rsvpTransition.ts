@@ -1,4 +1,5 @@
 import type { EventRsvpStatus } from '@/types';
+import { eventShareSlug } from '@/utils/eventShareSlug';
 
 /**
  * Kommer/Intresserad-svarets övergångar (6/10, spår 3). Ett tryck på samma
@@ -35,6 +36,15 @@ export function rsvpCountDeltas(
  *  svarar på seriens DOKUMENT — samma regel som delningslänken (/e/). */
 export function rsvpShareId(eventId: string, userCreated: boolean | undefined): string {
     return userCreated ? eventId.split('__')[0] : eventId;
+}
+
+/** BJUD MED-länken (6/10): /e/<slug>?inb=1&fran=<uid> - mottagaren landar på
+ *  kartan med inbjudningsbannern och svarar utan konto. DELAD av kartkortet
+ *  ((v2)/page.tsx) och stadssidornas utfällda event, så länken aldrig ser
+ *  olika ut beroende på var man bjöd. fromUid null = utloggad (ingen fran). */
+export function inviteUrl(origin: string, eventId: string, userCreated: boolean | undefined, fromUid: string | null): string {
+    const fran = fromUid ? `&fran=${encodeURIComponent(fromUid)}` : '';
+    return `${origin}/e/${eventShareSlug(rsvpShareId(eventId, userCreated))}?inb=1${fran}`;
 }
 
 /** localStorage-nyckeln för eget svar — DELAD mellan kartan ((v2)/page.tsx)

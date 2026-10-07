@@ -20,8 +20,7 @@ import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
 import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
 import { setRsvpStatus } from '@/services/rsvpService';
-import { nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY } from '@/utils/rsvpTransition';
-import { eventShareSlug } from '@/utils/eventShareSlug';
+import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY } from '@/utils/rsvpTransition';
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
@@ -3222,9 +3221,7 @@ export default function HomePage() {
     // vidare till kartan (MapRedirect).
     const handleInviteFriend = useCallback(async (evt: LinkEvent) => {
         if (!goingEventIds.has(evt.id)) void handleSetRsvp(evt, 'going');
-        const shareId = rsvpShareId(evt.id, evt.userCreated);
-        const fran = user ? `&fran=${encodeURIComponent(user.uid)}` : '';
-        const url = `${window.location.origin}/e/${eventShareSlug(shareId)}?inb=1${fran}`;
+        const url = inviteUrl(window.location.origin, evt.id, evt.userCreated, user?.uid ?? null);
         const text = `Följer du med på ${evt.title}?`;
         try {
             if (navigator.share) {
@@ -4415,7 +4412,11 @@ export default function HomePage() {
             // dags enrad "IDAG · VÄXJÖ" och 2/9-plattan med dagen stort.
             // Platsen är kvar i mitten överst: hörnen ägs av profil och
             // "+ Lägg till" - gridet runt om håller plattan fri från dem.
-            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center min-w-0 max-w-full rounded-full backdrop-blur-md px-4 sm:px-6 py-2 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
+            // h-11 = SAMMA 44 px som profilen och pillen (Josef samma kväll:
+            // "höja den ... så den är aline med lägg till") - med py-2 var den
+            // 52 px och hängde 8 px under knapparna. Därför text-xl och inte
+            // 2xl på desktop: 2xl + dagraden rymdes inte i 44 px.
+            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center justify-center min-w-0 max-w-full h-11 rounded-full backdrop-blur-md px-4 sm:px-6 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
                 tourHint === 'city' ? 'bg-slate-900/90 scale-105' : 'bg-slate-900/80 hover:bg-slate-900/90 hover:scale-105'
             }`}
             style={{ transitionDuration: '200ms' }}
@@ -4424,9 +4425,9 @@ export default function HomePage() {
                 raden revs samma kväll som den lades till — namnet ÄR länken,
                 utan skylt). Länkens ärende ligger i title/aria + sr-only-
                 texten nedan, som också är det Google läser.
-                sm:leading-tight MÅSTE upprepas: sm:text-2xl sätter om
-                line-height till 32px i breakpointen och vinner annars - då
-                växer plattan i onödan på desktop. leading-tight och inte
+                sm:leading-tight MÅSTE upprepas: sm:text-xl sätter om
+                line-height till 28px i breakpointen och vinner annars - då
+                ryms inte två rader i plattans 44 px. leading-tight och inte
                 leading-none: truncate klipper, och med leading-none försvann
                 nederstaplarna i "Göteborg"/"Helsingborg". */}
             {/* DAGEN under staden - den ska fortfarande synas (Josef 2/9: "där
@@ -4444,7 +4445,7 @@ export default function HomePage() {
             {/* Staden överst (7/10 kväll): plattan är länken till stadens
                 egen /evenemang-sida (cityLink; indexet som fallback - Googles
                 väg in i stadshierarkin), och namnet säger vart den leder. */}
-            <span className="block max-w-full truncate text-lg sm:text-2xl font-black tracking-tight text-white leading-tight sm:leading-tight">
+            <span className="block max-w-full truncate text-lg sm:text-xl font-black tracking-tight text-white leading-tight sm:leading-tight">
                 {liveCityName ?? 'Sverige'}
             </span>
             <span

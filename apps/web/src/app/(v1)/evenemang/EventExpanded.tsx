@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarDays, Check, Lock, MapPin, Map as MapIcon, MessageCircle, Share2, Ticket, Users, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, Lock, MapPin, Map as MapIcon, MessageCircle, Share2, Ticket, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { LinkEvent } from '@/types';
 import { fetchDeepLinkEvent } from '@/utils/eventSeed';
@@ -15,6 +15,7 @@ import { recordEventClick } from '@/services/eventStatsService';
 import { linkEventService, type RsvpAttendee } from '@/services/linkEventService';
 import { useAuth } from '@/context/AuthContext';
 import { useEventRsvp } from '@/hooks/useEventRsvp';
+import { inviteUrl } from '@/utils/rsvpTransition';
 import EventChatPanel from '@/components/v2/EventChatPanel';
 import HScrollRow from '@/components/ui/HScrollRow';
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
@@ -178,6 +179,27 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
     // konto krävs (anonym session). Skilt från hosted-ANMÄLAN ovan.
     const rsvp = useEventRsvp(e.id, hosted);
 
+    // BJUD MED (7/10 kväll, Josef: "vi behöver de intresserad, kommer, anmäl
+    // och bjud inne på stadssidorna"): samma flöde som kartkortets footer -
+    // den som bjuder blir själv Kommer och delar inbjudningslänken (inviteUrl,
+    // delad med kartan). Mottagaren landar på kartan med bannern och svarar
+    // utan konto. press togglar, så Kommer sätts bara om det inte redan är på.
+    const handleInvite = async () => {
+        if (rsvp.my !== 'going') void rsvp.press('going');
+        const url = inviteUrl(window.location.origin, e.id, hosted, user?.uid ?? null);
+        const text = `Följer du med på ${e.title}?`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: e.title, text, url });
+                return;
+            }
+            await navigator.clipboard.writeText(`${text} ${url}`);
+            toast.success('Inbjudningslänk kopierad!');
+        } catch {
+            // Avbruten delning är inget fel.
+        }
+    };
+
     // CHATT-GRINDEN (Josef 6/9, justerad samma dag): bara VADKUL-värdade
     // event grindas på anmälan (RSVP:n bor här på sidan). Externa event har
     // sin anmälan hos arrangören — där räcker inloggning för att chatta
@@ -302,10 +324,12 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                 )}
             </div>
 
-            {/* KOMMER/INTRESSERAD (7/10) — samma svar och räknare som kart-
-                kortets footer (hooks/useEventRsvp): ömsesidigt uteslutande,
-                inget konto krävs. Hosted-anmälan (riktiga platser) är kvar
-                som egen knapp längre ner. */}
+            {/* KOMMER/INTRESSERAD/BJUD MED (7/10) — samma svar, räknare och
+                inbjudan som kartkortets footer (hooks/useEventRsvp):
+                ömsesidigt uteslutande, inget konto krävs. ANMÄL/BOKA står
+                kvar i knappraden överst + stora CTA:n under texten (raden
+                här ryms inte på en smal telefon med den också). Hosted-
+                anmälan (riktiga platser) är kvar som egen knapp längre ner. */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                     type="button"
@@ -338,6 +362,18 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                     {rsvp.interestedCount !== null && rsvp.interestedCount > 0 && (
                         <span className={`tabular-nums ${rsvp.my === 'interested' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.interestedCount}</span>
                     )}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => void handleInvite()}
+                    aria-label="Bjud med någon — dela eventet"
+                    title="Bjud med någon"
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40"
+                >
+                    <UserPlus size={14} strokeWidth={2.5} aria-hidden />
+                    {/* Bara ikonen på mobil (som kartkortets footer): med
+                        texten bröts knappen ner på egen rad i 375 px. */}
+                    <span className="hidden sm:inline">Bjud med</span>
                 </button>
             </div>
 

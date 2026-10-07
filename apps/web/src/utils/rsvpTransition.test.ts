@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { nextRsvp, rsvpCountDeltas, rsvpShareId } from './rsvpTransition';
+import { eventShareSlug } from './eventShareSlug';
+import { inviteUrl, nextRsvp, rsvpCountDeltas, rsvpShareId } from './rsvpTransition';
 
 describe('nextRsvp', () => {
     it('tomt läge + tryck = valet', () => {
@@ -38,5 +39,18 @@ describe('rsvpShareId', () => {
     });
     it('skrapade event (URL-id med __) kapas inte', () => {
         expect(rsvpShareId('https://ex.se/a__b', false)).toBe('https://ex.se/a__b');
+    });
+});
+
+describe('inviteUrl', () => {
+    it('bygger /e/-länken med inb=1 och inbjudarens uid', () => {
+        const url = inviteUrl('https://vadkul.se', 'https://ex.se/event/1', false, 'abc 123');
+        expect(url).toBe(`https://vadkul.se/e/${eventShareSlug('https://ex.se/event/1')}?inb=1&fran=abc%20123`);
+    });
+    it('utelämnar fran för utloggade', () => {
+        expect(inviteUrl('https://vadkul.se', 'x', false, null)).toBe(`https://vadkul.se/e/${eventShareSlug('x')}?inb=1`);
+    });
+    it('bjuder på seriens dokument för veckoserietillfällen', () => {
+        expect(inviteUrl('o', 'doc1__2026-09-18', true, null)).toBe(`o/e/${eventShareSlug('doc1')}?inb=1`);
     });
 });
