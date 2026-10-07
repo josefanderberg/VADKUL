@@ -63,27 +63,42 @@ export function activeCategorySlug(pathname: string, search: string, citySlug: s
     return q && q.trim() ? q.trim() : null;
 }
 
-export type MapCategoryChip = { key: string; count: number };
+export type MapCategoryChip = {
+    key: string;
+    count: number;
+    /** Står i raden FÖRE 🔥-chippet: vald, eller det öppna eventets kategori. */
+    lead: boolean;
+};
 
 /**
- * KARTANS kategorichips i sökpanelen (Josef 16/9): kategorierna med event i
- * kartans ruta, flest först (lika → `keys`-ordningen), Övrigt alltid sist.
- * Den valda kategorin följer ALLTID med — även på noll — annars går ett
- * filter som tömt vyn inte att släppa i raden.
+ * KARTANS kategorichips i sökpanelen (Josef 16/9, flerval 6/10): kategorierna
+ * med event i kartans ruta, flest först (lika → `keys`-ordningen), Övrigt
+ * alltid sist. Valda kategorier följer ALLTID med — även på noll — annars går
+ * ett filter som tömt vyn inte att släppa i raden.
+ *
+ * VALDA LÄNGST TILL VÄNSTER (ägarbeslut 7/10 sent, Josef: "de kategorier som
+ * är valda måste ju hamna längst åt vänster i den filter menyn"), och direkt
+ * efter dem det ÖPPNA EVENTETS kategori (`highlight`, även på noll - "så man
+ * kan aktivera för att se ifrån den kategorin i listan sen under"). Båda bär
+ * `lead`; resten följer i den vanliga ordningen.
  */
 export function planMapCategoryChips(
     keys: readonly string[],
     counts: ReadonlyMap<string, number>,
-    selected: string | null,
+    selected: ReadonlySet<string>,
+    highlight: string | null = null,
 ): MapCategoryChip[] {
+    // 0 = vald, 1 = det öppna eventets kategori, 2 = övriga.
+    const rank = (key: string) => (selected.has(key) ? 0 : key === highlight ? 1 : 2);
     const chips = keys
-        .map((key, order) => ({ key, count: counts.get(key) ?? 0, order }))
-        .filter(c => c.count > 0 || c.key === selected);
+        .map((key, order) => ({ key, count: counts.get(key) ?? 0, order, rank: rank(key) }))
+        .filter(c => c.count > 0 || c.rank < 2);
     chips.sort((a, b) =>
-        (a.key === 'other' ? 1 : 0) - (b.key === 'other' ? 1 : 0)
+        a.rank - b.rank
+        || (a.key === 'other' ? 1 : 0) - (b.key === 'other' ? 1 : 0)
         || b.count - a.count
         || a.order - b.order);
-    return chips.map(({ key, count }) => ({ key, count }));
+    return chips.map(({ key, count, rank: r }) => ({ key, count, lead: r < 2 }));
 }
 
 /**

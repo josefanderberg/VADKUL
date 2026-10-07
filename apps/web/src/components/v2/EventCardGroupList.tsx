@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChevronRight, Clock } from 'lucide-react';
 import { LinkEvent } from '../../types';
 import { eventEmoji, isEventPast } from './v2MapBricka';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { nearestCityPoint } from '@/utils/cityPoints';
 import { getDayLabel } from './FloatingNavbar';
+import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 
 // ── Gruppväljaren i EVENTKORTET ─────────────────────────────────────────────
 // Ersätter multi-event-listan som svävade över kartan (V2MapGroupList,
@@ -24,10 +25,11 @@ import { getDayLabel } from './FloatingNavbar';
 // eventkorten när man scrollar ner"): blått streck + dagnamnet ("Idag",
 // "Imorgon", "Onsdag", "Ons 8 okt" - getDayLabel). Är hela högen samma dag
 // (vanligt i dagsläget) ritas INGA rubriker.
-// SCROLLEN (Josef 2/9): kortet står still och listan rullar upp under kortets
-// överkant (EventCard låter innehållet scrolla i väljarläget i stället för att
-// växa kortet). Dagrubriken är sticky mot kortets scrollcontainer, så den dag
-// man är på stannar längst upp i kortet tills nästa dags rubrik knuffar ut den.
+// SCROLLEN (7/10 kväll — ersätter 2/9-beslutet "kortet står still"): väljar-
+// läget beter sig som ett VANLIGT eventkort (Josef: "hela det fönstret åka
+// upp"): svep/hjul växer arket genom stoppen (default → taket), innehållet
+// scrollar först på taket. Dagrubriken är sticky mot kortets scrollcontainer,
+// så den dag man är på stannar under platsrubriken tills nästa knuffar ut den.
 // HAR VARIT: passerade event ligger hopfällda bakom en knapp längst ner (samma
 // grepp som stadssidan) i stället för att ta plats bland de kommande.
 
@@ -71,9 +73,16 @@ interface EventCardGroupListProps {
     selectedEvent: LinkEvent | null;
     /** Radklicket = valet. Sidan väljer eventet OCH stänger väljarläget. */
     onSelect: (ev: LinkEvent) => void;
+    /** Rader EFTER högen men INNANFÖR wrappern (7/10: arrangörsraden +
+     *  stadssideknappen när hela platsen hör till en arrangör). Måste ligga
+     *  inuti data-group-list: den klistrade platsrubriken hålls kvar av sin
+     *  container, så den står överst tills man scrollat förbi även de här
+     *  raderna (Josef: "sticky längst upp tills dess att man scrollat förbi
+     *  fler av samma arrangör eller kommit till den vanliga listan under"). */
+    moreRows?: ReactNode;
 }
 
-export default function EventCardGroupList({ events, selectedEvent, onSelect }: EventCardGroupListProps) {
+export default function EventCardGroupList({ events, selectedEvent, onSelect, moreRows = null }: EventCardGroupListProps) {
     // Passerade event ligger hopfällda tills man ber om dem.
     const [pastOpen, setPastOpen] = useState(false);
 
@@ -100,36 +109,58 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
     const sharedVenue = firstName !== '' && events.every(ev => (ev.locationName?.trim() || '') === firstName);
     const placeName = sharedVenue ? firstName : nearestCityPoint(events[0].lat, events[0].lng).name;
 
-    // En eventrad: emoji, titel, klockslag · kategorinamn (+ "har varit" på
-    // passerade). Kategorinamnet till höger om klockslaget (Josef 26/8) —
-    // samma nyckelupplösning som eventEmoji: okänd/utebliven kategori → Övrigt.
-    const row = (ev: LinkEvent, isPast: boolean) => {
+    // En eventrad. KOMPAKT MED BILDFYRKANT TILL VÄNSTER sedan 7/10 kväll
+    // (ägarbeslut: "Vi behöver inte visa bilder i dem ... elller isf i en
+    // ruta åt vänster. så man ser skillnad på dem som är för just den
+    // platsen") - ersätter 6/10-bildkorten (h-28): nu när den vanliga listan
+    // fortsätter UNDER högen ska platsens egna rader se annorlunda ut än
+    // listans stora bildrader. Bild (usableImageUrl filtrerar skräp) i en
+    // w-12-fyrkant där emojin annars står; bildlösa får emoji-fyrkanten.
+    // Klicket väljer eventet precis som förut.
+    const infoRow = (ev: LinkEvent, isPast: boolean, isSel: boolean) => {
         const tid = ev.time && ev.hasSpecificTime !== false
             ? ev.time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
             : '';
         const catKey = (ev.category && ev.category in EVENT_CATEGORIES ? ev.category : 'other') as EventCategoryType;
         const catLabel = EVENT_CATEGORIES[catKey].label;
+        return (
+            <span className={`flex items-center gap-1 text-[11px] font-semibold ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-zinc-400'}`}>
+                {tid && <Clock size={10} className="shrink-0" />}
+                {tid && <span className="shrink-0 tabular-nums">{`kl ${tid}`}</span>}
+                <span className="min-w-0 truncate">{tid ? `· ${catLabel}` : catLabel}</span>
+                {isPast && <span className="shrink-0">· har varit</span>}
+            </span>
+        );
+    };
+    const row = (ev: LinkEvent, isPast: boolean) => {
         const isSel = selectedEvent?.id === ev.id;
+        const img = usableImageUrl(ev.coverImage);
+        // Markerad rad = blå med vit kant (ring-inset, ingen layout-shift) —
+        // samma "vald = vit-kantad" som markören på kartan, så man ser vilken
+        // frame brickan stod på. Passerad rad dämpas (samma 50 % som kartans
+        // nål-prickar).
+        const selClasses = isSel ? 'ring-2 ring-inset ring-white z-10' : '';
         return (
             <li key={ev.id}>
                 <button
                     type="button"
                     onClick={() => onSelect(ev)}
-                    // Markerad rad = blå med vit kant (ring-inset, ingen layout-
-                    // shift) — samma "vald = vit-kantad" som markören på kartan,
-                    // så man ser vilken frame brickan stod på. Passerad rad
-                    // dämpas (samma 50 % som kartans nål-prickar).
-                    className={`relative w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${isSel ? 'bg-[#006AA7] ring-2 ring-inset ring-white z-10' : 'hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700'}${isPast && !isSel ? ' opacity-50' : ''}`}
+                    className={`relative w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${isSel ? `bg-[#006AA7] ${selClasses}` : 'hover:bg-slate-50 dark:hover:bg-zinc-800 active:bg-slate-100 dark:active:bg-zinc-700'}${isPast && !isSel ? ' opacity-50' : ''}`}
                 >
-                    <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100 dark:bg-zinc-800'}`} aria-hidden>{eventEmoji(ev)}</span>
+                    {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={img}
+                            alt=""
+                            loading="lazy"
+                            className="shrink-0 w-12 h-12 rounded-lg object-cover bg-slate-200 dark:bg-zinc-700"
+                        />
+                    ) : (
+                        <span className={`shrink-0 w-12 h-12 rounded-lg flex items-center justify-center text-xl leading-none ${isSel ? 'bg-white/20' : 'bg-slate-100 dark:bg-zinc-800 border border-border'}`} aria-hidden>{eventEmoji(ev)}</span>
+                    )}
                     <span className="flex-1 min-w-0">
                         <span className={`block font-bold text-sm truncate ${isSel ? 'text-white' : 'text-slate-800 dark:text-zinc-100'}`}>{ev.title}</span>
-                        <span className={`flex items-center gap-1 text-[11px] font-semibold ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-zinc-400'}`}>
-                            {tid && <Clock size={10} className="shrink-0" />}
-                            {tid && <span className="shrink-0 tabular-nums">{`kl ${tid}`}</span>}
-                            <span className="min-w-0 truncate">{tid ? `· ${catLabel}` : catLabel}</span>
-                            {isPast && <span className="shrink-0">· har varit</span>}
-                        </span>
+                        {infoRow(ev, isPast, isSel)}
                     </span>
                     <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-white' : 'text-slate-400'}`} />
                 </button>
@@ -145,7 +176,18 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
         // tomrum). data-group-list: EventCard känner igen väljarläget i DOM:en
         // och mäter listans höjd (measureDefaultHeight).
         <div className="pt-1" data-group-list>
-            <div className="flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-zinc-700/70">
+            {/* PLATSRUBRIKEN ÄR KLISTRAD (7/10 kväll, Josef: "den platsen som
+                visas längst upp på eventkortet, den ska ju vara sticky längst
+                upp tills dess att man scrollat förbi fler av samma arrangör
+                eller kommit till den vanliga listan under"). Containern
+                (data-group-list, inkl. moreRows) är det som håller den kvar —
+                när vanliga listan tar vid knuffas den ut av sig själv.
+                pt-6 -mt-6 = netto noll i flödet (28 px-luften står kvar) men
+                fastklistrad bär rubriken sin egen solida yta under grip-zonen
+                i stället för att texten glider in bakom den. z-30 över
+                dagrubrikerna (z-20), som pinnas med överlapp IN UNDER den
+                (top-[60px]) så fontmetrik-skillnader aldrig öppnar en glipa. */}
+            <div className="sticky top-0 z-30 bg-card pt-6 -mt-6 flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-zinc-700/70">
                 <div className="min-w-0 flex-1">
                     <span className="block text-base font-black text-slate-800 dark:text-zinc-100 truncate leading-tight">{placeName}</span>
                     {/* Räknarraden + uppmaningen på SAMMA rad (Josef 2/9: "Välj
@@ -179,10 +221,11 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
                     {showDays && (
                         // Samma rubrik som listan under eventkortet (EventCard:
                         // blått streck i vänstermarginalen, dagtexten i linje med
-                        // radernas innehåll). pt-5 i stället för pt-3: här finns
-                        // ingen flikrad, så rubriken fastnar överst i kortet och
-                        // ska gå fri från drag-strecken.
-                        <li className="sticky top-0 z-20 bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 pt-5 pb-2 border-b border-border flex items-center gap-2">
+                        // radernas innehåll). top-[60px]: pinnas under den
+                        // klistrade PLATSRUBRIKEN (7/10) — medvetet några px in
+                        // under dess botten (z-20 < 30) så fontmetrik-skillnader
+                        // aldrig öppnar en glipa mellan dem.
+                        <li className="sticky top-[60px] z-20 bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 pt-3 pb-2 border-b border-border flex items-center gap-2">
                             <span aria-hidden className="shrink-0 -ml-3 h-4 w-1 rounded-full bg-[#006AA7] dark:bg-sky-400" />
                             <span className="text-sm font-black text-slate-900 dark:text-zinc-100">{day.label}</span>
                         </li>
@@ -208,6 +251,9 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect }: 
                     {pastOpen && pastOrdered.map(ev => row(ev, true))}
                 </ul>
             )}
+            {/* Arrangörsraden + stadssideknappen (7/10) — inuti wrappern så
+                platsrubriken står kvar tills de scrollat förbi (se ovan). */}
+            {moreRows}
         </div>
     );
 }

@@ -74,7 +74,22 @@ export interface UserProfile {
    *  även som tom array — betyder att användaren rört filtret; då rör
    *  profil-defaulterna (65+ ⇒ PRO) det aldrig igen. Se (v2)/page.tsx. */
   mapCategories?: string[];
+  /** Kartans kategorifilter (sökpanelens chips, flerval sedan 6/10) + 🔥-
+   *  läget, sparat så det överlever nästa besök och följer med mellan
+   *  enheter. Skilt från mapCategories (opt-in-källorna ovan). Utloggade
+   *  sparar samma sak i localStorage (utils/mapFilter). */
+  mapFilter?: { kats?: string[]; pop?: boolean };
+  /** "Jag kommer"-event (6/10, spår 3): egna svaret speglas här för snabb
+   *  hydrering mellan enheter. Det publika svaret (avatarer + räknare) bor i
+   *  eventRsvps/{slug}/svar/{uid} + eventStats.going. */
+  goingEventIds?: string[];
+  /** "Intresserad"-event — samma mönster som goingEventIds. */
+  interestedEventIds?: string[];
 }
+
+/** Svaret på ett event: Kommer eller Intresserad (6/10). Ömsesidigt
+ *  uteslutande — ett nytt val ersätter det gamla, samma val togglar av. */
+export type EventRsvpStatus = 'going' | 'interested';
 
 export interface UserReview {
   id: string;

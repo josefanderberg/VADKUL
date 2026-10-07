@@ -14,7 +14,7 @@ import {
     SELECTED_RING_FALLBACK_HEX,
 } from './v2MapBricka';
 
-// "Har varit"-logiken delas av ALLA ytor (kartan, EventCard, SavedPanel,
+// "Har varit"-logiken delas av ALLA ytor (kartan, EventCard, SavedSection,
 // stadssidorna) — en regression här dimmar/visar fel event överallt samtidigt.
 
 const ev = (time: Date | null, hasSpecificTime?: boolean): LinkEvent =>

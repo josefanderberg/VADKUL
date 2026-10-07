@@ -86,21 +86,67 @@ export function recordEventLike(eventId: string, delta: 1 | -1): void {
 }
 
 /**
- * Läs gilla-antalet för ett event (siffran vid hjärtat på kortet). En getDoc
- * per kortöppning - inga lyssnare, ingen extra egress. Returnerar null vid fel
- * (offline, rules ej deployade) så siffran döljs i stället för att ljuga "0".
+ * Kommer/Intresserad-räknarna (6/10, spår 3): `going`/`interested` i SAMMA
+ * eventStats-doc. Deltan kommer från utils/rsvpTransition (testad) så ett
+ * byte Kommer→Intresserad blir exakt -1/+1. Fire-and-forget som likes -
+ * själva svaret bor i eventRsvps/{slug}/svar/{uid} och går alltid igenom.
+ */
+export function recordEventRsvpCount(eventId: string, deltas: { going?: number; interested?: number }): void {
+    const fields: Record<string, unknown> = {};
+    if (deltas.going) fields.going = increment(deltas.going);
+    if (deltas.interested) fields.interested = increment(deltas.interested);
+    if (Object.keys(fields).length === 0) return;
+    try {
+        const ref = doc(db, 'eventStats', eventShareSlug(eventId));
+        setDoc(ref, { ...fields, eventId }, { merge: true }).catch(() => {
+            /* nätverk/regler nere → släpp räknaren, aldrig svaret */
+        });
+    } catch {
+        /* defensivt - en trasig räknare ska inte fälla kartan */
+    }
+}
+
+export interface EventEngagement { likes: number; going: number; interested: number }
+
+// Sessionscache med promise-dedupe: hjärtats siffra OCH footerns räknare
+// läser SAMMA getDoc - en läsning per event och besök oavsett hur många ytor
+// som frågar. Fel cachas inte (nästa öppning får försöka igen).
+const engagementCache = new Map<string, Promise<EventEngagement | null>>();
+
+/**
+ * Läs likes + going + interested i ETT svep (siffran vid hjärtat och
+ * Kommer/Intresserad-footern). Returnerar null vid fel (offline, rules ej
+ * deployade) så siffrorna döljs i stället för att ljuga "0".
+ */
+export function getEventEngagement(eventId: string): Promise<EventEngagement | null> {
+    const slug = eventShareSlug(eventId);
+    let p = engagementCache.get(slug);
+    if (!p) {
+        p = (async (): Promise<EventEngagement | null> => {
+            try {
+                const snap = await getDoc(doc(db, 'eventStats', slug));
+                const data = snap.exists() ? snap.data() : null;
+                // Decrement kan i teorin gå under noll (t.ex. avgillning vars
+                // +1 aldrig nådde servern) - visa aldrig ett negativt tal.
+                const n = (v: unknown) => (typeof v === 'number' ? Math.max(0, v) : 0);
+                return { likes: n(data?.likes), going: n(data?.going), interested: n(data?.interested) };
+            } catch {
+                return null;
+            }
+        })();
+        engagementCache.set(slug, p);
+        void p.then(v => { if (v === null) engagementCache.delete(slug); });
+    }
+    return p;
+}
+
+/**
+ * Läs gilla-antalet för ett event (siffran vid hjärtat på kortet). Delar
+ * läsning och cache med getEventEngagement.
  */
 export async function getEventLikes(eventId: string): Promise<number | null> {
-    try {
-        const snap = await getDoc(doc(db, 'eventStats', eventShareSlug(eventId)));
-        if (!snap.exists()) return 0;
-        const likes = snap.data()?.likes;
-        // Decrement kan i teorin gå under noll (t.ex. avgillning vars +1 aldrig
-        // nådde servern) - visa aldrig ett negativt tal.
-        return typeof likes === 'number' ? Math.max(0, likes) : 0;
-    } catch {
-        return null;
-    }
+    const engagement = await getEventEngagement(eventId);
+    return engagement === null ? null : engagement.likes;
 }
 
 /**

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MapPinPlus, Check } from 'lucide-react';
+import { Plus, Check } from 'lucide-react';
 import HoverLabel from './HoverLabel';
 
 interface CreateEventButtonProps {
@@ -16,19 +16,21 @@ interface CreateEventButtonProps {
 }
 
 /**
- * Skapa/tipsa/önska — kartnål-med-plus DIREKT UNDER PROFILKNAPPEN uppe till
- * vänster (ägarbeslut 24/9: "den att man skapar event den kan vara under
- * profilknappen"). Bodde där 14/8–15/9 också, och i botten-dockans vänstra
- * hörn 15/9–24/9 (🔥-knappen i högra hörnet revs samma dag — 🔥 är ett chip
- * i sökpanelen). Formspråket: blå gradient, gul kant. Den pulserande guld-
- * glöden (gold-glow-pulse) är BORTTAGEN 29/9 (Josef: "gör så den slutar
- * blinka gult"). 44 px — samma storlek som profil och sök.
+ * Skapa/tipsa/önska — RUND +-KNAPP OVANFÖR DAGVÄLJARENS HÖGERKOLUMN (ägarbeslut
+ * 7/10 kväll: "lägg till symbolen som ett plus på motsvarande sida som den
+ * reset knappen. alltså ovanför åt höger om dagsväljaren" — spegelbild av ↺,
+ * som står ovanför bakåtpilen till vänster). Renderas INUTI väljarens relativa
+ * container i page.tsx (absolute bottom-full right-0), med samma tryckyte-
+ * recept som väljarens cirklar: osynlig 66px-knapp, cirkeln på ett inre spann.
+ * Historik: "+ Lägg till"-pill uppe till höger 7/10 (hörnet ägs nu av
+ * filterknappen), under profilknappen 24/9-7/10 (och 14/8-15/9), botten-
+ * dockans vänstra hörn 15/9-24/9. Formspråket: blå gradient, gul kant, STILL
+ * (guld-glöden riven 29/9 — lägg inte tillbaka den).
  *
- * z-[1090] = samma som dagväljaren → hamnar under eventkortet (1250) när ett
- * kort är uppe, precis som väljaren. I placerings-läget är knappen bekräfta-
- * knappen (✓) och lyfts över kortet så den alltid går att nå. Mitt i drop-
- * animationen får den inte unmountas (då fastnar plusDropping-låset) — därför
- * gäller editing-grinden bara läget, inte animationen.
+ * I placerings-läget är knappen bekräfta-knappen (✓) och etiketten "Välj
+ * denna plats" visas — texten "Välj plats" som stod i pillen ryms inte i en
+ * cirkel. Mitt i drop-animationen får den inte unmountas (då fastnar
+ * plusDropping-låset) — därför gäller editing-grinden bara läget.
  */
 export default function CreateEventButton({
     creationMode = 'idle',
@@ -86,26 +88,37 @@ export default function CreateEventButton({
     const label = creationMode === 'placing' ? 'Välj denna plats' : 'Skapa event, tipsa eller önska';
 
     return (
-        // Samma kolumn som toppraden (FloatingNavbar: top-6 + px-4 +
-        // max-w-[1400px] mx-auto) så + står i lod under profilknappen även på
-        // bred skärm. top-[80px] = profilens 24 + 44 px + 12 px luft.
-        <div className={`fixed inset-x-0 top-[80px] px-4 ${creationMode === 'placing' ? 'z-[1260]' : 'z-[1090]'} pointer-events-none`}>
-            <div className="max-w-[1400px] mx-auto flex items-center gap-2">
-                <button
-                    ref={plusBtnRef}
-                    type="button"
-                    onClick={handlePlusClick}
-                    disabled={plusDropping}
-                    aria-label={label}
-                    className={`peer pointer-events-auto relative bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] backdrop-blur-md h-11 w-11 flex items-center justify-center rounded-full shadow-lg border-2 border-[#FECC02] ${hint ? 'scale-105' : 'hover:scale-105'} active:scale-95 transition-transform duration-200 shrink-0 group`}
-                >
-                    {creationMode === 'placing'
-                        ? <Check size={20} className="text-white shrink-0" />
-                        : <MapPinPlus size={20} className={`text-[#FECC02] shrink-0 transition-transform duration-200 ${hint ? 'scale-110' : 'group-hover:scale-110'}`} />}
-                </button>
-                {/* Josef 10/9: "Skapa event, tipsa eller önska" — alla tre vägarna in. */}
-                <HoverLabel show={hint && creationMode === 'idle'}>{label}</HoverLabel>
-            </div>
-        </div>
+        <>
+            {/* Samma frikoppling av träffyta och utseende som väljarens
+                cirklar (2c i page.tsx): knappen är en osynlig 66×66-kolumn,
+                cirkeln (56px) sitter på det inre spannet. bottom-full right-0
+                = rakt ovanför framåtpilen, i lod — spegelbilden av ↺. */}
+            <button
+                ref={plusBtnRef}
+                type="button"
+                onClick={handlePlusClick}
+                disabled={plusDropping}
+                aria-label={creationMode === 'placing' ? label : `Lägg till: ${label}`}
+                title={label}
+                className="peer group pointer-events-auto absolute bottom-full right-0 flex h-[66px] w-[66px] items-center justify-center outline-none"
+            >
+                <span className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#006AA7] via-[#005590] to-[#003C66] border-2 border-[#FECC02] text-white shadow-lg transition-transform duration-200 ${hint ? 'scale-110' : 'group-hover:scale-110'} group-active:scale-95 group-focus-visible:ring-2 group-focus-visible:ring-white/70`}>
+                    {creationMode === 'placing' ? (
+                        <Check size={24} strokeWidth={3} className="shrink-0" />
+                    ) : (
+                        <Plus size={24} strokeWidth={3} className="text-[#FECC02] shrink-0" />
+                    )}
+                </span>
+            </button>
+            {/* Etiketten ovanför cirkeln: visningsrundans create-steg, och
+                ALLTID i placerings-läget — "Välj denna plats" måste synas nu
+                när pillen med text är borta. */}
+            <HoverLabel
+                show={creationMode === 'placing' || (hint && creationMode === 'idle')}
+                className="absolute bottom-full right-0 mb-[66px]"
+            >
+                {label}
+            </HoverLabel>
+        </>
     );
 }

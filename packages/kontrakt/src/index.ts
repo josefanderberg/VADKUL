@@ -16,3 +16,4 @@ export * from './cities';
 export * from './categories';
 export * from './eventShareSlug';
 export * from './organizer';
+export * from './konto';

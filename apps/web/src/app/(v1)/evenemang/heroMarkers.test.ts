@@ -61,6 +61,18 @@ describe('pickHeroMarkers', () => {
         expect(pickHeroMarkers(markers, { dayKeys: null, category: null, now: NOW })).toHaveLength(3);
     });
 
+    it('🔥-chippet smalnar till pipelineklassade populära (7/10)', () => {
+        const markers = [
+            ev({ dx: 0, pop: true }),
+            ev({ dx: 100 }),
+            ev({ dx: 200, pop: true }),
+        ];
+        expect(pickHeroMarkers(markers, { dayKeys: null, category: null, popularOnly: true, now: NOW })
+            .map(m => m.e.dx)).toEqual([0, 200]);
+        // Utan flaggan: allt som förut.
+        expect(pickHeroMarkers(markers, { dayKeys: null, category: null, now: NOW })).toHaveLength(3);
+    });
+
     it('slår ihop event på samma plats till EN bricka med räknare', () => {
         const out = pickHeroMarkers(
             [ev({ dx: 50, dy: 10 }), ev({ dx: 50, dy: 10 }), ev({ dx: 50, dy: 10 })],

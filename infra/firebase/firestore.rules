@@ -82,13 +82,56 @@ service cloud.firestore {
         allow write: if isAuthenticated() && request.auth.uid == reviewerId;
       }
 
-      // UNDERSAMLING: Friends (Vänner)
+      // UNDERSAMLING: Friends (Vänner) — SKÄRPT för spår 3 (7/10): v1-regeln
+      // lät vem som helst av parterna skriva VAD som helst (en motpart kunde
+      // sätta sig själv som 'accepted' direkt). Nu är tillståndsmaskinen
+      // (utils/friendStatus i webben) låst även här:
+      //   users/A/friends/B 'outgoing' = A har frågat B
+      //   users/B/friends/A 'incoming' = B har en förfrågan från A
+      //   båda 'accepted' = vänner — nås BARA via övergångarna nedan.
       match /friends/{friendId} {
-        allow read: if isAuthenticated();
-        // Tillåt skrivning om:
-        // 1. Man är ägare till profilen (userId == auth.uid) - Jag hanterar min och andras status hos mig
-        // 2. Man är vännen som läggs till (friendId == auth.uid) - Jag lägger till mig själv som 'incoming' hos dig
-        allow write: if isAuthenticated() && (request.auth.uid == userId || request.auth.uid == friendId);
+        function validFriendDoc(d) {
+          return d.status in ['incoming', 'outgoing', 'accepted']
+            && d.keys().hasOnly(['status', 'name', 'photoURL', 'createdAt'])
+            && (!d.keys().hasAny(['name'])
+                || (d.name is string && d.name.size() <= 80))
+            // Bilden visas i <img> i vänlistan — bara https (som attendees).
+            && (!d.keys().hasAny(['photoURL'])
+                || (d.photoURL is string && d.photoURL.size() <= 500
+                    && d.photoURL.matches('https://.*')))
+            && (!d.keys().hasAny(['createdAt']) || d.createdAt is timestamp);
+        }
+
+        // Läsa: BARA de två parterna — vänlistor ska inte gå att kartlägga.
+        // (v1-regeln lät alla inloggade läsa allas listor.)
+        allow read: if isAuthenticated()
+          && (request.auth.uid == userId || request.auth.uid == friendId);
+
+        // Skapa: ägaren sin EGEN 'outgoing'-rad, motparten 'incoming'-raden
+        // hos en (det ÄR förfrågan). Ingen kan skapa 'accepted' direkt.
+        // Kräver riktigt konto — en anonym session har inget namn att visa.
+        allow create: if isAuthenticated() && !isAnonymous()
+          && userId != friendId
+          && validFriendDoc(request.resource.data)
+          && (
+            (request.auth.uid == userId && request.resource.data.status == 'outgoing')
+            || (request.auth.uid == friendId && request.resource.data.status == 'incoming')
+          );
+
+        // Uppdatera = acceptera, inget annat. Ägaren: sin 'incoming' →
+        // 'accepted'. Motparten: ägarens 'outgoing' → 'accepted' (spegel-
+        // skrivningen när hen accepterar — bara möjlig när ägaren frågade).
+        allow update: if isAuthenticated() && !isAnonymous()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status == 'accepted'
+          && (
+            (request.auth.uid == userId && resource.data.status == 'incoming')
+            || (request.auth.uid == friendId && resource.data.status == 'outgoing')
+          );
+
+        // Radera: båda parter — avböj/ångra/ta bort vän tar båda raderna.
+        allow delete: if isAuthenticated()
+          && (request.auth.uid == userId || request.auth.uid == friendId);
       }
     }
 
@@ -429,6 +472,61 @@ service cloud.firestore {
         ]);
     }
 
+    // 8e. PRIVAT EVENTCHATT (spår 3, 7/10 kväll: "en privat chatt med folk
+    // man bjuder in"). eventChats/{nyckel}/privat/{trådId} — trådId är
+    // INBJUDARENS uid (en tråd per inbjudare och event), nyckeln är samma
+    // URL-enkodning som 8b fast på SERIENS dokument-id (rsvpShareId, som
+    // eventRsvps) eftersom inbjudningslänken /e/<slug> pekar dit.
+    // Medlemmarna är en MAP uid→true: uppdateringar får BARA röra ens EGEN
+    // nyckel (voters-mönstret i eventPhotos), så att gå med i praktiken
+    // kräver inbjudningslänken (?fran= ÄR trådens id). Medlemmar läser;
+    // webbens trådlista frågar where('members.<mitt uid>', '==', true),
+    // vilket är exakt vad läsregeln kan bevisa. Kräver riktigt konto.
+    match /eventChats/{chatId}/privat/{threadId} {
+      allow read: if isAuthenticated()
+        && resource.data.members[request.auth.uid] == true;
+      allow create: if isAuthenticated() && !isAnonymous()
+        && threadId == request.auth.uid
+        && request.resource.data.eventId is string
+        && request.resource.data.eventId.size() >= 1
+        && request.resource.data.eventId.size() <= 1400
+        && request.resource.data.members is map
+        && request.resource.data.members.keys().hasOnly([request.auth.uid])
+        && request.resource.data.members[request.auth.uid] == true
+        && (!request.resource.data.keys().hasAny(['inviterName'])
+            || (request.resource.data.inviterName is string
+                && request.resource.data.inviterName.size() <= 80))
+        && request.resource.data.keys().hasOnly([
+            'eventId', 'members', 'inviterName', 'createdAt'
+        ]);
+      // Gå med (eller lämna): bara sin egen members-nyckel, värdet true
+      // eller borttagen. Taket håller tråden som ETT litet dokument.
+      allow update: if isAuthenticated() && !isAnonymous()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+        && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid])
+        && (!(request.auth.uid in request.resource.data.members)
+            || request.resource.data.members[request.auth.uid] == true)
+        && request.resource.data.members.size() <= 50;
+      allow delete: if isAuthenticated() && request.auth.uid == threadId;
+
+      // Meddelandena: bara medlemmar läser/skriver (get mot tråd-dokumentet —
+      // en extra läsning per regelkoll, acceptabelt för en liten privat tråd).
+      // Samma form som publika chatten, senderId måste vara ens eget uid.
+      match /messages/{messageId} {
+        allow read: if isAuthenticated()
+          && get(/databases/$(database)/documents/eventChats/$(chatId)/privat/$(threadId)).data.members[request.auth.uid] == true;
+        allow create: if isAuthenticated()
+          && get(/databases/$(database)/documents/eventChats/$(chatId)/privat/$(threadId)).data.members[request.auth.uid] == true
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.keys().hasOnly([
+              'senderId', 'senderName', 'senderImage', 'text', 'createdAt'
+          ]);
+      }
+    }
+
     // 9. FCM TOKENS
     match /fcmTokens/{userId} {
       match /tokens/{token} {
@@ -569,11 +667,15 @@ service cloud.firestore {
       allow read: if true;
       // clicksByDay (14/9): dagshinkarna bakom arrangörsmejlens 7/30-fönster.
       // likes (27/9): gilla-räknaren vid hjärtat på eventkortet.
+      // going/interested (6/10): Kommer/Intresserad-räknarna i kortets footer
+      // (deltan från utils/rsvpTransition; svaret själv bor i eventRsvps nedan).
       allow create: if request.resource.data.keys()
-          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes'])
+          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes', 'going', 'interested'])
         && request.resource.data.eventId is string
         && (!('views' in request.resource.data) || request.resource.data.views is number)
         && (!('likes' in request.resource.data) || request.resource.data.likes is number)
+        && (!('going' in request.resource.data) || request.resource.data.going is number)
+        && (!('interested' in request.resource.data) || request.resource.data.interested is number)
         && (!('clicks' in request.resource.data) || request.resource.data.clicks is number)
         && (!('clicksByMonth' in request.resource.data) || request.resource.data.clicksByMonth is map)
         && (!('clicksByDay' in request.resource.data) || request.resource.data.clicksByDay is map)
@@ -581,10 +683,12 @@ service cloud.firestore {
         && (!('domain' in request.resource.data) || request.resource.data.domain is string)
         && (!('title' in request.resource.data) || request.resource.data.title is string);
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes'])
+          .hasOnly(['views', 'eventId', 'clicks', 'clicksByMonth', 'clicksByDay', 'hostName', 'domain', 'title', 'likes', 'going', 'interested'])
         && request.resource.data.eventId is string
         && (!('views' in request.resource.data) || request.resource.data.views is number)
         && (!('likes' in request.resource.data) || request.resource.data.likes is number)
+        && (!('going' in request.resource.data) || request.resource.data.going is number)
+        && (!('interested' in request.resource.data) || request.resource.data.interested is number)
         && (!('clicks' in request.resource.data) || request.resource.data.clicks is number)
         && (!('clicksByMonth' in request.resource.data) || request.resource.data.clicksByMonth is map)
         && (!('clicksByDay' in request.resource.data) || request.resource.data.clicksByDay is map)
@@ -592,6 +696,24 @@ service cloud.firestore {
         && (!('domain' in request.resource.data) || request.resource.data.domain is string)
         && (!('title' in request.resource.data) || request.resource.data.title is string);
       allow delete: if false;
+    }
+
+    // KOMMER/INTRESSERAD-SVAREN (6/10, spår 3): eventRsvps/{slug}/svar/{uid}
+    // — slug är eventShareSlug(eventId), samma som eventStats (skrapade
+    // events rå-id är en URL och ogiltigt som doc-id). Publik läsning för
+    // avatarraden i kortet. Var och en skriver BARA sitt eget svar — även
+    // ANONYMA sessioner (Josef: inbjudna från t.ex. Facebook utan konto ska
+    // räknas med; de saknar namn/bild och visas som grå avatar). Räknarna
+    // bor i eventStats.going/.interested ovan.
+    match /eventRsvps/{slug}/svar/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['eventId', 'status', 'name', 'photoURL', 'createdAt'])
+        && request.resource.data.eventId is string
+        && request.resource.data.status in ['going', 'interested']
+        && (!('name' in request.resource.data) || request.resource.data.name is string)
+        && (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string);
+      allow delete: if isOwner(uid);
     }
 
     // 19. OUTREACH-KONTAKTER (FB-grupper, arrangörer, medlemslistan)
