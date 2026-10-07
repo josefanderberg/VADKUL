@@ -4371,8 +4371,8 @@ export default function HomePage() {
             />
             )}
 
-            {/* 1b1a. DAGEN ÖVERST, staden som liten rad under (Josef 2/9 — se
-                span-kommentarerna). Plattan är kvar i mitten överst (Josef 31/8)
+            {/* 1b1a. STADEN ÖVERST, dagen under (Josef 7/10 kväll — se
+                className-kommentaren). Plattan är kvar i mitten överst (Josef 31/8)
                 och är en LÄNK till STADSSIDAN för staden man är i (Josef 2/9,
                 cityLink ovan; /evenemang-indexet bara som fallback) i stället för
                 dag/vecka-växeln, som flyttat ner till botten (1b1b). Hörn-
@@ -4386,10 +4386,20 @@ export default function HomePage() {
                 moveend. key på HOPP-nyckeln → plattan tonar in på nytt vid
                 stadshopp men inte vid egen panorering.
                 Mörk platta som förut: kartan är ljus och vit skugg-text blir
-                gröt över ljusa kvarter. px-16 håller den fri från navbarens
-                knappkolumner i hörnen. */}
+                gröt över ljusa kvarter. Gridet runt plattan håller den fri
+                från hörnknapparna (se kommentaren vid gridet). */}
 {!chromeHidden && (
-    <div className="fixed inset-x-0 top-6 z-[1090] flex flex-col items-center gap-1.5 px-16 pointer-events-none">
+    <div className="fixed inset-x-0 top-6 z-[1090] flex flex-col items-center gap-1.5 pointer-events-none">
+        {/* Plattans rad: samma kolumn som hörnknapparna (px-4 + max-w-[1400px])
+            i ett tredelat grid. Sidokolumnerna delar luften lika (plattan står
+            mitt på skärmen) men blir aldrig smalare än knappen i sitt hörn +
+            8 px luft: 52 = profilen 44 + 8, 118 = "+ Lägg till" 110 + 8. Ett
+            långt stadsnamn knuffar därför plattan åt vänster i stället för in
+            under pillen (som iOS-titlar); först när hela mitten är full
+            kapas namnet med …. Gör pillen bredare → höj 118. */}
+        <div className="w-full px-4">
+        <div className="max-w-[1400px] mx-auto grid grid-cols-[minmax(52px,1fr)_minmax(0,auto)_minmax(118px,1fr)]">
+        <div className="col-start-2 min-w-0 relative flex flex-col items-center">
         <a
             key={cityTourTarget?.key ?? 0}
             href={cityLink.href}
@@ -4400,12 +4410,12 @@ export default function HomePage() {
             // styr inflygningens animation OCH övergångarna — hovern ska vara
             // lika kvick som knapparna (200 ms).
             // tourHint 'city' = visningsrundans sista steg: samma hover-läge i 4 s.
-            // KOMPAKT ENRAD sedan 7/10 (ägarbeslut: "ändra plats och storlek
-            // på Växjö IDAG det ser kanske bättre ut"): dagen och staden på
-            // SAMMA rad ("IDAG · VÄXJÖ") i en slimmare pill — tvåradersplattan
-            // (dagen stort, staden under, 2/9–7/10) tog mer höjd än den gav.
-            // Platsen är kvar i mitten överst: hörnen ägs av profil och +.
-            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex items-baseline gap-2 rounded-full backdrop-blur-md px-5 py-2 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
+            // STADEN ÖVERST, STORT, DAGEN UNDER (ägarbeslut 7/10 kväll: "staden
+            // ska stå över dagen. Och i större bokstäver") - ersätter samma
+            // dags enrad "IDAG · VÄXJÖ" och 2/9-plattan med dagen stort.
+            // Platsen är kvar i mitten överst: hörnen ägs av profil och
+            // "+ Lägg till" - gridet runt om håller plattan fri från dem.
+            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center min-w-0 max-w-full rounded-full backdrop-blur-md px-4 sm:px-6 py-2 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
                 tourHint === 'city' ? 'bg-slate-900/90 scale-105' : 'bg-slate-900/80 hover:bg-slate-900/90 hover:scale-105'
             }`}
             style={{ transitionDuration: '200ms' }}
@@ -4414,11 +4424,13 @@ export default function HomePage() {
                 raden revs samma kväll som den lades till — namnet ÄR länken,
                 utan skylt). Länkens ärende ligger i title/aria + sr-only-
                 texten nedan, som också är det Google läser.
-                sm:leading-none MÅSTE upprepas: sm:text-2xl sätter om
-                line-height till 32px i breakpointen och vinner annars över
-                bara leading-none — då växer plattan i onödan på desktop. */}
-            {/* DAGEN står överst (Josef 2/9: "där det står staden längst upp —
-                där ska det stå vilken dag man är på, så man ser det"): Nästa-
+                sm:leading-tight MÅSTE upprepas: sm:text-2xl sätter om
+                line-height till 32px i breakpointen och vinner annars - då
+                växer plattan i onödan på desktop. leading-tight och inte
+                leading-none: truncate klipper, och med leading-none försvann
+                nederstaplarna i "Göteborg"/"Helsingborg". */}
+            {/* DAGEN under staden - den ska fortfarande synas (Josef 2/9: "där
+                ska det stå vilken dag man är på, så man ser det"): Nästa-
                 bläddringen byter dag av sig själv när eventen i bild är slut,
                 och dagväljaren i botten ligger bakom kortet just då. Samma
                 etikett som väljaren (getDayLabel) så texterna aldrig går isär;
@@ -4429,28 +4441,33 @@ export default function HomePage() {
             {dayFlashNonce > 0 && (
                 <span key={`ring-${dayFlashNonce}`} aria-hidden className="day-flash-ring absolute inset-0 rounded-full pointer-events-none" />
             )}
+            {/* Staden överst (7/10 kväll): plattan är länken till stadens
+                egen /evenemang-sida (cityLink; indexet som fallback - Googles
+                väg in i stadshierarkin), och namnet säger vart den leder. */}
+            <span className="block max-w-full truncate text-lg sm:text-2xl font-black tracking-tight text-white leading-tight sm:leading-tight">
+                {liveCityName ?? 'Sverige'}
+            </span>
             <span
                 key={`day-${dayFlashNonce}`}
-                className={`block first-letter:uppercase text-base sm:text-lg font-black tracking-tight text-white leading-none sm:leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
+                className={`block text-[11px] font-black uppercase tracking-wider text-white/80 leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
             >
                 {mapOrganizer && organizerRange === 'all'
                     ? 'Alla'
                     : getDayLabel(dayOffset, mapOrganizer ? organizerDays : effectiveRangeDays)}
-            </span>
-            <span aria-hidden className="text-white/40 text-sm leading-none">·</span>
-            {/* Staden efter dagen (enraden 7/10): plattan är länken till
-                stadens egen /evenemang-sida (cityLink; indexet som fallback —
-                Googles väg in i stadshierarkin), och namnet säger vart den
-                leder. */}
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-white/75 leading-none">
-                {liveCityName ?? 'Sverige'}
             </span>
             <span className="sr-only">{cityLink.label}</span>
         </a>
         {/* Visningsrundans sista steg ('city') SÄGER vad plattan gör (Josef
             15/9: "skriva gå till stadssida typ") — samma pill som skapa- och
             🔥-stegen, och på desktop även vid hover (peer på länken). */}
-        <HoverLabel show={tourHint === 'city'}>Gå till stadssidan</HoverLabel>
+        {/* absolute under plattan: i flödet gjorde den (osynlig, 126 px)
+            gridets mittkolumn bredare än plattan och knuffade den ur mitten. */}
+        <HoverLabel show={tourHint === 'city'} className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2">Gå till stadssidan</HoverLabel>
+        </div>
+        </div>
+        </div>
+        {/* Bannern och filterbrickorna under: centrerade på skärmen, px-16. */}
+        <div className="w-full px-16 flex flex-col items-center gap-1.5">
         {/* FILTRET PÅ (16/9) — kategori, Fler-källa eller 🔥 (24/9): alltid synligt
             under plattan, ett filter får aldrig vara osynligt när sökpanelen
             är stängd. Tryck = släpp filtret. */}
@@ -4549,6 +4566,7 @@ export default function HomePage() {
         )}
         </div>
         )}
+        </div>
     </div>
 )}
 
