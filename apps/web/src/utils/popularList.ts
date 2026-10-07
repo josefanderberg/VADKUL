@@ -19,6 +19,29 @@ interface PopularListCandidate {
     featuredUntil?: Date;
 }
 
+/** Listans horisont (Josef 24/9: "vi fokuserar mest på kommande månaden").
+ *  Räknas från IDAG, inte från den visade dagen. */
+export const LIST_HORIZON_DAYS = 30;
+
+/**
+ * Samma tidsfönster som listans flikar (Månaden · 🔥 Populärt): från den
+ * visade dagen (aldrig före idag) och framåt inom LIST_HORIZON_DAYS,
+ * passerade bort. Kategoriradens siffror räknar i samma fönster (Josef 7/10:
+ * "22 populära … sen står det något annat samtidigt" - chippet räknade
+ * dagen, fliken månaden och bannern veckan), så 🔥-chippet = Populärt-
+ * fliken och kategorierna går ihop med Månaden.
+ */
+export function inListWindow<T extends { time: Date }>(
+    e: T,
+    fromDayOffset: number,
+    now: Date,
+    isPast: (e: T) => boolean,
+): boolean {
+    if (isPast(e)) return false;
+    const d = dayOffsetOf(e.time, now);
+    return d >= Math.max(0, fromDayOffset) && d < LIST_HORIZON_DAYS;
+}
+
 export function isPopularListed(e: PopularListCandidate, nowMs: number): boolean {
     return e.pop === true || (!!e.featuredUntil && e.featuredUntil.getTime() > nowMs);
 }
