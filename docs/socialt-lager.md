@@ -11,9 +11,8 @@ mer av [det] happymap hade". Bygger ovanpå RSVP-lagret från 6-7/10
 rulesetet verifierat identiskt med `infra/firebase/firestore.rules` via
 `admin.securityRules().getFirestoreRuleset()`). Samma deploy släppte även
 6/10-reglerna för Kommer/Intresserad (eventRsvps + going/interested i
-eventStats) som legat committade men aldrig gått ut. OBS: main saknar
-fortfarande diffen - deployar någon rules från main innan grenen är mergad
-försvinner privata chatten, vänskärpningen och RSVP-reglerna igen.
+eventStats) som legat committade men aldrig gått ut. Grenen är mergad i
+main samma kväll (PR #111), så repofilen på main == live.
 
 ## Datamodell
 
