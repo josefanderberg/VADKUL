@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment, type ReactNode } from 'react';
 import { isVadkulHostedEvent, LinkEvent, type EventRsvpStatus } from '../../types';
-import EventRsvpFooter from './EventRsvpFooter';
+import EventRsvpFooter, { EventRsvpTopBar } from './EventRsvpFooter';
 import CardMoreRows, { type OrganizerRowData } from './CardMoreRows';
-import { Search, X as XIcon } from 'lucide-react';
+import { Search, ListFilter as FilterIcon, X as XIcon } from 'lucide-react';
 import { eventOutlink } from '@/utils/eventExpand';
+import { isAffiliateUrl } from '@/utils/affiliateLink';
 import { isTicketmasterEvent } from '@/utils/ticketmasterEvent';
 import { recordEventClick } from '@/services/eventStatsService';
 import { normalizePriceLabel } from '../../utils/priceLabel';
@@ -20,7 +21,7 @@ import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, takeRows } from '@/utils/popularList';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease } from '@/utils/sheetSnap';
-import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List, ZoomOut } from 'lucide-react';
 
 /** Listflikarnas horisont (Josef 24/9: "vi fokuserar mest på kommande
  *  månaden"). Kartan laddar bara tidsfönstret (14 dagar, utils/timelineWindow);
@@ -249,7 +250,20 @@ interface NearbyEventsListProps {
      *  toggle som kortets hjärta. Utelämnade → inga hjärtan på raderna. */
     savedIds?: Set<string>;
     onToggleSave?: (eventId: string) => void;
+    /** DE PÅSLAGNA FILTREN I FLIKRADEN (ägarbeslut 7/10 sent, Josef: "jämte
+     *  månadens / populära. då ska det ju synas de kategorier man har
+     *  iklickade. eller den filter knappen så man kan lägga till andra"):
+     *  en liten blå bricka per vald kategori/källa (tryck = släpp den) och
+     *  filtersymbolen, som fäller ut samma kategorirad direkt under flikraden.
+     *  Utelämnade filterChips (sökarket - där står raden redan fast) = varken
+     *  brickor eller symbol. */
+    activeFilters?: ActiveFilter[];
+    onRemoveFilter?: (key: string) => void;
+    filterChips?: ReactNode;
 }
+
+/** Ett påslaget kartfilter som bricka i listans flikrad (7/10 sent). */
+export type ActiveFilter = { key: string; emoji: string; label: string };
 
 type ListTab = 'all' | 'popular';
 
@@ -606,8 +620,10 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
+    // Kategoriraden utfälld under flikraden (filtersymbolen, 7/10 sent).
+    const [chipsOpen, setChipsOpen] = useState(false);
     // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const effectiveShowImages = imagesOnly || showImages;
     // Ankaret sätts efter det 4:e eventet (0-indexerat: 3) — eller sista raden
@@ -621,13 +637,19 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                 här måste top-11 följa med. */}
             {/* sticky top-0 fäster vid scrollcontainerns PADDING-kant — pt-6
                 (grip-zonen) ingår, så raden hamnar precis under den solida
-                zonen. top-6 gav dubbel offset (glipa där innehåll syntes). */}
-            <div data-tab-zone className={`px-4 md:px-6 sticky top-0 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'h-11' : 'py-3'}`}>
+                zonen. top-6 gav dubbel offset (glipa där innehåll syntes).
+                --card-sticky-top = toppradens höjd när den syns (emoji +
+                titel + svarsknapparna, 7/10 sent) - flikraden fäster under
+                den; 0 annars. */}
+            <div data-tab-zone className={`px-4 md:px-6 sticky top-[var(--card-sticky-top,0px)] bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'h-11' : 'py-3'}`}>
+                {/* Flikarna + de påslagna filtren rullar i sidled när raden
+                    blir trång; filtersymbolen och bildknappen står kvar. */}
+                <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto no-scrollbar">
                 {onTabChange ? (
                     <div
                         role="tablist"
                         aria-label="Lista"
-                        className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 min-w-0 overflow-x-auto no-scrollbar"
+                        className="flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-zinc-800 p-0.5 shrink-0"
                         // Klick i den grå containerns kant/glipa (utanför själva
                         // pillret) ska räknas som flikklick (Josef 28/9) —
                         // närmaste fliken på X-led får det.
@@ -669,9 +691,41 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                         ))}
                     </div>
                 ) : (
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <span className="shrink-0 text-[10px] font-black uppercase tracking-widest text-slate-500">
                         Fler event i närheten · {upcomingCount}
                     </span>
+                )}
+                {filterChips && activeFilters.map(f => (
+                    <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => onRemoveFilter?.(f.key)}
+                        aria-label={`Släpp filtret ${f.label}`}
+                        title={`Visar bara ${f.label.toLowerCase()} - tryck för att släppa`}
+                        className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#006AA7] text-white pl-2 pr-1.5 py-1 text-[10px] font-black uppercase tracking-wider whitespace-nowrap hover:bg-[#005590] active:scale-95 transition"
+                    >
+                        <span aria-hidden className="normal-case">{f.emoji}</span>
+                        {f.label}
+                        <XIcon size={10} strokeWidth={3} aria-hidden />
+                    </button>
+                ))}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                {filterChips && (
+                    <button
+                        type="button"
+                        onClick={() => setChipsOpen(o => !o)}
+                        aria-pressed={chipsOpen}
+                        aria-label={chipsOpen ? 'Dölj kategorierna' : 'Filtrera på kategori'}
+                        title={chipsOpen ? 'Dölj kategorierna' : 'Filtrera på kategori'}
+                        className={`shrink-0 h-7 w-7 rounded-full flex items-center justify-center transition-colors active:scale-95 ${
+                            chipsOpen || activeFilters.length > 0
+                                ? 'bg-[#006AA7] text-white'
+                                : 'bg-slate-200 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-[#006AA7]'
+                        }`}
+                    >
+                        <FilterIcon size={13} strokeWidth={2.5} aria-hidden />
+                    </button>
                 )}
                 {!imagesOnly && (
                     <button
@@ -694,7 +748,14 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                         <span className="whitespace-nowrap">{showImages ? 'Dölj bilder' : 'Visa bilder'}</span>
                     </button>
                 )}
+                </div>
             </div>
+            {/* Filtersymbolens kategorirad - SAMMA rad som kortets och
+                sökarkets (sidan bygger den), utanför sticky-zonen så
+                dagrubrikernas top-11 fortfarande stämmer. */}
+            {chipsOpen && filterChips && (
+                <div className="bg-white/70 dark:bg-zinc-900/60 border-b border-border">{filterChips}</div>
+            )}
 
             {onTabChange ? (
                 <>
@@ -720,8 +781,9 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                                     top-0 z-10 ovanför; offsets räknas från
                                     padding-kanten så grip-zonens pt-6 ingår);
                                     z-[9] så rubriken glider IN UNDER flikraden
-                                    när den knuffas ut. */}
-                                <h3 className="sticky top-11 z-[9] bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 md:px-6 pt-3 pb-2 border-b border-border flex items-center gap-2">
+                                    när den knuffas ut. Plus toppradens höjd
+                                    (--card-sticky-top) när den syns. */}
+                                <h3 className="sticky top-[calc(var(--card-sticky-top,0px)_+_2.75rem)] z-[9] bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 md:px-6 pt-3 pb-2 border-b border-border flex items-center gap-2">
                                     {/* Blått streck + tydlig dagtext (Josef 28/9:
                                         "typ som på stadssidorna så man ser dagar
                                         lite tydligare") — samma formspråk som
@@ -973,9 +1035,31 @@ interface EventCardProps {
     cardFilterOn?: boolean;
     /** Stadssidelänken under arrangörsraden — samma mål som topplattan. */
     cityLink?: { href: string; label: string };
+    /** SÖKARKET (7/10 kväll, Josef: "ha en vanlig filtersymbol där. om man
+     *  klickar på den öppnar eventkortet, men bara med sök och att vi visa
+     *  filterna och inga event"): filterknappen uppe till höger öppnar arket
+     *  — sökfältet + kategorichipsen utan något valt event; träffarna
+     *  (listan) dyker upp först när man söker. Stängs av sidan när ett event
+     *  väljs. */
+    searchSheet?: boolean;
+    onCloseSearchSheet?: () => void;
+    /** 🔥-filtret är på (popularOnly) — kopplar listan till Populärt-fliken
+     *  (7/10 kväll, Josef: "den filterknappen där det står populära = hur
+     *  många som står åt höger om månaden"). */
+    popularFilterOn?: boolean;
+    /** Påslagna kategorier/källa som brickor i listans flikrad (7/10 sent,
+     *  se NearbyEventsList) - sidan bygger listan, kortet släpper via
+     *  onRemoveFilter. */
+    activeFilters?: ActiveFilter[];
+    onRemoveFilter?: (key: string) => void;
+    /** NÄSTA ZOOMAR UT (ägarbeslut 7/10 sent): eventen i bild är genomgångna
+     *  men perioden har obesökta event utanför bild → sidan zoomar ut kartan
+     *  kring samma mitt tills målet syns (utils/viewportTour) och blinkar
+     *  dagplattan. Utelämnad = rakt till nästa dag som förut. */
+    onZoomOutTo?: (target: LinkEvent) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onZoomOutTo }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -1055,6 +1139,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // transition-rendering aldrig hinner skriva ett läge som inte committas.
     const chooserActiveRef = useRef(chooserActive);
     useLayoutEffect(() => { chooserActiveRef.current = chooserActive; }, [chooserActive]);
+
+    // SÖKARKET (7/10 kväll): filterknappen uppe till höger öppnar kortet UTAN
+    // event — bara sökfältet + chipsen, listan först när man söker. Samma
+    // ark/gester som vanliga kortet; ref-spegel av samma skäl som chooserns.
+    const searchOnly = searchSheet && !selectedEvent;
+    const searchOnlyRef = useRef(searchOnly);
+    useLayoutEffect(() => { searchOnlyRef.current = searchOnly; }, [searchOnly]);
+    // Sökarkets öppningshöjd: sökraden + chipsraden, inget mer ("inga event").
+    const SEARCH_SHEET_PX = 190;
+    const searchSheetVh = () =>
+        Math.max(PEEK_HEIGHT_VH, Math.min(60, Math.round((SEARCH_SHEET_PX / window.innerHeight) * 100)));
 
     // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
     const [cardRevealStep, setCardRevealStep] = useState(0);
@@ -1152,13 +1247,24 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // ur Populärt ska listan under det nya kortet fortfarande vara Populärt.
     const [listTab, setListTab] = useState<ListTab>('all');
     const [daysVisibleCount, setDaysVisibleCount] = useState(NEARBY_PAGE_SIZE);
+    // 🔥-CHIPPET STYR FLIKEN (7/10 kväll, Josef: "den filterknappen där det
+    // står populära = hur många som står åt höger om månaden" — chipvalet
+    // smalnade bara kartan, listans Månaden-flik stod orörd och chippet såg
+    // trasigt ut): slås 🔥 på hoppar listan till Populärt-fliken, släpps det
+    // tillbaka till Månaden. Flikens egna knappar funkar som vanligt emellan.
+    useEffect(() => {
+        setListTab(popularFilterOn ? 'popular' : 'all');
+        setDaysVisibleCount(NEARBY_PAGE_SIZE);
+    }, [popularFilterOn]);
     // Kortlagret (bilder, värd, pris) hämtas först när ett kort öppnas. Innan
     // det landat har bara användarevent en bild, så bildflödet ritades först
     // med en handfull av dem och byttes sedan ut HELT ~1 s senare (uppmätt
     // 29/9: "Temakurs …" → "Trädgårdsdagar …"). Listan väntar in lagret och
     // visar "Letar fler event…" så länge - en gång per session.
     const [cardsReady, setCardsReady] = useState(() => linkEventService.cardsSettledNow());
-    const cardOpen = !!selectedEvent;
+    // Sökarket räknas som öppet kort: listan som dyker upp vid sökning ska ha
+    // kortlagrets bilder/värdar precis som vanliga listan.
+    const cardOpen = !!selectedEvent || searchOnly;
     useEffect(() => {
         if (cardsReady || !cardOpen) return;
         let alive = true;
@@ -1308,8 +1414,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const href = eventOutlink(selectedEvent.id, selectedEvent.url);
         if (!href) return null;
         const gold = isTicketmasterEvent(selectedEvent);
-        return { href, gold, label: gold ? 'BOKA' : 'ANMÄL' };
+        // Annons-märkningen (affiliate) bor i footern sedan den breda CTA:n
+        // i kortet revs (7/10 kväll).
+        return { href, gold, label: gold ? 'BOKA' : 'ANMÄL', affiliate: isAffiliateUrl(selectedEvent.url) };
     }, [selectedEvent]);
+    // Klickstatistiken för ANMÄL/BOKA - samma för raden i kortet och toppraden.
+    const recordCtaClick = () => {
+        if (!selectedEvent) return;
+        recordEventClick({
+            id: selectedEvent.id,
+            url: selectedEvent.url,
+            title: selectedEvent.title,
+            hostName: selectedEvent.hostName,
+        });
+    };
 
     // KOMMER/INTRESSERAD-FOOTERN (6/10) visas i infovyn när kortet står ÖVER
     // kompaktläget: i kompaktläget skulle plattan täcka tid/plats-raden som
@@ -1325,6 +1443,42 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEvent, onSetRsvp, chooserActive, cardView, heightVh]);
 
+    // TOPPRADEN (EventRsvpTopBar, ägarbeslut 7/10 sent: "längst uppe om man
+    // scrollat förbi ett eventkort. då ska fortfarande intresserad, kommer,
+    // .... Alla de ska synas, samt emojin och titeln ska vara kvar"): tänds
+    // när svarsradens plats i kortet (ankaret precis före den) scrollat upp
+    // under grip-zonen, och står kvar genom chatt, arrangörsrad och listan.
+    // Raden i kortet är sticky bottom-0 och toppraden tänds först när dess
+    // plats passerat överkanten - de två syns aldrig samtidigt. Höjden
+    // (ResizeObserver i toppraden) blir --card-sticky-top på scrollcontainern
+    // så listans flikrad + dagrubriker fäster UNDER toppraden i stället för
+    // att gömma sig bakom den.
+    const rsvpAnchorRef = useRef<HTMLDivElement | null>(null);
+    const [rsvpBarOn, setRsvpBarOn] = useState(false);
+    const [rsvpBarH, setRsvpBarH] = useState(0);
+    useEffect(() => {
+        setRsvpBarOn(false);
+        const sc = scrollContainerRef.current;
+        if (!sc || !rsvpFooterVisible) return;
+        let raf = 0;
+        const check = () => {
+            raf = 0;
+            const anchor = rsvpAnchorRef.current;
+            if (!anchor) { setRsvpBarOn(false); return; }
+            // 24 = grip-zonens höjd (scrollcontainerns pt-6): det som ligger
+            // där under är redan täckt.
+            const top = anchor.getBoundingClientRect().top - sc.getBoundingClientRect().top;
+            setRsvpBarOn(top <= 24);
+        };
+        const onScroll = () => { if (!raf) raf = requestAnimationFrame(check); };
+        check();
+        sc.addEventListener('scroll', onScroll, { passive: true });
+        return () => {
+            sc.removeEventListener('scroll', onScroll);
+            if (raf) cancelAnimationFrame(raf);
+        };
+    }, [selectedEvent?.id, rsvpFooterVisible]);
+
     // Default-höjd när ett kort öppnas: visa HELA headern (titel, tid, plats,
     // värd, pris) + en remsa av bilden — så man direkt ser värden OCH lite av
     // bilden. Mäts mot Värd/Pris-radens botten (data-peek-boundary) + ~110px ner
@@ -1337,6 +1491,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // CHOOSER_DEFAULT_PX följa med: väljarlistan ska öppna lika högt som
     // ett vanligt event.
     const measureDefaultHeight = (): number => {
+        // SÖKARKET: fast öppningshöjd (sökrad + chips) — inget event att mäta.
+        if (searchOnlyRef.current) return searchSheetVh();
         const sc = scrollContainerRef.current;
         if (!sc) return OPEN_HEIGHT_VH;
         // VÄLJARLISTAN (multievent): ingen peek-markör — öppna på
@@ -1370,7 +1526,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const sheetStopsNow = (): number[] => sheetStops([
         measureCompactHeight() ?? NaN,
         measureDefaultHeight(),
-        ...(chooserActiveRef.current ? [] : [measureOpenHeight()]),
+        // Väljarlistan och sökarket har ingen tapp-höjd (ingen beskrivning).
+        ...(chooserActiveRef.current || searchOnlyRef.current ? [] : [measureOpenHeight()]),
         maxVhRef.current,
     ], SNAP_TOLERANCE_VH);
     // Live-ref så drag-handlern (onPointerMove) alltid läser senaste mätta
@@ -1385,7 +1542,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const closeCard = () => {
         updateHeightVh(2);
         if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-        dismissTimerRef.current = setTimeout(() => onSelectEvent(null), 260);
+        dismissTimerRef.current = setTimeout(() => {
+            onSelectEvent(null);
+            // Sökarket stängs samma väg (drag ner/hjul) — no-op annars.
+            onCloseSearchSheet?.();
+        }, 260);
     };
     // Hjul-lyssnaren registreras en gång per öppnat kort och skulle annars
     // stänga mot den renderingens onSelectEvent — läs via ref.
@@ -1441,7 +1602,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // släppas för att stängas). preventDefault på touchmove hindrar webbläsaren
     // från att ta gesten för scroll; pointermove fortsätter då till kortets
     // drag-handlers. Kräver passive:false → native listeners, inte React-props.
-    const hasSelectedEvent = selectedEvent !== null;
+    // "Kort uppe" för gest-lyssnarna: även sökarket (utan valt event) ska
+    // kunna dras/stängas och snäppa mellan sina stopp.
+    const hasSelectedEvent = selectedEvent !== null || searchOnly;
     useEffect(() => {
         if (!hasSelectedEvent) return;
         const sc = scrollContainerRef.current;
@@ -1457,7 +1620,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // ALLTID pan-y och det här beslutet fattas i JS: vid gest-START (som
         // förr) avgörs om svepet ska dra kortet, och då hindrar preventDefault
         // webbläsaren från att scrolla — pointermove driver kortet, samma
-        // mekanism som dra-ner-vid-toppen nedan. Väljarlistan scrollar alltid.
+        // mekanism som dra-ner-vid-toppen nedan. (Gäller ÄVEN väljarlistan
+        // sedan 7/10 kväll — 2/9-undantaget är ersatt.)
         let dragsSheet = false;
         // Gesten började i en sidledsrullande rad (HScrollRow, 16/9) som
         // faktiskt rullar över. Då avgörs vid första rörelsen: vågrätt →
@@ -1472,7 +1636,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // event, taket följer viewporten (rotation/storlek).
             // Sidopanelen (xl, 6/10): svep scrollar alltid innehållet — drar
             // aldrig panelen (touchskärm på bred laptop/surfplatta).
-            dragsSheet = !sideModeRef.current && !chooserActiveRef.current && heightVhRef.current < maxVhRef.current - 5;
+            // VÄLJARLISTAN DRAR OCKSÅ KORTET sedan 7/10 kväll (Josef: "när
+            // man scrollar efter man klickat på ett multi event så ska ju
+            // hela det fönstret åka upp. precis som ett vanligt eventkort
+            // gör") — 2/9-beslutet "kortet står still, listan scrollar" är
+            // ERSATT: chooser-undantaget som stod här är borta.
+            dragsSheet = !sideModeRef.current && heightVhRef.current < maxVhRef.current - 5;
             const row = (e.target as HTMLElement).closest('[data-hscroll]') as HTMLElement | null;
             inHScroll = !!row && row.scrollWidth > row.clientWidth + 1;
             hscrollDecided = false;
@@ -1569,16 +1738,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             }
             track.lastAbs = absPx;
             if (sign !== 0) track.lastSign = sign;
-            // VÄLJARLISTAN (Josef 2/9): kortet står STILL och listan scrollar
-            // upp under överkanten — hjulet växer inte kortet här. Vill man
-            // ha det större drar man i handtaget.
-            const chooser = chooserActiveRef.current;
+            // (VÄLJARLISTANS hjul-undantag — "kortet står still, listan
+            // scrollar", 2/9 — är ERSATT 7/10 kväll: hjulet stegar kortet
+            // genom stoppen även där, precis som ett vanligt kort. Chooserns
+            // stopp är default → taket; tapp-höjden finns inte utan
+            // beskrivning, se sheetStopsNow.)
             // Scrolla "in i" kortet (fingrar upp / hjul ner) under taket → ETT
             // STOPP UPP (Josef 2/9): default → tapp-höjden → taket. Grinden
             // slukar tröghetssvansen så ett svep aldrig kedjar genom flera
             // stopp. Landar vi på taket hålls resten av gesten (hold nedan) så
             // innehållet inte börjar scrolla förrän nästa gest.
-            if (deltaVh > 0 && h < maxVhRef.current && !chooser) {
+            if (deltaVh > 0 && h < maxVhRef.current) {
                 e.preventDefault();
                 if (!wheelSnapArmedRef.current) { scheduleWheelRearm(); return; }
                 consumeWheelGate();
@@ -1613,17 +1783,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 scheduleWheelRearm();
                 return;
             }
-            // annars: helskärm + innehållet scrollar → låt hjulet scrolla normalt.
-            // I väljarlistan spänner innehållsscrollen AV snäpp-grinden: en
-            // styrplatte-flick som rullar listan tillbaka till toppen får inte
-            // fortsätta rakt in i stäng-snäppet ovan på sin tröghetssvans.
-            // Grinden återspänns efter WHEEL_SNAP_QUIET_MS tystnad — ett nytt,
-            // medvetet uppåtsvep vid toppen stänger som vanligt. (Bara när
-            // listan faktiskt kan scrolla; en kort lista lämnar grinden spänd.)
-            if (chooser && sc.scrollHeight - sc.clientHeight > 1) {
-                wheelSnapArmedRef.current = false;
-                scheduleWheelRearm();
-            }
+            // annars: helskärm + innehållet scrollar → låt hjulet scrolla
+            // normalt. (Väljarlistans egen av-spänning av snäpp-grinden är
+            // borta med 2/9-undantaget — samma grind-beteende som vanliga
+            // kortet gäller överallt.)
         };
         sc.addEventListener('wheel', onWheel, { passive: false });
         return () => sc.removeEventListener('wheel', onWheel);
@@ -1856,6 +2019,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const [cardSearchOpen, setCardSearchOpen] = useState(false);
     const cardSearchInputRef = useRef<HTMLInputElement>(null);
     const handleCloseCardSearch = () => {
+        // Sökarket (utan valt event): ✕ med text rensar bara — chipsen ÄR
+        // arkets innehåll och står kvar; ✕ utan text stänger hela arket.
+        if (searchOnlyRef.current) {
+            if (cardSearchQ.trim()) handleCardSearch('');
+            else closeCard();
+            return;
+        }
         // Stänga = släpp sökningen (chips-filtret lever sitt eget liv och
         // syns som brickor under dagplattan).
         handleCardSearch('');
@@ -1863,9 +2033,43 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         cardSearchInputRef.current?.blur();
     };
     useEffect(() => {
-        if (!selectedEvent) { setCardSearchQ(''); setCardSearchOpen(false); }
+        // Rensa först när HELA arket är stängt — sökarket (filterknappen uppe
+        // till höger) lever utan valt event och ska behålla termen.
+        if (!selectedEvent && !searchSheet) { setCardSearchQ(''); setCardSearchOpen(false); }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEvent]);
+    }, [selectedEvent, searchSheet]);
+    // SÖKARKETS ÖPPNING (7/10 kväll): fast höjd (sökrad + chips), chipsen
+    // framme direkt ("att vi visa filterna"), INGEN autofokus — mobil-
+    // tangentbordet ska inte ligga över chipsen (samma skäl som 6/10-
+    // filterknappens skipFocus).
+    useEffect(() => {
+        if (!searchOnly) return;
+        setCardSearchOpen(true);
+        setCardView('info');
+        setIsAnimating(true);
+        const raf = requestAnimationFrame(() => {
+            // Är kartfiltret redan på visas träfflistan direkt (7/10 kväll)
+            // — då öppnar arket fullhöjt så listan faktiskt syns.
+            updateHeightVh(cardFilterOn ? maxVhRef.current : searchSheetVh());
+            if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+        });
+        return () => cancelAnimationFrame(raf);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchOnly]);
+    // KATEGORIVAL I SÖKARKET (7/10 kväll, Josef: "om jag klickar på filter
+    // knappen och sedan en kategori. då ska ju listan med de eventen visas
+    // under. nu ändras det ju bara på kartan"): ett chipval växer arket till
+    // full höjd så träfflistan syns; släpps sista filtret (och ingen
+    // sökterm står kvar) krymper arket tillbaka.
+    useEffect(() => {
+        if (!searchOnlyRef.current) return;
+        setIsAnimating(true);
+        if (cardFilterOn) updateHeightVh(maxVhRef.current);
+        else if (!cardSearchQ.trim()) updateHeightVh(searchSheetVh());
+        // Bara filterväxlingen ska styra här — söktermen har sin egen väg
+        // (handleCardSearch/handleToggleView).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cardFilterOn]);
     const cardQNorm = cardSearchQ.trim().toLowerCase();
     const matchesCardSearch = useMemo(() => {
         if (!cardQNorm) return null;
@@ -1880,7 +2084,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (value.trim() && !cardSearchQ.trim() && cardView !== 'nearby') handleToggleView('nearby');
         // Tömd sökning lämnar listvyn (höjden behålls) — Lista-ikonen i
         // knappraden är BORTTAGEN (6/10), så rensningen är vägen tillbaka.
-        if (!value.trim() && cardSearchQ.trim() && cardView === 'nearby') setCardView('info');
+        if (!value.trim() && cardSearchQ.trim()) {
+            if (cardView === 'nearby') setCardView('info');
+            // Sökarket: tillbaka till arkets egen höjd — utan event finns
+            // inget kort att stå kvar fullhöjt på.
+            if (searchOnlyRef.current) {
+                setIsAnimating(true);
+                updateHeightVh(searchSheetVh());
+            }
+        }
     };
 
     // Sortera övriga event efter avstånd från valt event (närmst först).
@@ -1936,7 +2148,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // INFOVYNS lista längst ner är bildflödet (Josef 26/8 kväll): bara event
     // med bild, bilderna tvingade på. Lista-toggeln i headern visar ALLA
     // event, med bildtoggeln (default av).
-    const imagesOnlyList = cardView !== 'nearby';
+    // SÖKARKET ÄR UNDANTAGET (7/10 kväll, Josef: "hur går detta ihop?
+    // månaden och de som visas bland kategorierna alltså summan" — chipsen
+    // räknar ALLA event i vyn, men bildflödet räknade bara bildraderna i
+    // flikarna, så Månaden·6 stod mot Socialt 13 och Populärt·0 mot 🔥 6):
+    // i arket visas ALLTID hela listan (med bildtoggeln), så flikarnas tal
+    // går ihop med chipsens.
+    const imagesOnlyList = cardView !== 'nearby' && !searchOnly;
     // Dubblettgruppering (Josef 1/9 — samma regel som stadssidornas daglista,
     // utils/groupDups): samma titel ELLER omslagsbild under samma dag = EN rad,
     // övriga tillfällen bakom radens utfällning. Grupperas EFTER bildfiltret så
@@ -2120,37 +2338,85 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
      * Plocka nästa event utifrån ankaret (spiral utåt i avstånd) BLAND DEM I
      * BILD. Lägger nuvarande plats i visited och letar närmaste-till-ankaret
      * som inte är besökt. null = alla i bild är genomgångna — då är det
-     * dagbytets tur (handleNextOnly/handleSwipeOut), inte ett nytt varv:
+     * zoom-ut-stegets tur (zoomOutStep, 7/10 sent) och sist dagbytets
+     * (handleNextOnly/handleSwipeOut), inte ett nytt varv:
      * omstarten från ankaret är RIVEN 2/9 (Josef: "har man gått igenom alla
      * ska vi automatiskt gå till nästa dag").
      */
     const pickNext = (current: LinkEvent): LinkEvent | null => {
         const anchor = events.find(e => e.id === anchorId) ?? current;
         const pool = visiblePool(anchor);
-
-        const newVisited = new Set(visitedEventIds);
-        
-        // Lägg till alla event på samma koordinat till besökta så Nästa-knappen 
-        // hoppar till nästa destination direkt i stället för att stega igenom 
-        // varje enskilt event på samma plats.
-        const currentKey = current.lat && current.lng ? `${current.lat.toFixed(4)},${current.lng.toFixed(4)}` : null;
-        if (currentKey) {
-            for (const e of events) {
-                if (e.lat && e.lng) {
-                    const k = `${e.lat.toFixed(4)},${e.lng.toFixed(4)}`;
-                    if (k === currentKey) {
-                        newVisited.add(e.id);
-                    }
-                }
-            }
-        } else {
-            newVisited.add(current.id);
-        }
-
+        const newVisited = withSpotVisited(current);
         const next = findNearestEvent(anchor, pool, discardedEventIds, newVisited);
         setVisitedEventIds(newVisited);
         if (next) expectedNextIdRef.current = next.id;
         return next;
+    };
+
+    /** Besökt-mängden MED platsen man står på: alla event på samma koordinat
+     *  räknas som besökta, så Nästa hoppar till nästa destination direkt i
+     *  stället för att stega igenom varje enskilt event på samma plats. Ren -
+     *  delas av pickNext, förhandsvisningen och zoom-ut-steget. */
+    const withSpotVisited = (current: LinkEvent): Set<string> => {
+        const out = new Set(visitedEventIds);
+        const currentKey = current.lat && current.lng ? `${current.lat.toFixed(4)},${current.lng.toFixed(4)}` : null;
+        if (currentKey) {
+            for (const e of events) {
+                if (e.lat && e.lng && `${e.lat.toFixed(4)},${e.lng.toFixed(4)}` === currentKey) out.add(e.id);
+            }
+        } else {
+            out.add(current.id);
+        }
+        return out;
+    };
+
+    /** ZOOM-UT-MÅLET (ägarbeslut 7/10 sent, Josef: "när vi har gått genom
+     *  alla de som vi inom det området där vi är. då ska ju kartan automatiskt
+     *  zooma ut, men börja om på vilken dag man är på"): närmaste OBESÖKTA
+     *  event i perioden UTANFÖR bild - samma tids-/ankarregel som Nästa-
+     *  poolen, bara med koordinater (det ska gå att zooma ut till det).
+     *  null = perioden är genomgången även utanför bild → nästa dag som förut. */
+    const zoomOutTargetFrom = (anchor: LinkEvent, visited: Set<string>): LinkEvent | null => {
+        if (!inView || !onZoomOutTo) return null;
+        const pool = nextCandidatePool(anchor).filter(e => hasValidCoords(e) && !inView(e));
+        return findNearestEvent(anchor, pool, discardedEventIds, visited);
+    };
+
+    // Bannern "ZOOMAR UT · IDAG IGEN" över kartan (7/10 sent, Josef: "gör
+    // det tydligt att vi zoomas ut på kartan. som en streck horisontellt och
+    // man ser att det är idag igen, fast de man inte gått genom än"):
+    // remaining = obesökta event kvar i perioden, målet inräknat.
+    const [zoomOutBanner, setZoomOutBanner] = useState<{ nonce: number; remaining: number } | null>(null);
+    useEffect(() => {
+        if (!zoomOutBanner) return;
+        const t = setTimeout(() => setZoomOutBanner(null), 2800);
+        return () => clearTimeout(t);
+    }, [zoomOutBanner]);
+
+    /** Eventen i bild är genomgångna → ZOOMA UT till närmaste obesökta i
+     *  perioden (samma dag - "börja om på vilken dag man är på"), välj det
+     *  och visa bannern. Kartan zoomar kring SAMMA mitt (sidan,
+     *  onZoomOutTo) - den panorerar fortfarande aldrig. Sant om steget togs;
+     *  falskt när inget obesökt finns kvar ens utanför bild. */
+    const zoomOutStep = (): boolean => {
+        if (!selectedEvent || !onZoomOutTo) return false;
+        const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
+        const visited = withSpotVisited(selectedEvent);
+        const target = zoomOutTargetFrom(anchor, visited);
+        if (!target) return false;
+        const remaining = nextCandidatePool(anchor)
+            .filter(e => !visited.has(e.id) && !discardedEventIds.has(e.id)).length;
+        pushHistory({ evt: selectedEvent, dayOffset });
+        setForwardStack([]);
+        expectedNextIdRef.current = target.id; // intern navigering — behåll ankaret
+        // Ny nonce = ny key = animationen och timern börjar om.
+        setZoomOutBanner(prev => ({ nonce: (prev?.nonce ?? 0) + 1, remaining }));
+        onNavigate?.(); // kameran panorerar inte - zoomen sköts av sidan
+        onZoomOutTo(target);
+        selectNextTarget(target); // multiplats → kortets väljarlista
+        setExitX(null);
+        updateDragX(0);
+        return true;
     };
 
     /** Alla event på samma koordinat som evt (4 decimaler — samma hopning som
@@ -2219,15 +2485,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const dragFromInteractiveRef = useRef(false);
     // Sant medan den native touch-lyssnaren (dra-ner-vid-scroll-toppen) har
     // tagit över gesten från innehållsscrollen — då får kortets drag driva
-    // höjden även i väljarlistan (se contentTouchLockRef).
+    // höjden (se contentTouchLockRef).
     const pullingRef = useRef(false);
-    // VÄLJARLISTAN på touch (Josef 2/9): innehållet äger den vertikala gesten
-    // (touch-action pan-y) så listan scrollar medan kortet står still. Men
-    // webbläsaren skickar några pointermove INNAN den tar över panoreringen
-    // (och sedan pointercancel) — utan låset växte kortet några px på dem och
-    // snäppte sedan till MAX i cancel-släppet. Sätts i onPointerDown för
-    // touch/penna som börjar i scrollinnehållet; handtaget överst är fort-
-    // farande touch-action:none och drar kortet som vanligt.
+    // Låset som höll VÄLJARLISTANS kort stilla på touch (2/9: "kortet står
+    // still, listan scrollar") är AVVÄPNAT 7/10 kväll (Josef: "hela det
+    // fönstret åka upp. precis som ett vanligt eventkort") — multievent drar
+    // kortet som alla andra. Refen står kvar (läses i onPointerMove och
+    // nollas i onButtonPointerDown) men sätts aldrig längre.
     const contentTouchLockRef = useRef(false);
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -2297,9 +2561,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             }
         }
 
-        contentTouchLockRef.current = chooserActiveRef.current
-            && e.pointerType !== 'mouse'
-            && !!scrollContainerRef.current?.contains(target);
+        // (Väljarlistans touch-lås sattes här 2/9-7/10 — avväpnat, se
+        // contentTouchLockRef-kommentaren: multievent drar kortet som
+        // vanligt numera.)
+        contentTouchLockRef.current = false;
 
         const captureEl = interactive ?? e.currentTarget;
         captureEl.setPointerCapture(e.pointerId);
@@ -2343,9 +2608,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         }
 
         if (dragDirection.current === 'vertical') {
-            // Väljarlistan på touch: höjden rörs bara om den native touch-
-            // lyssnaren tagit över gesten (neddrag vid scroll-toppen) — annars
-            // är det innehållet som ska scrolla, inte kortet som ska växa.
+            // (Väljarlistans touch-lås är avväpnat 7/10 kväll — villkoret är
+            // numera alltid falskt och står kvar som säkerhetsnät.)
             if (contentTouchLockRef.current && !pullingRef.current) return;
             const deltaVh = (deltaY / window.innerHeight) * 100;
             // Fritt nedåt: under peek-gränsen fortsätter kortet glida ner mot
@@ -2418,7 +2682,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // betydelse — höjdtoggeln ska inte också slå till.
             // pointercancel (webbläsaren tog gesten — t.ex. sidledsrullningen
             // i tid/plats-raden, 16/9) är aldrig ett tap.
-            if (cardView === 'info' && !dragFromInteractiveRef.current && e.type !== 'pointercancel') {
+            if (cardView === 'info' && !searchOnlyRef.current && !dragFromInteractiveRef.current && e.type !== 'pointercancel') {
                 // Gränsen är kortets EGEN default-höjd, inte en fast 50 vh
                 // (Josef 16/9: "när kortet täcker halva skärmen går den inte
                 // ner"): tapp-höjden ligger själv runt halva skärmen, så med
@@ -2582,8 +2846,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // Tom framåt-stack (eller eventet finns inte längre) → vanligt pickNext.
         if (!next) next = pickNext(selectedEvent);
         if (!next) {
-            // Alla i bild genomgångna → nästa dag (Josef 2/9). Knappen är
-            // släckt när ingen dag finns kvar, så grenen är då oåtkomlig.
+            // Alla i bild genomgångna → ZOOMA UT till fler obesökta samma
+            // dag (7/10 sent); först när perioden är slut även utanför bild
+            // går Nästa till nästa dag (Josef 2/9). Knappen är släckt när
+            // ingen dag finns kvar, så grenen är då oåtkomlig.
+            if (zoomOutStep()) return;
             advanceToNextDay();
             return;
         }
@@ -2647,18 +2914,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // Annars: samma logik som pickNext, utan sidoeffekter.
         const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
         const pool = visiblePool(anchor);
-        const simVisited = new Set(visitedEventIds);
-        const curKey = selectedEvent.lat && selectedEvent.lng
-            ? `${selectedEvent.lat.toFixed(4)},${selectedEvent.lng.toFixed(4)}` : null;
-        if (curKey) {
-            for (const e of events) {
-                if (e.lat && e.lng && `${e.lat.toFixed(4)},${e.lng.toFixed(4)}` === curKey) simVisited.add(e.id);
-            }
-        } else {
-            simVisited.add(selectedEvent.id);
-        }
-        // null = alla i bild genomgångna → knappen visar nästa dag i stället.
-        return findNearestEvent(anchor, pool, discardedEventIds, simVisited);
+        // null = alla i bild genomgångna → knappen visar zoom-ut eller nästa dag.
+        return findNearestEvent(anchor, pool, discardedEventIds, withSpotVisited(selectedEvent));
     }, [selectedEvent, events, forwardStack, dayOffset, anchorId, visitedEventIds, discardedEventIds, now, inView]);
 
     // Antal event i nästa events grupp (om det är en multibricka)
@@ -2678,17 +2935,173 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Har man backat över ett dagbyte ligger DEN dagen överst i framåtstacken
     // och vinner över den beräknade nästa dagen — Nästa spelar upp samma väg.
     const forwardTop: NavEntry | undefined = forwardStack[forwardStack.length - 1];
-    const nextStepDayOffset = forwardTop && forwardTop.dayOffset !== dayOffset ? forwardTop.dayOffset : nextDayOffset;
-    const nextDayLabel = !nextEvent && nextStepDayOffset != null ? getDayLabel(nextStepDayOffset, dayRangeDays) : null;
-    const nextDisabled = !nextEvent && nextStepDayOffset == null;
+    const forwardCrossDay = !!forwardTop && forwardTop.dayOffset !== dayOffset;
+    const nextStepDayOffset = forwardCrossDay ? forwardTop!.dayOffset : nextDayOffset;
+    // FJÄRDE LÄGET (7/10 sent): eventen i bild slut men perioden har
+    // obesökta utanför bild → "ZOOMA UT" med målets emoji; trycket zoomar ut
+    // och väljer det (zoomOutStep). Vinner över nästa dag - utom när man
+    // backat över ett dagbyte (framåtstacken spelar upp samma väg).
+    const zoomOutPreview = useMemo<LinkEvent | null>(() => {
+        if (!selectedEvent || nextEvent || forwardCrossDay) return null;
+        const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
+        return zoomOutTargetFrom(anchor, withSpotVisited(selectedEvent));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEvent, nextEvent, forwardCrossDay, events, anchorId, visitedEventIds, discardedEventIds, now, inView, onZoomOutTo]);
+    const nextDayLabel = !nextEvent && !zoomOutPreview && nextStepDayOffset != null ? getDayLabel(nextStepDayOffset, dayRangeDays) : null;
+    const nextDisabled = !nextEvent && !zoomOutPreview && nextStepDayOffset == null;
     const nextTitle = nextEvent
         ? `Närmaste i bild: ${nextEvent.title}`
-        : nextDayLabel
-            ? `Alla event i bild är genomgångna — gå vidare till ${nextDayLabel.toLowerCase()}`
-            : 'Inga fler event i bild';
+        : zoomOutPreview
+            ? `Alla event i bild är genomgångna - zooma ut till fler ${getDayLabel(dayOffset, dayRangeDays).toLowerCase()} (${zoomOutPreview.title})`
+            : nextDayLabel
+                ? `Alla event i bild är genomgångna — gå vidare till ${nextDayLabel.toLowerCase()}`
+                : 'Inga fler event i bild';
+
+    // LISTVAL = SOM ETT KARTKLICK (7/10 kväll, Josef: "om jag väljer ett
+    // event som är som alternativ i sök eventkortet. Då ska ju den jag
+    // väljer bli i sin kategorifärg och så som när det är klickat på
+    // kartan"): ligger raden på en ANNAN dag än kartan visar finns eventet
+    // inte i kartans dagslager — markören kunde aldrig tändas/väljas och
+    // valet såg "färglöst" ut. Stega dagen dit och låt sidan landa på just
+    // det eventet (samma väg som Bakåt/Nästa över ett dagbyte) — då får
+    // markören den valda kategorifärgade looken som vanligt. Inom den
+    // visade perioden väljs direkt som förut. Delas av listan,
+    // arrangörsraden och väljarlistans fortsättning.
+    const handleListPick = (evt: LinkEvent) => {
+        if (evt.time && onDayStep) {
+            const a = new Date(evt.time); a.setHours(0, 0, 0, 0);
+            const b = new Date(now); b.setHours(0, 0, 0, 0);
+            const offset = Math.round((a.getTime() - b.getTime()) / 86_400_000);
+            const inShown = offset >= dayOffset && offset < dayOffset + dayRangeDays;
+            if (!inShown && offset >= 0) {
+                stepToDay(offset, evt.id);
+                return;
+            }
+        }
+        onSelectEvent(evt);
+    };
+
+    // KORTSÖKET + FILTERSYMBOLEN (7/10 kväll, Josef: "visa filtersymbolen
+    // jämte sökrutan i eventkortet"): fältet + en filterknapp som öppnar/
+    // stänger kategorichipsen utan att fokusera fältet (inget tangentbord
+    // över chipsen). Delas av knappraden (LinkEventCard-slotten) och
+    // sökarket. stopPropagation: ett tryck här ska inte fälla ut kortet.
+    const searchFieldNode = (
+        <div
+            onClick={e => e.stopPropagation()}
+            className="flex-1 min-w-0 max-w-xs flex items-center gap-1.5"
+        >
+            <div className="flex-1 min-w-0 flex items-center gap-2 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 border border-border focus-within:border-[#006AA7] px-3 transition-colors">
+                <Search size={14} className="shrink-0 text-slate-400" aria-hidden />
+                <input
+                    ref={cardSearchInputRef}
+                    type="text"
+                    value={cardSearchQ}
+                    onChange={e => handleCardSearch(e.target.value)}
+                    onFocus={() => setCardSearchOpen(true)}
+                    placeholder="Sök event i listan…"
+                    aria-label="Sök event i listan under kortet"
+                    className="flex-1 min-w-0 bg-transparent outline-none text-sm text-slate-800 dark:text-zinc-100 placeholder:text-slate-400"
+                />
+                {cardSearchQ && (
+                    <button
+                        type="button"
+                        onClick={handleCloseCardSearch}
+                        aria-label="Rensa sökningen"
+                        className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        <XIcon size={14} />
+                    </button>
+                )}
+            </div>
+            {/* Filtersymbolen: blå fylld när chipsen är framme eller kartans
+                filter är på (kategorier/🔥/källa — arrangörsfiltret har sin
+                egen banner). */}
+            <button
+                type="button"
+                onClick={() => setCardSearchOpen(o => !o)}
+                aria-pressed={cardSearchOpen}
+                aria-label={cardSearchOpen ? 'Dölj filtren' : 'Visa filtren'}
+                title={cardSearchOpen ? 'Dölj filtren' : 'Filtrera på kategori'}
+                className={`shrink-0 h-8 w-8 rounded-full border flex items-center justify-center transition-colors active:scale-95 ${
+                    cardSearchOpen || cardFilterOn
+                        ? 'bg-[#006AA7] border-[#006AA7] text-white'
+                        : 'bg-white dark:bg-zinc-800 border-border text-slate-500 dark:text-zinc-400 hover:text-[#006AA7] hover:border-sky-200'
+                }`}
+            >
+                <FilterIcon size={14} strokeWidth={2.5} aria-hidden />
+            </button>
+        </div>
+    );
+
+    // Kategorichipsen under sökraden — samma nod i knappraden (belowToolbar)
+    // och i sökarket.
+    const filterChipsRow = cardSearchOpen && filterChips
+        ? <div className="-mx-4 md:-mx-6 -mt-2 mb-1">{filterChips}</div>
+        : null;
+
+    // ARRANGÖREN PÅ PLATSEN (7/10 kväll, Josef: "Om det är en arrangör som är
+    // på den platsen så ska arrangörssidolistan visas"): delar HELA högen
+    // värd med representanten visas arrangörsraden (+ stadssideknappen)
+    // direkt under väljarlistan — inuti dess wrapper, så platsrubriken står
+    // kvar tills raden scrollat förbi.
+    const chooserOrganizerRow = useMemo(() => {
+        if (!chooserActive || !groupChoice || !organizerRow) return null;
+        const host = (groupChoice[0].hostName ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!host) return null;
+        const sameHost = groupChoice.every(ev => (ev.hostName ?? '').replace(/\s+/g, ' ').trim().toLowerCase() === host);
+        return sameHost ? organizerRow : null;
+    }, [chooserActive, groupChoice, organizerRow]);
+
+    // Listan under kortet visas i: väljarläget (7/10: "listan går att
+    // fortsätta bläddra i, utan att välja dem i början"), vanliga kortet
+    // (utom chatt-vyn) och sökarket SÅ FORT man sökt ELLER valt ett filter
+    // (Josef 7/10 kväll: "om jag klickar på filter knappen och sedan en
+    // kategori. då ska ju listan med de eventen visas under") — "inga event"
+    // gäller bara det orörda arket. viewEvents är redan kartfiltrerade, så
+    // listan visar precis kategorins event.
+    const listVisible = chooserActive
+        || (selectedEvent ? cardView !== 'chat' : searchOnly && (!!cardQNorm || cardFilterOn));
+    // SIDONAVEN (ägarbeslut 7/10 kväll, Josef: "den nästa knappen när man är
+    // på en dator. den kan vara åt höger om den fönstret som är åt vänster.
+    // längst ner. sen de andra knapparna ... de kan vara ovanpå nästaknappen"):
+    // i sidopanelsläget lämnar navraden platsen ovanför kortet och blir en
+    // KOLUMN till höger om panelen, nederkant mot skärmens botten - Nästa
+    // längst ner, bakåt/lista/pager staplade ovanför. Smala knappar ovanför
+    // Nästa (≤ 62 px) går fria från den skärmcentrerade dagväljaren även på
+    // en 1280 px-skärm; Nästa själv står under väljarens bottom-[92px].
+    const sideNav = sideMode && !!selectedEvent;
+    // ml-auto knuffar ut gruppen i högerkanten på raden - i kolumnen hade den
+    // högerställt knapparna mot den bredaste, så den släpps där.
+    const navMlAuto = sideNav ? '' : ' ml-auto';
 
     return (
         <>
+        {/* ZOOM-UT-BANNERN (7/10 sent): vågräta streck som växer ut från
+            mitten + "ZOOMAR UT / {DAG} IGEN · N KVAR" - kartan zoomar ut
+            samtidigt och dagplattan blinkar. Tonar ut av sig själv
+            (zoomout-banner i globals.css); i sidopanelsläget över kartytan
+            till höger om panelen. */}
+        {zoomOutBanner && (
+            <div
+                key={zoomOutBanner.nonce}
+                role="status"
+                aria-live="polite"
+                className={`zoomout-banner pointer-events-none fixed top-[34%] z-[1250] flex items-center gap-3 ${sideMode && selectedEvent ? 'left-[432px] right-6' : 'inset-x-4'}`}
+            >
+                <span aria-hidden className="zoomout-line zoomout-line-l flex-1 h-[3px] rounded-full bg-white shadow-[0_0_10px_rgba(0,0,0,0.45)]" />
+                <span className="shrink-0 flex flex-col items-center gap-1 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-white/15 text-white px-4 py-2 shadow-2xl">
+                    <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest leading-none">
+                        <ZoomOut size={14} strokeWidth={2.5} aria-hidden />
+                        Zoomar ut
+                    </span>
+                    <span className="text-[13px] font-black uppercase tracking-wider leading-none text-[#FECC02] whitespace-nowrap">
+                        {getDayLabel(dayOffset, dayRangeDays)} igen · {zoomOutBanner.remaining} kvar
+                    </span>
+                </span>
+                <span aria-hidden className="zoomout-line zoomout-line-r flex-1 h-[3px] rounded-full bg-white shadow-[0_0_10px_rgba(0,0,0,0.45)]" />
+            </div>
+        )}
         {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
         {/* z-[1250]: kortet ligger över ALLT kartkrom — kategorikolumnen (1150),
             stadsrutan (1090), navbaren (1160). Bara modaler (1300) går över. */}
@@ -2696,7 +3109,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             (navrad + kort) till VÄNSTER som en 400 px panel i stället för
             centrerat bottenark — kartan ligger fri till höger. */}
         <div className={`fixed bottom-0 left-0 right-0 z-[1250] flex flex-col ${sideMode && selectedEvent ? 'items-start' : 'items-center'} px-4 pointer-events-none`} style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
-            <div className={`w-full ${sideMode && selectedEvent ? 'max-w-[400px]' : 'max-w-4xl'} flex justify-between items-center mb-4`}>
+            <div className={sideNav
+                // 432 = kolumnens px-4 (16) + panelen (400) + luft (16).
+                ? 'absolute bottom-4 left-[432px] flex flex-col items-start gap-2'
+                : 'w-full max-w-4xl flex justify-between items-center mb-4'}>
 
                 {/* Vänster: verktygs-pill (dagväljaren är flyttad till toppen). */}
                 <div className="flex items-center gap-2 pointer-events-auto">
@@ -2768,7 +3184,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     är pointer-events-none — bara knapparna själva tar klick, tomrummet
                     emellan går till kartan. Bakåt/Nästa döljs i spelläget — då ska man inte
                     kunna navigera bort målet. */}
-                <div className="flex-1 min-w-0 ml-2 flex items-center gap-2 pointer-events-none">
+                <div className={`${sideNav ? 'flex-col items-start' : 'flex-1 min-w-0 ml-2 items-center'} flex gap-2 pointer-events-none`}>
                     {pinShotHits > 0 && (
                         <div className="pointer-events-auto flex items-center gap-1.5 bg-amber-400 text-slate-900 font-black rounded-full shadow-xl border border-white/30 px-3.5 h-[38px] text-[13px] tabular-nums box-border whitespace-nowrap">
                             🎯 {pinShotHits} träff{pinShotHits === 1 ? '' : 'ar'}
@@ -2845,7 +3261,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     title={backToGroupCount > 1
                                         ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
                                         : 'Tillbaka till listan'}
-                                    className="pointer-events-auto shrink-0 ml-auto h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all"
+                                    className={`pointer-events-auto shrink-0${navMlAuto} h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all`}
                                 >
                                     <ArrowLeft size={13} strokeWidth={2.5} className="shrink-0" />
                                     <List size={15} strokeWidth={2.5} className="shrink-0" />
@@ -2861,7 +3277,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     onPointerCancel={onButtonPointerUp}
                                     aria-label={`Nästa av ${sameSpotGroup.length} event på samma plats`}
                                     title="Fler event på samma plats"
-                                    className={`pointer-events-auto shrink-0${showBackToGroup ? '' : ' ml-auto'} h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all`}
+                                    className={`pointer-events-auto shrink-0${showBackToGroup ? '' : navMlAuto} h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all`}
                                 >
                                     <span className="text-[12px] font-black tabular-nums leading-none">
                                         {(sameSpotIndex < 0 ? 0 : sameSpotIndex) + 1}/{sameSpotGroup.length}
@@ -2890,7 +3306,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 disabled={nextDisabled}
                                 aria-label={nextTitle}
                                 title={nextTitle}
-                                className={`group/nasta pointer-events-auto relative shrink-0 h-[38px] box-border flex items-center bg-transparent${(!chooserActive && sameSpotGroup.length > 1) || showBackToGroup ? '' : ' ml-auto'}${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
+                                className={`group/nasta pointer-events-auto relative shrink-0 h-[38px] box-border flex items-center bg-transparent${(!chooserActive && sameSpotGroup.length > 1) || showBackToGroup ? '' : navMlAuto}${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
                             >
                                 {/* DAGBYTES-LÄGET: samma blå kapsel men med GUL RAM (Josef
                                     2/9: "skit i det att den byter färg, lägg en gul ram i
@@ -2898,13 +3314,21 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     Ägarbeslut — den vita omfärgningen byggdes och revs
                                     samma kväll. */}
                                 <span className={`flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-inset transition-all group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg group-active/nasta:scale-[0.97] ${
-                                    nextDayLabel ? 'ring-2 ring-[#FECC02]' : 'ring-1 ring-white/25'
+                                    nextDayLabel ? 'ring-2 ring-[#FECC02]' : zoomOutPreview ? 'ring-2 ring-white/80' : 'ring-1 ring-white/25'
                                 }`}>
-                                    {/* Eventen i bild slut → nästa dags namn i stället för NÄSTA,
-                                        så man ser att trycket byter dag (se nextDayLabel). */}
-                                    <span className="text-[12px] font-black uppercase tracking-widest leading-none">{nextDayLabel ?? 'NÄSTA'}</span>
+                                    {/* Eventen i bild slut → ZOOMA UT (fler samma dag
+                                        utanför bild, 7/10 sent) eller nästa dags namn,
+                                        så man ser vad trycket gör (se nextDayLabel). */}
+                                    <span className="text-[12px] font-black uppercase tracking-widest leading-none">{zoomOutPreview ? 'ZOOMA UT' : nextDayLabel ?? 'NÄSTA'}</span>
                                     {/* Emoji för nästa event + liten framåt-pil. */}
-                                    {nextEvent ? (
+                                    {zoomOutPreview ? (
+                                        <span aria-hidden className="relative flex items-center justify-center w-8 h-8 text-lg leading-none">
+                                            {eventEmoji(zoomOutPreview)}
+                                            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
+                                                <ZoomOut size={10} />
+                                            </span>
+                                        </span>
+                                    ) : nextEvent ? (
                                         <span aria-hidden className="relative flex items-center justify-center w-8 h-8 text-lg leading-none">
                                             {eventEmoji(nextEvent)}
                                             {/* Liten framåt-pil så det syns att brickan tar en vidare. */}
@@ -2934,8 +3358,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 </div>
             </div>
 
-            {/* Draggable bottom sheet card container — visas bara när ett event är valt */}
-            {selectedEvent ? (
+            {/* Draggable bottom sheet card container — visas när ett event är
+                valt ELLER sökarket (filterknappen uppe till höger) är öppet. */}
+            {selectedEvent || searchOnly ? (
             <div className={`w-full ${sideMode ? 'max-w-[400px]' : 'max-w-4xl'}`}>
             <div
                 ref={sheetRef}
@@ -3002,6 +3427,23 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     </div>
                 )}
 
+                {/* SÖKARKETS FASTA HUVUD (7/10 kväll, Josef: "då ska ju sök
+                    och de filter vara sticky i toppen. så man kan filtrera
+                    lättare"): sök + chips ligger UTANFÖR scrollcontainern, i
+                    arkets flöde under grip-zonen — träfflistan scrollar under
+                    medan raden står kvar, och listans egna stickies (flikrad/
+                    dagrubriker) fäster vid containerns topp precis under.
+                    pt-6 klarar den solida grip-zonen; containern släpper sin
+                    pt-6 i det här läget (paddingTop-overriden nedan). */}
+                {searchOnly && (
+                    <div className="shrink-0 bg-card pt-6 px-4 md:px-6 pb-2 border-b border-border">
+                        <div className="flex justify-between items-center gap-2 mb-2">
+                            {searchFieldNode}
+                        </div>
+                        {filterChipsRow}
+                    </div>
+                )}
+
                 {/* Scrollable content container */}
                 <div
                     ref={scrollContainerRef}
@@ -3012,9 +3454,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     // solida zonen i viloläget och scrollar in UNDER den.
                     className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar pt-6"
                     style={{
-                        // Footern (Kommer/Intresserad) ligger ovanpå botten —
-                        // luft så listans sista rad kan scrollas fram ovanför.
-                        paddingBottom: rsvpFooterVisible ? 56 : undefined,
+                        // Sökarket: huvudet (sök + chips) ovanför bär redan
+                        // pt-6 mot grip-zonen — containern ska börja direkt.
+                        ...(searchOnly ? { paddingTop: 0 } : null),
+                        // (pb-56:an för overlay-footern är borta 7/10 kväll —
+                        // raden bor i flödet och tar sin egen plats.)
+                        // Toppradens höjd när den syns: listans flikrad och
+                        // dagrubriker fäster under den (NearbyEventsList).
+                        ...({ '--card-sticky-top': rsvpBarOn ? `${rsvpBarH}px` : '0px' } as React.CSSProperties),
                         // Innehållet scrollar FÖRST när kortet vuxit till taket.
                         // Under det tar kortets drag-handler gesten → hela
                         // behållaren åker upp/ner i stället för att scrolla
@@ -3023,21 +3470,64 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // vid gest-start i touch-lyssnaren (dragsSheet) — INTE
                         // här: en touch-action som växlar none ↔ pan-y fastnade
                         // på iPhone över text och knappar (Josef 10/9).
-                        // VÄLJARLISTAN (Josef 2/9): svepet scrollar listan upp
-                        // under överkanten, kortet står still (se
-                        // contentTouchLockRef för pointer-sidan).
+                        // (Väljarlistan följer samma regler som vanliga
+                        // kortet sedan 7/10 kväll — svepet växer arket genom
+                        // stoppen, innehållet scrollar först på taket.)
                         touchAction: 'pan-y'
                     }}
                 >
                     {/* VÄLJARLÄGET: innehållet ÄR väljarlistan tills man valt
-                        (Josef 31/8) — sen renderas det vanliga kortet nedan. */}
+                        (Josef 31/8) — sen renderas det vanliga kortet nedan.
+                        Sedan 7/10 kväll fortsätter den VANLIGA listan under
+                        högen (gemensamma blocken längst ner), och delar hela
+                        platsen värd visas arrangörsraden emellan. */}
                     {chooserActive && groupChoice ? (
                         <EventCardGroupList
                             events={groupChoice}
                             selectedEvent={selectedEvent}
                             onSelect={onPickFromGroup!}
+                            moreRows={chooserOrganizerRow && cityLink ? (
+                                <CardMoreRows
+                                    organizerRow={chooserOrganizerRow}
+                                    onSelect={handleListPick}
+                                    cityLink={cityLink}
+                                    cityCount={tabDays.all.count}
+                                    searchQ={cardSearchQ}
+                                />
+                            ) : null}
                         />
+                    ) : !selectedEvent ? (
+                        /* SÖKARKET: sök + chips bor i det FASTA huvudet
+                           ovanför scrollcontainern (7/10 kväll, "sticky i
+                           toppen") — här finns inget kortinnehåll; träff-
+                           listan (gemensamma blocken nedan) dyker upp så
+                           fort man sökt eller valt ett filter. */
+                        null
                     ) : (<>
+                    {/* TOPPRADEN (emoji + titel + alla svarsknappar) när
+                        svarsraden scrollat förbi - se rsvpBarOn. Ett sticky
+                        h-0-ankare FÖRST i innehållet med raden absolut i sig:
+                        den tar ingen plats i flödet (inget hopp när den
+                        tänds) och står kvar i toppen hela vägen ner genom
+                        listan. top-0 = under grip-zonen (sticky räknar från
+                        containerns padding-kant, se NearbyEventsList).
+                        z-30: över listans flikrad/dagrubriker, under
+                        grip-zonen (39). */}
+                    {rsvpBarOn && rsvpFooterVisible && onSetRsvp && (
+                        <div className="sticky top-0 z-30 h-0">
+                            <div className="absolute inset-x-0 top-0">
+                                <EventRsvpTopBar
+                                    event={selectedEvent}
+                                    myRsvp={myRsvp}
+                                    onSetRsvp={(status) => onSetRsvp(selectedEvent, status)}
+                                    onInvite={() => onInviteFriend?.(selectedEvent)}
+                                    cta={footerCta}
+                                    onVisitCta={recordCtaClick}
+                                    onHeight={setRsvpBarH}
+                                />
+                            </div>
+                        </div>
+                    )}
                     <LinkEventCard
                         linkEvent={selectedEvent}
                         isAdmin={false}
@@ -3096,81 +3586,95 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // ut genom att rensa sökningen. Kategorichipsen under
                         // sökfältet ersätter ikonens jobb.
                         onToggleNearbyView={undefined}
-                        // KORTSÖKET direkt i knappraden (7/10 kväll). Inte
-                        // sticky: flikraden (top-0) och dagrubrikerna (top-11)
-                        // äger sticky-kedjan, och att skriva växlar ändå till
-                        // listvyn med scrollen i topp. stopPropagation: ett
-                        // tryck i fältet ska inte fälla ut kortet.
-                        searchField={
-                            <div
-                                onClick={e => e.stopPropagation()}
-                                className="flex-1 min-w-0 max-w-xs flex items-center gap-2 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 border border-border focus-within:border-[#006AA7] px-3 transition-colors"
-                            >
-                                {/* Förstoringsglaset blått = kartans kategorifilter är på. */}
-                                <Search size={14} className={`shrink-0 ${cardFilterOn ? 'text-[#006AA7]' : 'text-slate-400'}`} aria-hidden />
-                                <input
-                                    ref={cardSearchInputRef}
-                                    type="text"
-                                    value={cardSearchQ}
-                                    onChange={e => handleCardSearch(e.target.value)}
-                                    onFocus={() => setCardSearchOpen(true)}
-                                    placeholder="Sök event i listan…"
-                                    aria-label="Sök event i listan under kortet"
-                                    className="flex-1 min-w-0 bg-transparent outline-none text-sm text-slate-800 dark:text-zinc-100 placeholder:text-slate-400"
-                                />
-                                {(cardSearchQ || cardSearchOpen) && (
-                                    <button
-                                        type="button"
-                                        onClick={handleCloseCardSearch}
-                                        aria-label={cardSearchQ ? 'Rensa sökningen' : 'Stäng sökningen'}
-                                        className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
-                                    >
-                                        <XIcon size={14} />
-                                    </button>
-                                )}
-                            </div>
-                        }
+                        // KORTSÖKET direkt i knappraden (7/10 kväll) + FILTER-
+                        // SYMBOLEN bredvid fältet (samma kväll) — delad nod
+                        // med sökarket, se searchFieldNode. Inte sticky:
+                        // flikraden (top-0) och dagrubrikerna (top-11) äger
+                        // sticky-kedjan, och att skriva växlar ändå till
+                        // listvyn med scrollen i topp.
+                        searchField={searchFieldNode}
                         // KATEGORICHIPSEN under knappraden när sökningen är
-                        // igång (6/10-raden, nu utlöst av fältet): SAMMA filter
-                        // som kartan - ett val här smalnar listan nedanför OCH
-                        // kartan bakom. Sidan äger raden (filterChips), kortet
-                        // bara visar den. -mx/-mt: raden har egen luft och ska
-                        // gå ut till kortets kanter.
-                        belowToolbar={cardSearchOpen && filterChips
-                            ? <div className="-mx-4 md:-mx-6 -mt-2 mb-1">{filterChips}</div>
-                            : null}
+                        // igång eller filterknappen tryckts (6/10-raden): SAMMA
+                        // filter som kartan - ett val här smalnar listan
+                        // nedanför OCH kartan bakom. Sidan äger raden
+                        // (filterChips), kortet bara visar den.
+                        belowToolbar={filterChipsRow}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
                         // Passerade event kan inte stjärnmärkas — stjärnan vore
                         // förbrukad direkt (den lyser bara tills eventet varit).
                         canPlaceStar={canPlaceStar && !isEventPast(selectedEvent, Date.now())}
                         onPlaceStar={onPlaceStar ? () => onPlaceStar(selectedEvent.id) : undefined}
                     />
-                    {/* FLER FRÅN SAMMA ARRANGÖR + stadssidelänken (6/10) —
-                        bara i infovyn; i listvyn dominerar listan. */}
-                    {cardView === 'info' && cityLink && (
-                        <CardMoreRows
-                            organizerRow={organizerRow}
-                            onSelect={evt => onSelectEvent(evt)}
-                            cityLink={cityLink}
-                            searchQ={cardSearchQ}
+                    {/* KOMMER/INTRESSERAD + BJUD MED + ANMÄL - MELLAN
+                        BESKRIVNINGEN OCH CHATTEN (7/10 sent, Josef:
+                        "intresserad, kommer.... att de är mellan beskrivning
+                        och chatt"; var precis före listan). Fortfarande
+                        sticky bottom-0 (samma kvälls "lossna ifrån sin
+                        stickiness" när man når raden): fast i arkets botten
+                        tills man scrollat fram till raden under
+                        beskrivningen, där den släpper. Passerar den
+                        överkanten tar toppraden över (ankaret nedan mäts av
+                        rsvpBarOn-effekten). Gömd i kompaktläget och
+                        chatt-/listvyn (rsvpFooterVisible). */}
+                    {rsvpFooterVisible && onSetRsvp && (<>
+                        <div ref={rsvpAnchorRef} aria-hidden className="h-0" />
+                        <EventRsvpFooter
+                            event={selectedEvent}
+                            myRsvp={myRsvp}
+                            onSetRsvp={(status) => onSetRsvp(selectedEvent, status)}
+                            onInvite={() => onInviteFriend?.(selectedEvent)}
+                            invite={cardInvite && cardInvite.eventId === selectedEvent.id ? { fran: cardInvite.fran } : null}
+                            onDismissInvite={onDismissInvite}
+                            onRequireLogin={onRequireLogin}
+                            cta={footerCta}
+                            onVisitCta={recordCtaClick}
                         />
-                    )}
+                    </>)}
                     {/* Chatt per event — KRÄVER KONTO för att ens läsas
                         (Josef 31/8): utloggade ser en låst rad "Logga in för
                         att se chatten" som öppnar auth-modalen.
                         (Livebilder-panelen borttagen 5/8 på ägarens beslut.)
-                        Döljs i listvyn så närhetslistan hamnar direkt under
-                        headern. */}
+                        DIREKT UNDER SVARSRADEN sedan 7/10 sent (före det
+                        direkt under eventinfon, Josef 7/10 kväll: "chatten
+                        ska vara direkt under ... inte efter de event av samma
+                        arrangör") - arrangörsraden ligger kvar efter.
+                        PUBLIK + PRIVAT sedan samma kväll (två block, se
+                        EventChatPanel). Döljs i listvyn så träfflistan
+                        hamnar direkt under sökraden. */}
                     {onRequireLogin && cardView !== 'nearby' && (
-                        <div className="px-4 md:px-6 pb-4 flex flex-col gap-3">
-                            <EventChatPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} onRequireLogin={onRequireLogin} />
+                        <div className="px-4 md:px-6 pt-3 pb-4 flex flex-col gap-3">
+                            <EventChatPanel
+                                eventId={selectedEvent.id}
+                                eventTitle={selectedEvent.title}
+                                userCreated={selectedEvent.userCreated}
+                                invite={cardInvite && cardInvite.eventId === selectedEvent.id ? { fran: cardInvite.fran } : null}
+                                onRequireLogin={onRequireLogin}
+                            />
                         </div>
                     )}
+                    {/* FLER FRÅN SAMMA ARRANGÖR + stadssideknappen (6/10;
+                        EFTER chatten sedan 7/10 kväll) — bara i infovyn; i
+                        listvyn dominerar listan. */}
+                    {cardView === 'info' && cityLink && (
+                        <CardMoreRows
+                            organizerRow={organizerRow}
+                            onSelect={handleListPick}
+                            cityLink={cityLink}
+                            cityCount={tabDays.all.count}
+                            searchQ={cardSearchQ}
+                        />
+                    )}
+                    {/* (Svarsraden låg här, precis före listan, 7/10 kväll -
+                        flyttad upp mellan beskrivningen och chatten.) */}
+                    </>)}
                     {/* Direkt till närhetslistan — "Tips för dig"-sektionen togs
                         bort 2026-07-13 (ägarbeslut: onödig, folk vill se Fler
                         event i närheten direkt när de scrollar). Döljs i
                         chatt-vyn (som visar bara header + chatt); i listvyn
-                        hamnar den i stället direkt under headern. */}
+                        hamnar den i stället direkt under sökraden. GEMENSAM för
+                        alla tre lägen sedan 7/10 kväll (listVisible): vanliga
+                        kortet, väljarläget ("listan går att fortsätta bläddra
+                        i") och sökarket så fort man sökt. */}
                     {/* Djuplänks-glappet (?event= från stadssidorna): kortet
                         öppnar på sitt seed-data långt innan Sverige-lagren
                         laddat, så närhetslistan är tom en stund. Visa sektionen
@@ -3179,7 +3683,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         när det definitiva beskedet säger att inget finns nära.
                         Samma rad står också tills kortlagret landat (cardsReady),
                         så listan ritas EN gång med rätt innehåll. */}
-                    {cardView !== 'chat' && ((nearbyEvents.length === 0 && !eventsSettled) || !cardsReady) && (
+                    {listVisible && ((nearbyEvents.length === 0 && !eventsSettled) || !cardsReady) && (
                         <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
                             <div className="px-4 md:px-6 py-3 flex items-center gap-2.5">
                                 <span aria-hidden className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 dark:border-zinc-600 border-t-[#006AA7] dark:border-t-sky-400 animate-spin" />
@@ -3189,14 +3693,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             </div>
                         </div>
                     )}
-                    {cardView !== 'chat' && cardsReady && (nearbyEvents.length > 0 || tabDays.all.count > 0) && (
+                    {listVisible && cardsReady && (nearbyEvents.length > 0 || tabDays.all.count > 0) && (
                         <NearbyEventsList
                             upcomingItems={listedUpcoming.rows.slice(0, nearbyVisibleCount)}
                             upcomingTotal={listedUpcoming.rows.length}
                             upcomingCount={listedUpcoming.count}
                             pastItems={listedPast.rows}
                             now={now}
-                            onSelect={evt => onSelectEvent(evt)}
+                            onSelect={handleListPick}
                             onLoadMore={() => setNearbyVisibleCount(c => c + NEARBY_PAGE_SIZE)}
                             coachMarkerRef={coachMarkerRef}
                             imagesOnly={imagesOnlyList}
@@ -3218,9 +3722,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onToggleSave={savedEventIds && onUnsaveEvent
                                 ? (id) => (savedEventIds.has(id) ? onUnsaveEvent(id) : onSaveEvent(id))
                                 : undefined}
+                            // Filtren i flikraden (7/10 sent) - inte i sökarket,
+                            // där står kategoriraden redan fast i huvudet.
+                            activeFilters={activeFilters}
+                            onRemoveFilter={onRemoveFilter}
+                            filterChips={searchOnly ? undefined : filterChips}
                         />
                     )}
-                    </>)}
                 </div>
 
                 {/* Scroll-coach: "scrolla ner"-pilen visas DIREKT när ett kort är
@@ -3235,26 +3743,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     ytan runt pillen inte fångar scroll/tap.
                     Bara i infovyn — i listvyn ÄR man redan i närhetslistan och
                     i chatt-vyn finns ingen lista att scrolla till. */}
-                {/* KOMMER/INTRESSERAD + BJUD MED (ägarbeslut 6/10): fast footer
-                    i botten av arket. Gömd i kompaktläget (rsvpFooterVisible)
-                    och i väljar-/chatt-/listvyn. */}
-                {rsvpFooterVisible && selectedEvent && onSetRsvp && (
-                    <EventRsvpFooter
-                        event={selectedEvent}
-                        myRsvp={myRsvp}
-                        onSetRsvp={(status) => onSetRsvp(selectedEvent, status)}
-                        onInvite={() => onInviteFriend?.(selectedEvent)}
-                        invite={cardInvite && cardInvite.eventId === selectedEvent.id ? { fran: cardInvite.fran } : null}
-                        onDismissInvite={onDismissInvite}
-                        cta={footerCta}
-                        onVisitCta={() => recordEventClick({
-                            id: selectedEvent.id,
-                            url: selectedEvent.url,
-                            title: selectedEvent.title,
-                            hostName: selectedEvent.hostName,
-                        })}
-                    />
-                )}
+                {/* (EventRsvpFooter som overlay låg här 6/10-7/10 - den bor
+                    nu STICKY i scrollflödet mellan beskrivningen och
+                    chatten, plus toppraden när den scrollat förbi.) */}
                 {coachStage !== 'off' && cardView === 'info' && !chooserActive && (
                     <div className={`absolute inset-x-0 ${rsvpFooterVisible ? 'bottom-16' : 'bottom-4'} z-[60] flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                         <button

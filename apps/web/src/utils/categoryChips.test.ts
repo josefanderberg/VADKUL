@@ -61,20 +61,44 @@ describe('planMapCategoryChips', () => {
     it('flest först, nollor dolda, Övrigt sist', () => {
         const counts = new Map([['music', 3], ['sport', 9], ['other', 20], ['food', 3]]);
         expect(planMapCategoryChips(MAP_KEYS, counts, new Set())).toEqual([
-            { key: 'sport', count: 9 },
-            { key: 'music', count: 3 },
-            { key: 'food', count: 3 },
-            { key: 'other', count: 20 },
+            { key: 'sport', count: 9, lead: false },
+            { key: 'music', count: 3, lead: false },
+            { key: 'food', count: 3, lead: false },
+            { key: 'other', count: 20, lead: false },
         ]);
     });
 
-    it('valda kategorier följer med även på noll, så de går att släppa', () => {
+    it('valda kategorier står först och följer med även på noll, så de går att släppa', () => {
         const plan = planMapCategoryChips(MAP_KEYS, new Map([['music', 2]]), new Set(['stage', 'sport']));
         expect(plan).toEqual([
-            { key: 'music', count: 2 },
-            { key: 'stage', count: 0 },
-            { key: 'sport', count: 0 },
+            { key: 'stage', count: 0, lead: true },
+            { key: 'sport', count: 0, lead: true },
+            { key: 'music', count: 2, lead: false },
         ]);
+    });
+
+    it('valda inbördes: flest först, Övrigt sist även bland de valda', () => {
+        const counts = new Map([['music', 3], ['sport', 9], ['other', 20]]);
+        const plan = planMapCategoryChips(MAP_KEYS, counts, new Set(['other', 'music']));
+        expect(plan.map(c => c.key)).toEqual(['music', 'other', 'sport']);
+    });
+
+    it('det öppna eventets kategori står direkt efter de valda, även på noll', () => {
+        const counts = new Map([['music', 3], ['sport', 9]]);
+        const plan = planMapCategoryChips(MAP_KEYS, counts, new Set(['music']), 'food');
+        expect(plan).toEqual([
+            { key: 'music', count: 3, lead: true },
+            { key: 'food', count: 0, lead: true },
+            { key: 'sport', count: 9, lead: false },
+        ]);
+    });
+
+    it('en vald highlight räknas som vald, och en okänd highlight ignoreras', () => {
+        const counts = new Map([['music', 3], ['sport', 9]]);
+        expect(planMapCategoryChips(MAP_KEYS, counts, new Set(['sport']), 'sport'))
+            .toEqual([{ key: 'sport', count: 9, lead: true }, { key: 'music', count: 3, lead: false }]);
+        expect(planMapCategoryChips(MAP_KEYS, counts, new Set(), 'finnsinte').map(c => c.key))
+            .toEqual(['sport', 'music']);
     });
 
     it('tom vy utan val ger inga chips', () => {

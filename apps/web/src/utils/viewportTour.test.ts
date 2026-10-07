@@ -3,6 +3,7 @@ import {
     isInVisibleMapArea,
     dayOffsetOf,
     nextPeriodWithEvents,
+    zoomOutStepsToReveal,
     TOUR_CARD_COVER_FRACTION,
 } from './viewportTour';
 
@@ -100,5 +101,43 @@ describe('nextPeriodWithEvents', () => {
     it('en trasig periodlängd faller tillbaka till en dag', () => {
         expect(nextPeriodWithEvents([0, 2], 0, 0)).toBe(2);
         expect(nextPeriodWithEvents([0, 2], 0, 0.4)).toBe(2);
+    });
+});
+
+describe('zoomOutStepsToReveal', () => {
+    // 400 x 800: marginal 40/80 px, kortet täcker nedersta 22 %.
+    const W = 400, H = 800;
+
+    it('punkt som redan syns kräver ingen zoom', () => {
+        expect(zoomOutStepsToReveal(0, 0, W, H)).toBe(0);
+        expect(zoomOutStepsToReveal(100, -200, W, H)).toBe(0);
+    });
+
+    it('dubbelt så långt bort som rummet åt sidan = en zoomnivå ut', () => {
+        // Rummet i x: 200 - 40 = 160 px.
+        expect(zoomOutStepsToReveal(320, 0, W, H)).toBeCloseTo(1);
+        expect(zoomOutStepsToReveal(-640, 0, W, H)).toBeCloseTo(2);
+    });
+
+    it('nedåt räknas mot kortets överkant, inte skärmens botten', () => {
+        // Rummet nedåt: 800 * (0.5 - 0.22) - 80 = 144 px; uppåt 400 - 80 = 320.
+        expect(zoomOutStepsToReveal(0, 288, W, H)).toBeCloseTo(1);
+        expect(zoomOutStepsToReveal(0, -288, W, H)).toBe(0);
+    });
+
+    it('den snålaste riktningen avgör', () => {
+        const steps = zoomOutStepsToReveal(320, 576, W, H);
+        expect(steps).toBeCloseTo(2);
+    });
+
+    it('trasig storlek ger noll i stället för NaN', () => {
+        expect(zoomOutStepsToReveal(500, 500, 0, H)).toBe(0);
+    });
+
+    it('efter zoomen ligger punkten inom den synliga ytan', () => {
+        const dx = 1234, dy = 987;
+        const s = Math.pow(2, -zoomOutStepsToReveal(dx, dy, W, H));
+        expect(W / 2 + dx * s).toBeLessThanOrEqual(W - W * 0.1 + 1e-6);
+        expect(H / 2 + dy * s).toBeLessThanOrEqual(H * (1 - TOUR_CARD_COVER_FRACTION) - H * 0.1 + 1e-6);
     });
 });

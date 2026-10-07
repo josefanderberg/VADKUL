@@ -10,9 +10,11 @@ import type { LinkEvent } from '@/types';
 
 export interface OrganizerRowData {
     /** null = arrangören har ingen arrangörssida (biljettplattform/opt-in/
-     *  användarskapad) — raden visas ändå, utan sidlänken. */
+     *  användarskapad) — raden visas ändå, utan sidknappen. */
     slug: string | null;
     name: string;
+    /** Kan vara TOM när arrangören har en sida men inga FLER laddade event
+     *  (7/10 kväll: vägen till arrangörssidan ska finnas ändå). */
     rows: LinkEvent[];
 }
 
@@ -26,6 +28,11 @@ interface CardMoreRowsProps {
     /** Kortsökets aktiva term följer med till stadssidan som ?q= (6/10:
      *  "ett sök kan välja att behållas när man kommer till sidan"). */
     searchQ?: string;
+    /** Antal event i kartans ruta den kommande månaden (EventCards
+     *  Månaden-flik, samma tal) — visas i stadssideknappen (7/10, Josef:
+     *  "mer av en knapp som visar hur många de är kommande månaden i den
+     *  staden"). Utelämnad/0 → knappen utan siffra. */
+    cityCount?: number;
 }
 
 function eventEmoji(evt: LinkEvent): string {
@@ -51,32 +58,30 @@ function dayAndTime(evt: LinkEvent): string {
  * länken hit är en EGEN väg), och en rad till STADSSIDAN där kortsökets term
  * följer med som ?q=.
  */
-export default function CardMoreRows({ organizerRow, onSelect, cityLink, searchQ }: CardMoreRowsProps) {
+export default function CardMoreRows({ organizerRow, onSelect, cityLink, searchQ, cityCount }: CardMoreRowsProps) {
     const q = searchQ?.trim();
     const cityHref = q
         ? `${cityLink.href}${cityLink.href.includes('?') ? '&' : '?'}q=${encodeURIComponent(q)}`
         : cityLink.href;
     return (
         <div className="border-t border-border">
-            {organizerRow && (
+            {organizerRow && (organizerRow.rows.length > 0 || organizerRow.slug) && (
                 <div className="px-4 md:px-6 py-3">
+                    {organizerRow.rows.length > 0 && (
                     <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400 truncate">
                             Fler från {organizerRow.name}
                         </span>
-                        {organizerRow.slug && (
-                            <a
-                                href={organizerHref(organizerRow.slug)}
-                                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#006AA7] dark:text-sky-400 hover:underline"
-                            >
-                                Arrangörssidan
-                                <ArrowRight size={11} aria-hidden />
-                            </a>
-                        )}
+                        {/* (Den lilla "Arrangörssidan →"-textlänken som stod
+                            här är ERSATT av knappen under raden - 7/10 kväll,
+                            Josef: "jag måste ju kunna gå till alla som är på
+                            arrangörssidan ifrån eventkortet".) */}
                     </div>
+                    )}
                     {/* -mx/px: raden rullar ända ut till kortets kanter, som
                         tid/plats-raden. data-hscroll (inuti HScrollRow) låter
                         kortets gestlogik släppa vågräta svep hit. */}
+                    {organizerRow.rows.length > 0 && (
                     <HScrollRow className="-mx-4 md:-mx-6 px-4 md:px-6 gap-2">
                         {organizerRow.rows.map(evt => {
                             // Bild i brickan (Josef 6/10: "det ska ju vara
@@ -115,18 +120,49 @@ export default function CardMoreRows({ organizerRow, onSelect, cityLink, searchQ
                             );
                         })}
                     </HScrollRow>
+                    )}
+                    {/* ARRANGÖRSSIDE-KNAPPEN (7/10 kväll, Josef: "jag måste
+                        ju kunna gå till alla som är på arrangörssidan ifrån
+                        eventkortet"): en riktig knapp till arrangörssidan med
+                        ALLA deras event - sekundär (kontur) så den blå
+                        stadssideknappen under behåller tyngden. Visas även
+                        när raden är tom (sidan finns ju ändå). Värdnamnets
+                        klick filtrerar fortfarande kartan (29/9-beslutet) -
+                        det här är den egna vägen till sidan. */}
+                    {organizerRow.slug && (
+                        <a
+                            href={organizerHref(organizerRow.slug)}
+                            className={`group/arr flex items-center justify-center gap-2 w-full py-2.5 rounded-full border-2 border-[#006AA7]/30 text-[#006AA7] dark:text-sky-400 dark:border-sky-400/30 text-xs font-black uppercase tracking-wider hover:bg-[#006AA7]/5 hover:border-[#006AA7]/50 dark:hover:border-sky-400/50 transition-all active:scale-[0.98] ${organizerRow.rows.length > 0 ? 'mt-2.5' : ''}`}
+                        >
+                            <span className="truncate normal-case tracking-normal text-sm">Alla event från {organizerRow.name}</span>
+                            <ArrowRight size={14} aria-hidden className="shrink-0 transition-transform group-hover/arr:translate-x-1" />
+                        </a>
+                    )}
                 </div>
             )}
-            <a
-                href={cityHref}
-                className="flex items-center justify-between gap-2 px-4 md:px-6 py-2.5 border-t border-border text-xs font-black text-[#006AA7] dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
-            >
-                <span className="truncate">
-                    {cityLink.label}
-                    {q ? ` — sök "${q}"` : ''}
-                </span>
-                <ArrowRight size={14} aria-hidden className="shrink-0" />
-            </a>
+            {/* STADSSIDEKNAPPEN (7/10, Josef: "mer av en knapp som visar hur
+                många de är kommande månaden i den staden") — ersätter den
+                tunna textraden: blå knapp i kortets CTA-formspråk med
+                månadens antal som underrad (samma tal som Månaden-fliken). */}
+            <div className="px-4 md:px-6 py-3 border-t border-border">
+                <a
+                    href={cityHref}
+                    className="group/stad flex flex-col items-center gap-0.5 w-full py-3 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/20 ring-1 ring-inset ring-white/25 hover:from-[#0083CE] hover:to-[#00619F] hover:shadow-lg transition-all active:scale-[0.98]"
+                >
+                    <span className="flex max-w-full items-center gap-2 px-4 text-sm font-black">
+                        <span className="truncate">
+                            {cityLink.label}
+                            {q ? ` — sök "${q}"` : ''}
+                        </span>
+                        <ArrowRight size={15} aria-hidden className="shrink-0 transition-transform group-hover/stad:translate-x-1" />
+                    </span>
+                    {typeof cityCount === 'number' && cityCount > 0 && (
+                        <span className="text-[11px] font-bold text-white/80 tabular-nums">
+                            {cityCount} event kommande månaden
+                        </span>
+                    )}
+                </a>
+            </div>
         </div>
     );
 }

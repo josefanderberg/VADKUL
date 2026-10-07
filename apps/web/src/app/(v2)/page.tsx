@@ -11,8 +11,7 @@ import CategoryChipRow, { SOURCE_EMOJI } from '@/components/v2/CategoryChipRow';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import HoverLabel from '@/components/v2/HoverLabel';
 import AuthModal from '@/components/v2/AuthModal';
-import EventCard from '@/components/v2/EventCard';
-import SavedPanel from '@/components/v2/SavedPanel';
+import EventCard, { type ActiveFilter } from '@/components/v2/EventCard';
 import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import { userService } from '@/services/userService';
@@ -21,7 +20,7 @@ import { storageService } from '@/services/storageService';
 import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
 import { setRsvpStatus } from '@/services/rsvpService';
 import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY } from '@/utils/rsvpTransition';
-import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus } from 'lucide-react';
+import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus, ListFilter as FilterIcon } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
@@ -463,8 +462,6 @@ export default function HomePage() {
     // Bumpas när sökrutan ska fällas ihop utifrån (man valde en stad ur
     // träfflistan) — se closeSearchNonce i FloatingNavbar.
     const [closeSearchNonce, setCloseSearchNonce] = useState(0);
-    // Panel med sparade event (öppnas från Sparade-raden i profilpanelen).
-    const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
     // Kategorifilter (flerval). Tomt NORMAL-val = visa alla kategorier; opt-in-
@@ -1565,6 +1562,17 @@ export default function HomePage() {
         if (delta !== 0) dayFlashArmedRef.current = true;
         handleTourDayStep(delta, selectEventId);
     }, [handleTourDayStep]);
+    // NÄSTA ZOOMAR UT (7/10 sent): kortet har gått igenom eventen i bild och
+    // valt nästa obesökta utanför bild samma dag - kartan zoomar ut till det
+    // (V2Map zoomRevealTarget) och dagplattan BLINKAR så man ser att det är
+    // samma dag igen. Kortets eget steg, så 4/9-regeln (blinken bara vid
+    // kortets egna steg, aldrig på dag-nyckeln rakt av) håller.
+    const [zoomRevealTarget, setZoomRevealTarget] = useState<{ lat: number; lng: number; nonce: number } | null>(null);
+    const handleCardZoomOut = useCallback((target: LinkEvent) => {
+        if (!hasValidCoords(target)) return;
+        setZoomRevealTarget(prev => ({ lat: target.lat!, lng: target.lng!, nonce: (prev?.nonce ?? 0) + 1 }));
+        setDayFlashNonce(n => n + 1);
+    }, []);
     const weekAreaKey = effectiveRangeDays >= WEEK_RANGE_MIN_DAYS && weekAreaCenter
         ? `${Math.round(weekAreaCenter.lat * 20) / 20}:${Math.round(weekAreaCenter.lng * 20) / 20}:${
             Math.max(WEEK_AREA_MIN_RADIUS_KM, Math.ceil(viewRadiusKm / 5) * 5)
@@ -2166,7 +2174,10 @@ export default function HomePage() {
             .filter(evt => evt.id !== selectedEvent.id && sameHost(evt) && !isEventPast(evt, nowMs))
             .sort((a, b) => (a.time?.getTime() ?? 0) - (b.time?.getTime() ?? 0))
             .slice(0, 12);
-        if (rows.length === 0) return null;
+        // Med arrangörssida visas sektionen ÄVEN utan fler laddade event
+        // (7/10 kväll: "jag måste ju kunna gå till alla som är på
+        // arrangörssidan ifrån eventkortet" - knappen dit ska alltid finnas).
+        if (rows.length === 0 && !slug) return null;
         return { slug, name: name || organizerNameFromSlug(slug ?? '') || 'arrangören', rows };
     }, [selectedEvent, events]);
     // Ligger eventet i perioden som börjar `offset` dagar fram och är `days`
@@ -3163,6 +3174,30 @@ export default function HomePage() {
             }
         });
     }, []);
+    // De påslagna filtren som brickor i kortlistans flikrad (7/10 sent, Josef:
+    // "jämte månadens / populära. då ska det ju synas de kategorier man har
+    // iklickade"): en per vald kategori + Fler-källan. 🔥 har redan sin flik
+    // (Populärt) och visas inte dubbelt.
+    const cardActiveFilters = useMemo<ActiveFilter[]>(() => {
+        const out: ActiveFilter[] = [];
+        for (const key of mapCategories) {
+            if (!(key in EVENT_CATEGORIES)) continue;
+            const cat = key as EventCategoryType;
+            out.push({ key: `cat:${cat}`, emoji: EVENT_CATEGORIES[cat].emoji, label: categoryLabel(cat) });
+        }
+        if (mapSource) {
+            out.push({
+                key: `src:${mapSource}`,
+                emoji: SOURCE_EMOJI[mapSource] ?? '•',
+                label: SOURCE_DEFS.find(d => d.key === mapSource)?.label ?? mapSource,
+            });
+        }
+        return out;
+    }, [mapCategories, mapSource]);
+    const handleRemoveCardFilter = useCallback((key: string) => {
+        if (key.startsWith('cat:')) handleToggleMapCategory(key.slice(4) as EventCategoryType);
+        else if (key.startsWith('src:')) handleSelectMapSource(null);
+    }, [handleToggleMapCategory, handleSelectMapSource]);
     // Tomlägets "Visa alla": släpper kategorierna, Fler-källan och 🔥.
     const handleClearFilters = useCallback(() => {
         startTransition(() => {
@@ -3221,6 +3256,14 @@ export default function HomePage() {
     // vidare till kartan (MapRedirect).
     const handleInviteFriend = useCallback(async (evt: LinkEvent) => {
         if (!goingEventIds.has(evt.id)) void handleSetRsvp(evt, 'going');
+        // Starta den PRIVATA tråden för ens inbjudna (spår 3) i bakgrunden —
+        // mottagaren av länken ska kunna gå med även innan man själv öppnat
+        // chatten igen. Best-effort: delningen är huvudsaken, och innan
+        // rules-deployen loggar den bara en varning.
+        if (user) {
+            void import('@/services/privateChatService').then(m =>
+                m.ensurePrivateThread(evt.id, evt.userCreated, { uid: user.uid, name: user.displayName || null }));
+        }
         const url = inviteUrl(window.location.origin, evt.id, evt.userCreated, user?.uid ?? null);
         const text = `Följer du med på ${evt.title}?`;
         try {
@@ -3256,6 +3299,22 @@ export default function HomePage() {
     const selectEventSmooth = useCallback((evt: LinkEvent | null) => {
         startTransition(() => setSelectedEvent(evt));
     }, []);
+
+    // SÖKARKET (7/10 kväll): filterknappen uppe till höger (där "+ Lägg till"
+    // stod) öppnar eventkortet UTAN event — bara kortsöket + kategorichipsen;
+    // träffarna dyker upp när man söker. Stängs av kortet (drag ner/✕) eller
+    // automatiskt när ett event väljs (kortet visar då eventet i stället).
+    const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+    const openSearchSheet = useCallback(() => {
+        startTransition(() => {
+            setGroupChoice(null);
+            setSelectedEvent(null);
+            setSearchSheetOpen(true);
+        });
+    }, []);
+    useEffect(() => {
+        if (selectedEvent) setSearchSheetOpen(false);
+    }, [selectedEvent]);
 
     /**
      * Kartklick UNDER (eller precis efter) bildspelet. Klicket stoppar blinket
@@ -3343,13 +3402,12 @@ export default function HomePage() {
         groupRepRef.current = null;
     }, [selectedEvent, groupReturn]);
 
-    // Sök-, sparat- och profilpanelen delar plats under navbaren — en i taget.
+    // Sök- och profilpanelen delar plats under navbaren - en i taget.
     useEffect(() => {
-        if (searchQuery.trim()) { setSavedPanelOpen(false); setProfilePanelOpen(false); }
+        if (searchQuery.trim()) setProfilePanelOpen(false);
     }, [searchQuery]);
     const handleToggleProfile = useCallback(() => {
         setProfilePanelOpen(o => !o);
-        setSavedPanelOpen(false);
         setSearchQuery('');
     }, []);
 
@@ -3375,28 +3433,15 @@ export default function HomePage() {
         [events, user]
     );
 
-    // Aktivt sparade = sparade event som ÄNNU INTE passerat (samma isEventPast-
-    // gräns som SavedPanel/kartan: start + 1 h, kl 20 för event utan klockslag).
-    // Passerade sparade räknas som HISTORIK och ska inte blåsa upp
-    // hjärt-badgen / "Sparade event"-räknaren — de ligger under Historik i panelen.
     // Rutläget: ett sparat event i en annan del av landet (eller bortom
-    // tidsfönstret) finns inte i rutorna — hämta det styckvis, annars
-    // försvann det tyst ur sparade-listan och hjärt-räknaren. De senast
-    // sparade räcker (äldre sparningar har oftast passerat och finns inte i
-    // datat alls; varje id kostar ett litet uppslag).
+    // tidsfönstret) finns inte i rutorna - hämta det styckvis, annars
+    // försvann det tyst ur profilens Sparade-mapp. De senast sparade räcker
+    // (äldre sparningar har oftast passerat och finns inte i datat alls;
+    // varje id kostar ett litet uppslag).
     useEffect(() => {
         if (!eventsSettled || !savedEventIds.size) return;
         void linkEventService.ensureEvents([...savedEventIds].slice(-30));
     }, [eventsSettled, savedEventIds]);
-
-    const activeSavedCount = useMemo(() => {
-        const nowMs = Date.now();
-        let n = 0;
-        for (const e of events) {
-            if (savedEventIds.has(e.id) && !isEventPast(e, nowMs)) n++;
-        }
-        return n;
-    }, [events, savedEventIds]);
 
     // Användarens GPS-position — rapporteras upp från kartan (den blå plats-
     // pricken; tyst hämtning vid start + "Min plats"-knappen). EventCard visar
@@ -3427,6 +3472,13 @@ export default function HomePage() {
             ? { href: cityPageHref(city), label: `Alla evenemang i ${city.name}`, aria: `Alla evenemang i ${city.name} — stadssidan med dag-för-dag-lista` }
             : { href: '/evenemang', label: 'Evenemang stad för stad', aria: `Evenemang stad för stad — se allt i ${liveCityName ?? 'Sverige'} och andra städer` };
     }, [cityTourTarget, boundsCityKey, liveCityName, mapCenter, userPos]);
+
+    // Dagplattans etikett (delas av plattan och dess aria). Fillets-mätningen
+    // som stod här är RIVEN 7/10 kväll (tredje varvet, Josef: "den ser jätte
+    // konstig ut") — plattan är nu EN kapsel med dagchipet INUTI, se JSX:en.
+    const plattaDayLabel = mapOrganizer && organizerRange === 'all'
+        ? 'Alla'
+        : getDayLabel(dayOffset, mapOrganizer ? organizerDays : effectiveRangeDays);
 
     // ── Var kartan LANDAR ────────────────────────────────────────────────────
     // I staden du är i, inte Stockholm (Josef 9/8). Ligger här nere för att
@@ -3505,7 +3557,6 @@ export default function HomePage() {
         // Panelerna stängs urgent (direkt visuell respons); dag+val är den
         // tunga omrenderingen och körs som transition.
         setSearchQuery('');
-        setSavedPanelOpen(false);
         setProfilePanelOpen(false);
         startTransition(() => {
             setDayOffset(offset);
@@ -4354,18 +4405,32 @@ export default function HomePage() {
             />
             )}
 
-            {/* 1b. SKAPA-KNAPPEN i ÖVRE HÖGRA hörnet (ägarbeslut 7/10: "ha
-                lägg till + som en knapp längst upp åt höger, sen ta bort den
-                under profilen" — tog söks gamla hörn). Ligger under
-                eventkortet (z-1090, som väljaren). */}
+            {/* 1b. FILTERKNAPPEN i ÖVRE HÖGRA hörnet (ägarbeslut 7/10 kväll:
+                "Ta bort lägg till som är uppe åt höger. ha en vanlig
+                filtersymbol där. om man klickar på den öppnar eventkortet,
+                men bara med sök och att vi visa filterna och inga event") —
+                ersätter "+ Lägg till"-pillen, som blev en rund + ovanför
+                dagväljarens högerkolumn (CreateEventButton, se 1b1b). Samma
+                vita 44px-formspråk som profilknappen; blå prick när kartans
+                filter är på (6/10-receptet — arrangörsfiltret räknas inte,
+                det har sin banner). Ligger under eventkortet (z-1090). */}
             {!chromeHidden && (
-            <CreateEventButton
-                creationMode={creationMode}
-                enabled={shopFlags.createEvent}
-                onStartCreate={() => setCreationMode('placing')}
-                onConfirmPlacement={openCreateFormHere}
-                hint={tourHint === 'create'}
-            />
+            <div className="fixed inset-x-0 top-6 px-4 z-[1090] pointer-events-none">
+                <div className="max-w-[1400px] mx-auto flex justify-end">
+                    <button
+                        type="button"
+                        onClick={openSearchSheet}
+                        aria-label="Sök och filtrera event"
+                        title="Sök och filtrera event"
+                        className="pointer-events-auto relative h-11 w-11 flex items-center justify-center bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200"
+                    >
+                        <FilterIcon size={19} className="text-slate-700" />
+                        {(popularOnly || mapCategories.size > 0 || mapSource !== null) && (
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
+                        )}
+                    </button>
+                </div>
+            </div>
             )}
 
             {/* 1b1a. STADEN ÖVERST, dagen under (Josef 7/10 kväll — se
@@ -4390,12 +4455,13 @@ export default function HomePage() {
         {/* Plattans rad: samma kolumn som hörnknapparna (px-4 + max-w-[1400px])
             i ett tredelat grid. Sidokolumnerna delar luften lika (plattan står
             mitt på skärmen) men blir aldrig smalare än knappen i sitt hörn +
-            8 px luft: 52 = profilen 44 + 8, 118 = "+ Lägg till" 110 + 8. Ett
-            långt stadsnamn knuffar därför plattan åt vänster i stället för in
-            under pillen (som iOS-titlar); först när hela mitten är full
-            kapas namnet med …. Gör pillen bredare → höj 118. */}
+            8 px luft: 52 = profilen/filterknappen 44 + 8 (sedan 7/10 kväll är
+            båda hörnen 44px-cirklar — "+ Lägg till"-pillen som krävde 118 bor
+            nu vid dagväljaren). Ett långt stadsnamn knuffar plattan i sidled i
+            stället för in under knappen (som iOS-titlar); först när hela
+            mitten är full kapas namnet med …. */}
         <div className="w-full px-4">
-        <div className="max-w-[1400px] mx-auto grid grid-cols-[minmax(52px,1fr)_minmax(0,auto)_minmax(118px,1fr)]">
+        <div className="max-w-[1400px] mx-auto grid grid-cols-[minmax(52px,1fr)_minmax(0,auto)_minmax(52px,1fr)]">
         <div className="col-start-2 min-w-0 relative flex flex-col items-center">
         <a
             key={cityTourTarget?.key ?? 0}
@@ -4407,54 +4473,60 @@ export default function HomePage() {
             // styr inflygningens animation OCH övergångarna — hovern ska vara
             // lika kvick som knapparna (200 ms).
             // tourHint 'city' = visningsrundans sista steg: samma hover-läge i 4 s.
-            // STADEN ÖVERST, STORT, DAGEN UNDER (ägarbeslut 7/10 kväll: "staden
-            // ska stå över dagen. Och i större bokstäver") - ersätter samma
-            // dags enrad "IDAG · VÄXJÖ" och 2/9-plattan med dagen stort.
-            // Platsen är kvar i mitten överst: hörnen ägs av profil och
-            // "+ Lägg till" - gridet runt om håller plattan fri från dem.
-            // h-11 = SAMMA 44 px som profilen och pillen (Josef samma kväll:
-            // "höja den ... så den är aline med lägg till") - med py-2 var den
-            // 52 px och hängde 8 px under knapparna. Därför text-xl och inte
-            // 2xl på desktop: 2xl + dagraden rymdes inte i 44 px.
-            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center justify-center min-w-0 max-w-full h-11 rounded-full backdrop-blur-md px-4 sm:px-6 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
-                tourHint === 'city' ? 'bg-slate-900/90 scale-105' : 'bg-slate-900/80 hover:bg-slate-900/90 hover:scale-105'
+            // STADEN STORT + DAGCHIPET (7/10 kväll, tre varv: "större text ...
+            // dagen ... egen background med borderradius på alla hörn utan de
+            // som är upp mot staden" → fliken under pillen och fillets-bygget
+            // PRÖVADE OCH RIVNA samma kväll — "går inte alls ihop" / "ser
+            // jätte konstig ut" → nu EN kapsel med dagchipet inuti, se
+            // kommentaren vid blocket nedan). Hela blocket är länken till
+            // stadssidan; stadsraden är h-11 (44 px som profilknappen).
+            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center min-w-0 max-w-full transition-transform active:scale-[0.99] outline-none group/platta ${
+                tourHint === 'city' ? 'scale-105' : 'hover:scale-105'
             }`}
             style={{ transitionDuration: '200ms' }}
         >
-            {/* BARA stadsnamnet (Josef 31/8: "Evenemang stad för stad"-under-
-                raden revs samma kväll som den lades till — namnet ÄR länken,
-                utan skylt). Länkens ärende ligger i title/aria + sr-only-
-                texten nedan, som också är det Google läser.
-                sm:leading-tight MÅSTE upprepas: sm:text-xl sätter om
-                line-height till 28px i breakpointen och vinner annars - då
-                ryms inte två rader i plattans 44 px. leading-tight och inte
-                leading-none: truncate klipper, och med leading-none försvann
-                nederstaplarna i "Göteborg"/"Helsingborg". */}
-            {/* DAGEN under staden - den ska fortfarande synas (Josef 2/9: "där
-                ska det stå vilken dag man är på, så man ser det"): Nästa-
-                bläddringen byter dag av sig själv när eventen i bild är slut,
-                och dagväljaren i botten ligger bakom kortet just då. Samma
-                etikett som väljaren (getDayLabel) så texterna aldrig går isär;
-                effectiveRangeDays = det kartan faktiskt visar (veckan faller
-                till en dag utzoomad). */}
-            {/* Ringen + texten får key=dayFlashNonce → remount → engångs-
-                blinken spelas om vid varje dagbyte (se dayFlashNonce). */}
-            {dayFlashNonce > 0 && (
-                <span key={`ring-${dayFlashNonce}`} aria-hidden className="day-flash-ring absolute inset-0 rounded-full pointer-events-none" />
-            )}
-            {/* Staden överst (7/10 kväll): plattan är länken till stadens
-                egen /evenemang-sida (cityLink; indexet som fallback - Googles
-                väg in i stadshierarkin), och namnet säger vart den leder. */}
-            <span className="block max-w-full truncate text-lg sm:text-xl font-black tracking-tight text-white leading-tight sm:leading-tight">
-                {liveCityName ?? 'Sverige'}
-            </span>
-            <span
-                key={`day-${dayFlashNonce}`}
-                className={`block text-[11px] font-black uppercase tracking-wider text-white/80 leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
-            >
-                {mapOrganizer && organizerRange === 'all'
-                    ? 'Alla'
-                    : getDayLabel(dayOffset, mapOrganizer ? organizerDays : effectiveRangeDays)}
+            {/* Stadspillen. truncate + leading-tight: klipper utan att tappa
+                nederstaplarna i "Göteborg"/"Helsingborg" (leading-none åt
+                dem). Mörk platta som förut: vit skugg-text blir gröt över
+                ljusa kvarter. w-full: pillen spänner alltid över HELA
+                kolumnen (= bredaste av stad/dagflik), så fliken aldrig
+                sticker utanför pillen - förutsättningen för de inåtvända
+                hörnen nedan. */}
+            {/* EN KAPSEL MED DAGCHIPET INUTI (7/10 kväll, tredje varvet -
+                Josef: "den ser jätte konstig ut"; ersätter både fliken
+                under pillen och fillets-bygget): hela plattan är ETT mörkt
+                rundat block - staden stort överst, och DAGEN i ett eget
+                ljusare chip (bg-white/10, "egen background") längst ner i
+                blocket, med rundade hörn BARA nedtill (rounded-b-2xl = 16 =
+                blockets 22 minus insatsen 6, koncentriskt) - hörnen mot
+                staden är raka. Chipet är w-full av blockets innervidd, så
+                stadens och dagens längder aldrig kan gå isär - allt "går
+                ihop" per konstruktion, utan mätning.
+                Dagen ska fortfarande synas här (Josef 2/9): Nästa-
+                bläddringen byter dag av sig själv och dagväljaren ligger
+                bakom kortet just då; samma etikett som väljaren
+                (plattaDayLabel/getDayLabel) så texterna aldrig går isär.
+                Ringen + texten får key=dayFlashNonce → remount → engångs-
+                blinken spelas om vid varje dagbyte. */}
+            <span className={`flex flex-col items-center min-w-0 max-w-full rounded-[22px] backdrop-blur-md px-1.5 pb-1.5 shadow-2xl border border-white/10 transition-colors duration-200 group-focus-visible/platta:ring-2 group-focus-visible/platta:ring-[#FECC02]/70 ${
+                tourHint === 'city' ? 'bg-slate-900/90' : 'bg-slate-900/80 group-hover/platta:bg-slate-900/90'
+            }`}>
+                <span className="flex items-center justify-center min-w-0 max-w-full h-11 px-3 sm:px-4">
+                    <span className="block max-w-full truncate text-xl sm:text-2xl font-black tracking-tight text-white leading-tight sm:leading-tight">
+                        {liveCityName ?? 'Sverige'}
+                    </span>
+                </span>
+                <span className="relative w-full flex items-center justify-center rounded-b-2xl bg-white/10 px-3 pt-1 pb-1.5">
+                    {dayFlashNonce > 0 && (
+                        <span key={`ring-${dayFlashNonce}`} aria-hidden className="day-flash-ring absolute inset-0 rounded-b-2xl pointer-events-none" />
+                    )}
+                    <span
+                        key={`day-${dayFlashNonce}`}
+                        className={`block whitespace-nowrap text-[11px] font-black uppercase tracking-wider text-white/90 leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
+                    >
+                        {plattaDayLabel}
+                    </span>
+                </span>
             </span>
             <span className="sr-only">{cityLink.label}</span>
         </a>
@@ -4859,6 +4931,22 @@ export default function HomePage() {
                     </button>
                 )}
 
+                {/* 2d. SKAPA-KNAPPEN (+) — RAKT OVANFÖR FRAMÅTPILEN, spegel-
+                    bilden av ↺ (ägarbeslut 7/10 kväll: "lägg till symbolen
+                    som ett plus på motsvarande sida som den reset knappen.
+                    alltså ovanför åt höger om dagsväljaren"). Samma tryckyte-
+                    recept som 2b/2c; i placerings-läget är den ✓-knappen med
+                    etiketten "Välj denna plats" ovanför. Bor INUTI väljarens
+                    container så onClickCapture ovan kvitterar skylten — samma
+                    regel som ↺. */}
+                <CreateEventButton
+                    creationMode={creationMode}
+                    enabled={shopFlags.createEvent}
+                    onStartCreate={() => setCreationMode('placing')}
+                    onConfirmPlacement={openCreateFormHere}
+                    hint={tourHint === 'create'}
+                />
+
                 {/* (Emoji-raden som låg här under rutan är BORTTAGEN 10/8 — dess
                     jobb görs av kategorikolumnen till höger, som visar antal per
                     kategori i vyn och dessutom filtrerar på riktigt.) */}
@@ -4878,15 +4966,9 @@ export default function HomePage() {
                 (searchQuery/searchResults/cityHits) står kvar orört för en
                 framtida väg in.) */}
 
-            {/* 1d. Sparade event — öppnas från profilpanelens Sparade-rad */}
-            <SavedPanel
-                open={savedPanelOpen}
-                events={events}
-                savedEventIds={savedEventIds}
-                onPick={jumpToEvent}
-                onRemove={handleUnsaveEvent}
-                onClose={() => setSavedPanelOpen(false)}
-            />
+            {/* (1d. Sparat-panelen är BORTTAGEN 7/10 - Sparade event fälls ut
+                som en mapp i profilpanelen i stället för att öppna ett eget
+                fönster, Josef: "vi kan ju bara ändra de befintliga".) */}
 
             {/* 1e. Profilen — allt konto-relaterat utan att lämna kartan */}
             <ProfilePanel
@@ -4896,8 +4978,7 @@ export default function HomePage() {
                 allEvents={events}
                 onPickEvent={jumpToEvent}
                 onDeleteEvent={handleDeleteOwnEvent}
-                savedCount={activeSavedCount}
-                onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
+                saved={{ ids: savedEventIds, onRemove: handleUnsaveEvent }}
                 optInCategories={{ selected: selectedCategories, onToggle: handleToggleCategory }}
                 onOpenAbout={() => { setProfilePanelOpen(false); setWelcomeOpen(true); }}
             />
@@ -4923,6 +5004,7 @@ export default function HomePage() {
                 onPaintRoundDone={handlePaintRoundDone}
                 zoomToEventTrigger={zoomToEventTrigger}
                 zoomOutTrigger={zoomOutTrigger}
+                zoomRevealTarget={zoomRevealTarget}
                 // Stadsrutans "Hela veckan" i utzoomat läge: zooma in till
                 // veckotröskeln åt användaren (31/8) — växlingen fullföljs av
                 // weekUnlocked-effekten när zoomen är framme.
@@ -4949,7 +5031,7 @@ export default function HomePage() {
                 // kvar så en ny knapp bara behöver sätta det här till sitt gamla
                 // villkor: !signsOn || !tourPlaying || chromeHidden || okänd/för
                 // låg zoom (< SIGNPOST_MIN_ZOOM) || creationMode !== 'idle' ||
-                // cardExpanded || savedPanelOpen ||
+                // cardExpanded ||
                 // profilePanelOpen || funcBagOpen || pågående sökning.
                 signpostsHidden
                 // Klick på kartan (inte dragning — MapLibre fyrar ingen 'click'
@@ -5921,6 +6003,15 @@ export default function HomePage() {
                 // Sök/filter-ikonen i knappraden lyser när kartfiltret är på
                 // (7/10) — arrangörsfiltret räknas inte (egen banner).
                 cardFilterOn={popularOnly || mapCategories.size > 0 || mapSource !== null}
+                // Sökarket (7/10 kväll): filterknappen uppe till höger öppnar
+                // kortet med bara sök + chips; stängs när ett event väljs.
+                searchSheet={searchSheetOpen}
+                onCloseSearchSheet={() => setSearchSheetOpen(false)}
+                // 🔥-chippet kopplar listan till Populärt-fliken (7/10 kväll).
+                popularFilterOn={popularOnly}
+                activeFilters={cardActiveFilters}
+                onRemoveFilter={handleRemoveCardFilter}
+                onZoomOutTo={handleCardZoomOut}
                 // Kategorichipsen i kortet (6/10, ersätter Lista-ikonen):
                 // SAMMA filter och siffror som sökpanelen — ett val smalnar
                 // listan i kortet och kartan bakom, och persisteras som
@@ -5936,6 +6027,9 @@ export default function HomePage() {
                         selectedSource={mapSource}
                         onSelectSource={handleSelectMapSource}
                         popular={popularAvailable || popularOnly ? { on: popularOnly, count: popularChipCount, onToggle: handleTogglePopular } : undefined}
+                        // Det öppna eventets kategori står först efter de
+                        // valda, markerad men inte vald (7/10 sent).
+                        highlight={selectedEvent ? (selectedEvent.category && selectedEvent.category in EVENT_CATEGORIES ? selectedEvent.category : 'other') : null}
                     />
                 }
             />

@@ -1,5 +1,4 @@
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
-import { eventOutlink } from '@/utils/eventExpand';
 import { Trash2, Clock, MapPin, Ticket, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, Star, MessageCircle, List, Pencil, X, Image as ImageIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
@@ -12,14 +11,12 @@ import { boostedUntilLabel } from '../../utils/boostLabel';
 import { seriesLabel } from '../../utils/weeklySeries';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import { eventShareSlug } from '../../utils/eventShareSlug';
-import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
-import { isAffiliateUrl, AFFILIATE_DISCLOSURE } from '../../utils/affiliateLink';
 // Radbrytnings-återställningen + värd-faviconen delas med stadssidornas utfällda event (2/9).
 import { hostFaviconUrl, withRecoveredLineBreaks } from '../../utils/eventExpand';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
 import { type BoostTier } from '../../services/boostService';
 import BoostTierPicker from './BoostTierPicker';
-import { recordEventClick, getEventLikes } from '../../services/eventStatsService';
+import { getEventLikes } from '../../services/eventStatsService';
 import { displayedLikeCount } from '../../utils/likeCount';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
@@ -319,28 +316,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         }
     };
 
-    // Ticketmaster = biljettköp, inte anmälan (ägarbeslut 1/9): utlänk-
-    // knapparna säger BOKA och går i guld — samma guld som boost-brickan.
-    const tmEvent = isTicketmasterEvent(linkEvent);
-
-    const handleVisitSite = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // Vidarelänknings-statistik (fire-and-forget): hur många vi skickar
-        // till vilken arrangör — underlaget för outreach-mejlen. Får aldrig
-        // fördröja eller stoppa själva öppningen.
-        recordEventClick({
-            id: linkEvent.id,
-            url: linkEvent.url,
-            title: linkEvent.title,
-            hostName: linkEvent.hostName,
-        });
-        // Schema-vakt (OWASP-svepet 12/9): url:en kan vara fritext från ett
-        // användartips — bara http(s) får öppnas (javascript:/data: stoppas).
-        // Samma vakt som stadssidornas eventOutlink.
-        const safeUrl = eventOutlink(linkEvent.id, linkEvent.url);
-        if (safeUrl) window.open(safeUrl, '_blank', 'noopener,noreferrer');
-    };
+    // (tmEvent/handleVisitSite revs 7/10 kväll med den stora CTA:n —
+    // utlänken, guldet och klickstatistiken bor i RSVP-footern, se
+    // footerCta i EventCard.)
 
     const handleToggleSave = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -467,7 +445,14 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     vet hur länge det håller på"). Serien stod tidigare som en
                     ensam 🔁-rad längst NER i kortet — den är FLYTTAD hit, inte
                     dubblerad. */}
-                {(vadkulHosted || isTip || seriesText) && (
+                {/* I LISTVYN (nearbyView = kortsöket är igång) visas INGET av
+                    eventet (Josef 7/10 kväll: "om jag söker, då tar vi bort
+                    det eventet som visas högst upp") - bara sökraden +
+                    kategorichipsen står kvar; listan renderas av föräldern
+                    direkt under. Fältet ligger kvar i SAMMA position i trädet
+                    så inputen aldrig remountas (tangentbordet ska inte
+                    stängas när första tecknet växlar vy). */}
+                {!nearbyView && (vadkulHosted || isTip || seriesText) && (
                     <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="min-w-0 flex flex-wrap items-center gap-1.5">
                             {vadkulHosted && (
@@ -507,7 +492,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             {/* (TILLBAKA TILL MULTIEVENT-LISTAN satt här 1/9-7/10.
                                 Flyttad upp till navraden, direkt till vänster om
                                 1/2-pagern - ägarbeslut 7/10 kväll. Se EventCard.) */}
-                            {onToggleActivityView && (
+                            {onToggleActivityView && !nearbyView && (
                                 <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleActivityView(); }}
                                     aria-pressed={activityView}
@@ -548,7 +533,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                            även när togglarna saknas (t.ex. stadssidornas kort). */
                         <div aria-hidden />
                     )}
-                    {/* Hjärta för att spara samt primär ANMÄL-knapp. */}
+                    {/* Hjärta för att spara samt primär ANMÄL-knapp. Döljs i
+                        listvyn — de hör till eventet som söket gömt. */}
+                    {!nearbyView && (
                     <div className="shrink-0 flex items-center gap-2">
                         {/* Stjärn-gåvan ⭐ bredvid hjärtat: klickbar när man har en
                             oanvänd stjärna, annars ren guld-indikator på event som
@@ -605,11 +592,15 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             footern ("anmäl direkt i anslutning till det") —
                             stora CTA:n under beskrivningen är kvar. */}
                     </div>
+                    )}
                 </div>
 
                 {/* Kategorichipsen under kortsöket (EventCard bestämmer när). */}
                 {belowToolbar}
 
+                {/* Resten av headern (titel, tid/plats, Värd/Pris) göms i
+                    listvyn — se kommentaren vid härkomst-raden. */}
+                {!nearbyView && (<>
                 {/* Titelraden — emoji + titel på egen rad under knapparna.
                     Fast 2-radshöjd: enradstitlar centreras vertikalt. */}
                 <div className="min-w-0 h-[2.8rem] md:h-[3.2rem] flex items-center overflow-hidden mb-3">
@@ -735,6 +726,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         </div>
                     )}
                 </div>
+                </>)}
             </div>
 
 
@@ -836,31 +828,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         </p>
                         
                         <div className="mt-6 flex flex-col gap-3">
-                                {/* Skrapade event länkar ut till arrangörens sida.
-                                    Samma formspråk som ANMÄL-pillret uppe i headern
-                                    (helrundad gradient, inre ljuskant, pil som glider
-                                    vid hover) — fast i CTA-storlek. */}
-                                {linkEvent.url && (
-                                    <>
-                                        <button
-                                            onClick={handleVisitSite}
-                                            className={`group/anmalcta flex items-center justify-center gap-3 w-full py-4 rounded-full text-lg md:text-xl font-black uppercase tracking-widest shadow-lg ring-1 ring-inset hover:shadow-xl transition-all active:scale-[0.97] ${tmEvent
-                                                ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 shadow-amber-900/30 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
-                                                : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-sky-900/30 ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'}`}
-                                        >
-                                            <span>{tmEvent ? 'Boka biljetter' : 'Anmäl dig här'}</span>
-                                            <ArrowRight size={22} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
-                                        </button>
-                                        {/* Provisionslänkar MÅSTE märkas "Annons"
-                                            (marknadsföringslagen + Impact-villkoren,
-                                            docs/affiliate.md). */}
-                                        {isAffiliateUrl(linkEvent.url) && (
-                                            <p className="-mt-1 text-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500">
-                                                {AFFILIATE_DISCLOSURE}
-                                            </p>
-                                        )}
-                                    </>
-                                )}
+                                {/* (Den STORA ANMÄL/BOKA-CTA:n som stod här är
+                                    RIVEN 7/10 kväll — Josef: "ta bort den stora
+                                    anmälknappen. ha de knapparna som är i
+                                    footern istället". ANMÄL/BOKA bor i den
+                                    sticky RSVP-footern (EventRsvpFooter), med
+                                    Annons-märkningen för affiliatelänkar.
+                                    Lägg inte tillbaka den breda knappen.) */}
 
                                 {/* VADKUL-värdade event: anmälan sker HÄR på sidan, ingen
                                     extern länk. Knappen togglar din anmälan och listan visar

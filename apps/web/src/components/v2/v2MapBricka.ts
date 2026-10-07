@@ -53,7 +53,7 @@ export function groupStartsWithinHour(group: LinkEvent[], nowMs: number): boolea
 export const NO_TIME_PAST_HOUR = 20;
 
 // Tidpunkten då eventet SLUTAR räknas som aktuellt: start + 1 h
-// (standardlängden, samma som EventCard/SavedPanel), eller kl 20 sin dag för
+// (standardlängden, samma som EventCard/SavedSection), eller kl 20 sin dag för
 // event utan klockslag (NO_TIME_PAST_HOUR ovan). null = passerar aldrig (event
 // helt utan tid). Egen funktion för att gränsen ska gå att FÖRUTSE och inte
 // bara utvärderas mot ett "nu" — se latestPastAt nedan.

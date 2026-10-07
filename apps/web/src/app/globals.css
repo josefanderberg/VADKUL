@@ -576,3 +576,24 @@
   animation: scroll-nudge 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
+
+/* NÄSTA ZOOMAR UT (7/10 sent, EventCard zoomOutBanner): de vågräta strecken
+   växer ut från mitten - vyn vidgas - och hela bannern tonar ut av sig
+   själv efter ~2,8 s (samma tid som komponentens timer). */
+@keyframes zoomout-banner {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes zoomout-line {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.zoomout-banner { animation: zoomout-banner 2.8s ease-out both; }
+.zoomout-line { animation: zoomout-line 700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.zoomout-line-l { transform-origin: right center; }
+.zoomout-line-r { transform-origin: left center; }
+@media (prefers-reduced-motion: reduce) {
+  .zoomout-line { animation: none; }
+}

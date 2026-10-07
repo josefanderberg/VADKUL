@@ -11,6 +11,7 @@ import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView, LABEL_TIT
 import { parsePlatsParam, readStartCity } from '../../utils/startCity';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
 import { nextFront, overlapClusters, type OverlapPoint } from '../../utils/overlapCycle';
+import { zoomOutStepsToReveal } from '../../utils/viewportTour';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
 // Nöjesfälts-kartan (enda basstilen) + klot/terräng-hjälpare. Voyager-URL:en är
@@ -36,9 +37,11 @@ import CitySignposts, { type SignpostCity } from './CitySignposts';
 const HOVER_PEEK_LIFT_PX = 62;
 const HOVER_PEEK_MAX_EMOJI = 8;
 
-// Etikett-stegen: från vilken zoom kategorinamnet under brickorna syns, och
-// från vilken den kapade eventtiteln tar över (minzoom + text-field-steget i
-// etikettlagret läser båda härifrån så de aldrig glider isär).
+// Etiketternas minzoom: under den är etiketter brus (Sverige-vyn). SEDAN
+// 7/10 kväll visas TITELN på alla etikett-zoomar när den får plats, med
+// kategorin som reserv (tvålagers-tricket vid LABEL_LAYER_IDS) — z13-steget
+// som lät titeln "ta över" är ersatt. LABEL_TITLE_MIN_ZOOM (13) används
+// fortfarande av zoom-bannern och reveal-ransonen som "titlarna syns brett".
 const LABEL_CAT_MIN_ZOOM = 9;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -74,8 +77,8 @@ type PlainFeature = {
     // gruppen visas som sin nål-prick (dämpad till 50 %).
     // dim = gruppen matchar INTE den emoji man klickat fram i emoji-raden under
     // stadsrutan → tonas ned och hamnar under de matchande i staplingen.
-    // labelCat/labelTitle = etikettlagrets text (kategorinamn vid mellanzoom,
-    // kapad titel vid hög zoom) — läses av spegelkällan 'plain-events-labels'.
+    // labelCat/labelTitle = etikettlagrens text (titeln när den får plats,
+    // kategorin som reserv) — läses av spegelkällan 'plain-events-labels'.
     properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean; dim: boolean; labelCat: string; labelTitle: string };
 };
 
@@ -262,7 +265,17 @@ const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
 // Etikettlagren (texten under brickorna): bottenlagret ritas UNDER brick-lagret
 // (en etikett får aldrig skymma en bricka), topplagret bär bara den VALDA
 // gruppens etikett (sortKey ≥ 1e6) ovanpå. Alla synlighetsväxlar går över båda.
-const LABEL_LAYER_IDS = ['plain-events-labels', 'plain-events-labels-top'] as const;
+// TITEL FÖRE KATEGORI NÄR DEN FÅR PLATS (ägarbeslut 7/10 kväll, Josef: "vi
+// skippar kategori om titel får plats ... titel går före allt då. om det inte
+// konkurrerar med en annan titel och blir kategori pga av det" — ersätter
+// zoom-steget labelCat→labelTitle vid z13): TRE etikettlager ur samma källa.
+// Titellagret ligger ÖVER kategorilagret, och MapLibre placerar symboler
+// UPPIFRÅN OCH NER (PauseablePlacement börjar på order.length-1) — titlarna
+// tar plats först, och kategorietiketten för SAMMA markör krockar med sin
+// egen titel (samma ankare/offset) och visas därför BARA när titeln inte
+// fick plats; får ingen av dem plats visas inget. -top är den valda gruppens
+// lager (alltid överst, placeras först av alla → titeln vinner alltid där).
+const LABEL_LAYER_IDS = ['plain-events-labels', 'plain-events-labels-titles', 'plain-events-labels-top'] as const;
 // ── Z-växlingen för överlappande brickor ──────────────────────────────────────
 // Grannbrickor (egna grupper >11 m isär) som täcker varandra på skärmen turas
 // om att ligga överst. Mekaniken är en SPEGELKÄLLA: brickan som "har ordet"
@@ -335,7 +348,7 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
 // SKÄRMENS MITT (Josef 26/8 — de 50 ska stå öppna utan klick). Panorerar man
 // själv följer urvalet med till nya mitten ("man flyttar sig för att flytta
 // den" — se mitt-följningen i init-effekten). Ett TRYCK tänder de
-// REVEAL_NEAREST_COUNT närmaste kring trycket och sätter ett ankare som
+// urvalet kring trycket (pickRevealKeys) och sätter ett ankare som
 // vinner över mitt-följningen tills nästa användar-gest; ett drag INOM de
 // tända brickornas ram flyttar ankaret direkt med fingret. Vid ett nytt tryck
 // BYTS urvalet ut med en kugghjuls-effekt (se nedan). Ingen
@@ -343,11 +356,27 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
 // själva (O(antal), kvadrerat + cos-lat-skalad longitud) och sätter
 // feature-state direkt via nyckeln (promoteId 'key'). Aldrig fler än
 // ~N synliga samtidigt = ingen lagg.
-const REVEAL_NEAREST_COUNT = 50;      // antal markörer kring ett tap (de N närmaste)
-const REVEAL_SEED_COUNT = 50;         // antal tända vid start kring användarens plats (utan tap)
-// (Ett spridningstak — max N brickor per skärmruta så täta vyer inte klumpar —
-// byggdes och REVS SAMMA DAG 31/8, Josef: "alla de 50 som är närmast
-// mittpunkten ska visas, det gör inget om de är i en hög". Sprid inte seedet.)
+const REVEAL_SEED_COUNT = 50;         // KANDIDAT-taket: de N närmaste punkten (seed OCH tap)
+// ── ZOOM-RANSONEN + POPULÄRA FÖRST (ägarbeslut 7/10 kväll, Josef: "inte
+// öppnar alla brickor över där man är. utan vi tar de som är mest populära.
+// så får man zooma in för att fler av dem ska visas. tills man zoomat in mera
+// så att fler kan visa titel eller kategori. så öppnas eventkorten") ───────
+// Hur många av kandidaterna som faktiskt TÄNDS beror på zoomen: vid stads-
+// landningen (TOUR_ZOOM 10) bara REVEAL_MIN_COUNT, linjärt upp till alla 50
+// vid LABEL_TITLE_MIN_ZOOM (13, där titlarna börjar under markörerna) — där
+// "öppnas eventkorten" helt. URVALET rankas populära först (pop-flaggan/guld,
+// närmast först inom varje skikt) — pickRevealKeys. Sticky-brickorna (TM/
+// egna/gillade/stjärnor/boostar) lyser alltid, som förr.
+// (Detta ERSÄTTER 31/8-regeln "alla de 50 närmast mittpunkten ska visas".
+// Spridningstaket per skärmruta från 31/8 är fortfarande rivet — sprid inte.)
+const REVEAL_MIN_COUNT = 12;          // tända vid stadszoom (populärast först)
+const REVEAL_RAMP_START_ZOOM = 10.5;  // under/vid denna: bara REVEAL_MIN_COUNT
+const revealAllowance = (zoom: number): number => {
+    if (zoom >= LABEL_TITLE_MIN_ZOOM) return REVEAL_SEED_COUNT;
+    if (zoom <= REVEAL_RAMP_START_ZOOM) return REVEAL_MIN_COUNT;
+    const t = (zoom - REVEAL_RAMP_START_ZOOM) / (LABEL_TITLE_MIN_ZOOM - REVEAL_RAMP_START_ZOOM);
+    return Math.round(REVEAL_MIN_COUNT + (REVEAL_SEED_COUNT - REVEAL_MIN_COUNT) * t);
+};
 // Övergång mellan två klickpunkter = en PARALLELL MIGRATION: de N brickorna "flyttar"
 // sig mot klicket var och en i sin egen takt (olika hastigheter). Några skjuter fram
 // och syns vid destinationen nästan direkt, andra släpar — jämn spridning längs vägen,
@@ -491,6 +520,9 @@ interface V2MapProps {
     zoomToEventTrigger?: number;
     /** Bumpas av zooma-ut-knappen i Nästa-pillen → zooma UT (samma center). */
     zoomOutTrigger?: number;
+    /** NÄSTA ZOOMAR UT (7/10 sent): ny nonce → zooma ut kring SAMMA mitt
+     *  precis så mycket att punkten hamnar i bild ovanför kortet. */
+    zoomRevealTarget?: { lat: number; lng: number; nonce: number } | null;
     /** Bumpas av stadsrutans "Hela veckan"-klick i utzoomat läge (31/8) →
      *  zooma IN till veckotröskeln kring samma center; page.tsx växlar sedan
      *  till veckan när weekUnlocked kvitterat att zoomen är framme. */
@@ -625,6 +657,7 @@ export default function V2Map({
     eventsSettled = true,
     zoomToEventTrigger = 0,
     zoomOutTrigger = 0,
+    zoomRevealTarget = null,
     weekZoomInTrigger = 0,
     daySwitchNonce = 0,
     prebakeEvents = null,
@@ -1268,7 +1301,7 @@ export default function V2Map({
     // ── "Skrapa fram"-markörer (de N närmaste pekaren) ────────────────────────
     // GL-brickorna börjar dolda (icon-opacity 0 via feature-state 'reveal'). Bara
     // ~REVEAL_SEED_COUNT syns från start (närmast mitten); i övrigt visas de
-    // REVEAL_NEAREST_COUNT grupper som är NÄRMAST pekaren och följer hovern. Vi
+    // grupper ur urvalet NÄRMAST pekaren och följer hovern. Vi
     // räknar avstånden själva (billigt) och sätter feature-state direkt via nyckeln
     // — ingen queryRenderedFeatures (det var det som laggade).
     const revealSeedRef = useRef<Set<string>>(new Set());                 // vilo-uppsättningen (vid start: ~10 nära mitten; efter tap: N närmast trycket)
@@ -1282,7 +1315,7 @@ export default function V2Map({
     // försvinna. Den valda visas som vit-kantad DOM-markör; när den lämnar valt läge
     // håller denna uppsättning kvar den i GL-lagret. GL-motsvarighet till revealedKeysRef.
     const revealStickyRef = useRef<Set<string>>(new Set());
-    const revealCoordsRef = useRef<{ key: string; lng: number; lat: number }[]>([]); // platt lista för avståndsberäkning
+    const revealCoordsRef = useRef<{ key: string; lng: number; lat: number; pop: boolean }[]>([]); // platt lista för avstånd + populärrank
     const revealWrittenRef = useRef<Map<string, number>>(new Map());      // senast skrivet opacitetsvärde (skippa redundanta skrivningar)
     const revealRafRef = useRef<number | null>(null);
     const revealCleanupRef = useRef<null | (() => void)>(null);
@@ -1683,13 +1716,10 @@ export default function V2Map({
                 const ev = shownCycleEvent(rot, cycleFrameIndexRef.current, groupsRef.current.get(f.properties.key) ?? []);
                 return ev ? { ...f, properties: { ...f.properties, ...eventLabels(ev.title, ev.category) } } : f;
             });
-            // Zoom-medveten signatur: under z13 visar text-field bara labelCat —
-            // ett titelbyte i en cyklande grupp ska då INTE kosta ett tile-byte.
-            // Tier-markören tvingar en skrivning när man korsar z13 (exitZooming
-            // schemalägger en sync), så titlarna är färska när de börjar visas.
-            const withTitles = map.getZoom() >= 13;
-            const sig = (withTitles ? 'T' : 'C')
-                + feats.map(f => `${f.properties.key}${f.properties.labelCat}${withTitles ? f.properties.labelTitle : ''}`).join('');
+            // Titlarna visas på ALLA etikett-zoomar sedan 7/10 kväll (titel
+            // före kategori när den får plats) — signaturen bär alltid båda
+            // fälten. (Zoom-tiern C/T vid z13 gick med steg-uttrycket.)
+            const sig = feats.map(f => `${f.properties.key}${f.properties.labelCat}${f.properties.labelTitle}`).join('');
             if (sig === labelSigRef.current) return;
             labelSigRef.current = sig;
             src.setData({ type: 'FeatureCollection', features: feats as unknown as GeoJSON.Feature[] });
@@ -1838,6 +1868,11 @@ export default function V2Map({
             for (const layerId of LABEL_LAYER_IDS) {
                 if (map.getLayer(layerId)) continue;
                 const isTop = layerId === 'plain-events-labels-top';
+                // Titellagret (och den valda gruppens -top) visar TITELN på
+                // alla etikett-zoomar; bas-lagret visar KATEGORIN och vinner
+                // bara när titeln inte fick plats (se LABEL_LAYER_IDS-
+                // kommentaren — zoom-steget vid z13 är ersatt 7/10 kväll).
+                const isTitle = layerId === 'plain-events-labels-titles' || isTop;
                 map.addLayer({
                     id: layerId,
                     type: 'symbol',
@@ -1849,7 +1884,7 @@ export default function V2Map({
                         ? ['>=', ['coalesce', ['get', 'sortKey'], 0], 1_000_000]
                         : ['<', ['coalesce', ['get', 'sortKey'], 0], 1_000_000],
                     layout: {
-                        'text-field': ['step', ['zoom'], ['get', 'labelCat'], LABEL_TITLE_MIN_ZOOM, ['get', 'labelTitle']],
+                        'text-field': isTitle ? ['get', 'labelTitle'] : ['get', 'labelCat'],
                         'text-font': ['Open Sans Bold'],
                         'text-size': ['interpolate', ['linear'], ['zoom'], 9, 11, 13, 12.5, 16, 13.5],
                         // Spetsen (icon-anchor bottom) står på koordinaten → texten
@@ -2027,7 +2062,7 @@ export default function V2Map({
 
     // Avslöjning sker BARA via vilo-uppsättningen (seed): de REVEAL_SEED_COUNT
     // närmast SKÄRMENS MITT (default, följer panorering), eller de
-    // REVEAL_NEAREST_COUNT närmaste kring ANKARET (senaste tap/områdes-drag).
+    // urvalet kring ANKARET (senaste tap/områdes-drag).
     // INGEN hover-följning. Engångsskrivning per recompute/tap (ingen rAF-loop
     // i vila).
     const pumpReveal = useCallback(() => {
@@ -2074,6 +2109,47 @@ export default function V2Map({
         return new Set(bestKey);
     }, []);
 
+    // KANDIDATERNA kring en punkt: de REVEAL_SEED_COUNT närmaste, med avstånd
+    // och populärflagga — samma billiga partiella urval som nearestKeysTo.
+    const nearestRevealCands = useCallback((lng: number, lat: number): { key: string; d2: number; pop: boolean }[] => {
+        const coords = revealCoordsRef.current;
+        const kx = Math.cos(lat * Math.PI / 180);
+        const cap = REVEAL_SEED_COUNT;
+        const best: { key: string; d2: number; pop: boolean }[] = [];
+        let worst = -Infinity, worstIdx = -1;
+        for (let i = 0; i < coords.length; i++) {
+            const c = coords[i];
+            const dx = kx * (c.lng - lng), dy = c.lat - lat;
+            const d2 = dx * dx + dy * dy;
+            if (best.length < cap) {
+                best.push({ key: c.key, d2, pop: c.pop });
+                if (d2 > worst) { worst = d2; worstIdx = best.length - 1; }
+            } else if (d2 < worst) {
+                best[worstIdx] = { key: c.key, d2, pop: c.pop };
+                worst = -Infinity;
+                for (let j = 0; j < cap; j++) if (best[j].d2 > worst) { worst = best[j].d2; worstIdx = j; }
+            }
+        }
+        return best;
+    }, []);
+
+    // URVALET som faktiskt tänds kring en punkt (ägarbeslut 7/10 kväll, se
+    // konstantblocket): populära/guld först (närmast först inom varje skikt),
+    // antal efter zoom-ransonen (revealAllowance). Returen är AVSTÅNDS-
+    // sorterad — insugs-animationen drar närmast-först. Delas av seedet
+    // (recomputeRevealSeed), tap-migrationen och isSameRevealTarget så alla
+    // tre alltid pekar på samma uppsättning.
+    const pickRevealKeys = useCallback((lng: number, lat: number): string[] => {
+        const zoom = mapRef.current?.getZoom() ?? START_ZOOM_MAX;
+        const cand = nearestRevealCands(lng, lat);
+        cand.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (a.d2 - b.d2));
+        const picked = cand.slice(0, revealAllowance(zoom));
+        picked.sort((a, b) => a.d2 - b.d2);
+        return picked.map(c => c.key);
+    }, [nearestRevealCands]);
+    const pickRevealKeysRef = useRef(pickRevealKeys);
+    pickRevealKeysRef.current = pickRevealKeys;
+
     // PARALLELL MIGRATION: vid ett tryck "flyttar" de N brickorna sig mot klickpunkten
     // var och en i SIN EGEN takt (parallella körfält på olika nivåer): några skjuter i
     // väg och dyker upp längst fram nästan direkt, andra kryper — så att de vid varje
@@ -2089,11 +2165,11 @@ export default function V2Map({
         if (revealTweenRef.current != null) return false;
         const cur = revealSeedRef.current;
         if (cur.size === 0) return false;
-        const target = nearestKeysTo(lng, lat, REVEAL_NEAREST_COUNT);
+        const target = new Set(pickRevealKeys(lng, lat));
         if (target.size !== cur.size) return false;
         for (const k of target) if (!cur.has(k)) return false;
         return true;
-    }, [nearestKeysTo]);
+    }, [pickRevealKeys]);
     const isSameRevealTargetRef = useRef(isSameRevealTarget);
     isSameRevealTargetRef.current = isSameRevealTarget;
 
@@ -2125,10 +2201,11 @@ export default function V2Map({
             });
         };
 
-        const N = REVEAL_NEAREST_COUNT;
-        // Slutläget = de N närmast klicket.
-        const destArr = [...nearestKeysTo(toLng, toLat, N)];
+        // Slutläget = urvalet kring klicket (populära först + zoom-ransonen,
+        // 7/10 kväll — pickRevealKeys är redan avståndssorterad för insuget).
+        const destArr = pickRevealKeys(toLng, toLat);
         const destSet = new Set(destArr);
+        const N = destArr.length;
 
         const p0 = map.project([fromLng, fromLat]);
         const p1 = map.project([toLng, toLat]);
@@ -2187,7 +2264,7 @@ export default function V2Map({
             else { revealTweenRef.current = requestAnimationFrame(tick); }
         };
         revealTweenRef.current = requestAnimationFrame(tick);
-    }, [nearestKeysTo, reportRevealCount, writeReveal]);
+    }, [nearestKeysTo, pickRevealKeys, reportRevealCount, writeReveal]);
     startRevealTravelRef.current = startRevealTravel;
 
     // Välj seed = de REVEAL_SEED_COUNT markörerna närmast utgångspunkten. Körs
@@ -2196,29 +2273,15 @@ export default function V2Map({
     // Avståndet skalar longitud med cos(latitud) så det blir rätt på svenska breddgrader.
     const recomputeRevealSeed = useCallback(() => {
         const map = mapRef.current;
-        // Utgångspunkt: alltid SKÄRMENS MITT (de 50 kring mitten ska stå öppna).
-        // GPS-positionen är bara sista fallback innan kartan finns.
-        const count = REVEAL_SEED_COUNT;
-        const origin = (map ? map.getCenter() : null) ?? userPosRef.current;
+        // Utgångspunkt: alltid SKÄRMENS MITT. GPS-positionen är bara sista
+        // fallback innan kartan finns.
         // BARA icke-passerade grupper (revealCoordsRef är förfiltrerad på past) —
         // "har varit"-grupper ritas aldrig som brickor (bara prickar) och får inte
-        // äta upp seed-platser: sent på kvällen såg man annars en handfull brickor
-        // fast 50 relevanta fanns längre bort. Samma urval som tap-migrationen
-        // (nearestKeysTo), så seed-omräkningen efter minut-ticken inte byter
-        // uppsättning mot en med osynliga platser.
-        const coords = new Map<string, [number, number]>();
-        for (const c of revealCoordsRef.current) coords.set(c.key, [c.lng, c.lat]);
-        let seedKeys: string[] = [];
-        if (origin) {
-            const allKeys = [...coords.keys()];
-            if (allKeys.length > count) {
-                const cl = origin.lng, ca = origin.lat;
-                const kx = Math.cos(ca * Math.PI / 180);
-                const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
-                allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
-            }
-            seedKeys = allKeys.slice(0, count);
-        }
+        // äta upp seed-platser. Urvalet (populära först + zoom-ransonen, 7/10
+        // kväll) delas med tap-migrationen via pickRevealKeys, så seed-
+        // omräkningen aldrig byter uppsättning mot en annan sorts urval.
+        const origin = (map ? map.getCenter() : null) ?? userPosRef.current;
+        const seedKeys: string[] = origin ? pickRevealKeysRef.current(origin.lng, origin.lat) : [];
         const newSeed = new Set(seedKeys);
         // Göm gamla seed-nycklar som inte längre är seed (men aldrig klickade/sticky).
         if (map && layerExists(map, 'plain-events')) {
@@ -2265,9 +2328,15 @@ export default function V2Map({
         // prickar), så de ska inte äta upp reveal-platser kring ett tap/seedet.
         // Önskningarna likaså: de är REDAN alltid tända (sticky) och ska inte
         // äta upp seed-/tap-platser eller dras med i reveal-vandringen.
-        revealCoordsRef.current = plainData.features.filter(f => !f.properties.past && !f.properties.key.startsWith('wish:')).map(f => ({
-            key: f.properties.key, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
-        }));
+        revealCoordsRef.current = plainData.features.filter(f => !f.properties.past && !f.properties.key.startsWith('wish:')).map(f => {
+            // Populärranken (7/10 kväll): pop-flaggan/guldet bor i den bakade
+            // brick-infon (ikon-registret), inte i featuren — slå upp per ikon.
+            const info = plainData.icons.get(f.properties.icon);
+            return {
+                key: f.properties.key, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
+                pop: !!(info?.pop || info?.gold),
+            };
+        });
         const map = mapRef.current;
         if (!map) return;
         // GRINDEN FÅR INTE VARA isStyleLoaded() (Josefs dagbytesbugg 13/9):
@@ -2515,7 +2584,7 @@ export default function V2Map({
         // Samma sak för event SKAPADE PÅ VADKUL (userCreated): sajtens kärna ska
         // aldrig behöva skrapas fram utan syns alltid, för alla besökare.
         {
-            // Samma isEventPast-gräns som dämpningen/SavedPanel (start + 1 h,
+            // Samma isEventPast-gräns som dämpningen/SavedSection (start + 1 h,
             // kl 20 för event utan klockslag).
             const stickyNowMs = Date.now();
             for (const [key, group] of groupsRef.current) {
@@ -3671,6 +3740,30 @@ export default function V2Map({
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [zoomOutTrigger]);
+
+    // 2c1. NÄSTA ZOOMAR UT (ägarbeslut 7/10 sent, Josef: "när vi har gått
+    //      genom alla de som vi inom det området där vi är. då ska ju kartan
+    //      automatiskt zooma ut"): eventkortet har gått igenom eventen i bild
+    //      och valt nästa obesökta utanför. Zooma ut kring SAMMA mitt - ingen
+    //      panorering, kartan "hoppar" fortfarande aldrig (2/9) - precis så
+    //      mycket att målet syns ovanför kortet (utils/viewportTour, samma
+    //      täckmått som sidans inTourView), plus en liten marginal.
+    const prevRevealZoomRef = useRef(zoomRevealTarget?.nonce ?? 0);
+    useEffect(() => {
+        if (!zoomRevealTarget || zoomRevealTarget.nonce === prevRevealZoomRef.current) return;
+        prevRevealZoomRef.current = zoomRevealTarget.nonce;
+        const map = mapRef.current;
+        if (!map || !isValidLatLng(zoomRevealTarget.lat, zoomRevealTarget.lng)) return;
+        const center = map.project(map.getCenter());
+        const target = map.project([zoomRevealTarget.lng, zoomRevealTarget.lat]);
+        const el = map.getContainer();
+        const steps = zoomOutStepsToReveal(target.x - center.x, target.y - center.y, el.clientWidth, el.clientHeight);
+        if (steps <= 0) return;
+        map.easeTo({
+            zoom: Math.max(map.getMinZoom(), map.getZoom() - steps - 0.15),
+            duration: 900,
+        });
+    }, [zoomRevealTarget]);
 
     // 2c2. Auto-inzoomning till veckovyn (31/8): stadsrutans "Hela veckan"-
     //      klick i utzoomat läge bumpar triggern → zooma in till veckotröskeln

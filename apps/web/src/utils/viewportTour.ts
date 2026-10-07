@@ -9,6 +9,8 @@
  *     räknas därför inte som "i bild".
  *   • dayOffsetOf — kalenderdagens offset från idag (dagväljarens enhet).
  *   • nextPeriodWithEvents — nästa dag/period som har något att visa.
+ *   • zoomOutStepsToReveal — hur långt kartan ska zooma ut (kring samma
+ *     mitt) för att nästa obesökta event ska synas (7/10 sent).
  */
 
 export type MapBounds = { west: number; south: number; east: number; north: number };
@@ -85,4 +87,38 @@ export function nextPeriodWithEvents(
         }
     }
     return null;
+}
+
+/**
+ * NÄSTA ZOOMAR UT när eventen i bild är genomgångna (ägarbeslut 7/10 sent,
+ * Josef: "när vi har gått genom alla de som vi inom det området där vi är.
+ * då ska ju kartan automatiskt zooma ut, men börja om på vilken dag man är
+ * på") - ERSÄTTER 2/9-steget "rakt till nästa dag". Kameran panorerar
+ * fortfarande ALDRIG: den zoomar ut kring samma mitt, precis så mycket att
+ * målet hamnar i bild.
+ *
+ * Hur många zoomnivåer ut som krävs för att en punkt dx/dy pixlar från
+ * kartans mitt ska landa i den synliga ytan: inom en marginal (padFraction
+ * av bredd/höjd) från kanterna och ovanför kortets nedersta andel
+ * (coveredFraction, samma mått som isInVisibleMapArea). En zoomnivå ut
+ * halverar alla avstånd från mitten. 0 = syns redan.
+ */
+export function zoomOutStepsToReveal(
+    dx: number,
+    dy: number,
+    width: number,
+    height: number,
+    coveredFraction = TOUR_CARD_COVER_FRACTION,
+    padFraction = 0.1,
+): number {
+    if (!(width > 0) || !(height > 0)) return 0;
+    const padX = width * padFraction;
+    const padY = height * padFraction;
+    // Hur långt från mitten punkten får ligga åt det håll den ligger.
+    const roomX = width / 2 - padX;
+    const roomY = dy < 0 ? height / 2 - padY : height * (0.5 - coveredFraction) - padY;
+    let scale = 1;
+    if (dx !== 0 && roomX > 0) scale = Math.min(scale, roomX / Math.abs(dx));
+    if (dy !== 0 && roomY > 0) scale = Math.min(scale, roomY / Math.abs(dy));
+    return scale >= 1 ? 0 : -Math.log2(scale);
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarPlus, Hand } from 'lucide-react';
+import { ArrowRight, CalendarPlus, Hand, Mail } from 'lucide-react';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from '@/lib/firebase';
 
@@ -137,7 +137,9 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
             if (e.key !== 'Tab') return;
             const card = cardRef.current;
             if (!card) return;
-            const focusables = card.querySelectorAll<HTMLElement>('button');
+            // Inte bara knappar längre: mejlfältet och kontaktlänken (7/10)
+            // ska också ingå i Tab-fällan.
+            const focusables = card.querySelectorAll<HTMLElement>('button, input, a[href]');
             if (focusables.length === 0) return;
             const first = focusables[0];
             const last = focusables[focusables.length - 1];
@@ -315,11 +317,31 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                         just den här rutan). CARTO (baskartans kakel) kräver också
                         att nämnas. Ta INTE bort raden utan att lägga tillbaka
                         attributionen på kartan. */}
-                    <p className="welcome-row -mt-2 text-center text-[11px] font-semibold text-slate-400 leading-snug" style={{ animationDelay: '1150ms' }}>
-                        Kartdata ©{' '}
-                        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" className="underline hover:text-slate-600">OpenStreetMap</a>
-                        {' '}· ©{' '}
-                        <a href="https://carto.com/attributions" target="_blank" rel="noopener" className="underline hover:text-slate-600">CARTO</a>
+                    {/* FRÅGOR? + mejlikon PÅ SAMMA RAD som kartkällorna
+                        (ägarbeslut 7/10 kväll, Josef: "Det räcker med en
+                        frågor? och mailikon på samma rad som det med kartan.
+                        inte att man skiver in mail för nyheter. bättre man
+                        direkt blir medlem" — mejlfältet för appnyheter är
+                        RIVET, lägg inte tillbaka det; medlemskapet säljs av
+                        Skapa gratis konto-knappen). Kontaktvägen för
+                        utloggade: rutan visas bara för dem. */}
+                    <p className="welcome-row -mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-semibold text-slate-400 leading-snug" style={{ animationDelay: '1150ms' }}>
+                        <a
+                            href="mailto:hej@vadkul.se"
+                            onClick={() => track('welcome_contact_mail')}
+                            title="Mejla hej@vadkul.se"
+                            className="inline-flex items-center gap-1 font-black hover:text-[#006AA7] transition-colors"
+                        >
+                            Frågor?
+                            <Mail size={12} aria-hidden />
+                        </a>
+                        <span aria-hidden>·</span>
+                        <span>
+                            Kartdata ©{' '}
+                            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" className="underline hover:text-slate-600">OpenStreetMap</a>
+                            {' '}· ©{' '}
+                            <a href="https://carto.com/attributions" target="_blank" rel="noopener" className="underline hover:text-slate-600">CARTO</a>
+                        </span>
                     </p>
                 </div>
             </div>
