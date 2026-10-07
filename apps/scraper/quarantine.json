@@ -1,6 +1,10 @@
 {
   "version": 1,
   "sources": {
+    "bjorndammens-masugn": {
+      "since": "2026-10-07",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -35,7 +39,9 @@
     },
     "naturskyddsforeningen": {
       "since": "2026-09-30",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-07",
+      "emptyRetries": 1
     },
     "nordmaling": {
       "since": "2026-08-19",
@@ -55,19 +61,11 @@
       "lastRetry": "2026-10-03",
       "emptyRetries": 6
     },
-    "prins-eugens-waldemarsudde": {
-      "since": "2026-09-29",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-10-03",
       "emptyRetries": 6
-    },
-    "sb-kb-se": {
-      "since": "2026-09-29",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "sb-visitbastad-se": {
       "since": "2026-10-02",
@@ -96,10 +94,6 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-10-03",
       "emptyRetries": 5
-    },
-    "turteatern": {
-      "since": "2026-09-29",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
 }
