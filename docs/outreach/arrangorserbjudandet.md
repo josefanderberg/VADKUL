@@ -38,7 +38,27 @@ Studion väljer mall själv och visar den ovanför texten ("Mall: …"). Antalen
 
 Siffrorna nämns bara när de är värda att visa: minst 50 visningar, och klicken bara från 10.
 
-### Så är mejlet uppbyggt (1/10)
+### Varianterna (7/10): stegvis, inte erbjudandet direkt
+
+Studion har fyra varianter att välja mellan ovanför mejltexten: **Start**, **Erbjudande**,
+**Påminnelse** och **Svar**. Studion föreslår en utifrån mejlhistoriken (start för första
+kontakten), men valet är ditt.
+
+**Start** är nya förstahandsvalet: bygg relationen först, kom inte med erbjudandet direkt.
+Den innehåller arrangörssidan, länkfrågan och två nyheter i stället för paketen:
+
+1. **Appen och förhandskoden:** vi släpper snart VADKUL som app, och den som svarar står på
+   listan för en förhandskod när den släpps. Gratis, ofarlig för alla segment, och ger en
+   anledning att svara - då har vi en dialog.
+2. **Det som är på gång för arrangörer** (bara för dem som får frågan om betalt): egen symbol
+   på kartan så att deras event känns igen direkt, och kampanj-event där de väljer vilka av
+   sina event som ska lyftas fram lite extra. Formulerat som "det öppnar vi stegvis", inget
+   pris och inga paket.
+
+**Erbjudande** är det gamla fulla mejlet med paketrutorna och frågan om det betalda. Används
+som steg två när någon har nappat, eller direkt när det känns rätt.
+
+### Så är erbjudande-mejlet uppbyggt (1/10)
 
 1. Hälsning och vem Josef är, med två av arrangörens **populäraste** kommande event som
    exempel (🔥 enligt kartans klassning först, sedan högst popularitetspoäng). Pipelinen
@@ -70,9 +90,10 @@ I studions textruta skrivs paketen som en **fetstilad** rad följd av rader som 
    Börja med de största som har arrangörssida.
 2. **Kolla adressen:** under e-postfältet står var den hittades. Öppna källan om du är osäker.
    Hembygdsföreningarnas adresser är ofta en styrelseledamots privata.
-3. **Skriv om första raden personligt** och klicka **Skicka**, eller **Lägg som utkast i
-   Zoho** om du vill se det där först. Facebook-arrangörer: **Kopiera texten**, skicka i
-   Messenger och klicka **Markera som skickat**.
+3. **Välj variant** (Start för första kontakten), **skriv om första raden personligt** och
+   klicka **Skicka**, eller **Lägg som utkast i Zoho** om du vill se det där först.
+   Facebook-arrangörer: **Kopiera texten**, skicka i Messenger och klicka **Markera som
+   skickat**.
 4. **Svar** syns i studion inom tio minuter (status Svarat). Läs och svara i Zoho, sätt
    sedan status **Positiv** (vill ha loggan, kartan eller rapporten) eller **Nej tack**, och
    skriv vad de sa under Anteckning.
