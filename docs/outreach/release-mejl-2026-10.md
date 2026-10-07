@@ -27,11 +27,14 @@ tabellmall som augusti/september). Uppföljare till `release-mejl-2026-09.md`.
 - **Noll bilder i mejlet** (Josefs beslut 7/10): externa bilder blockeras tills
   mottagaren tryckt "visa bilder", så loggan (molnet MED smiley) är pixelkonst
   i ren HTML - RLE-tabeller genererade pixel för pixel ur appikonen
-  (pwa-icon-bla-192-rund.png; headern 64x64-upplösning vid 2 px/cell = 128 px,
-  signaturen 32x32 vid 2 px/cell = 64 px). Överst i mitten mattad mot #eef1f4,
-  i signaturen mattad mot vitt. Mejlet renderar komplett hos alla direkt.
+  (pwa-icon-bla-192-rund.png; headern 96x96-upplösning vid 2 px/cell = 192 px,
+  signaturen 48x48 vid 2 px/cell = 96 px). Headern mattas mot bakgrundsblått
+  (#006AA7) så molnet svävar fritt - plattkantens egna blåa nyanser snäpps
+  till bakgrunden (dist2 < 5500), annars blir det prickiga hörnbågar.
+  Signaturen mattas mot vitt. Mejlet renderar komplett hos alla direkt.
   Lägg inte in bilder i Zoho-editorn.
-  Hela mejlet är ~41 kB - håll det under Gmails 102 kB-klipp om mer läggs till.
+  Hela mejlet är ~49 kB - håll det under Gmails 102 kB-klipp om mer läggs till
+  (klippet döljer sidfoten med avregistreringen och kan sinka öppningsspårningen).
   OBS: skärmdumpar/mobilklienter som SKALAR mejlet kan ge ett lätt
   scanline-mönster i pixelloggan (tabellceller kantutjämnas inte som bilder);
   vid 100 % är den pixelperfekt (radhöjder verifierade exakt 2 px). Bedöm på
@@ -39,6 +42,14 @@ tabellmall som augusti/september). Uppföljare till `release-mejl-2026-09.md`.
 - Designbeslut 7/10: det blå headerbandet från sep-mallen är rivet - vitt
   rubrikhuvud med gul accentlinje; signaturen är namn/titel/vadkul.se i
   arrangörsmejlens form, inte "/Josef som bygger på kvällar och helger".
+- Designbeslut 8/10: HELA bakgrunden är VADKUL-blå (#006AA7) med vit extra fet
+  VADKUL-titel (Arial Black, kursiv) och gul linje - flaggfärgerna. Ljus text
+  i tagline och sidfot.
+- **Pulsknappen**: "Hitta något..."-knappen har en pulsande ring via
+  <style>/@keyframes (klass vk-puls) - progressiv förbättring: Apple Mail/iOS
+  spelar den, Gmail/Outlook visar statisk knapp. prefers-reduced-motion
+  stänger av den. VERIFIERA i testmejlet att Zoho inte strippar <style>-blocket;
+  gör den det är knappen bara statisk, inget går sönder.
 
 ## Listan
 
