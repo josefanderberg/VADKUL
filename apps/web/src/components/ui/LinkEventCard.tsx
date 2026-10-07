@@ -1,6 +1,6 @@
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { eventOutlink } from '@/utils/eventExpand';
-import { Trash2, Clock, MapPin, Ticket, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, ArrowLeft, Star, MessageCircle, List, Pencil, X, Search as SearchIcon, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Clock, MapPin, Ticket, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, Star, MessageCircle, List, Pencil, X, Image as ImageIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { isVadkulHostedEvent, type LinkEvent } from '../../types';
 import { formatEventDateSpan } from '../../utils/dateUtils';
@@ -23,7 +23,7 @@ import { recordEventClick, getEventLikes } from '../../services/eventStatsServic
 import { displayedLikeCount } from '../../utils/likeCount';
 import { feedbackService } from '../../services/feedbackService';
 import { useAuth } from '../../context/AuthContext';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 
 // Adresser som indikerar en geokod-fallback (bara stadsnamn, inte en faktisk gatuadress).
@@ -96,17 +96,13 @@ interface LinkEventCardProps {
      *  direkt under. Egen pill bredvid Chatt på översta raden. */
     nearbyView?: boolean;
     onToggleNearbyView?: () => void;
-    /** ETT STEG TILLBAKA till multievent-listan eventet valdes ur (Josef 1/9).
-     *  Undefined = kortet nåddes inte via en grupplista → ingen pil. */
-    onBackToGroup?: () => void;
-    /** Antal i gruppen — bara för pilens title/aria. */
-    backToGroupCount?: number;
-    /** Sök/filter-ikonen längst till vänster i knappraden (ägarbeslut 7/10:
-     *  "vi ska bara ha sök- och filter-ikonen i toppen av eventkortet") —
-     *  fäller ut kortsöket + kategorichipsen (EventCard äger blocket). */
-    onToggleSearch?: () => void;
-    /** Ikonens aktiva läge: blocket är öppet, eller ett filter/sök är på. */
-    searchActive?: boolean;
+    /** KORTSÖKET längst till vänster i knappraden (ägarbeslut 7/10 kväll:
+     *  "sök rutan ska vara lite bredare och inte en knapp, utan direkt
+     *  input") - fältet självt, EventCard äger tillståndet. Fyller raden
+     *  fram till knapparna till höger. */
+    searchField?: ReactNode;
+    /** Rad direkt under knappraden (kategorichipsen när sökningen är igång). */
+    belowToolbar?: ReactNode;
     /** Stjärn-gåvan ⭐: eventet har redan (någons) stjärna → guld-indikator. */
     hasStar?: boolean;
     /** Inloggad + oanvänd stjärna (och eventet inte passerat) → ⭐-knappen är
@@ -115,7 +111,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, onBackToGroup, backToGroupCount = 0, onToggleSearch, searchActive = false, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, searchField, belowToolbar, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
@@ -506,30 +502,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         sektionen respektive närhetslistan (som annars ligger
                         långt ner och sällan nås via scroll). Tydligt på/av-läge:
                         fylld blå när vyn är aktiv. */}
-                    {(onBackToGroup || onToggleActivityView || onToggleNearbyView || onToggleSearch) ? (
-                        <div className="shrink-0 flex items-center gap-1.5">
-                            {/* TILLBAKA TILL MULTIEVENT-LISTAN (Josef 1/9) —
-                                längst till vänster, före Lista-toggeln, så
-                                steget bakåt läses som ett steg bakåt. BARA
-                                pilen: texten "Tillbaka" krockade med
-                                Lista-toggeln bredvid (två listor, två ord).
-                                Neutral (aldrig blå/aktiv) — den är en väg,
-                                inte ett läge man kan stå i. Meningen ligger i
-                                title/aria ("Tillbaka till de N eventen"). */}
-                            {onBackToGroup && (
-                                <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onBackToGroup(); }}
-                                    aria-label={backToGroupCount > 1
-                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
-                                        : 'Tillbaka till listan'}
-                                    title={backToGroupCount > 1
-                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
-                                        : 'Tillbaka till listan'}
-                                    className="inline-flex items-center justify-center h-8 w-8 rounded-full border transition-all active:scale-[0.97] bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50"
-                                >
-                                    <ArrowLeft size={15} strokeWidth={2.5} />
-                                </button>
-                            )}
+                    {(searchField || onToggleActivityView || onToggleNearbyView) ? (
+                        <div className={`${searchField ? 'flex-1 min-w-0' : 'shrink-0'} flex items-center gap-1.5`}>
+                            {/* (TILLBAKA TILL MULTIEVENT-LISTAN satt här 1/9-7/10.
+                                Flyttad upp till navraden, direkt till vänster om
+                                1/2-pagern - ägarbeslut 7/10 kväll. Se EventCard.) */}
                             {onToggleActivityView && (
                                 <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleActivityView(); }}
@@ -560,28 +537,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                     Lista
                                 </button>
                             )}
-                            {/* SÖK/FILTER-IKONEN (ägarbeslut 7/10: "vi ska
-                                bara ha sök- och filter-ikonen i toppen av
-                                eventkortet, allra till vänster"): fäller ut
-                                kortsöket + kategorichipsen. Blå prick när ett
-                                filter eller en sökning är på — samma språk som
-                                navbarens filterknapp. Ersätter det alltid
-                                synliga sökfältet (6/10-versionen). */}
-                            {onToggleSearch && (
-                                <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSearch(); }}
-                                    aria-pressed={searchActive}
-                                    aria-label={searchActive ? 'Sök och filtrera — på' : 'Sök och filtrera i listan'}
-                                    title="Sök och filtrera i listan"
-                                    className={`relative w-8 h-8 rounded-full border transition-all active:scale-[0.95] flex items-center justify-center shrink-0 ${
-                                        searchActive
-                                            ? 'bg-[#006AA7] border-[#006AA7] text-white'
-                                            : 'bg-white border-slate-200 text-slate-500 hover:text-[#006AA7] hover:border-sky-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-sky-400 dark:hover:border-sky-900/50'
-                                    }`}
-                                >
-                                    <SearchIcon size={14} />
-                                </button>
-                            )}
+                            {/* KORTSÖKET (7/10 kväll: ett riktigt fält i
+                                stället för sök/filter-ikonen från samma
+                                morgon). Ersätter ikonen - lägg inte tillbaka
+                                den. */}
+                            {searchField}
                         </div>
                     ) : (
                         /* Tom platshållare så knapparna ligger kvar till höger
@@ -646,6 +606,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             stora CTA:n under beskrivningen är kvar. */}
                     </div>
                 </div>
+
+                {/* Kategorichipsen under kortsöket (EventCard bestämmer när). */}
+                {belowToolbar}
 
                 {/* Titelraden — emoji + titel på egen rad under knapparna.
                     Fast 2-radshöjd: enradstitlar centreras vertikalt. */}

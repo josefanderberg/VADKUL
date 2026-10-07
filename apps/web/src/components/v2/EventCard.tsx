@@ -20,7 +20,7 @@ import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, takeRows } from '@/utils/popularList';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease } from '@/utils/sheetSnap';
-import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List } from 'lucide-react';
 
 /** Listflikarnas horisont (Josef 24/9: "vi fokuserar mest på kommande
  *  månaden"). Kartan laddar bara tidsfönstret (14 dagar, utils/timelineWindow);
@@ -1066,6 +1066,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // vyskiftes-läget). Kortet växer samtidigt till full höjd och scrollas
     // till toppen — ett riktigt vyskifte, inte en scroll-genväg.
     const [cardView, setCardView] = useState<'info' | 'chat' | 'nearby'>('info');
+    // Tillbaka-pilen till multievent-listan i navraden (vid 1/2-pagern) - bara
+    // i infovyn, där "tillbaka" bara kan betyda en sak.
+    const showBackToGroup = !chooserActive && !!onBackToGroup && cardView === 'info';
     // Bilder AV som default i listan (Josef 26/8) — 'on' i storage slår på dem.
     const [showImages, setShowImages] = useState(false);
     useEffect(() => {
@@ -1841,21 +1844,23 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Lever kvar vid eventbyte (man bläddrar bland sina träffar) och nollas
     // när kortet stängs.
     const [cardSearchQ, setCardSearchQ] = useState('');
-    // SEDAN 7/10 fäller SÖK/FILTER-IKONEN i knappraden ut blocket (ägarbeslut:
-    // "vi ska bara ha sök- och filter-ikonen i toppen av eventkortet") — det
-    // alltid synliga fältet från 6/10 är ersatt, och kortets default-höjd är
-    // tillbaka på 335.
+    // SEDAN 7/10 KVÄLL är fältet ett riktigt input DIREKT I KNAPPRADEN
+    // (ägarbeslut: "sök rutan ska vara lite bredare och inte en knapp, utan
+    // direkt input. sen ska en kategorier symbl visas under") - ersätter
+    // samma morgons sök/filter-ikon. Fältet tar ikonens plats, så kortets
+    // default-höjd står kvar på 335. cardSearchOpen = sökningen är IGÅNG
+    // (fältet har fått fokus): då visas kategorichipsen under knappraden.
+    // Stängs bara av ✕ eller när kortet stängs - inte vid blur, för ett
+    // tryck på ett chip blurrar fältet först och hade släckt raden under
+    // fingret.
     const [cardSearchOpen, setCardSearchOpen] = useState(false);
     const cardSearchInputRef = useRef<HTMLInputElement>(null);
-    const handleToggleCardSearch = () => {
-        setCardSearchOpen(open => {
-            const next = !open;
-            // Stänga = släpp sökningen (chips-filtret lever sitt eget liv och
-            // syns som brickor under dagplattan). Öppna = fokusera fältet.
-            if (!next) handleCardSearch('');
-            else setTimeout(() => cardSearchInputRef.current?.focus(), 60);
-            return next;
-        });
+    const handleCloseCardSearch = () => {
+        // Stänga = släpp sökningen (chips-filtret lever sitt eget liv och
+        // syns som brickor under dagplattan).
+        handleCardSearch('');
+        setCardSearchOpen(false);
+        cardSearchInputRef.current?.blur();
     };
     useEffect(() => {
         if (!selectedEvent) { setCardSearchQ(''); setCardSearchOpen(false); }
@@ -2817,6 +2822,35 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 ml-auto flyttar med till den när pagern syns så paret
                                 sitter ihop i högerkanten. Döljs i väljarläget: då ÄR
                                 kortets innehåll listan över högen. */}
+                            {/* TILLBAKA TILL MULTIEVENT-LISTAN (Josef 1/9) - DIREKT
+                                TILL VÄNSTER OM 1/2-PAGERN sedan 7/10 kväll ("där
+                                uppe vid 1/2 åt vänster direkt om den"); satt förut
+                                i kortets knapprad, där kortsöket nu tar plats.
+                                Spegelbild av pagern: [← lista] [1/2 →] [NÄSTA].
+                                Bara i infovyn: i listvyn är "tillbaka" tvetydigt
+                                (två listor). Neutral glas-look - en väg, inte ett
+                                läge. ml-auto sitter på den första synliga av de
+                                tre så gruppen håller ihop i högerkanten. */}
+                            {showBackToGroup && (
+                                <button
+                                    type="button"
+                                    onClick={onBackToGroup}
+                                    onPointerDown={onButtonPointerDown}
+                                    onPointerMove={onButtonPointerMove}
+                                    onPointerUp={onButtonPointerUp}
+                                    onPointerCancel={onButtonPointerUp}
+                                    aria-label={backToGroupCount > 1
+                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
+                                        : 'Tillbaka till listan'}
+                                    title={backToGroupCount > 1
+                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
+                                        : 'Tillbaka till listan'}
+                                    className="pointer-events-auto shrink-0 ml-auto h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all"
+                                >
+                                    <ArrowLeft size={13} strokeWidth={2.5} className="shrink-0" />
+                                    <List size={15} strokeWidth={2.5} className="shrink-0" />
+                                </button>
+                            )}
                             {!chooserActive && sameSpotGroup.length > 1 && (
                                 <button
                                     type="button"
@@ -2827,7 +2861,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     onPointerCancel={onButtonPointerUp}
                                     aria-label={`Nästa av ${sameSpotGroup.length} event på samma plats`}
                                     title="Fler event på samma plats"
-                                    className="pointer-events-auto shrink-0 ml-auto h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all"
+                                    className={`pointer-events-auto shrink-0${showBackToGroup ? '' : ' ml-auto'} h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all`}
                                 >
                                     <span className="text-[12px] font-black tabular-nums leading-none">
                                         {(sameSpotIndex < 0 ? 0 : sameSpotIndex) + 1}/{sameSpotGroup.length}
@@ -2856,7 +2890,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 disabled={nextDisabled}
                                 aria-label={nextTitle}
                                 title={nextTitle}
-                                className={`group/nasta pointer-events-auto relative shrink-0 h-[38px] box-border flex items-center bg-transparent${!chooserActive && sameSpotGroup.length > 1 ? '' : ' ml-auto'}${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
+                                className={`group/nasta pointer-events-auto relative shrink-0 h-[38px] box-border flex items-center bg-transparent${(!chooserActive && sameSpotGroup.length > 1) || showBackToGroup ? '' : ' ml-auto'}${nextDisabled ? ' opacity-40 cursor-not-allowed' : ''}`}
                             >
                                 {/* DAGBYTES-LÄGET: samma blå kapsel men med GUL RAM (Josef
                                     2/9: "skit i det att den byter färg, lägg en gul ram i
@@ -2995,44 +3029,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         touchAction: 'pan-y'
                     }}
                 >
-                    {/* KORTSÖKET (6/10; IHOPFÄLLT bakom sök/filter-ikonen i
-                        knappraden sedan 7/10): fältet + chipsen visas bara
-                        när ikonen slagits på. MEDVETET inte sticky: flikraden
-                        (top-0) och dagrubrikerna (top-11) äger sticky-kedjan,
-                        och att skriva växlar ändå till listvyn med scrollen i
-                        topp. Inte i väljarläget (innehållet ÄR listan). */}
-                    {!chooserActive && selectedEvent && cardSearchOpen && (
-                        <div className="bg-card px-4 md:px-6 pb-2 animate-in fade-in slide-in-from-top-1 duration-150">
-                            <div className="flex items-center gap-2 h-9 rounded-full bg-slate-100 dark:bg-zinc-800 border border-border px-3">
-                                <Search size={14} className="shrink-0 text-slate-400" aria-hidden />
-                                <input
-                                    ref={cardSearchInputRef}
-                                    type="text"
-                                    value={cardSearchQ}
-                                    onChange={e => handleCardSearch(e.target.value)}
-                                    placeholder="Sök event i listan…"
-                                    aria-label="Sök event i listan under kortet"
-                                    className="flex-1 min-w-0 bg-transparent outline-none text-sm text-slate-800 dark:text-zinc-100 placeholder:text-slate-400"
-                                />
-                                {cardSearchQ && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleCardSearch('')}
-                                        aria-label="Rensa sökningen"
-                                        className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
-                                    >
-                                        <XIcon size={14} />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                    {/* KATEGORICHIPSEN i kortet (ägarbeslut 6/10, ersätter
-                        Lista-ikonens jobb; bakom sök/filter-ikonen sedan
-                        7/10): SAMMA filter som kartan — ett val här smalnar
-                        listan nedanför OCH kartan bakom. Sidan äger raden
-                        (filterChips), kortet bara visar den. */}
-                    {!chooserActive && selectedEvent && cardSearchOpen && filterChips}
                     {/* VÄLJARLÄGET: innehållet ÄR väljarlistan tills man valt
                         (Josef 31/8) — sen renderas det vanliga kortet nedan. */}
                     {chooserActive && groupChoice ? (
@@ -3091,12 +3087,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // ligger direkt under eventinfon. Lista-toggeln bara
                         // när närhetslistan har innehåll.
                         activityView={false}
-                        // Tillbaka-pilen sitter FÖRE Lista-knappen i headern.
-                        // Bara i infovyn: står man i närhetslistan är "tillbaka"
-                        // tvetydigt (två listor), och där finns Lista-toggeln
-                        // som väg ut.
-                        onBackToGroup={cardView === 'info' ? onBackToGroup : undefined}
-                        backToGroupCount={backToGroupCount}
+                        // (Tillbaka-pilen till multievent-listan satt här i
+                        // headern t.o.m. 7/10 - nu i navraden vid 1/2-pagern.)
                         nearbyView={cardView === 'nearby'}
                         // LISTA-IKONEN BORTTAGEN (ägarbeslut 6/10, Josef: "då
                         // ska den lista-ikonen försvinna, och man ska se
@@ -3104,11 +3096,49 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // ut genom att rensa sökningen. Kategorichipsen under
                         // sökfältet ersätter ikonens jobb.
                         onToggleNearbyView={undefined}
-                        // Sök/filter-ikonen (7/10): fäller ut kortsöket +
-                        // chipsen; lyser när blocket är öppet, en sökning
-                        // skrivits eller kartfiltret är på.
-                        onToggleSearch={handleToggleCardSearch}
-                        searchActive={cardSearchOpen || cardQNorm !== '' || cardFilterOn}
+                        // KORTSÖKET direkt i knappraden (7/10 kväll). Inte
+                        // sticky: flikraden (top-0) och dagrubrikerna (top-11)
+                        // äger sticky-kedjan, och att skriva växlar ändå till
+                        // listvyn med scrollen i topp. stopPropagation: ett
+                        // tryck i fältet ska inte fälla ut kortet.
+                        searchField={
+                            <div
+                                onClick={e => e.stopPropagation()}
+                                className="flex-1 min-w-0 max-w-xs flex items-center gap-2 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 border border-border focus-within:border-[#006AA7] px-3 transition-colors"
+                            >
+                                {/* Förstoringsglaset blått = kartans kategorifilter är på. */}
+                                <Search size={14} className={`shrink-0 ${cardFilterOn ? 'text-[#006AA7]' : 'text-slate-400'}`} aria-hidden />
+                                <input
+                                    ref={cardSearchInputRef}
+                                    type="text"
+                                    value={cardSearchQ}
+                                    onChange={e => handleCardSearch(e.target.value)}
+                                    onFocus={() => setCardSearchOpen(true)}
+                                    placeholder="Sök event i listan…"
+                                    aria-label="Sök event i listan under kortet"
+                                    className="flex-1 min-w-0 bg-transparent outline-none text-sm text-slate-800 dark:text-zinc-100 placeholder:text-slate-400"
+                                />
+                                {(cardSearchQ || cardSearchOpen) && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCloseCardSearch}
+                                        aria-label={cardSearchQ ? 'Rensa sökningen' : 'Stäng sökningen'}
+                                        className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+                                    >
+                                        <XIcon size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        }
+                        // KATEGORICHIPSEN under knappraden när sökningen är
+                        // igång (6/10-raden, nu utlöst av fältet): SAMMA filter
+                        // som kartan - ett val här smalnar listan nedanför OCH
+                        // kartan bakom. Sidan äger raden (filterChips), kortet
+                        // bara visar den. -mx/-mt: raden har egen luft och ska
+                        // gå ut till kortets kanter.
+                        belowToolbar={cardSearchOpen && filterChips
+                            ? <div className="-mx-4 md:-mx-6 -mt-2 mb-1">{filterChips}</div>
+                            : null}
                         hasStar={starredEventIds?.has(selectedEvent.id) ?? false}
                         // Passerade event kan inte stjärnmärkas — stjärnan vore
                         // förbrukad direkt (den lyser bara tills eventet varit).
