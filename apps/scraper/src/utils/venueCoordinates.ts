@@ -603,6 +603,26 @@ export function firstWordPlaceQuery(cleaned: string, city: string): string | nul
     return `${w}, ${city.trim()}`;
 }
 
+/** Kedjor/genrer som finns i varje stad. Ensamma hittar de en namne, inte platsen. */
+const STANDALONE_STOP = /^(folkets|scandic|quality|clarion|comfort|elite|first|best|ica|coop|systembolaget)$/i;
+
+/**
+ * "Ovikens gamla kyrka, Östersund" → "Ovikens gamla kyrka". Regionala källor
+ * (Visit Östersund) lägger platser i GRANNKOMMUNER under sin defaultCity.
+ * Nominatim hittar inte kyrkan i Oviken med ", Östersund" på slutet, och
+ * eventet föll till Östersunds mittpunkt (community-kritik 2026-10-08).
+ * Huvudsegmentet ensamt, med nearCity-predikatet som vakt. Samma krav som
+ * firstWordPlaceQuery (första ordet ska kunna vara en ort), plus att resten
+ * av frågan bara är staden; mellansegment sköts av suffixkedjan.
+ */
+export function standaloneVenueQuery(cleaned: string, city: string): string | null {
+    const parts = cleaned.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length !== 2 || parts[1].toLowerCase() !== city.trim().toLowerCase()) return null;
+    if (!firstWordPlaceQuery(cleaned, city)) return null;
+    const first = parts[0].split(/\s+/)[0].replace(/[^\p{L}\-]/gu, '');
+    return STANDALONE_STOP.test(first) ? null : parts[0];
+}
+
 /** Strippa genitiv-s ur FÖRSTA ordet: "Ingelstads bibliotek" → "Ingelstad bibliotek".
  *  Rör inte ord som slutar på dubbel-s/-ås/-us/-es (Braås!) eller är för korta. */
 export function deGenitiveFirstWord(name: string): string | null {
@@ -807,6 +827,20 @@ async function geocodeVenueSwedenLive(
             const precision: GeoPrecision = classifyQueryPrecision(sfx) === 'gata' ? 'gata' : 'ort-centroid';
             console.log(`[Geocoding/SE] Found suffix "${sfx}" (${precision}): [${result[0]}, ${result[1]}]`);
             return [result[0], result[1], precision];
+        }
+    }
+
+    // Försök 2a: platsnamnet UTAN stadsankaret ("Ovikens gamla kyrka"):
+    // platsen ligger i en grannkommun. Bara med accept-predikatet som vakt.
+    if (cityHint && accept) {
+        const solo = standaloneVenueQuery(cleaned, cityHint);
+        if (solo) {
+            await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
+            result = await nominatimSearchSweden(solo, accept);
+            if (result) {
+                console.log(`[Geocoding/SE] Found venue without city "${solo}": [${result[0]}, ${result[1]}]`);
+                return [result[0], result[1], classifyQueryPrecision(solo)];
+            }
         }
     }
 

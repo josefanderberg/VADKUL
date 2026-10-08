@@ -99,14 +99,31 @@ async function fetchDetailHtml(url: string, cfg: WpRestConfig, signal?: AbortSig
     }
 }
 
+/**
+ * HTML → text som BEHÅLLER radbrytningarna: <br> och block-slut blir \n,
+ * övriga taggar mellanslag. Platsregexarna stoppar på \n. Med allt hopslaget
+ * till mellanslag åt "Plats: Ovikens gamla kyrka<br />Torsdag 8 oktober kl
+ * 19.00" upp datumraden, geokodningen missade och eventet hamnade mitt i
+ * Östersund i stället för i Oviken (community-kritik 2026-10-08).
+ */
+export function htmlToLines(html: string): string {
+    return html
+        .replace(/<br\s*\/?>|<\/(?:p|div|li|dd|dt|tr|h[1-6])>/gi, '\n')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/[^\S\n]+/g, ' ')
+        .replace(/ *\n[\s]*/g, '\n')
+        .trim();
+}
+
 /** Försök extrahera venue ur HTML — t.ex. <dl><dt>Plats</dt><dd>Trollsjön</dd></dl> */
-function findVenueInHtml(html: string): string | undefined {
+export function findVenueInHtml(html: string): string | undefined {
     if (!html) return undefined;
     // <dt>Plats</dt><dd>X</dd>  — vanligt i kommun-event-sidor
     const dtdd = html.match(/<dt[^>]*>\s*(?:plats|var|venue)\s*<\/dt>\s*<dd[^>]*>([^<]{2,80})</i);
     if (dtdd) return dtdd[1].trim();
     // "Plats: X" i ren text
-    const inline = html.replace(/<[^>]+>/g, ' ').match(/\b(?:plats|var)\s*[:：]\s*([A-ZÅÄÖ][^.!?\n,]{2,60})/i);
+    const inline = htmlToLines(html).match(/\b(?:plats|var)\s*[:：]\s*([A-ZÅÄÖ][^.!?\n,]{2,60})/i);
     if (inline) return inline[1].trim();
     return undefined;
 }
@@ -229,14 +246,15 @@ const VENUE_FALSE_POSITIVES = /^(facebook|instagram|tiktok|youtube|spotify|datum
 // Etikettord i början av kandidaten ("Dat" ur "Datum:", "Pris 160 kr") — ingen plats.
 const VENUE_LABEL_START = /^(?:dat(?:um)?|tid(?:er)?|när|var|plats|info(?:rmation)?|anmälan|pris|kostnad|avgift|ålder|kl)(?!\p{L})/iu;
 
-function findVenueInText(text: string): string | undefined {
+export function findVenueInText(text: string): string | undefined {
     if (!text) return undefined;
-    const clean = text.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    const clean = htmlToLines(text);
     // "på Helsingborgs Konserthus", "vid Sofiero slott", "i Ångfärjeparken"
     const patterns = [
         /\bplats:\s*([A-ZÅÄÖ][^.!?\n]{2,40})/i, // "Plats: X" är starkast
-        /\bpå\s+([A-ZÅÄÖ][\wåäöÅÄÖ&-]+(?:\s+[A-ZÅÄÖ][\wåäöÅÄÖ&-]+){0,3})/,
-        /\bvid\s+([A-ZÅÄÖ][\wåäöÅÄÖ&-]+(?:\s+[A-ZÅÄÖ][\wåäöÅÄÖ&-]+){0,3})/,
+        // Mellanslag, inte \s: frasen får inte fortsätta över en radbrytning.
+        /\bpå +([A-ZÅÄÖ][\wåäöÅÄÖ&-]+(?: +[A-ZÅÄÖ][\wåäöÅÄÖ&-]+){0,3})/,
+        /\bvid +([A-ZÅÄÖ][\wåäöÅÄÖ&-]+(?: +[A-ZÅÄÖ][\wåäöÅÄÖ&-]+){0,3})/,
     ];
     for (const p of patterns) {
         const m = clean.match(p);
