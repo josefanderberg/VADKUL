@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
 <title>Appen är nästan här</title>
 <style type="text/css">
 @keyframes vkpuls {
@@ -13,28 +14,33 @@
 }
 .vk-puls { animation: vkpuls 2.4s ease-out infinite; }
 @media (prefers-reduced-motion: reduce) { .vk-puls { animation: none; } }
+/* Allt står på blått: mejlappar som själva länkar text (adresser, datum)
+   målar den i sin standardblå = blått på blått. Ärv färgen i stället.
+   Apple Mail = x-apple-data-detectors, Gmail = u + #body. Skriv ändå varje
+   adress som egen <a> med färg inline - det här är bara skyddsnätet. */
+a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; font-size: inherit !important; font-family: inherit !important; font-weight: inherit !important; line-height: inherit !important; }
+u + #body a { color: inherit; text-decoration: none; font-size: inherit; font-family: inherit; font-weight: inherit; line-height: inherit; }
 </style>
 </head>
-<body style="margin:0;padding:0;background-color:#006AA7;">
+<body id="body" style="margin:0;padding:0;background-color:#006AA7;">
 <!-- Preheader (syns i inkorgen, inte i mejlet) -->
 <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#006AA7;">
-  Vi närmar oss 1&nbsp;000 aktiva användare - och du som bjuder med en vän får appen först.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  Vi är 874 och närmar oss 1&nbsp;000 - du som bjuder med en vän får appen först.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
 </div>
 
+<!-- Hela mejlet står direkt på VADKUL-blått (designbeslut 8/10): inga grå
+     ytor, det vita kortet är förtur-rutan. Loggan är pixelkonst i ren HTML,
+     mattad mot bakgrundsblått så molnet svävar fritt. -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#006AA7;">
   <tr>
-    <td align="center" style="padding:28px 12px;">
+    <td align="center" style="padding:30px 12px 28px;">
 
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;">
 
-        <!-- Header / logotyp - samma uttryck som WelcomeOverlay:
-             font-black + italic + uppercase i sans, gult streck under -->
+        <!-- Loggan: molnet svävande på blått -->
         <tr>
-          <td align="center" style="padding:8px 16px 20px;">
-            <!-- Loggan som pixelkonst i ren HTML (genererad ur appikonen,
-                 pixel för pixel): inga bilder i mejlet = ingen "visa bilder"-
-                 fråga. Mattad mot sidbakgrunden #eef1f4. -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 12px;"><tr><td>
+          <td align="center" style="padding:8px 16px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 14px;"><tr><td>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-size:0;line-height:0;"><tr><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td></tr>
 <tr><td colspan="96" height="2" bgcolor="#006aa7"></td></tr>
 <tr><td colspan="96" height="2" bgcolor="#006aa7"></td></tr>
@@ -133,186 +139,167 @@
 <tr><td colspan="96" height="2" bgcolor="#006aa7"></td></tr>
 <tr><td colspan="96" height="2" bgcolor="#006aa7"></td></tr>
 </table>
-</td></tr></table>
+            </td></tr></table>
             <span style="font-family:'Arial Black',Arial,Helvetica,sans-serif;font-size:38px;font-weight:900;font-style:italic;letter-spacing:-1px;color:#ffffff;">VADKUL</span>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:7px auto 8px;">
               <tr><td width="96" height="5" style="background-color:#FECC02;border-radius:999px;font-size:1px;line-height:1px;">&nbsp;</td></tr>
             </table>
-            <span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;letter-spacing:1px;color:#cfe3f1;">hitta events nära dig - vadkul.se</span>
+            <span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;letter-spacing:1px;color:#cfe3f1;">hitta events nära dig - <a href="https://vadkul.se?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=tagline" style="color:#cfe3f1;text-decoration:none;"><span style="color:#cfe3f1;">vadkul.se</span></a></span>
           </td>
         </tr>
 
-        <!-- Kort -->
+        <!-- Rubrik direkt på blått -->
         <tr>
-          <td style="background-color:#ffffff;border-radius:14px;border:1px solid #e2e8f0;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <td style="padding:34px 24px 0;">
+            <span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:bold;letter-spacing:2px;color:#FECC02;text-transform:uppercase;">Nytt på VADKUL &middot; oktober 2026</span><br>
+            <span style="font-family:Arial,Helvetica,sans-serif;font-size:27px;line-height:35px;font-weight:800;color:#ffffff;">Appen är nästan här 📱</span>
+          </td>
+        </tr>
 
-              <!-- Rubrikhuvud: vitt med etikett, stor mörk rubrik och en kort gul
-                   accentlinje. Det blå bandet från sep-mallen revs 7/10 (Josef:
-                   såg inte bra ut, mejlet ska kännas mer professionellt). -->
-              <tr>
-                <td style="padding:36px 36px 0;">
-                  <span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:bold;letter-spacing:2px;color:#006AA7;text-transform:uppercase;">Nytt på VADKUL &middot; oktober 2026</span><br>
-                  <span style="font-family:Arial,Helvetica,sans-serif;font-size:27px;line-height:35px;font-weight:800;color:#0f172a;">Appen är nästan här 📱</span>
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 0;">
-                    <tr><td width="44" height="4" style="background-color:#FECC02;border-radius:999px;font-size:1px;line-height:1px;">&nbsp;</td></tr>
-                  </table>
-                </td>
-              </tr>
+        <!-- Brödtext på blått -->
+        <tr>
+          <td style="padding:18px 24px 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#eaf3f9;">
+            <p style="margin:0 0 16px;color:#ffffff;">Hej $[FNAME|där]$!</p>
+            <p style="margin:0 0 22px;">Två stora saker på en gång: vi är redan <strong style="color:#ffffff;">874 medlemmar</strong> på <a href="https://vadkul.se?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=ingress" style="color:#ffffff;text-decoration:none;"><span style="color:#ffffff;">vadkul.se</span></a> och närmar oss med stormsteg 1&nbsp;000 - och <strong style="color:#ffffff;">riktiga VADKUL-appen</strong> är strax redo för släpp. Tack vare er som använder kartan, tipsar och skapar event har det gått fortare än vi vågade hoppas.</p>
+          </td>
+        </tr>
 
-              <!-- Brödtext -->
+        <!-- Förtur-rutan: det vita kortet -->
+        <tr>
+          <td style="padding:0 12px 6px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-radius:16px;">
               <tr>
-                <td style="padding:22px 36px 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;">
-                  <p style="margin:0 0 16px;">Hej $[FNAME|där]$!</p>
-                  <p style="margin:0 0 22px;">Två stora saker på en gång: vi närmar oss med stormsteg <strong>1&nbsp;000 aktiva användare</strong> på vadkul.se - och <strong>riktiga VADKUL-appen</strong> är strax redo för släpp. Tack vare er som använder kartan, tipsar och skapar event har det gått fortare än vi vågade hoppas.</p>
-                </td>
-              </tr>
+                <td style="padding:24px 26px 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;">
+                  <p style="margin:0 0 8px;font-size:18px;color:#006AA7;"><strong>Bjud med en vän - och få appen först ⭐</strong></p>
+                  <p style="margin:0 0 12px;">När vi passerar 1&nbsp;000 släpper vi appen stegvis - och <strong>först ut är du som har bjudit in en vän</strong>. Så här säkrar du din plats:</p>
+                  <p style="margin:0 0 4px;"><strong>1.</strong> Öppna ett event du vill gå på, kanske i $[UD:CITY|din stad]$</p>
+                  <p style="margin:0 0 4px;"><strong>2.</strong> Tryck på <strong>Bjud med</strong> och skicka inbjudan till en vän</p>
+                  <p style="margin:0 0 18px;"><strong>3.</strong> När din vän har tackat ja är din förtur säkrad 🎉</p>
 
-              <!-- Förtur-rutan -->
-              <tr>
-                <td style="padding:0 36px 8px;">
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f8fc;border:1px solid #cfe3f2;border-radius:10px;">
+                  <!-- Knappen: pill i loggans mjuka rundade form, fylld i
+                       VADKUL-blått med den pulsande ringen (vk-puls). -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 16px;">
                     <tr>
-                      <td style="padding:20px 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;">
-                        <p style="margin:0 0 8px;font-size:16px;color:#006AA7;"><strong>Bjud med en vän - och få appen först ⭐</strong></p>
-                        <p style="margin:0 0 12px;">När vi passerar 1&nbsp;000 aktiva släpper vi appen stegvis - och <strong>först ut är du som har bjudit in en vän</strong>. Så här säkrar du din plats:</p>
-                        <p style="margin:0 0 4px;"><strong>1.</strong> Öppna ett event du vill gå på, kanske i $[UD:CITY|din stad]$</p>
-                        <p style="margin:0 0 4px;"><strong>2.</strong> Tryck på <strong>Bjud med</strong> och skicka inbjudan till en vän</p>
-                        <p style="margin:0 0 16px;"><strong>3.</strong> När din vän har tackat ja är din förtur säkrad 🎉</p>
-
-                        <!-- Knapp -->
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 14px;">
-                          <tr>
-                            <!-- Inverterad knapp (Josef 7/10): vit med blå ram och blå
-                                 text - samma sekundärknappstil som arrangörsmejlen. -->
-                            <td align="center" class="vk-puls" style="background-color:#ffffff;border:2px solid #006AA7;border-radius:8px;">
-                              <a href="https://vadkul.se/?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=bjudmed" style="display:inline-block;padding:12px 28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#006AA7;text-decoration:none;">Hitta något att bjuda med en vän på</a>
-                            </td>
-                          </tr>
-                        </table>
-
-                        <p style="margin:0;">Ni får appen samtidigt, före alla andra - och något kul att gå på ihop.</p>
+                      <td align="center" class="vk-puls" style="background-color:#006AA7;border-radius:999px;">
+                        <a href="https://vadkul.se/?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=bjudmed" style="display:inline-block;padding:14px 32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:999px;">Hitta något att bjuda med en vän på</a>
                       </td>
                     </tr>
                   </table>
+
+                  <p style="margin:0;text-align:center;color:#64748b;">Ni får appen samtidigt, före alla andra - och något kul att gå på ihop.</p>
                 </td>
               </tr>
+            </table>
+          </td>
+        </tr>
 
-              <!-- Nyheterna -->
+        <!-- Nyheterna på blått -->
+        <tr>
+          <td style="padding:26px 24px 4px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#eaf3f9;">
+            <p style="margin:0 0 12px;font-size:11px;font-weight:bold;letter-spacing:2px;color:#FECC02;text-transform:uppercase;">Nytt på kartan</p>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px;">
               <tr>
-                <td style="padding:16px 36px 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;">
-                  <p style="margin:0 0 12px;font-size:11px;font-weight:bold;letter-spacing:2px;color:#006AA7;text-transform:uppercase;">Nytt på kartan</p>
-
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px;">
-                    <tr>
-                      <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">🙋</td>
-                      <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;padding:5px 0;"><strong>Kommer eller Intresserad</strong> - säg till direkt i eventkortet, så ser du och andra vad som lockar. Inget krångel, ett tryck räcker.</td>
-                    </tr>
-                    <tr>
-                      <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">💌</td>
-                      <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;padding:5px 0;"><strong>Bjud med</strong> - varje event har en Bjud med-knapp som skickar en personlig inbjudan till en vän. Bäst av allt: det räknas till din förtur (se ovan).</td>
-                    </tr>
-                    <tr>
-                      <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">🏙️</td>
-                      <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;padding:5px 0;"><strong>Stadssidan och arrangörssidorna hänger ihop</strong> - tryck på en arrangör så ser du allt de ordnar, tryck på staden så är du på stadens samlade sida. Kartan är aldrig mer än ett tryck bort. <a href="https://vadkul.se/evenemang?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=stadssida" style="color:#006AA7;font-weight:bold;">vadkul.se/evenemang</a></td>
-                    </tr>
-                    <tr>
-                      <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">🔔</td>
-                      <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;padding:5px 0;"><strong>På väg: vänner på kartan</strong> - fler sociala uppdateringar rullar ut, och snart meddelar vi dig när en vän tänker gå på något. Så att ni oftare hamnar på samma ställe.</td>
-                    </tr>
-                  </table>
-                </td>
+                <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">🙋</td>
+                <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#eaf3f9;padding:5px 0;"><strong style="color:#ffffff;">Kommer eller Intresserad</strong> - säg till direkt i eventkortet, så ser du och andra vad som lockar. Inget krångel, ett tryck räcker.</td>
               </tr>
-
-              <!-- Avslut + signatur. "Bygger på kvällar och helger" revs 7/10
-                   (Josef: ska se mer professionellt ut) - nu samma signaturform
-                   som arrangörsmejlen: logga, namn, titel, vadkul.se. -->
               <tr>
-                <td style="padding:14px 36px 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1e293b;">
-                  <p style="margin:0 0 22px;">Tack för att du är med - det är ni som gör kartan levande. Vi hörs när appen släpps!</p>
-                  <p style="margin:0 0 14px;">Vänliga hälsningar,</p>
-                  <!-- Loggan ritas i HTML som pixelkonst (RLE-tabell genererad ur
-                       appikonen med docs/outreach-receptet i scratchpad-skriptet
-                       pixelmoln.py), INTE som bild: externa bilder blockeras tills
-                       mottagaren tryckt "visa bilder" (Josef 7/10) och Zoho
-                       rehostar dem ändå. Mattad mot kortets vita bakgrund. -->
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                      <td style="padding:0 14px 0 0;vertical-align:middle;">
-                        <a href="https://vadkul.se?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=signatur" style="text-decoration:none;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td>
+                <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">💌</td>
+                <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#eaf3f9;padding:5px 0;"><strong style="color:#ffffff;">Bjud med</strong> - varje event har en Bjud med-knapp som skickar en personlig inbjudan till en vän. Bäst av allt: det räknas till din förtur (se ovan).</td>
+              </tr>
+              <tr>
+                <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">🏙️</td>
+                <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#eaf3f9;padding:5px 0;"><strong style="color:#ffffff;">Stadssidan och arrangörssidorna hänger ihop</strong> - tryck på en arrangör så ser du allt de ordnar, tryck på staden så är du på stadens samlade sida. Kartan är aldrig mer än ett tryck bort. <a href="https://vadkul.se/evenemang?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=stadssida" style="color:#ffffff;font-weight:bold;text-decoration:underline;"><span style="color:#ffffff;">vadkul.se/evenemang</span></a></td>
+              </tr>
+              <tr>
+                <td valign="top" width="30" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;padding:5px 0;">🔔</td>
+                <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#eaf3f9;padding:5px 0;"><strong style="color:#ffffff;">På väg: vänner på kartan</strong> - fler sociala uppdateringar rullar ut, och snart meddelar vi dig när en vän tänker gå på något. Så att ni oftare hamnar på samma ställe.</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Avslut + signatur på blått. Loggan ritas i HTML som pixelkonst
+             (mattad mot bakgrundsblått), INTE som bild: externa bilder
+             blockeras tills mottagaren tryckt "visa bilder" och Zoho
+             rehostar dem ändå. -->
+        <tr>
+          <td style="padding:16px 24px 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#eaf3f9;">
+            <p style="margin:0 0 22px;">Tack för att du är med - det är ni som gör kartan levande. Vi hörs när appen släpps!</p>
+            <p style="margin:0 0 14px;color:#ffffff;">Vänliga hälsningar,</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding:0 14px 0 0;vertical-align:middle;">
+                  <a href="https://vadkul.se?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=signatur" style="text-decoration:none;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-size:0;line-height:0;"><tr><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td><td width=2></td></tr>
-<tr><td colspan="7" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td bgcolor="#6dd7ff"></td><td colspan="30" bgcolor="#006aa7"></td><td bgcolor="#6dd7ff"></td><td bgcolor="#c3ffff"></td><td colspan="7" bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="5" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td bgcolor="#309ad8"></td><td colspan="34" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#c3ffff"></td><td colspan="5" bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="4" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#4db6f4"></td><td colspan="38" bgcolor="#006aa7"></td><td bgcolor="#4db6f4"></td><td colspan="4" bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="3" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#309ad8"></td><td colspan="40" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td colspan="3" bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="2" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#4db6f4"></td><td colspan="42" bgcolor="#006aa7"></td><td bgcolor="#4db6f4"></td><td colspan="2" bgcolor="#f8f8f6"></td></tr>
-<tr><td height="2" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td colspan="44" bgcolor="#006aa7"></td><td bgcolor="#c3ffff"></td><td bgcolor="#f8f8f6"></td></tr>
-<tr><td height="2" bgcolor="#f8f8f6"></td><td bgcolor="#309ad8"></td><td colspan="44" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#f8f8f6"></td></tr>
-<tr><td height="2" bgcolor="#c3ffff"></td><td colspan="46" bgcolor="#006aa7"></td><td bgcolor="#c3ffff"></td></tr>
-<tr><td height="2" bgcolor="#6dd7ff"></td><td colspan="46" bgcolor="#006aa7"></td><td bgcolor="#6dd7ff"></td></tr>
 <tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
 <tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="20" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td colspan="5" bgcolor="#7cadd8"></td><td colspan="2" bgcolor="#309ad8"></td><td colspan="20" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="18" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#7cadd8"></td><td bgcolor="#c3ffff"></td><td colspan="5" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="19" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="16" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="9" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#309ad8"></td><td colspan="18" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="16" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="17" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="15" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#b1cee5"></td><td colspan="13" bgcolor="#f8f8f6"></td><td colspan="5" bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="12" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="15" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td colspan="14" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="4" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="11" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="14" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#b1cee5"></td><td colspan="20" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#309ad8"></td><td colspan="10" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="11" height="2" bgcolor="#006aa7"></td><td colspan="4" bgcolor="#309ad8"></td><td bgcolor="#b1cee5"></td><td colspan="21" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="10" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="9" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td bgcolor="#c3ffff"></td><td bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="22" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="9" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="8" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#7cadd8"></td><td colspan="4" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td colspan="4" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#b1cee5"></td><td colspan="6" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#b1cee5"></td><td colspan="8" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="9" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="20" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td colspan="5" bgcolor="#7cadd8"></td><td bgcolor="#5094cd"></td><td colspan="21" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="18" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="5" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#5094cd"></td><td colspan="19" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="17" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="9" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#5094cd"></td><td colspan="18" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="16" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="18" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="15" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="13" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#5094cd"></td><td colspan="2" bgcolor="#7cadd8"></td><td colspan="2" bgcolor="#5094cd"></td><td colspan="12" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="15" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td colspan="14" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="4" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#5094cd"></td><td colspan="11" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="15" height="2" bgcolor="#006aa7"></td><td bgcolor="#b1cee5"></td><td colspan="20" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#5094cd"></td><td colspan="10" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="12" height="2" bgcolor="#006aa7"></td><td colspan="3" bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="21" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="10" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="10" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="2" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="22" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="10" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="9" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td colspan="9" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#b1cee5"></td><td colspan="6" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#b1cee5"></td><td colspan="8" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="10" bgcolor="#006aa7"></td></tr>
 <tr><td colspan="8" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td colspan="9" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="3" bgcolor="#7cadd8"></td><td colspan="4" bgcolor="#f8f8f6"></td><td colspan="4" bgcolor="#7cadd8"></td><td colspan="7" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="10" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="7" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#b1cee5"></td><td colspan="9" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="2" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="4" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="2" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="7" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="8" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="7" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td colspan="31" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="7" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="6" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#b1cee5"></td><td colspan="32" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="7" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="6" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#b1cee5"></td><td colspan="10" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#c3ffff"></td><td colspan="9" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="10" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#309ad8"></td><td colspan="6" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="6" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#7cadd8"></td><td colspan="10" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td bgcolor="#7cadd8"></td><td bgcolor="#c3ffff"></td><td colspan="7" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="10" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#309ad8"></td><td colspan="6" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="6" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#7cadd8"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td bgcolor="#c3ffff"></td><td colspan="3" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#309ad8"></td><td colspan="6" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="6" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#7cadd8"></td><td bgcolor="#c3ffff"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td colspan="6" bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="12" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#309ad8"></td><td colspan="6" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="7" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#b1cee5"></td><td colspan="14" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#c3ffff"></td><td colspan="15" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="6" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="8" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="29" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="7" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="9" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="5" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="14" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="3" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td colspan="2" bgcolor="#7cadd8"></td><td colspan="8" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="10" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td colspan="2" bgcolor="#7cadd8"></td><td colspan="2" bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td bgcolor="#7cadd8"></td><td bgcolor="#c3ffff"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="2" bgcolor="#309ad8"></td><td colspan="5" bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="9" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="13" height="2" bgcolor="#006aa7"></td><td colspan="2" bgcolor="#309ad8"></td><td colspan="3" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td colspan="2" bgcolor="#b1cee5"></td><td colspan="7" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="3" bgcolor="#006aa7"></td><td colspan="3" bgcolor="#309ad8"></td><td colspan="11" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="19" height="2" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td colspan="3" bgcolor="#7cadd8"></td><td colspan="3" bgcolor="#b1cee5"></td><td colspan="2" bgcolor="#7cadd8"></td><td bgcolor="#309ad8"></td><td colspan="19" bgcolor="#006aa7"></td></tr>
-<tr><td colspan="21" height="2" bgcolor="#006aa7"></td><td colspan="5" bgcolor="#309ad8"></td><td colspan="22" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="7" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="9" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="2" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="4" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="2" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="7" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td colspan="9" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="7" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td colspan="31" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="8" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="7" height="2" bgcolor="#006aa7"></td><td bgcolor="#b1cee5"></td><td colspan="32" bgcolor="#f8f8f6"></td><td bgcolor="#5094cd"></td><td colspan="7" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="6" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="10" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#b1cee5"></td><td colspan="9" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="10" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="7" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="6" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#7cadd8"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="8" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="10" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#5094cd"></td><td colspan="6" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="6" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#7cadd8"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="4" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#5094cd"></td><td colspan="6" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="7" height="2" bgcolor="#006aa7"></td><td bgcolor="#7cadd8"></td><td colspan="13" bgcolor="#f8f8f6"></td><td colspan="6" bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="12" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#5094cd"></td><td colspan="6" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="7" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="14" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#b1cee5"></td><td colspan="15" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="7" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="8" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="29" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td bgcolor="#5094cd"></td><td colspan="7" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="9" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td bgcolor="#b1cee5"></td><td colspan="5" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td colspan="14" bgcolor="#f8f8f6"></td><td colspan="2" bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="3" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#5094cd"></td><td colspan="8" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="10" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td colspan="2" bgcolor="#7cadd8"></td><td colspan="2" bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#5094cd"></td><td bgcolor="#7cadd8"></td><td bgcolor="#b1cee5"></td><td colspan="11" bgcolor="#f8f8f6"></td><td bgcolor="#7cadd8"></td><td colspan="3" bgcolor="#5094cd"></td><td colspan="3" bgcolor="#7cadd8"></td><td colspan="2" bgcolor="#5094cd"></td><td colspan="9" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="18" height="2" bgcolor="#006aa7"></td><td bgcolor="#5094cd"></td><td colspan="2" bgcolor="#b1cee5"></td><td colspan="7" bgcolor="#f8f8f6"></td><td bgcolor="#b1cee5"></td><td bgcolor="#7cadd8"></td><td bgcolor="#5094cd"></td><td colspan="17" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="19" height="2" bgcolor="#006aa7"></td><td colspan="2" bgcolor="#5094cd"></td><td colspan="2" bgcolor="#7cadd8"></td><td colspan="3" bgcolor="#b1cee5"></td><td colspan="2" bgcolor="#7cadd8"></td><td bgcolor="#5094cd"></td><td colspan="19" bgcolor="#006aa7"></td></tr>
 <tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
 <tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
 <tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
-<tr><td height="2" bgcolor="#6dd7ff"></td><td colspan="46" bgcolor="#006aa7"></td><td bgcolor="#6dd7ff"></td></tr>
-<tr><td height="2" bgcolor="#c3ffff"></td><td colspan="46" bgcolor="#006aa7"></td><td bgcolor="#c3ffff"></td></tr>
-<tr><td height="2" bgcolor="#f8f8f6"></td><td bgcolor="#309ad8"></td><td colspan="44" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#f8f8f6"></td></tr>
-<tr><td height="2" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td colspan="44" bgcolor="#006aa7"></td><td bgcolor="#c3ffff"></td><td bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="2" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#4db6f4"></td><td colspan="42" bgcolor="#006aa7"></td><td bgcolor="#4db6f4"></td><td colspan="2" bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="3" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#309ad8"></td><td colspan="40" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td colspan="3" bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="4" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#4db6f4"></td><td colspan="38" bgcolor="#006aa7"></td><td bgcolor="#4db6f4"></td><td colspan="4" bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="5" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td bgcolor="#309ad8"></td><td colspan="34" bgcolor="#006aa7"></td><td bgcolor="#309ad8"></td><td bgcolor="#c3ffff"></td><td colspan="5" bgcolor="#f8f8f6"></td></tr>
-<tr><td colspan="7" height="2" bgcolor="#f8f8f6"></td><td bgcolor="#c3ffff"></td><td bgcolor="#6dd7ff"></td><td colspan="30" bgcolor="#006aa7"></td><td bgcolor="#6dd7ff"></td><td bgcolor="#c3ffff"></td><td colspan="7" bgcolor="#f8f8f6"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
+<tr><td colspan="48" height="2" bgcolor="#006aa7"></td></tr>
 </table>
-</td></tr></table>
-                        </a>
-                      </td>
-                      <td style="border-left:3px solid #FECC02;padding-left:14px;vertical-align:middle;">
-                        <span style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:bold;color:#0f172a;">Josef Anderberg</span><br>
-                        <span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;">Grundare, <span style="color:#006AA7;font-weight:bold;font-style:italic;">VADKUL</span> - Sveriges karta över allt som händer</span><br>
-                        <a href="https://vadkul.se?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=signatur" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#006AA7;font-weight:bold;text-decoration:none;">vadkul.se</a>
-                      </td>
-                    </tr>
-                  </table>
+                    </td></tr></table>
+                  </a>
+                </td>
+                <td style="border-left:3px solid #FECC02;padding-left:14px;vertical-align:middle;">
+                  <span style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:bold;color:#ffffff;">Josef Anderberg</span><br>
+                  <span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#cfe3f1;">Grundare, <span style="color:#ffffff;font-weight:bold;font-style:italic;">VADKUL</span> - Sveriges karta över allt som händer</span><br>
+                  <a href="https://vadkul.se?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=signatur" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#ffffff;font-weight:bold;text-decoration:underline;"><span style="color:#ffffff;">vadkul.se</span></a>
                 </td>
               </tr>
-
             </table>
           </td>
         </tr>
 
         <!-- Sidfot -->
         <tr>
-          <td align="center" style="padding:20px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#cfe3f1;">
+          <td align="center" style="padding:26px 24px 4px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#cfe3f1;">
             Du får det här mejlet för att du har ett konto på
-            <a href="https://vadkul.se?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=sidfot" style="color:#ffffff;">vadkul.se</a>.<br>
+            <a href="https://vadkul.se?utm_source=zoho&amp;utm_medium=email&amp;utm_campaign=medlemsmejl-okt-2026&amp;utm_content=sidfot" style="color:#ffffff;"><span style="color:#ffffff;">vadkul.se</span></a>.<br>
             <!-- LAGKRAV (CAN-SPAM/GDPR) + Zohos kontroll vid inklistring: taggen
                  $[LI:UNSUBSCRIBE]$ MÅSTE finnas. Ligger den i EGEN sidfot behåller
                  vi formen; saknas den ersätter Zoho hela foten med sin standard.

@@ -5,7 +5,10 @@ tabellmall som augusti/september). Uppföljare till `release-mejl-2026-09.md`.
 
 ## Budskapet
 
-1. Vi närmar oss 1 000 aktiva användare.
+1. Vi är 874 medlemmar och närmar oss 1 000. Siffran = medlemslistan 8/10
+   (konton med e-post; de 54 anonyma kontona utan e-post räknas inte).
+   ÄGARBESLUT 8/10: skriv ut exakta antalet, inte "aktiva" (aktivitet går
+   inte att belägga ur inloggningsdatan).
 2. Riktiga appen släpps snart - och när vi passerar tröskeln släpps den FÖRST
    till medlemmar som bjudit in en vän som tackat ja (förtur).
 3. Nytt: Kommer/Intresserad i eventkortet, Bjud med-inbjudan, stadssida och
@@ -17,7 +20,8 @@ tabellmall som augusti/september). Uppföljare till `release-mejl-2026-09.md`.
 - Typ: Regular email, HTML-editorn (klistra in koden)
 - Avsändare: hej@vadkul.se
 - Ämne: `Appen är nästan här - bjud med en vän och få den först 📱`
-- Preheader ligger i HTML:en ("Vi närmar oss 1 000 aktiva användare ...")
+- Preheader ligger i HTML:en ("Vi är 874 och närmar oss 1 000 - du som bjuder
+  med en vän får appen först.")
 - utm_campaign: `medlemsmejl-okt-2026`
 - Taggar som används: `$[FNAME|där]$`, `$[UD:CITY|din stad]$` (egna fältet
   City måste finnas som Contact Custom Tag - det skapades i september),
@@ -45,6 +49,21 @@ tabellmall som augusti/september). Uppföljare till `release-mejl-2026-09.md`.
 - Designbeslut 8/10: HELA bakgrunden är VADKUL-blå (#006AA7) med vit extra fet
   VADKUL-titel (Arial Black, kursiv) och gul linje - flaggfärgerna. Ljus text
   i tagline och sidfot.
+- Designbeslut 8/10 v2 (commit efter c40c5c6e): det stora vita kortet RIVET -
+  allt står direkt på blått med vit brödtext och GULA sektionsetiketter;
+  förtur-rutan är det enda vita kortet; knappen är en fylld blå PILL
+  (border-radius 999px, loggans mjuka form) med pulsringen; båda molnen
+  mattas mot blått och svävar fritt. ÅTERSTÄLLNING om Josef ångrar sig:
+  `git show c40c5c6e:docs/outreach/release-mejl-2026-10.html` = versionen
+  före ombygget (grå bakgrund, vitt kort, kantknapp).
+- Adresser som ren text (t.ex. "på vadkul.se") länkas av mejlappen själv i
+  standardblått = blått på blått (Josef såg det 8/10). Varje adress skrivs
+  därför som egen <a> med färgen inline + inre <span>, och <style> har
+  skyddsnätet för Apple Mail (x-apple-data-detectors) och Gmail (u + #body).
+  Skriv aldrig en adress som ren text i det här mejlet.
+- OBS mörkt läge: vita texter/länkar på färgad bakgrund kan målas om av
+  Gmail-appens mörka läge (arrangörsmejlens lärdom 1/10). Kolla testmejlet
+  i mörkt läge innan utskick - ser länkarna fel ut, flytta dem till ljus yta.
 - **Pulsknappen**: "Hitta något..."-knappen har en pulsande ring via
   <style>/@keyframes (klass vk-puls) - progressiv förbättring: Apple Mail/iOS
   spelar den, Gmail/Outlook visar statisk knapp. prefers-reduced-motion
@@ -64,17 +83,24 @@ får City/Cityslug, och mappa kolumnerna email/firstname/city/cityslug.
 
 ## SKICKA INTE FÖRRÄN
 
-- [ ] **PR #111 (sociala paketet) är mergad och deployad** - Kommer/Intresserad,
+- [x] **PR #111 (sociala paketet) är mergad och deployad** - Kommer/Intresserad,
       Bjud med och stadssidornas arrangörsrad ligger där. Mejlet lovar dem.
-- [ ] **Rules-deployen är körd** (`firebase deploy --only firestore:rules` -
+      (Mergad + Actions-deployen grön 7/10 21:16 UTC.)
+- [x] **Rules-deployen är körd** (`firebase deploy --only firestore:rules` -
       eventRsvps + eventStats-vitlistorna), annars failar svaren tyst.
+      (Körd 7/10 22:21.)
 - [ ] Bestäm hur förturen bokförs: Bjud med-länken bär `?inb=1&fran=<uid>`,
       men "vänner ur accepterade inbjudningar" (B6) är inte byggt än. Antingen
       byggs en enkel bokföring av fran-uid vid accepterat svar, eller så mäts
       förturen manuellt. Mejlet lovar bara "bjud in en vän som tackar ja".
 - [ ] Notisen "när en vän tänker gå" är skriven som "på väg"/"snart" i mejlet
       (push till inbjudaren är inte byggd) - lova inte mer än så i ämnesraden.
-- [ ] Verifiera siffran "närmar oss 1 000 aktiva" vid utskicksdagen.
+- [x] Siffran: 874 i ingressen och preheadern (= listan 8/10). Byggs listan
+      om före utskick, byt siffran på båda ställena så de stämmer med listan.
+      8/10: 928 konton i Auth, 874 unika mejladresser - "närmar oss" håller.
+- [ ] Listan ombyggd 8/10 -> `medlemmar-2026-10-08.csv` (874 adresser, 840 med
+      förnamn, 577 med stad, 530 med stadssideslug). Bygg om igen om utskicket
+      dröjer mer än ett par dagar.
 
 ## Öppningar, klick och påminnelsen
 
