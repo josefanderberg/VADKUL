@@ -716,6 +716,19 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
     const [showPast, setShowPast] = useState(false);
     // Kategoriraden utfälld under flikraden (filtersymbolen, 7/10 sent).
     const [chipsOpen, setChipsOpen] = useState(false);
+    // Den utfällda radens höjd (8/10): raden står i sticky-zonen under
+    // flikraden, så dagrubrikerna ska fästa under den också.
+    const chipsShown = chipsOpen && !!filterChips;
+    const chipsRef = useRef<HTMLDivElement | null>(null);
+    const [chipsH, setChipsH] = useState(0);
+    useLayoutEffect(() => {
+        const el = chipsRef.current;
+        if (!chipsShown || !el) { setChipsH(0); return; }
+        setChipsH(el.offsetHeight);
+        const ro = new ResizeObserver(() => setChipsH(el.offsetHeight));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [chipsShown]);
     // I bildflödes-läget (imagesOnly) ignoreras valet — bilderna är PÅ.
     const effectiveShowImages = imagesOnly || showImages;
     // Ankaret sätts efter det 4:e eventet (0-indexerat: 3) — eller sista raden
@@ -723,17 +736,28 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
     // scrollat ända ner hit.
     const markerIdx = Math.min(3, upcomingItems.length - 1);
     return (
-        <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
+        <div
+            className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border"
+            style={{ '--list-chips-h': `${chipsShown ? chipsH : 0}px` } as React.CSSProperties}
+        >
             {/* Flikraden har FAST höjd (h-11) i flikläget: dagrubrikerna nedan
-                är sticky top-11 och ska fästa exakt under den — ändras höjden
-                här måste top-11 följa med. */}
+                är sticky top-11 (+ kategoriradens höjd när den är utfälld)
+                och ska fästa exakt under den — ändras höjden här måste
+                top-11 följa med. */}
             {/* sticky top-0 fäster vid scrollcontainerns PADDING-kant — pt-6
                 (grip-zonen) ingår, så raden hamnar precis under den solida
                 zonen. top-6 gav dubbel offset (glipa där innehåll syntes).
                 --card-sticky-top = toppradens höjd när den syns (emoji +
                 titel + svarsknapparna, 7/10 sent) - flikraden fäster under
                 den; 0 annars. */}
-            <div data-tab-zone className={`px-4 md:px-6 sticky top-[var(--card-sticky-top,0px)] bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border z-10 flex items-center justify-between gap-3 ${onTabChange ? 'h-11' : 'py-3'}`}>
+            {/* Flikraden OCH den utfällda kategoriraden klistrar ihop (Josef
+                8/10: "om man klickar på filter. då ska ju den komma sticky
+                under den med månaden, populära och knappen") - annars föll
+                raden ut uppe i listan, utom synhåll när man scrollat ner.
+                z-[12]: över radernas hjärtknappar (z-10), som annars målades
+                ovanpå zonen. */}
+            <div className="sticky top-[var(--card-sticky-top,0px)] z-[12]">
+            <div data-tab-zone className={`px-4 md:px-6 bg-slate-50/95 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-border flex items-center justify-between gap-3 ${onTabChange ? 'h-11' : 'py-3'}`}>
                 {/* Flikarna + de påslagna filtren rullar i sidled när raden
                     blir trång; filtersymbolen och bildknappen står kvar. */}
                 <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto no-scrollbar">
@@ -843,11 +867,12 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                 </div>
             </div>
             {/* Filtersymbolens kategorirad - SAMMA rad som kortets och
-                sökarkets (sidan bygger den), utanför sticky-zonen så
-                dagrubrikernas top-11 fortfarande stämmer. */}
-            {chipsOpen && filterChips && (
-                <div className="bg-white/70 dark:bg-zinc-900/60 border-b border-border">{filterChips}</div>
+                sökarkets (sidan bygger den), i sticky-zonen under flikraden.
+                Höjden mäts (chipsH) och skjuter ner dagrubrikerna. */}
+            {chipsShown && (
+                <div ref={chipsRef} className="bg-white/95 dark:bg-zinc-900/90 backdrop-blur-sm border-b border-border">{filterChips}</div>
             )}
+            </div>
 
             {onTabChange ? (
                 <>
@@ -875,12 +900,14 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                                     scrollcontainer, hålls kvar av sin egen
                                     <section> och knuffas ut av nästa dags rubrik.
                                     top-11 = flikradens fasta höjd (h-11, sticky
-                                    top-0 z-10 ovanför; offsets räknas från
+                                    top-0 z-[12] ovanför; offsets räknas från
                                     padding-kanten så grip-zonens pt-6 ingår);
-                                    z-[9] så rubriken glider IN UNDER flikraden
-                                    när den knuffas ut. Plus toppradens höjd
-                                    (--card-sticky-top) när den syns. */}
-                                <h3 className="sticky top-[calc(var(--card-sticky-top,0px)_+_2.75rem)] z-[9] bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 md:px-6 pt-3 pb-2 border-b border-border flex items-center gap-2">
+                                    z-[11] så rubriken glider IN UNDER flikraden
+                                    när den knuffas ut, men över radernas
+                                    hjärtknappar (z-10). Plus toppradens höjd
+                                    (--card-sticky-top) när den syns och den
+                                    utfällda kategoriradens (--list-chips-h). */}
+                                <h3 className="sticky top-[calc(var(--card-sticky-top,0px)_+_2.75rem_+_var(--list-chips-h,0px))] z-[11] bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 md:px-6 pt-3 pb-2 border-b border-border flex items-center gap-2">
                                     {/* Blått streck + tydlig dagtext (Josef 28/9:
                                         "typ som på stadssidorna så man ser dagar
                                         lite tydligare") — samma formspråk som
