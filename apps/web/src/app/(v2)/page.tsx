@@ -6178,11 +6178,13 @@ export default function HomePage() {
                     }}
                     todayEventCount={todayEventCount}
                     weekEventCount={weekEventCount}
-                    onClose={() => {
+                    onClose={(toMap) => {
                         setWelcomeOpen(false);
                         // Steg 2: startstaden, en gång per enhet. Inloggade
-                        // frågas via kontohydreringen i stället.
-                        if (!user && !readStartPickerDone() && !startPickerAskedRef.current) {
+                        // frågas via kontohydreringen i stället. Klick bredvid
+                        // rutan (toMap) = rakt till kartan där man är, ingen
+                        // fråga (Josef 8/10 kväll) - den kommer nästa besök.
+                        if (!toMap && !user && !readStartPickerDone() && !startPickerAskedRef.current) {
                             startPickerAskedRef.current = true;
                             setStartPicker({ withCategories: true });
                         } else setWelcomeDone(true);

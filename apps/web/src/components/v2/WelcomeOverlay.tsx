@@ -16,7 +16,7 @@ interface WelcomeOverlayProps {
     /** Fyrar när rutan stängts klart. Föräldern avmonterar den då — overlayn
      *  visas inte längre automatiskt vid sidladdning utan öppnas från
      *  info-knappen, och måste kunna öppnas igen efteråt. */
-    onClose?: () => void;
+    onClose?: (toMap?: boolean) => void;
     /** Sant när ett eventkort är öppet (t.ex. djuplänk från en stadssida).
      *  Då lägger sig rutan UNDER kortet (Josef 29/8): den som klickat sig hit
      *  från en stadssida ska se eventet direkt, inte mötas av onboarding.
@@ -118,13 +118,16 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
         if (seenDecision) setReturning(true);
     }, []);
 
-    const dismiss = useCallback((then: 'account' | 'city' | null = null) => {
+    // 'map' = klick bredvid/Escape (Josef 8/10 kväll: "klicka på sidan för
+    // att stänga den och komma direkt till sin plats") - rakt till kartan,
+    // ingen stadsfråga efteråt.
+    const dismiss = useCallback((then: 'account' | 'city' | 'map' | null = null) => {
         if (closingRef.current) return;
         closingRef.current = true;
         setClosing(true);
         window.setTimeout(() => {
             setOpen(false);
-            onCloseRef.current?.();
+            onCloseRef.current?.(then === 'map');
             if (then === 'account') onCreateAccountRef.current();
             if (then === 'city') onChangeCityRef.current?.();
         }, EXIT_MS);
@@ -138,7 +141,7 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 track('welcome_dismiss');
-                dismiss();
+                dismiss('map');
                 return;
             }
             if (e.key !== 'Tab') return;
@@ -201,7 +204,7 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                 för att kortet ska ha ro omkring sig, och prickarnas glöd
                 (intro-glow i V2Map) punchar igenom.
                 Ingen backdrop-blur: filter ovanpå WebGL-kartan är dyrt på svaga mobiler. */}
-            <div className="welcome-backdrop absolute inset-0 bg-black/[0.32]" onClick={() => { track('welcome_dismiss'); dismiss(); }} />
+            <div className="welcome-backdrop absolute inset-0 bg-black/[0.32]" onClick={() => { track('welcome_dismiss'); dismiss('map'); }} />
             <div
                 ref={cardRef}
                 className={`relative w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden bg-white rounded-[28px] shadow-2xl ${
