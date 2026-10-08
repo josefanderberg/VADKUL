@@ -493,7 +493,9 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
 
     // Hjärtat (spara-toggeln) uppe till höger — utanför radknappen och
     // absolut positionerat, med mörk platta på bilden och naket i den
-    // kompakta layouten.
+    // kompakta layouten. z-[5]: över radens bild/gradient men UNDER listans
+    // sticky flikrad (z-10) och dagrubriker (z-[9]) - med z-10 låg hjärtat
+    // ovanpå filterraden när man scrollade listan (Josef 8/10).
     const heartBtn = (over: boolean) => onToggleSave && (
         <button
             type="button"
@@ -501,7 +503,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
             aria-label={saved ? 'Ta bort från sparade' : 'Spara eventet'}
             title={saved ? 'Ta bort från sparade' : 'Spara eventet'}
             onClick={(e) => { e.stopPropagation(); onToggleSave(); }}
-            className={`absolute top-2 right-2.5 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 ${
+            className={`absolute top-2 right-2.5 z-[5] w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 ${
                 over
                     ? `bg-black/40 backdrop-blur-sm ${saved ? 'text-red-500' : 'text-white hover:text-red-400'}`
                     : saved ? 'text-red-500' : 'text-slate-400 dark:text-zinc-500 hover:text-red-500'
@@ -3451,7 +3453,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     data-card-scroll
                     // pt-6 = grip-zonens höjd: innehållet börjar under den
                     // solida zonen i viloläget och scrollar in UNDER den.
-                    className="flex-1 w-full overflow-y-auto overscroll-none bg-card custom-scrollbar pt-6"
+                    // overflow-x-hidden: något för brett (svarsraden 8/10) får
+                    // aldrig göra containern sidledsscrollbar - då gled hela
+                    // kortet i sidled (Josef: "containern rör sig i sidleds").
+                    className="flex-1 w-full overflow-y-auto overflow-x-hidden overscroll-none bg-card custom-scrollbar pt-6"
                     style={{
                         // Sökarket: huvudet (sök + chips) ovanför bär redan
                         // pt-6 mot grip-zonen — containern ska börja direkt.
@@ -3627,6 +3632,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onRequireLogin={onRequireLogin}
                             cta={footerCta}
                             onVisitCta={recordCtaClick}
+                            hidden={rsvpBarOn}
                         />
                     </>)}
                     {/* Chatt per event — KRÄVER KONTO för att ens läsas
