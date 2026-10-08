@@ -10,7 +10,7 @@ import { fetchDeepLinkEvent } from '@/utils/eventSeed';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { isTicketmasterEvent } from '@/utils/ticketmasterEvent';
 import { isAffiliateUrl, AFFILIATE_DISCLOSURE } from '@/utils/affiliateLink';
-import { descriptionText, eventOutlink, hostFaviconUrl, pickDescription } from '@/utils/eventExpand';
+import { descriptionText, eventOutlink, hostFaviconUrl, pickDescription, stickyChipsPx } from '@/utils/eventExpand';
 import { recordEventClick } from '@/services/eventStatsService';
 import { linkEventService, type RsvpAttendee } from '@/services/linkEventService';
 import { useAuth } from '@/context/AuthContext';
@@ -143,7 +143,7 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
         const r = el.getBoundingClientRect();
         const overflow = r.bottom - window.innerHeight + 16;
         if (overflow <= 0) return;
-        window.scrollBy({ top: Math.min(overflow, Math.max(0, r.top - 120)), behavior: 'instant' });
+        window.scrollBy({ top: Math.min(overflow, Math.max(0, r.top - 120 - stickyChipsPx())), behavior: 'instant' });
     }, [e.id]);
 
     // Escape stänger, som kortet på kartan.

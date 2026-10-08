@@ -12,7 +12,7 @@ import { NO_TIME_PAST_HOUR } from '@/components/v2/v2MapBricka';
 import { useDayFilter } from './dayFilter';
 import { dupKey } from '@/utils/groupDups';
 import { useAuth } from '@/context/AuthContext';
-import { anchorScrollDelta, isPlainClick } from '@/utils/eventExpand';
+import { anchorScrollDelta, EXPAND_ANCHOR_HEADER_PX, isPlainClick, stickyChipsPx } from '@/utils/eventExpand';
 import { recordEventClick, recordEventLike } from '@/services/eventStatsService';
 import { userService } from '@/services/userService';
 import { displayedLikeCount } from '@/utils/likeCount';
@@ -579,7 +579,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
         const a = scrollAnchorRef.current;
         if (!a) return;
         scrollAnchorRef.current = null;
-        const delta = anchorScrollDelta(a.top, a.el.getBoundingClientRect().top, expandedId === null);
+        const delta = anchorScrollDelta(a.top, a.el.getBoundingClientRect().top, expandedId === null, EXPAND_ANCHOR_HEADER_PX + stickyChipsPx());
         if (delta) window.scrollBy({ top: delta, behavior: 'instant' });
     }, [expandedId]);
     const sentinelRef = useRef<HTMLDivElement>(null);
@@ -774,7 +774,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
         const el = document.querySelector(`li[data-row-id="${CSS.escape(rowScrollId)}"]`);
         if (!el) return;
         setRowScrollId(null);
-        const top = el.getBoundingClientRect().top + window.scrollY - 120;
+        const top = el.getBoundingClientRect().top + window.scrollY - 120 - stickyChipsPx();
         window.scrollTo({ top: Math.max(0, top), behavior: 'instant' as ScrollBehavior });
     });
 
@@ -793,9 +793,9 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
         const el = dayRefs.current.get(pendingScrollKey);
         if (!el) return; // sektionen monteras av reveal-rendern — effekten körs om då
         setPendingScrollKey(null);
-        // 57 px toppnav — nästa dags rubrik ska landa strax under naven,
-        // precis där den sedan klistrar sig.
-        window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 56, behavior: 'smooth' });
+        // 57 px toppnav (+ den klistrade kategoriraden, 8/10) — nästa dags
+        // rubrik ska landa strax under dem, precis där den sedan klistrar sig.
+        window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 56 - stickyChipsPx(), behavior: 'smooth' });
     }, [pendingScrollKey, revealed]);
 
     // Nästa dag monteras när sentineln ligger OVANFÖR laddlinjen (viewport-
@@ -840,7 +840,9 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
     const emptyPhrase = selDayLabel ?? unit;
 
     return (
-        <div className="mt-7">
+        // --chips-h: den klistrade kategoriradens höjd (CategoryChips, 8/10)
+        // när den finns i listan - dagrubrikerna fäster under den.
+        <div className="mt-7 has-[[data-sticky-chips]]:[--chips-h:46px]">
             {/* FILTERRADEN ÄR BORTTAGEN 20/9 (ägarbeslut). Låg här: period-
                 chipsen (Alla/Idag/Imorgon/I helgen/I veckan), en chip per
                 listad dag, och timstaplarna "När på dagen?".
@@ -909,7 +911,7 @@ export default function DayFilteredList({ days: serverDays, restCount, restByCat
                                 (annars hänger en lös linje kvar under naven).
                                 Första dagen har filterraden över sig i stället. */}
                             {di > 0 && <span aria-hidden className="block mb-3 h-px bg-slate-200 dark:bg-zinc-800" />}
-                            <div className="sticky top-[57px] z-20 -mx-5 px-5 pt-2 pb-2.5 bg-slate-50/95 dark:bg-zinc-950/95 backdrop-blur-sm flex items-center gap-2">
+                            <div className="sticky top-[calc(57px_+_var(--chips-h,0px))] z-20 -mx-5 px-5 pt-2 pb-2.5 bg-slate-50/95 dark:bg-zinc-950/95 backdrop-blur-sm flex items-center gap-2">
                                 {/* En RUBRIK, inte en knapp (Josef 22/9: den blå pillen
                                     med gul IDAG-bricka inuti såg ut att gå att klicka
                                     på). Smalt streck + "Idag" stort i blått och datumet

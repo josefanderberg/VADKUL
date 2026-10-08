@@ -13,6 +13,10 @@ interface HScrollRowProps {
      *  standard: inne i eventkortet äger kortet hjulet (det växer kortet), och
      *  en enradig remsa som kapar hjulet vore en fälla. */
     wheel?: boolean;
+    /** Sant = ett lodrätt svep som börjar i raden scrollar SIDAN (touch-action
+     *  pan-x pan-y). För rader som klistrar på en vanlig sida (stadssidornas
+     *  kategorirad, 8/10) - i eventkortet äger kortet det lodräta draget. */
+    panY?: boolean;
     ref?: Ref<HTMLDivElement>;
 }
 
@@ -32,7 +36,7 @@ interface HScrollRowProps {
  * som faktiskt rullar, och låter ett vågrätt touch-svep i raden gå till
  * webbläsaren i stället för att dras upp som kortdrag.
  */
-export default function HScrollRow({ children, className = '', wheel = false, ref }: HScrollRowProps) {
+export default function HScrollRow({ children, className = '', wheel = false, panY = false, ref }: HScrollRowProps) {
     const innerRef = useRef<HTMLDivElement | null>(null);
     const dragRef = useRef<{ x: number; left: number; moved: boolean } | null>(null);
     const suppressClickRef = useRef(false);
@@ -90,7 +94,7 @@ export default function HScrollRow({ children, className = '', wheel = false, re
             onPointerCancel={endDrag}
             onClickCapture={onClickCapture}
             onWheel={onWheel}
-            className={`flex items-center overflow-x-auto no-scrollbar [touch-action:pan-x] select-none cursor-grab active:cursor-grabbing ${className}`}
+            className={`flex items-center overflow-x-auto no-scrollbar ${panY ? '[touch-action:pan-x_pan-y]' : '[touch-action:pan-x]'} select-none cursor-grab active:cursor-grabbing ${className}`}
         >
             {children}
         </div>
