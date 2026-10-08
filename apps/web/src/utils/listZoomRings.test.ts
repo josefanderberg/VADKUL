@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nearestOutsideBounds, splitDaysIntoRings } from './listZoomRings';
+import { nearestOutsideBounds, listSegmentKey, splitDaysIntoRings } from './listZoomRings';
 
 const id = (r: string) => [r];
 
@@ -87,5 +87,60 @@ describe('nearestOutsideBounds', () => {
 
     it('inget utanför → null', () => {
         expect(nearestOutsideBounds([{ lat: 56.876, lng: 14.81 }], bounds, center)).toBeNull();
+    });
+});
+
+describe('splitDaysIntoRings - Från idag', () => {
+    // Visade dagen = 2 (t.ex. imorgon-bumpen eller en vald dag); 0 och 1 är tidigare.
+    const days = [
+        { dayOffset: 0, rows: ['t0', 'n0'] },
+        { dayOffset: 1, rows: ['t1'] },
+        { dayOffset: 2, rows: ['a', 'x'] },
+        { dayOffset: 3, rows: ['b'] },
+    ];
+
+    it('utan valet visas inget före den visade dagen', () => {
+        expect(splitDaysIntoRings(days, [], id, { shownDay: 2, todayAt: null })).toEqual([
+            { dayOffset: 2, ring: 0, rows: ['a', 'x'] },
+            { dayOffset: 3, ring: 0, rows: ['b'] },
+        ]);
+    });
+
+    it('Från idag lägger de tidigare dagarna sist, i ett eget avsnitt', () => {
+        expect(splitDaysIntoRings(days, [], id, { shownDay: 2, todayAt: 0 })).toEqual([
+            { dayOffset: 2, ring: 0, rows: ['a', 'x'] },
+            { dayOffset: 3, ring: 0, rows: ['b'] },
+            { dayOffset: 0, ring: 0, fromToday: true, rows: ['t0', 'n0'] },
+            { dayOffset: 1, ring: 0, fromToday: true, rows: ['t1'] },
+        ]);
+    });
+
+    it('zoomar man ut efter Från idag börjar den nya ringen om från idag', () => {
+        // Ringen frös hela rutan (alla dagar) - n0 och x kom in vid utzoomningen.
+        const rings = [new Set(['t0', 't1', 'a', 'b'])];
+        expect(splitDaysIntoRings(days, rings, id, { shownDay: 2, todayAt: 0 })).toEqual([
+            { dayOffset: 2, ring: 0, rows: ['a'] },
+            { dayOffset: 3, ring: 0, rows: ['b'] },
+            { dayOffset: 0, ring: 0, fromToday: true, rows: ['t0'] },
+            { dayOffset: 1, ring: 0, fromToday: true, rows: ['t1'] },
+            { dayOffset: 0, ring: 1, rows: ['n0'] },
+            { dayOffset: 2, ring: 1, rows: ['x'] },
+        ]);
+    });
+
+    it('Från idag efter en utzoomning tar med de tidigare dagarna ur båda ringarna', () => {
+        const rings = [new Set(['t1', 'a', 'b'])];
+        expect(splitDaysIntoRings(days, rings, id, { shownDay: 2, todayAt: 1 })).toEqual([
+            { dayOffset: 2, ring: 0, rows: ['a'] },
+            { dayOffset: 3, ring: 0, rows: ['b'] },
+            { dayOffset: 2, ring: 1, rows: ['x'] },
+            { dayOffset: 0, ring: 1, fromToday: true, rows: ['t0', 'n0'] },
+            { dayOffset: 1, ring: 1, fromToday: true, rows: ['t1'] },
+        ]);
+    });
+
+    it('avsnittsnyckeln lägger Från idag mellan sin ring och nästa', () => {
+        expect(listSegmentKey({ ring: 1 })).toBeLessThan(listSegmentKey({ ring: 1, fromToday: true }));
+        expect(listSegmentKey({ ring: 1, fromToday: true })).toBeLessThan(listSegmentKey({ ring: 2 }));
     });
 });
