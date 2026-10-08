@@ -19,7 +19,7 @@ import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, LIST_HORIZON_DAYS, takeRows } from '@/utils/popularList';
-import { splitDaysIntoRings } from '@/utils/listZoomRings';
+import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List, ZoomOut } from 'lucide-react';
@@ -241,9 +241,14 @@ interface NearbyEventsListProps {
     popularCount?: number;
     /** Aktiva flikens dagar, redan kapade till synligt antal rader. `ring`
      *  = listans zoomring (8/10): > 0 = kom in när kartan zoomade ut. */
-    days?: { dayOffset: number; ring?: number; rows: NearbyItem[] }[];
-    /** Antal event per zoomring i aktiva fliken (avdelarnas "N fler"). */
-    ringCounts?: number[];
+    days?: { dayOffset: number; ring?: number; fromToday?: true; rows: NearbyItem[] }[];
+    /** Antal event per avsnitt (zoomring / Från idag, nyckel =
+     *  listSegmentKey) i aktiva fliken - avdelarnas "N fler". */
+    segmentCounts?: ReadonlyMap<number, number>;
+    /** FRÅN IDAG (ägarbeslut 9/10): visade dagen är inte idag och det finns
+     *  osedda event mellan idag och den - botten erbjuder två val, Från idag
+     *  eller Zooma ut, i stället för att zooma ut av sig själv. */
+    fromToday?: { count: number; onPick: () => void };
     /** LISTAN ZOOMAR UT (ägarbeslut 8/10): botten zoomar ut kartan i stället
      *  för att ta slut. Utelämnad = "Det var den närmaste månaden". */
     listZoom?: ListZoomEnd;
@@ -352,6 +357,72 @@ function ZoomRingDivider({ count, dayOffset }: { count: number; dayOffset: numbe
                 </span>
                 <span className="text-[12px] font-black uppercase tracking-wider leading-none text-[#FECC02] whitespace-nowrap">
                     {getDayLabel(dayOffset)} igen · {count} fler
+                </span>
+            </span>
+            <span aria-hidden className="zoomout-line zoomout-line-r flex-1 h-[3px] rounded-full bg-[#006AA7] dark:bg-sky-400" />
+        </div>
+    );
+}
+
+/** LISTANS BOTTEN NÄR VISADE DAGEN INTE ÄR IDAG (ägarbeslut 9/10, Josef:
+ *  "om man är på en annan dag än idag, eller om default på kvällen hunnit
+ *  bli imorgon. Då ska man kunna välja att ifrån idag eller så kan man
+ *  zooma ut"): två knappar och inget auto-steg - det är ett val. Från idag
+ *  lägger till de osedda eventen från idag fram till den visade dagen,
+ *  Zooma ut tar bara in det som tillkommer runtomkring (samma steg som
+ *  ListEndZoom). Utan listZoom (ingen karta att zooma) står bara Från idag. */
+function ListEndChoice({ fromToday, listZoom, bare = false }: { fromToday: { count: number; onPick: () => void }; listZoom?: ListZoomEnd; bare?: boolean }) {
+    if (listZoom?.state === 'zooming') return <ListEndZoom {...listZoom} bare={bare} />;
+    const btn = 'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-widest active:scale-95 transition';
+    return (
+        <div className={`px-4 md:px-6 flex flex-col items-center gap-2 ${bare ? 'pb-5' : 'py-4 border-t border-border'}`}>
+            {!bare && (
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {listZoom?.state === 'idle' ? 'Inget nytt runtomkring än' : 'Det var den närmaste månaden här'}
+                </span>
+            )}
+            <div className="flex flex-wrap justify-center gap-2">
+                <button
+                    type="button"
+                    onClick={fromToday.onPick}
+                    className={`${btn} bg-[#FECC02] text-slate-900 hover:bg-[#f0c000]`}
+                >
+                    <CalendarDays size={13} strokeWidth={2.5} aria-hidden />
+                    Från idag · {fromToday.count}
+                </button>
+                {listZoom && (
+                    <button
+                        type="button"
+                        onClick={listZoom.onZoomOut}
+                        className={`${btn} bg-[#006AA7] text-white hover:bg-[#005590]`}
+                    >
+                        <ZoomOut size={13} strokeWidth={2.5} aria-hidden />
+                        {listZoom.state === 'idle' ? 'Zooma ut mer' : 'Zooma ut'}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/** Avdelaren där Från idag-avsnittet börjar (9/10): samma formspråk som
+ *  zoomringens, men "Från idag" - listan börjar om från dagens dag med det
+ *  man inte sett än. */
+function FromTodayDivider({ count }: { count: number }) {
+    return (
+        <div
+            role="separator"
+            aria-label={`Från idag - ${count} fler event som inte visats än`}
+            className="px-4 md:px-6 pt-5 pb-3 flex items-center gap-3 border-t border-border"
+        >
+            <span aria-hidden className="zoomout-line zoomout-line-l flex-1 h-[3px] rounded-full bg-[#006AA7] dark:bg-sky-400" />
+            <span aria-hidden className="shrink-0 flex flex-col items-center gap-1 rounded-2xl bg-slate-900 dark:bg-zinc-800 text-white px-4 py-2 shadow-lg">
+                <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest leading-none">
+                    <CalendarDays size={14} strokeWidth={2.5} />
+                    Från idag
+                </span>
+                <span className="text-[12px] font-black uppercase tracking-wider leading-none text-[#FECC02] whitespace-nowrap">
+                    {count} fler
                 </span>
             </span>
             <span aria-hidden className="zoomout-line zoomout-line-r flex-1 h-[3px] rounded-full bg-[#006AA7] dark:bg-sky-400" />
@@ -714,7 +785,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], ringCounts = [], listZoom, daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], segmentCounts, fromToday, listZoom, daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // Kategoriraden utfälld under flikraden (filtersymbolen, 7/10 sent).
     const [chipsOpen, setChipsOpen] = useState(false);
@@ -888,12 +959,17 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                     {days.map((day, di) => {
                         // Coach-ankaret efter 4:e raden i hela listan (över dagsgränser).
                         const before = days.slice(0, di).reduce((n, d) => n + d.rows.length, 0);
-                        const ring = day.ring ?? 0;
-                        // Första dagen i en ny zoomring: avdelaren före den.
-                        const ringStart = ring > 0 && (di === 0 || (days[di - 1].ring ?? 0) !== ring);
+                        const seg = listSegmentKey({ ring: day.ring ?? 0, fromToday: day.fromToday });
+                        // Första dagen i ett nytt avsnitt (zoomring eller
+                        // Från idag): avdelaren före den.
+                        const segStart = seg > 0 && (di === 0
+                            || listSegmentKey({ ring: days[di - 1].ring ?? 0, fromToday: days[di - 1].fromToday }) !== seg);
+                        const segCount = segmentCounts?.get(seg) ?? 0;
                         return (
-                            <Fragment key={`${ring}:${day.dayOffset}`}>
-                            {ringStart && <ZoomRingDivider count={ringCounts[ring] ?? 0} dayOffset={day.dayOffset} />}
+                            <Fragment key={`${seg}:${day.dayOffset}`}>
+                            {segStart && (day.fromToday
+                                ? <FromTodayDivider count={segCount} />
+                                : <ZoomRingDivider count={segCount} dayOffset={day.dayOffset} />)}
                             <section>
                                 {/* Klistrad dagrubrik (Josef 27/9: "den dagen man
                                     är på ska stanna i toppen tills man scrollar
@@ -939,7 +1015,9 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                     })}
                     {daysHasMore && onLoadMoreDays && <AutoLoadMore onLoadMore={onLoadMoreDays} />}
                     {!daysHasMore && onLoadLaterDays && <AutoLoadMore onLoadMore={onLoadLaterDays} label="Hämtar fler dagar…" />}
-                    {!daysHasMore && !onLoadLaterDays && (listZoom ? (
+                    {!daysHasMore && !onLoadLaterDays && (fromToday ? (
+                        <ListEndChoice fromToday={fromToday} listZoom={listZoom} bare={days.length === 0} />
+                    ) : listZoom ? (
                         // Botten zoomar ut kartan (8/10) - också under en tom
                         // flik, där texten ovan redan säger "Zooma ut".
                         <ListEndZoom {...listZoom} bare={days.length === 0} />
@@ -1023,6 +1101,8 @@ type ListSpot = {
     daysVisible: number;
     tab: ListTab;
     rings: ReadonlySet<string>[];
+    /** Från idag-valet (9/10): antal ringar när det valdes, null = inte valt. */
+    todayAt: number | null;
     view: 'info' | 'chat' | 'nearby';
     /** Multieventets väljarlista som var framme, annars null. */
     group: LinkEvent[] | null;
@@ -1406,6 +1486,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // utzoomning från listans botten (utils/listZoomRings). Nollas med
     // eventet - nästa kort börjar om på kartans nya zoomsteg.
     const [listRings, setListRings] = useState<ReadonlySet<string>[]>([]);
+    // FRÅN IDAG (ägarbeslut 9/10): antal ringar när man valde Från idag i
+    // listans botten, null = inte valt. Nollas tillsammans med ringarna.
+    const [listTodayAt, setListTodayAt] = useState<number | null>(null);
     // Var man stod i SÖKARKETS lista när man valde en träff (8/10) - ← ☰ på
     // det valda eventet öppnar arket igen där (sökord, lista, scroll, höjd).
     const [searchReturn, setSearchReturn] = useState<ListSpot | null>(null);
@@ -2074,6 +2157,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         setNearbyVisibleCount(NEARBY_PAGE_SIZE);
         setDaysVisibleCount(NEARBY_PAGE_SIZE);
         setListRings([]);
+        setListTodayAt(null);
         setListZoomPending(false);
         listZoomScrollRef.current = 0;
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
@@ -2133,6 +2217,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         setListTab(p.spot.tab);
         setDaysVisibleCount(p.spot.daysVisible);
         setListRings(p.spot.rings);
+        setListTodayAt(p.spot.todayAt);
         if (!chooserActive) setCardView(p.spot.view);
         restoreScrollTo(p.spot.scrollTop);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2428,15 +2513,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // framåt, dag för dag. Avståndet på raderna räknas från användaren när
     // positionen är känd (listan är "vad händer där jag tittar", inte "nära
     // det här eventet"), annars från det valda eventet.
+    // FRÅN IDAG (9/10): dagarna byggs från idag när den visade dagen ligger
+    // senare - de tidigare dagarna visas bara när man valt Från idag i
+    // botten (splitDaysIntoRings), och räknas bara då in i flikarnas tal.
+    // `earlier` = antal event i de dagarna (valets "Från idag · N").
+    const shownDay = Math.max(0, dayOffset);
     const tabDays = useMemo(() => {
-        const empty = { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0 };
+        const empty = { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0, earlier: 0 };
         if (!viewEvents) return { all: empty, popular: empty };
         const nowDate = new Date(now);
         const from = userPos ?? (selectedEvent && hasValidCoords(selectedEvent) ? { lat: selectedEvent.lat, lng: selectedEvent.lng } : null);
         const kept = viewEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id
             && (!matchesCardSearch || matchesCardSearch(e)));
         const build = (include?: (e: LinkEvent) => boolean) => {
-            const days = eventDays(kept, Math.max(0, dayOffset), nowDate, e => isEventPast(e, now), include).map(day => {
+            const days = eventDays(kept, 0, nowDate, e => isEventPast(e, now), include).map(day => {
                 const items = day.events.map(evt => ({
                     evt,
                     distanceKm: from && hasValidCoords(evt) ? haversineKm(from.lat, from.lng, evt.lat, evt.lng) : null,
@@ -2448,25 +2538,35 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // Fliken heter "Närmsta månaden" (Josef 24/9: hinta att vi
             // fokuserar på närtid) — samma horisont för båda flikarna.
             }).filter(day => day.rows.length > 0 && day.dayOffset < LIST_HORIZON_DAYS);
-            const count = days.reduce((n, d) => n + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0), 0);
-            return { days, count };
+            const sum = (ds: typeof days) => ds.reduce((n, d) => n + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0), 0);
+            const earlier = sum(days.filter(d => d.dayOffset < shownDay));
+            return { days, count: sum(days) - (listTodayAt === null ? earlier : 0), earlier };
         };
         return { all: build(), popular: build(e => isPopularListed(e, now)) };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewEvents, discardedEventIds, selectedEvent, dayOffset, now, userPos, imagesOnlyList, matchesCardSearch]);
+    }, [viewEvents, discardedEventIds, selectedEvent, shownDay, listTodayAt, now, userPos, imagesOnlyList, matchesCardSearch]);
     const activeTabDays = tabDays[listTab].days;
-    const activeTabRowTotal = useMemo(() => activeTabDays.reduce((n, d) => n + d.rows.length, 0), [activeTabDays]);
     // Zoomringarna (8/10): det som fanns före varje utzoomning står kvar
     // överst, de nya under sin avdelare - dag för dag från den visade dagen.
     const ringTabDays = useMemo(
-        () => splitDaysIntoRings(activeTabDays, listRings, r => [r.evt.id, ...(r.dups ?? []).map(d => d.evt.id)]),
-        [activeTabDays, listRings],
+        () => splitDaysIntoRings(activeTabDays, listRings, r => [r.evt.id, ...(r.dups ?? []).map(d => d.evt.id)],
+            { shownDay, todayAt: listTodayAt }),
+        [activeTabDays, listRings, shownDay, listTodayAt],
     );
-    const ringCounts = useMemo(() => {
-        const counts = listRings.map(() => 0).concat(0);
-        for (const d of ringTabDays) counts[d.ring] += d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0);
+    const activeTabRowTotal = useMemo(() => ringTabDays.reduce((n, d) => n + d.rows.length, 0), [ringTabDays]);
+    const segmentCounts = useMemo(() => {
+        const counts = new Map<number, number>();
+        for (const d of ringTabDays) {
+            const key = listSegmentKey(d);
+            counts.set(key, (counts.get(key) ?? 0) + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0));
+        }
         return counts;
-    }, [ringTabDays, listRings]);
+    }, [ringTabDays]);
+    // Från idag-valet i botten: bara när den visade dagen inte är idag, det
+    // finns osedda event före den och valet inte redan är gjort.
+    const fromTodayChoice = listTodayAt === null && shownDay > 0 && tabDays[listTab].earlier > 0
+        ? { count: tabDays[listTab].earlier, onPick: () => setListTodayAt(listRings.length) }
+        : undefined;
     const visibleTabDays = useMemo(() => takeRows(ringTabDays, daysVisibleCount), [ringTabDays, daysVisibleCount]);
     // Listans botten: frys det listan visat som en ring och be sidan zooma
     // ut. Ringen fryser HELA rutans id:n (alla dagar och flikar), så det
@@ -2482,6 +2582,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // också, annars stod en gammal avdelare kvar i nästa sökning.
     useEffect(() => {
         setListRings([]);
+        setListTodayAt(null);
         setListZoomPending(false);
         listZoomScrollRef.current = 0;
     }, [searchOnly]);
@@ -2495,6 +2596,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         setListTab(p.spot.tab);
         setDaysVisibleCount(p.spot.daysVisible);
         setListRings(p.spot.rings);
+        setListTodayAt(p.spot.todayAt);
         setCardView(p.spot.view);
         restoreScrollTo(p.spot.scrollTop);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2508,7 +2610,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     }, [listZoomPending]);
     const listZoomEnd: ListZoomEnd | undefined = onListZoomOut && viewEvents ? {
         state: listZoomPending ? 'zooming'
-            : listRings.length > 0 && ringCounts[listRings.length] === 0 ? 'idle' : 'ready',
+            : listRings.length > 0 && !segmentCounts.get(listRings.length) ? 'idle' : 'ready',
         onZoomOut: handleListZoomOut,
         canAuto: () => (scrollContainerRef.current?.scrollTop ?? 0) > listZoomScrollRef.current + 40,
     } : undefined;
@@ -3322,6 +3424,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     daysVisible: daysVisibleCount,
                     tab: listTab,
                     rings: listRings,
+                    todayAt: listTodayAt,
                     view: cardView,
                     group: null,
                     heightVh: heightVhRef.current,
@@ -3339,6 +3442,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 daysVisible: daysVisibleCount,
                 tab: listTab,
                 rings: listRings,
+                todayAt: listTodayAt,
                 view: cardView,
                 group: chooserActive && groupChoice ? groupChoice : null,
             },
@@ -4100,7 +4204,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             allCount={tabDays.all.count}
                             popularCount={tabDays.popular.count}
                             days={visibleTabDays}
-                            ringCounts={ringCounts}
+                            segmentCounts={segmentCounts}
+                            fromToday={fromTodayChoice}
                             listZoom={listZoomEnd}
                             daysHasMore={daysVisibleCount < activeTabRowTotal}
                             onLoadMoreDays={() => setDaysVisibleCount(c => c + NEARBY_PAGE_SIZE)}
