@@ -1475,21 +1475,26 @@ export const linkEventService = {
             return nationwidePromise;
         }
 
-        // Dagens landsslice (statisk fil + API, som förut) ritar första
-        // prickarna innan området är känt — och står kvar UTANFÖR de laddade
-        // rutorna (composeAreaRows), så dagens prickar finns över hela landet.
+        // Dagens landsslice ritar första prickarna innan området är känt — och
+        // står kvar UTANFÖR de laddade rutorna (composeAreaRows), så dagens
+        // prickar finns över hela landet. Den statiska dagsfilen räcker: inom
+        // området tar färska rutor över strax efter. API-slicen (~150 kB)
+        // hämtas bara när filen saknas eller är förlegad (samma regel som
+        // boot-scriptet i (v2)/layout.tsx, vars promise fetchTodaySlice
+        // återanvänder) — förut hämtades båda för varje besökare.
         function startTodaySlices() {
-            let todayLevel = 0;
-            const take = (level: number) => (rows: any[] | null) => {
-                if (!active || !rows || todayLevel >= level || nationwideLanded) return;
-                todayLevel = level;
+            const take = (rows: any[] | null) => {
+                if (!active || !rows || nationwideLanded) return false;
                 todayRows = rows;
                 todayRowsDay = STOCKHOLM_DAY_FMT.format(new Date());
                 recomposeArea(timelineWindowRange());
                 emit();
+                return true;
             };
-            fetchTodayStatic().then(take(1));
-            fetchTodaySlice().then(take(2));
+            fetchTodayStatic().then((rows) => {
+                if (take(rows) || !active) return;
+                fetchTodaySlice().then(take);
+            });
         }
 
         const controller: AreaController = {
