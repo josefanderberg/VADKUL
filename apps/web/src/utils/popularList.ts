@@ -105,14 +105,15 @@ export function popularDays<T extends PopularListCandidate>(
 }
 
 /** Kapar dagarna till de första `limit` raderna (pagineringen) — dagar som
- *  inte får någon rad alls följer inte med, den sista kan komma halv. */
-export function takeRows<T>(days: readonly { dayOffset: number; rows: T[] }[], limit: number): { dayOffset: number; rows: T[] }[] {
-    const out: { dayOffset: number; rows: T[] }[] = [];
+ *  inte får någon rad alls följer inte med, den sista kan komma halv.
+ *  Dagens övriga fält (listans zoomring) följer med oförändrade. */
+export function takeRows<D extends { rows: readonly unknown[] }>(days: readonly D[], limit: number): D[] {
+    const out: D[] = [];
     let left = limit;
     for (const day of days) {
         if (left <= 0) break;
         const rows = day.rows.slice(0, left);
-        out.push({ dayOffset: day.dayOffset, rows });
+        out.push({ ...day, rows });
         left -= rows.length;
     }
     return out;

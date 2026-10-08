@@ -19,6 +19,7 @@ import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, LIST_HORIZON_DAYS, takeRows } from '@/utils/popularList';
+import { splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease } from '@/utils/sheetSnap';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List, ZoomOut } from 'lucide-react';
@@ -238,8 +239,14 @@ interface NearbyEventsListProps {
     /** Antal EVENT per flik (alla dagar från den visade) — flikarnas siffror. */
     allCount?: number;
     popularCount?: number;
-    /** Aktiva flikens dagar, redan kapade till synligt antal rader. */
-    days?: { dayOffset: number; rows: NearbyItem[] }[];
+    /** Aktiva flikens dagar, redan kapade till synligt antal rader. `ring`
+     *  = listans zoomring (8/10): > 0 = kom in när kartan zoomade ut. */
+    days?: { dayOffset: number; ring?: number; rows: NearbyItem[] }[];
+    /** Antal event per zoomring i aktiva fliken (avdelarnas "N fler"). */
+    ringCounts?: number[];
+    /** LISTAN ZOOMAR UT (ägarbeslut 8/10): botten zoomar ut kartan i stället
+     *  för att ta slut. Utelämnad = "Det var den närmaste månaden". */
+    listZoom?: ListZoomEnd;
     daysHasMore?: boolean;
     onLoadMoreDays?: () => void;
     /** Slut på laddade rader men kartan har bara tidsfönstret inne — listans
@@ -265,6 +272,92 @@ interface NearbyEventsListProps {
 export type ActiveFilter = { key: string; emoji: string; label: string };
 
 type ListTab = 'all' | 'popular';
+
+type ListZoomEnd = {
+    /** ready = botten zoomar ut av sig själv när man scrollat dit,
+     *  zooming = kartan zoomar ut just nu, idle = senaste steget gav inget
+     *  nytt (än) - bara knappen, inget auto-steg. */
+    state: 'ready' | 'zooming' | 'idle';
+    onZoomOut: () => void;
+    /** Auto-stegets grind: man har scrollat VIDARE sedan förra steget. */
+    canAuto: () => boolean;
+};
+
+/** LISTANS BOTTEN ZOOMAR UT (ägarbeslut 8/10, Josef: "när man scrollat ner
+ *  i listan för man redan sett allt denna månaden på eventkorten. Då ska ju
+ *  kartan zooma ut"): samma observer-grepp som AutoLoadMore, men steget tas
+ *  bara när botten glider IN i bild och man scrollat sedan förra steget -
+ *  ett steg som gav få rader (botten kvar i bild) kedjar inte vidare av sig
+ *  självt. Knappen är reserv, och vägen vidare när ett steg inte gav något. */
+function ListEndZoom({ state, onZoomOut, canAuto, bare = false }: ListZoomEnd & { bare?: boolean }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const autoRef = useRef<() => void>(() => {});
+    useEffect(() => {
+        autoRef.current = () => { if (state === 'ready' && canAuto()) onZoomOut(); };
+    });
+    useEffect(() => {
+        const el = ref.current;
+        if (!el || typeof IntersectionObserver === 'undefined') return;
+        const io = new IntersectionObserver(
+            entries => { if (entries.some(e => e.isIntersecting)) autoRef.current(); },
+            { rootMargin: '0px 0px 120px 0px' },
+        );
+        io.observe(el);
+        return () => io.disconnect();
+    }, []);
+    return (
+        <div ref={ref} className={`px-4 md:px-6 flex flex-col items-center gap-2 ${bare ? 'pb-5' : 'py-4 border-t border-border'}`}>
+            {state === 'zooming' ? (
+                <span role="status" className="inline-flex items-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest text-[#006AA7] dark:text-sky-400">
+                    <span aria-hidden className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 dark:border-zinc-600 border-t-[#006AA7] dark:border-t-sky-400 animate-spin" />
+                    Zoomar ut…
+                </span>
+            ) : (
+                <>
+                    {!bare && (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            {state === 'idle' ? 'Inget nytt runtomkring än' : 'Det var den närmaste månaden här'}
+                        </span>
+                    )}
+                    <button
+                        type="button"
+                        onClick={onZoomOut}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[#006AA7] text-white px-4 py-2 text-[11px] font-black uppercase tracking-widest hover:bg-[#005590] active:scale-95 transition"
+                    >
+                        <ZoomOut size={13} strokeWidth={2.5} aria-hidden />
+                        {state === 'idle' ? 'Zooma ut mer' : 'Zooma ut · fler runtomkring'}
+                    </button>
+                </>
+            )}
+        </div>
+    );
+}
+
+/** Avdelaren där listans nästa zoomring börjar (8/10, "visa på när de
+ *  börjar"): samma formspråk som kartans zoom-ut-banner - vågräta streck
+ *  som växer ut från mitten och "{DAG} IGEN", för listan börjar om från den
+ *  visade dagen med eventen som kom in runtomkring. */
+function ZoomRingDivider({ count, dayOffset }: { count: number; dayOffset: number }) {
+    return (
+        <div
+            role="separator"
+            aria-label={`Kartan zoomade ut - ${count} fler event runtomkring, från ${getDayLabel(dayOffset).toLowerCase()} igen`}
+            className="px-4 md:px-6 pt-5 pb-3 flex items-center gap-3 border-t border-border"
+        >
+            <span aria-hidden className="zoomout-line zoomout-line-l flex-1 h-[3px] rounded-full bg-[#006AA7] dark:bg-sky-400" />
+            <span aria-hidden className="shrink-0 flex flex-col items-center gap-1 rounded-2xl bg-slate-900 dark:bg-zinc-800 text-white px-4 py-2 shadow-lg">
+                <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest leading-none">
+                    <ZoomOut size={14} strokeWidth={2.5} />
+                    Zoomade ut
+                </span>
+                <span className="text-[12px] font-black uppercase tracking-wider leading-none text-[#FECC02] whitespace-nowrap">
+                    {getDayLabel(dayOffset)} igen · {count} fler
+                </span>
+            </span>
+            <span aria-hidden className="zoomout-line zoomout-line-r flex-1 h-[3px] rounded-full bg-[#006AA7] dark:bg-sky-400" />
+        </div>
+    );
+}
 
 /** Laddar nästa sida automatiskt när den skymtar fram (rootMargin = lite
  *  före botten) — flikarnas daglistor ska bara fortsätta framåt i dagarna
@@ -619,7 +712,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], ringCounts = [], listZoom, daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // Kategoriraden utfälld under flikraden (filtersymbolen, 7/10 sent).
     const [chipsOpen, setChipsOpen] = useState(false);
@@ -768,8 +861,13 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                     {days.map((day, di) => {
                         // Coach-ankaret efter 4:e raden i hela listan (över dagsgränser).
                         const before = days.slice(0, di).reduce((n, d) => n + d.rows.length, 0);
+                        const ring = day.ring ?? 0;
+                        // Första dagen i en ny zoomring: avdelaren före den.
+                        const ringStart = ring > 0 && (di === 0 || (days[di - 1].ring ?? 0) !== ring);
                         return (
-                            <section key={day.dayOffset}>
+                            <Fragment key={`${ring}:${day.dayOffset}`}>
+                            {ringStart && <ZoomRingDivider count={ringCounts[ring] ?? 0} dayOffset={day.dayOffset} />}
+                            <section>
                                 {/* Klistrad dagrubrik (Josef 27/9: "den dagen man
                                     är på ska stanna i toppen tills man scrollar
                                     ner till nästa dag") — samma grepp som väljar-
@@ -807,15 +905,20 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                                     ))}
                                 </ul>
                             </section>
+                            </Fragment>
                         );
                     })}
                     {daysHasMore && onLoadMoreDays && <AutoLoadMore onLoadMore={onLoadMoreDays} />}
                     {!daysHasMore && onLoadLaterDays && <AutoLoadMore onLoadMore={onLoadLaterDays} label="Hämtar fler dagar…" />}
-                    {!daysHasMore && !onLoadLaterDays && days.length > 0 && (
+                    {!daysHasMore && !onLoadLaterDays && (listZoom ? (
+                        // Botten zoomar ut kartan (8/10) - också under en tom
+                        // flik, där texten ovan redan säger "Zooma ut".
+                        <ListEndZoom {...listZoom} bare={days.length === 0} />
+                    ) : days.length > 0 && (
                         <p className="px-4 md:px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-t border-border">
                             Det var den närmaste månaden
                         </p>
-                    )}
+                    ))}
                 </>
             ) : (<>
             <ul className="divide-y divide-border">
@@ -1056,9 +1159,14 @@ interface EventCardProps {
      *  kring samma mitt tills målet syns (utils/viewportTour) och blinkar
      *  dagplattan. Utelämnad = rakt till nästa dag som förut. */
     onZoomOutTo?: (target: LinkEvent) => void;
+    /** LISTAN ZOOMAR UT (ägarbeslut 8/10): listans botten zoomar ut kartan
+     *  kring samma mitt (sidan väljer hur långt) och listan fortsätter med
+     *  de nya eventen under en avdelare (utils/listZoomRings). Utelämnad =
+     *  listan slutar som förut (utzoomat förbi golvet). */
+    onListZoomOut?: (popularTab: boolean) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onZoomOutTo }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onZoomOutTo, onListZoomOut }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -1246,6 +1354,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // ur Populärt ska listan under det nya kortet fortfarande vara Populärt.
     const [listTab, setListTab] = useState<ListTab>('all');
     const [daysVisibleCount, setDaysVisibleCount] = useState(NEARBY_PAGE_SIZE);
+    // LISTAN ZOOMAR UT (ägarbeslut 8/10): frysta id-mängder, en per
+    // utzoomning från listans botten (utils/listZoomRings). Nollas med
+    // eventet - nästa kort börjar om på kartans nya zoomsteg.
+    const [listRings, setListRings] = useState<ReadonlySet<string>[]>([]);
+    const [listZoomPending, setListZoomPending] = useState(false);
+    // scrollTop vid senaste steget: auto-steget kräver att man scrollat
+    // VIDARE sedan dess, annars kunde ett steg som gav få rader (botten
+    // fortfarande i bild) kedja vidare utan att man rört listan.
+    const listZoomScrollRef = useRef(0);
     // 🔥-CHIPPET STYR FLIKEN (7/10 kväll, Josef: "den filterknappen där det
     // står populära = hur många som står åt höger om månaden" — chipvalet
     // smalnade bara kartan, listans Månaden-flik stod orörd och chippet såg
@@ -1882,6 +1999,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     useEffect(() => {
         setNearbyVisibleCount(NEARBY_PAGE_SIZE);
         setDaysVisibleCount(NEARBY_PAGE_SIZE);
+        setListRings([]);
+        setListZoomPending(false);
+        listZoomScrollRef.current = 0;
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
         updateDragX(0);
         setIsAnimating(true);
@@ -2212,7 +2332,48 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     }, [viewEvents, discardedEventIds, selectedEvent, dayOffset, now, userPos, imagesOnlyList, matchesCardSearch]);
     const activeTabDays = tabDays[listTab].days;
     const activeTabRowTotal = useMemo(() => activeTabDays.reduce((n, d) => n + d.rows.length, 0), [activeTabDays]);
-    const visibleTabDays = useMemo(() => takeRows(activeTabDays, daysVisibleCount), [activeTabDays, daysVisibleCount]);
+    // Zoomringarna (8/10): det som fanns före varje utzoomning står kvar
+    // överst, de nya under sin avdelare - dag för dag från den visade dagen.
+    const ringTabDays = useMemo(
+        () => splitDaysIntoRings(activeTabDays, listRings, r => [r.evt.id, ...(r.dups ?? []).map(d => d.evt.id)]),
+        [activeTabDays, listRings],
+    );
+    const ringCounts = useMemo(() => {
+        const counts = listRings.map(() => 0).concat(0);
+        for (const d of ringTabDays) counts[d.ring] += d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0);
+        return counts;
+    }, [ringTabDays, listRings]);
+    const visibleTabDays = useMemo(() => takeRows(ringTabDays, daysVisibleCount), [ringTabDays, daysVisibleCount]);
+    // Listans botten: frys det listan visat som en ring och be sidan zooma
+    // ut. Ringen fryser HELA rutans id:n (alla dagar och flikar), så det
+    // man redan haft i listan aldrig hamnar under avdelaren.
+    const handleListZoomOut = () => {
+        if (!onListZoomOut || !viewEvents || listZoomPending) return;
+        setListRings(r => [...r, new Set(viewEvents.map(e => e.id))]);
+        setListZoomPending(true);
+        listZoomScrollRef.current = scrollContainerRef.current?.scrollTop ?? 0;
+        onListZoomOut(listTab === 'popular');
+    };
+    // Sökarket öppnas/stängs utan att eventet byts - ringarna börjar om där
+    // också, annars stod en gammal avdelare kvar i nästa sökning.
+    useEffect(() => {
+        setListRings([]);
+        setListZoomPending(false);
+        listZoomScrollRef.current = 0;
+    }, [searchOnly]);
+    // Kartan zoomar 0,9 s + listans lugnade ruta 0,6 s - sedan står den nya
+    // ringen (eller inget nytt än) i listan.
+    useEffect(() => {
+        if (!listZoomPending) return;
+        const t = setTimeout(() => setListZoomPending(false), 2200);
+        return () => clearTimeout(t);
+    }, [listZoomPending]);
+    const listZoomEnd: ListZoomEnd | undefined = onListZoomOut && viewEvents ? {
+        state: listZoomPending ? 'zooming'
+            : listRings.length > 0 && ringCounts[listRings.length] === 0 ? 'idle' : 'ready',
+        onZoomOut: handleListZoomOut,
+        canAuto: () => (scrollContainerRef.current?.scrollTop ?? 0) > listZoomScrollRef.current + 40,
+    } : undefined;
     const handleListTab = (tab: ListTab) => {
         setListTab(tab);
         setDaysVisibleCount(NEARBY_PAGE_SIZE);
@@ -3710,6 +3871,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             allCount={tabDays.all.count}
                             popularCount={tabDays.popular.count}
                             days={visibleTabDays}
+                            ringCounts={ringCounts}
+                            listZoom={listZoomEnd}
                             daysHasMore={daysVisibleCount < activeTabRowTotal}
                             onLoadMoreDays={() => setDaysVisibleCount(c => c + NEARBY_PAGE_SIZE)}
                             // Bara tidsfönstret inne → listans botten hämtar resten

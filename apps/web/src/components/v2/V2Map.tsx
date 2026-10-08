@@ -521,8 +521,10 @@ interface V2MapProps {
     /** Bumpas av zooma-ut-knappen i Nästa-pillen → zooma UT (samma center). */
     zoomOutTrigger?: number;
     /** NÄSTA ZOOMAR UT (7/10 sent): ny nonce → zooma ut kring SAMMA mitt
-     *  precis så mycket att punkten hamnar i bild ovanför kortet. */
-    zoomRevealTarget?: { lat: number; lng: number; nonce: number } | null;
+     *  precis så mycket att punkten hamnar i bild ovanför kortet.
+     *  minSteps (listans utzoomning 8/10): zooma ut MINST så många nivåer
+     *  även om punkten redan syns - "nästa zoomsteg". */
+    zoomRevealTarget?: { lat: number; lng: number; nonce: number; minSteps?: number } | null;
     /** Bumpas av stadsrutans "Hela veckan"-klick i utzoomat läge (31/8) →
      *  zooma IN till veckotröskeln kring samma center; page.tsx växlar sedan
      *  till veckan när weekUnlocked kvitterat att zoomen är framme. */
@@ -3758,9 +3760,10 @@ export default function V2Map({
         const target = map.project([zoomRevealTarget.lng, zoomRevealTarget.lat]);
         const el = map.getContainer();
         const steps = zoomOutStepsToReveal(target.x - center.x, target.y - center.y, el.clientWidth, el.clientHeight);
-        if (steps <= 0) return;
+        const out = Math.max(zoomRevealTarget.minSteps ?? 0, steps > 0 ? steps + 0.15 : 0);
+        if (out <= 0) return;
         map.easeTo({
-            zoom: Math.max(map.getMinZoom(), map.getZoom() - steps - 0.15),
+            zoom: Math.max(map.getMinZoom(), map.getZoom() - out),
             duration: 900,
         });
     }, [zoomRevealTarget]);

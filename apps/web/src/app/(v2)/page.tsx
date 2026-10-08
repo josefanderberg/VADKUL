@@ -25,6 +25,7 @@ import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/ut
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
 import { inListWindow, isPopularListed } from '@/utils/popularList';
+import { LIST_ZOOM_OUT_FLOOR, nearestOutsideBounds } from '@/utils/listZoomRings';
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { zoomInCenter } from '@/utils/zoomInCenter';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug } from '@/utils/organizerPages';
@@ -1568,7 +1569,7 @@ export default function HomePage() {
     // (V2Map zoomRevealTarget) och dagplattan BLINKAR så man ser att det är
     // samma dag igen. Kortets eget steg, så 4/9-regeln (blinken bara vid
     // kortets egna steg, aldrig på dag-nyckeln rakt av) håller.
-    const [zoomRevealTarget, setZoomRevealTarget] = useState<{ lat: number; lng: number; nonce: number } | null>(null);
+    const [zoomRevealTarget, setZoomRevealTarget] = useState<{ lat: number; lng: number; nonce: number; minSteps?: number } | null>(null);
     const handleCardZoomOut = useCallback((target: LinkEvent) => {
         if (!hasValidCoords(target)) return;
         setZoomRevealTarget(prev => ({ lat: target.lat!, lng: target.lng!, nonce: (prev?.nonce ?? 0) + 1 }));
@@ -3095,6 +3096,28 @@ export default function HomePage() {
         },
         [events, settledMapBounds, matchesFilter],
     );
+    // LISTAN ZOOMAR UT (ägarbeslut 8/10, Josef: "när man scrollat ner i
+    // listan för man redan sett allt denna månaden på eventkorten. Då ska ju
+    // kartan zooma ut så att listan kan börja om på nästa zoomsteg"): kortets
+    // lista har nått botten - zooma ut kring SAMMA mitt (ingen panorering,
+    // 2/9) minst ett steg och så långt att närmaste event utanför listans
+    // ruta syns (samma filter + tidsfönster som listan, Populärt smalnar).
+    // Kortet fryser det den redan visat och lägger de nya under en avdelare
+    // (utils/listZoomRings). Ingen dagblink - dagen byts inte.
+    const listCanZoomOut = mapZoom != null && mapZoom > LIST_ZOOM_OUT_FLOOR;
+    const handleListZoomOut = useCallback((popularTab: boolean) => {
+        const b = settledMapBounds ?? mapBounds;
+        if (!b) return;
+        const c = mapCenter ?? { lat: (b.south + b.north) / 2, lng: (b.west + b.east) / 2 };
+        const now = new Date();
+        const nowMs = now.getTime();
+        const target = nearestOutsideBounds(events, b, c, e =>
+            matchesFilter(e)
+            && inListWindow(e, dayOffset, now, x => isEventPast(x, nowMs))
+            && (!popularTab || isPopularListed(e, nowMs)));
+        const at = target ? { lat: target.lat!, lng: target.lng! } : c;
+        setZoomRevealTarget(prev => ({ ...at, minSteps: 1, nonce: (prev?.nonce ?? 0) + 1 }));
+    }, [settledMapBounds, mapBounds, mapCenter, events, matchesFilter, dayOffset]);
     // Kategoriradens siffror: per kategori, med ALLA filter utom själva
     // kategorivalet (opt-in-källor, familjegrinden) — alltså vad kategorin
     // bidrar med om dess chip är valt (enelements-mängd per kategori;
@@ -6033,6 +6056,9 @@ export default function HomePage() {
                 activeFilters={cardActiveFilters}
                 onRemoveFilter={handleRemoveCardFilter}
                 onZoomOutTo={handleCardZoomOut}
+                // Listans botten zoomar ut kartan (8/10) - inte under
+                // golvet där "runtomkring" blir halva landet.
+                onListZoomOut={listCanZoomOut ? handleListZoomOut : undefined}
                 // Kategorichipsen i kortet (6/10, ersätter Lista-ikonen):
                 // SAMMA filter och siffror som sökpanelen — ett val smalnar
                 // listan i kortet och kartan bakom, och persisteras som

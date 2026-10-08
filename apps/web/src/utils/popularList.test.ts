@@ -64,6 +64,16 @@ describe('takeRows', () => {
     it('gränsen större än allt → allt', () => {
         expect(takeRows(days, 99)).toEqual(days);
     });
+    it('dagens övriga fält (listans zoomring) följer med', () => {
+        const ringed = [
+            { dayOffset: 0, ring: 0, rows: [1, 2] },
+            { dayOffset: 0, ring: 1, rows: [3, 4] },
+        ];
+        expect(takeRows(ringed, 3)).toEqual([
+            { dayOffset: 0, ring: 0, rows: [1, 2] },
+            { dayOffset: 0, ring: 1, rows: [3] },
+        ]);
+    });
 });
 
 describe('eventDays', () => {
