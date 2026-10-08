@@ -879,7 +879,10 @@ export default function HomePage() {
     // läser lagringen direkt (readChosenCity/readStartCity) så den aldrig
     // väntar på en omrendering.
     const [chosenStart, setChosenStart] = useState<CityPoint | null>(null);
-    useEffect(() => { setChosenStart(readChosenCity()); }, []);
+    // Har väljaren besvarats på enheten? Då visar välkomstrutan i stället en
+    // "Kartan startar i … · Byt"-rad (ingen automatisk fråga efter rutan).
+    const [startPickerDone, setStartPickerDone] = useState(false);
+    useEffect(() => { setChosenStart(readChosenCity()); setStartPickerDone(readStartPickerDone()); }, []);
     // Sant när besöket kom via en djuplänk (?plats=/?event=/?arrangor=) -
     // då har man redan valt vart man ska, och väljaren får inte dyka upp.
     const deepLinkVisitRef = useRef(false);
@@ -3734,6 +3737,7 @@ export default function HomePage() {
     const handleStartPickerDone = useCallback(({ city, kats }: { city: CityPoint | null; kats?: EventCategoryType[] }) => {
         const changed = (readChosenCity()?.name ?? null) !== (city?.name ?? null);
         writeChosenCity(city);
+        setStartPickerDone(true);
         setChosenStart(city);
         saveAccountStartChoice(city);
         // Kategorierna blir kartans vanliga sparade filter (utils/mapFilter +
@@ -3751,6 +3755,7 @@ export default function HomePage() {
         // ändrar ingenting.
         if (startPicker?.withCategories && !readStartPickerDone()) {
             markStartPickerDone();
+            setStartPickerDone(true);
             saveAccountStartChoice(readChosenCity());
         }
         setStartPicker(null);
@@ -3776,6 +3781,7 @@ export default function HomePage() {
         const city = parsed.kind === 'city' ? parsed.city : null;
         const before = readChosenCity()?.name ?? null;
         writeChosenCity(city);
+        setStartPickerDone(true);
         setChosenStart(city);
         // Valet gjordes på en annan enhet: flytta bara om kartan fortfarande
         // står orörd i startvyn - aldrig mitt i att man tittar.
@@ -6182,6 +6188,7 @@ export default function HomePage() {
                         } else setWelcomeDone(true);
                     }}
                     underCard={!!selectedEvent}
+                    startCity={startPickerDone ? { name: chosenStart?.name ?? null, onChange: () => setStartPicker({ withCategories: false }) } : undefined}
                 />
             )}
 
@@ -6192,6 +6199,7 @@ export default function HomePage() {
                     initialCategories={mapCategories}
                     onDone={handleStartPickerDone}
                     onSkip={handleStartPickerSkip}
+                    onDismiss={() => { setStartPicker(null); setWelcomeDone(true); }}
                 />
             )}
 

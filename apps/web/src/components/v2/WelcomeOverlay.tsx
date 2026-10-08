@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarPlus, Hand, Mail } from 'lucide-react';
+import { ArrowRight, CalendarPlus, Hand, Mail, MapPin } from 'lucide-react';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from '@/lib/firebase';
 
@@ -23,6 +23,10 @@ interface WelcomeOverlayProps {
      *  Rutan väntar bakom och står kvar framför när kortet stängts. Även
      *  tangenterna (Escape/Tab-fällan) släpps så länge kortet ligger överst. */
     underCard?: boolean;
+    /** Kartans startstad (Josef 8/10: "man kanske vill kunna välja"): en rad
+     *  under knapparna som stänger rutan och öppnar stadsväljaren. name null
+     *  = "där du är". Utelämnad (väljaren kommer ändå efter rutan) → döljs. */
+    startCity?: { name: string | null; onChange: () => void };
 }
 
 /** Exit-animationens längd — skickas till CSS via --welcome-exit-ms så de inte kan glida isär. */
@@ -84,7 +88,7 @@ function useCountUp(target: number, durationMs = 1200) {
  * live-räknare och en zoom-exit ner i kartan.
  * Återbesökare får allt direkt utan stagger (.welcome-fast).
  */
-export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose, underCard = false }: WelcomeOverlayProps) {
+export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose, underCard = false, startCity }: WelcomeOverlayProps) {
     const [open, setOpen] = useState(true);
     const [closing, setClosing] = useState(false);
     const [returning, setReturning] = useState(false);
@@ -94,6 +98,8 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     onCreateAccountRef.current = onCreateAccount;
     const onCloseRef = useRef(onClose);
     onCloseRef.current = onClose;
+    const onChangeCityRef = useRef(startCity?.onChange);
+    onChangeCityRef.current = startCity?.onChange;
 
     const shownCount = useCountUp(weekEventCount ?? 0);
     // Idag-siffran räknas upp precis som veckosiffran (Josef 1/9).
@@ -112,14 +118,15 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
         if (seenDecision) setReturning(true);
     }, []);
 
-    const dismiss = useCallback((thenCreateAccount = false) => {
+    const dismiss = useCallback((then: 'account' | 'city' | null = null) => {
         if (closingRef.current) return;
         closingRef.current = true;
         setClosing(true);
         window.setTimeout(() => {
             setOpen(false);
             onCloseRef.current?.();
-            if (thenCreateAccount) onCreateAccountRef.current();
+            if (then === 'account') onCreateAccountRef.current();
+            if (then === 'city') onChangeCityRef.current?.();
         }, EXIT_MS);
     }, []);
 
@@ -302,11 +309,24 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             minus fyllningen. */}
                         <button
                             type="button"
-                            onClick={() => { track('welcome_create_account'); dismiss(true); }}
+                            onClick={() => { track('welcome_create_account'); dismiss('account'); }}
                             className="w-full py-3 rounded-2xl border-2 border-[#006AA7]/25 text-[#006AA7] hover:bg-[#006AA7]/5 hover:border-[#006AA7]/40 font-black text-sm active:scale-[0.98] transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#006AA7]/40"
                         >
                             Skapa gratis konto
                         </button>
+                        {/* Startstaden (8/10): byts här vid varje besök -
+                            frågan efter rutan kommer bara en gång. */}
+                        {startCity && (
+                            <button
+                                type="button"
+                                onClick={() => { track('welcome_change_city'); dismiss('city'); }}
+                                className="self-center inline-flex items-center gap-1.5 pt-1 text-[12.5px] font-bold text-slate-500 hover:text-[#006AA7] transition-colors outline-none focus-visible:underline"
+                            >
+                                <MapPin size={13} aria-hidden />
+                                Kartan startar i {startCity.name ?? 'där du är'}
+                                <span className="font-black text-[#006AA7]">· Byt</span>
+                            </button>
+                        )}
                     </div>
 
                     {/* KARTANS KÄLLOR (15/9): kartans egen ⓘ-attribution är
