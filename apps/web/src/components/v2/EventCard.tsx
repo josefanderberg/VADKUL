@@ -980,7 +980,24 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
  *  Nästa så man byter dag ska man kunna klicka på tillbaka-knappen igen").
  *  Eventobjektet sparas hellre än bara id:t — en annan dags event finns
  *  inte i `events` (dagens lista) och behövs ändå för emoji-förhandsvisningen. */
-type NavEntry = { evt: LinkEvent; dayOffset: number };
+type NavEntry = { evt: LinkEvent; dayOffset: number; spot?: ListSpot };
+
+/** VAR MAN STOD I KORTETS LISTA när man valde ett event ur den (ägarbeslut
+ *  8/10, Josef: "så att man kan gå tillbaka och se precis där man var
+ *  någonstans i listan, så man kan fortsätta sin sökning"). Bakåt och
+ *  "← tillbaka till listan" lägger tillbaka väljarlistan (om den var
+ *  framme), fliken, de laddade sidorna, zoomringarna, vyn och scrollen. */
+type ListSpot = {
+    /** Eventet som valdes ur listan - listpilen visas bara på det. */
+    pickedId: string;
+    scrollTop: number;
+    daysVisible: number;
+    tab: ListTab;
+    rings: ReadonlySet<string>[];
+    view: 'info' | 'chat' | 'nearby';
+    /** Multieventets väljarlista som var framme, annars null. */
+    group: LinkEvent[] | null;
+};
 
 interface EventCardProps {
     events: LinkEvent[];
@@ -1268,9 +1285,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // vyskiftes-läget). Kortet växer samtidigt till full höjd och scrollas
     // till toppen — ett riktigt vyskifte, inte en scroll-genväg.
     const [cardView, setCardView] = useState<'info' | 'chat' | 'nearby'>('info');
-    // Tillbaka-pilen till multievent-listan i navraden (vid 1/2-pagern) - bara
-    // i infovyn, där "tillbaka" bara kan betyda en sak.
-    const showBackToGroup = !chooserActive && !!onBackToGroup && cardView === 'info';
     // Bilder AV som default i listan (Josef 26/8) — 'on' i storage slår på dem.
     const [showImages, setShowImages] = useState(false);
     useEffect(() => {
@@ -1452,6 +1466,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // (sidan valde samma event) armerar ett riktigt kartklick långt senare.
     const dayStepRef = useRef<{ fromOffset: number; armedAt: number } | null>(null);
     const DAY_STEP_LANDING_MS = 3000;
+    // VAL UR KORTETS LISTA (8/10): ett nytt ankare som ett kartklick
+    // ("LISTVAL = SOM ETT KARTKLICK", 7/10), men bakåt-stacken står kvar -
+    // dess översta post bär var man stod i listan (ListSpot).
+    const listPickIdRef = useRef<string | null>(null);
+    // Bakåt till en ListSpot väntar på att eventet (och ev. väljarlistan)
+    // landat innan listan läggs tillbaka - se återställnings-effekten.
+    const pendingSpotRef = useRef<{ evtId: string; spot: ListSpot; groupAsked: boolean; armedAt: number } | null>(null);
+    const restoreRafRef = useRef(0);
     const isFreshOpenRef = useRef(false);
     // Senast förbrukade helskärmsbegäran (fullOpenNonce) — se ankar-effekten.
     const consumedFullOpenNonceRef = useRef(0);
@@ -1935,15 +1957,19 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const step = dayStepRef.current;
         const isDayStepLanding = !!step && step.fromOffset !== dayOffset
             && Date.now() - step.armedAt < DAY_STEP_LANDING_MS;
+        const isListPick = listPickIdRef.current === selectedEvent.id;
+        listPickIdRef.current = null;
         if (isPickNext) {
             // Intern navigering (Nästa/Bakåt) drev fram detta event — behåll
             // ankare, besökt-set OCH bakåt/framåt-stackarna.
             expectedNextIdRef.current = null;
-        } else if (isDayStepLanding) {
+        } else if (isDayStepLanding || isListPick) {
             // LANDNINGEN efter ett dagbyte via Nästa/Bakåt (Josef 2/9): sidan
             // valde eventet åt oss. Ny dag = ny runda — nytt ankare och tomt
             // besökt-set — men bakåt-/framåtstackarna står KVAR så man kan gå
-            // tillbaka över dagbytet (och framåt igen).
+            // tillbaka över dagbytet (och framåt igen). Samma för ett VAL UR
+            // KORTETS LISTA (8/10): nytt ankare som ett kartklick, men
+            // stacken behålls - den bär var man stod i listan (ListSpot).
             dayStepRef.current = null;
             setAnchorId(selectedEvent.id);
             anchorSetAtRef.current = Date.now();
@@ -2012,10 +2038,57 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Väljarlistan börjar alltid från toppen (Josef 2/9): kortet kan ha stått
     // nedscrollat i ett vanligt event när multibrickan klickades, eller när
     // man backar till listan via pilen — annars låg listan kvar mitt i.
+    // Undantag sedan 8/10: Bakåt till en ListSpot lägger tillbaka scrollen
+    // (effekten nedan körs efter den här).
     useEffect(() => {
         if (!chooserActive) return;
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
     }, [chooserActive]);
+
+    // TILLBAKA TILL DÄR MAN VAR I LISTAN (8/10): Bakåt till en ListSpot.
+    // Ligger EFTER nollställningarna ovan (eventbytet, väljarlistans topp-
+    // scroll) så de körs först i samma commit och det här vinner. Scrollen
+    // sätts när innehållet hunnit bli så högt (kortlagret, sidorna) - griper
+    // man själv i listan under tiden släpps återställningen.
+    const restoreScrollTo = (target: number) => {
+        cancelAnimationFrame(restoreRafRef.current);
+        const started = performance.now();
+        let expected = scrollContainerRef.current?.scrollTop ?? 0;
+        const tick = () => {
+            const sc = scrollContainerRef.current;
+            if (!sc || Math.abs(sc.scrollTop - expected) > 4) return;
+            const max = sc.scrollHeight - sc.clientHeight;
+            if (max >= target - 2 || performance.now() - started > 2000) {
+                sc.scrollTop = Math.min(target, Math.max(0, max));
+                return;
+            }
+            expected = sc.scrollTop;
+            restoreRafRef.current = requestAnimationFrame(tick);
+        };
+        restoreRafRef.current = requestAnimationFrame(tick);
+    };
+    useEffect(() => () => cancelAnimationFrame(restoreRafRef.current), []);
+    useEffect(() => {
+        const p = pendingSpotRef.current;
+        if (!p || !selectedEvent) return;
+        if (Date.now() - p.armedAt > DAY_STEP_LANDING_MS) { pendingSpotRef.current = null; return; }
+        if (selectedEvent.id !== p.evtId) return;
+        if (p.spot.group && !chooserActive) {
+            // Landade via ett dagbyte: väljarlistan måste upp igen först.
+            if (!p.groupAsked && onSelectGroup) {
+                p.groupAsked = true;
+                onSelectGroup(p.spot.group, selectedEvent);
+            }
+            return;
+        }
+        pendingSpotRef.current = null;
+        setListTab(p.spot.tab);
+        setDaysVisibleCount(p.spot.daysVisible);
+        setListRings(p.spot.rings);
+        if (!chooserActive) setCardView(p.spot.view);
+        restoreScrollTo(p.spot.scrollTop);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEvent, chooserActive]);
 
     // Växla mellan infovyn och chatt-/listvyn. På väg IN i en vy: väx kortet
     // till full höjd och börja från toppen så sektionen syns direkt. På väg UT
@@ -2951,8 +3024,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         if (didDragRef.current) { didDragRef.current = false; return; }
         if (historyStack.length === 0 || !selectedEvent) return;
         const entry = historyStack[historyStack.length - 1];
+        const sameEvent = entry.evt.id === selectedEvent.id;
         setHistoryStack(prev => prev.slice(0, -1));
-        setForwardStack(prev => [...prev, { evt: selectedEvent, dayOffset }]);
+        // Valde man representanten själv ur väljarlistan är "tillbaka" bara
+        // listan igen - inget att spela upp framåt.
+        if (!sameEvent) setForwardStack(prev => [...prev, { evt: selectedEvent, dayOffset }]);
+        // Posten bär var man stod i listan: lägg tillbaka den när eventet
+        // landat (återställnings-effekten efter väljarlistans topp-scroll).
+        pendingSpotRef.current = entry.spot
+            ? { evtId: entry.evt.id, spot: entry.spot, groupAsked: false, armedAt: Date.now() }
+            : null;
         if (entry.dayOffset !== dayOffset) {
             // BAKÅT ÖVER ETT DAGBYTE (Josef 2/9): tillbaka till den dagen, och
             // sidan landar på eventet man stod på där (finns det inte längre:
@@ -2964,11 +3045,22 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             return;
         }
         const prevEvent = events.find(e => e.id === entry.evt.id);
-        if (prevEvent) {
+        if (prevEvent && entry.spot?.group && onSelectGroup) {
+            // Väljarlistan var framme: grupp + representant atomiskt via
+            // sidan, precis som multibrick-klicket.
+            pendingSpotRef.current!.groupAsked = true;
+            // Ankar-effekten körs bara om eventOBJEKTET byts - armera inte
+            // en flagga som annars blir liggande till ett senare kartklick.
+            if (prevEvent !== selectedEvent) expectedNextIdRef.current = prevEvent.id;
+            onNavigate?.();
+            onSelectGroup(entry.spot.group, prevEvent);
+        } else if (prevEvent && !sameEvent) {
             // Intern navigering → behåll ankare/besökt (markeras som "väntat").
             expectedNextIdRef.current = prevEvent.id;
             onNavigate?.(); // kameran står kvar — vi flyger inte till föregående event
             onSelectEvent(prevEvent);
+        } else {
+            pendingSpotRef.current = null;
         }
         setExitX(null);
         updateDragX(0);
@@ -3043,6 +3135,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const backTitle = backEvent
         ? `Gå tillbaka till ${backEvent.title}${backCrossDay ? ` (${getDayLabel(backEntry!.dayOffset, dayRangeDays).toLowerCase()})` : ''}`
         : null;
+    // TILLBAKA TILL LISTAN i navraden (vid 1/2-pagern, till vänster om
+    // NÄSTA) - bara i infovyn, där "tillbaka" bara kan betyda en sak. Sedan
+    // 8/10 även efter ett val ur listan UNDER kortet (inte bara ur
+    // väljarlistan), och då tar den en till exakt samma ställe i listan
+    // (ListSpot). Utan en sådan post: sidans gamla väg till väljarlistan.
+    const listReturnEntry = backEntry?.spot && backEntry.spot.pickedId === selectedEvent?.id ? backEntry : undefined;
+    const showBackToGroup = !chooserActive && cardView === 'info' && (!!listReturnEntry || !!onBackToGroup);
+    const backToListCount = listReturnEntry ? (listReturnEntry.spot!.group?.length ?? 0) : backToGroupCount;
+    const handleBackToList = () => {
+        if (listReturnEntry) handleHistoryBack();
+        else onBackToGroup?.();
+    };
 
     // Antal event i föregående events grupp (om det var en multibricka).
     // Räknas bara på dagens lista — över ett dagbyte visas ingen siffra.
@@ -3127,7 +3231,28 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // markören den valda kategorifärgade looken som vanligt. Inom den
     // visade perioden väljs direkt som förut. Delas av listan,
     // arrangörsraden och väljarlistans fortsättning.
+    const rememberListSpot = (picked: LinkEvent) => {
+        if (!selectedEvent) return; // sökarket: inget event att gå tillbaka till
+        pushHistory({
+            evt: selectedEvent,
+            dayOffset,
+            spot: {
+                pickedId: picked.id,
+                scrollTop: scrollContainerRef.current?.scrollTop ?? 0,
+                daysVisible: daysVisibleCount,
+                tab: listTab,
+                rings: listRings,
+                view: cardView,
+                group: chooserActive && groupChoice ? groupChoice : null,
+            },
+        });
+        setForwardStack([]); // ny gren, som Nästa efter ett Bakåt
+        // Representanten själv ur väljarlistan byter inget event - då körs
+        // ingen ankar-effekt som kan förbruka flaggan.
+        if (picked !== selectedEvent) listPickIdRef.current = picked.id;
+    };
     const handleListPick = (evt: LinkEvent) => {
+        rememberListSpot(evt);
         if (evt.time && onDayStep) {
             const a = new Date(evt.time); a.setHours(0, 0, 0, 0);
             const b = new Date(now); b.setHours(0, 0, 0, 0);
@@ -3410,16 +3535,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             {showBackToGroup && (
                                 <button
                                     type="button"
-                                    onClick={onBackToGroup}
+                                    onClick={handleBackToList}
                                     onPointerDown={onButtonPointerDown}
                                     onPointerMove={onButtonPointerMove}
                                     onPointerUp={onButtonPointerUp}
                                     onPointerCancel={onButtonPointerUp}
-                                    aria-label={backToGroupCount > 1
-                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
+                                    aria-label={backToListCount > 1
+                                        ? `Tillbaka till de ${backToListCount} eventen på platsen`
                                         : 'Tillbaka till listan'}
-                                    title={backToGroupCount > 1
-                                        ? `Tillbaka till de ${backToGroupCount} eventen på platsen`
+                                    title={backToListCount > 1
+                                        ? `Tillbaka till de ${backToListCount} eventen på platsen`
                                         : 'Tillbaka till listan'}
                                     className={`pointer-events-auto shrink-0${navMlAuto} h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all`}
                                 >
@@ -3645,7 +3770,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         <EventCardGroupList
                             events={groupChoice}
                             selectedEvent={selectedEvent}
-                            onSelect={onPickFromGroup!}
+                            onSelect={(evt) => { rememberListSpot(evt); onPickFromGroup!(evt); }}
                             moreRows={chooserOrganizerRow && cityLink ? (
                                 <CardMoreRows
                                     organizerRow={chooserOrganizerRow}
