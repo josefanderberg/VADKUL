@@ -4603,9 +4603,12 @@ export default function HomePage() {
             // länk till arrangörssidan (Josef 30/9, understruket). Länken
             // bara när arrangören har kommande event - sidan finns då alltid
             // (samma urval, utils/organizerPages), aldrig en tom sida.
+            // w-max (Josef 8/10): bannern får bli bredare än px-16-raden
+            // (den centreras ändå) så "Visar bara event från" ryms på en
+            // rad; taket är skärmen minus 16 px per sida, långa namn kortas.
             <div
                 onClick={() => startTransition(() => setMapOrganizer(null))}
-                className="pointer-events-auto flex cursor-pointer items-center gap-3 max-w-[88vw] rounded-2xl bg-[#006AA7] pl-4 pr-2 py-2 text-left text-white shadow-xl border border-white/20 hover:bg-[#005d93] transition animate-in fade-in slide-in-from-top-2 duration-300"
+                className="pointer-events-auto flex cursor-pointer items-center gap-3 w-max max-w-[calc(100vw-2rem)] rounded-2xl bg-[#006AA7] pl-4 pr-2 py-2 text-left text-white shadow-xl border border-white/20 hover:bg-[#005d93] transition animate-in fade-in slide-in-from-top-2 duration-300"
             >
                 <span className="min-w-0 flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-[0.14em] leading-none text-white/70">
