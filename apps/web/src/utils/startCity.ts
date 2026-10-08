@@ -1,4 +1,5 @@
 import { isValidLatLng } from './mapUtils';
+import { readChosenCity, START_CHOICE_ZOOM } from './startChoice';
 
 /**
  * "Staden man är i" — vyn kartan ÖPPNAR i nästa gång man kommer tillbaka.
@@ -74,9 +75,13 @@ export function parsePlatsParam(raw: string | null): { lat: number; lng: number;
     return { lat, lng, zoom: Number.isFinite(zoom) ? Math.min(16, Math.max(4, zoom)) : 11 };
 }
 
-/** Sparad stad, eller null (första besöket, rensad lagring, privat läge). */
+/** Sparad stad, eller null (första besöket, rensad lagring, privat läge).
+ *  En AKTIVT VALD startstad (utils/startChoice, 8/10) vinner över den
+ *  GPS-landade - då öppnar kartan där oavsett var man är. */
 export function readStartCity(nowMs: number = Date.now()): StartCity | null {
     if (typeof window === 'undefined') return null;
+    const chosen = readChosenCity();
+    if (chosen) return { lat: chosen.lat, lng: chosen.lng, zoom: START_CHOICE_ZOOM, name: chosen.name, savedAt: nowMs };
     try {
         return parseStartCity(window.localStorage.getItem(START_CITY_KEY), nowMs);
     } catch {

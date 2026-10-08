@@ -12,7 +12,7 @@ import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
 import FriendsSection from './FriendsSection';
 import SavedSection from './SavedSection';
-import { X, Pencil, Check, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info, UserPlus } from 'lucide-react';
+import { X, Pencil, Check, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info, LocateFixed, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
 import { doc, getDoc, setDoc, deleteField, serverTimestamp, collection, getDocs, query, where, limit, Timestamp } from 'firebase/firestore';
@@ -65,6 +65,9 @@ interface ProfilePanelProps {
     optInCategories?: { selected: ReadonlySet<string>; onToggle: (id: string) => void };
     /** Öppna välkomstrutan (Om VADKUL). Utelämnad → raden döljs. */
     onOpenAbout?: () => void;
+    /** Kartans startstad (8/10): name null = "där jag är". onChange öppnar
+     *  väljaren. Utelämnad (stadssidornas toppnav) → raden döljs. */
+    startCity?: { name: string | null; onChange: () => void };
 }
 
 // Stabil tom lista när allEvents utelämnas — en ny [] per render hade varit
@@ -76,7 +79,7 @@ const NO_EVENTS: LinkEvent[] = [];
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, saved, anchor = 'left', optInCategories, onOpenAbout }: ProfilePanelProps) {
+export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, saved, anchor = 'left', optInCategories, onOpenAbout, startCity }: ProfilePanelProps) {
     // Mina event HOPGRUPPERADE till en rad per sak man skapat (Josef 14/9:
     // "nu blir det en jättelång lista"): både veckoserier och samma event
     // inlagt på flera datum (Josef 16/9, destilleribesöken på Stobirk —
@@ -1001,6 +1004,21 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                 </div>
                             )}
                         </div>
+
+                        {/* Startstad (8/10) — var kartan öppnar. Skild från
+                            Min stad (helgtipset) under Inställningar. */}
+                        {startCity && (
+                            <div className="border-t border-slate-100 dark:border-slate-800">
+                                <button type="button" onClick={startCity.onChange} className={actionRow}>
+                                    {startCity.name
+                                        ? <MapPin size={16} className="text-[#006AA7] shrink-0" />
+                                        : <LocateFixed size={16} className="text-[#006AA7] shrink-0" />}
+                                    <span className="flex-1">Kartan startar i</span>
+                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate max-w-[40%]">{startCity.name ?? 'Där jag är'}</span>
+                                    <ChevronRight size={15} className="text-slate-400 shrink-0" />
+                                </button>
+                            </div>
+                        )}
 
                         {/* Om VADKUL — öppnar välkomstrutan igen (15/9: den
                             flytande info-knappen på kartan är riven). */}
