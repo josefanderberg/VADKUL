@@ -14,6 +14,7 @@ import AuthModal from '@/components/v2/AuthModal';
 import EventCard, { type ActiveFilter } from '@/components/v2/EventCard';
 import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
+import StartCityPicker from '@/components/v2/StartCityPicker';
 import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
@@ -29,6 +30,7 @@ import { LIST_ZOOM_OUT_FLOOR, nearestOutsideBounds } from '@/utils/listZoomRings
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { zoomInCenter } from '@/utils/zoomInCenter';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug } from '@/utils/organizerPages';
+import { markActive, readShouldAutoShowWelcome } from '@/utils/welcomeGate';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
@@ -39,10 +41,12 @@ import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFrom
 import { LABEL_TITLE_MIN_ZOOM, WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
 import { readStartCity, writeStartCity, parsePlatsParam } from '@/utils/startCity';
+import { markStartPickerDone, parseAccountStartChoice, readChosenCity, readStartPickerDone, writeChosenCity } from '@/utils/startChoice';
 import { circleBounds, unionBounds } from '@/utils/eventTiles';
 import { sumDayCounts } from '@/utils/dayCounts';
 import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
+import { loadCreateDraft, saveCreateDraft, clearCreateDraft, draftTimeStillValid } from '@/utils/createDraft';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { shouldAutoBumpDay } from '@/utils/autoDayBump';
 import { normalizeTipUrl } from '@/utils/tipUrl';
@@ -652,6 +656,65 @@ export default function HomePage() {
         editingOriginalRef.current = null;
     }, []);
 
+    // UTKASTET (Josef 8/10, se utils/createDraft): att STÄNGA rutan utan att
+    // skapa sparar det man skrivit — alla flikar delar samma fält, så texten
+    // står kvar oavsett flik — och nästa öppning lägger tillbaka det. Bilden
+    // (en File) kan inte ligga i sessionStorage och hålls här i minnet.
+    const draftImageRef = useRef<{ file: File; preview: string } | null>(null);
+    const closeCreateFlow = useCallback(() => {
+        // Redigering och önske-förifyllning är inget eget utkast — de får
+        // varken skriva över eller rensa ett sparat.
+        if (creationMode === 'editing' && !editingEventId && !fulfillingWish) {
+            saveCreateDraft({
+                v: 1,
+                kind: createKind,
+                role: newEventRole,
+                title: newEventTitle,
+                time: newEventTime,
+                category: newEventCategory,
+                place: newEventPlace,
+                price: newEventPrice,
+                description: newEventDescription,
+                url: newEventUrl,
+                host: newEventHost,
+                repeats: newEventRepeats,
+                repeatInterval: newEventRepeatInterval,
+                repeatTimes: newEventRepeatTimes,
+                showMoreDetails,
+            });
+            draftImageRef.current = newEventImage ? { file: newEventImage, preview: newEventImagePreview } : null;
+        }
+        resetCreateFlow();
+    }, [creationMode, editingEventId, fulfillingWish, createKind, newEventRole, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventUrl, newEventHost, newEventRepeats, newEventRepeatInterval, newEventRepeatTimes, showMoreDetails, newEventImage, newEventImagePreview, resetCreateFlow]);
+    /** Efter lyckad skapning: utkastet har gjort sitt. */
+    const discardCreateDraft = useCallback(() => {
+        clearCreateDraft();
+        draftImageRef.current = null;
+    }, []);
+    /** Lägg tillbaka ett sparat utkast i fälten (anropas när rutan öppnas).
+     *  role tvingar fliken när öppningsknappen själv valt den. */
+    const restoreCreateDraft = useCallback((role?: 'host' | 'tip') => {
+        const d = loadCreateDraft();
+        if (d) {
+            setCreateKind(role ? 'event' : d.kind);
+            setNewEventRole(role ?? d.role);
+            setNewEventTitle(d.title);
+            if (draftTimeStillValid(d.time, Date.now())) setNewEventTime(d.time);
+            setNewEventCategory(d.category in EVENT_CATEGORIES ? d.category : 'other');
+            setNewEventPlace(d.place);
+            setNewEventPrice(d.price);
+            setNewEventDescription(d.description);
+            setNewEventUrl(d.url);
+            setNewEventHost(d.host);
+            setNewEventRepeats(d.repeats);
+            setNewEventRepeatInterval(d.repeatInterval);
+            setNewEventRepeatTimes(d.repeatTimes);
+            setShowMoreDetails(d.showMoreDetails);
+        }
+        const img = draftImageRef.current;
+        if (img) { setNewEventImage(img.file); setNewEventImagePreview(img.preview); }
+    }, []);
+
     /**
      * Öppna skapa-/tipsa-formuläret på KARTANS MITT, med tiden förifylld till
      * nästa hela timme. Hit kommer man via bekräfta-knappen i slutet av
@@ -666,8 +729,11 @@ export default function HomePage() {
         const t = new Date(); t.setMinutes(0, 0, 0); t.setHours(t.getHours() + 1);
         const pad = (n: number) => String(n).padStart(2, '0');
         setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
+        // Ett sparat utkast tar över — utom när en djuplänk redan lagt in en
+        // titel (?skapa=…), då gäller länkens.
+        if (!newEventTitle) restoreCreateDraft();
         setCreationMode('editing');
-    }, []);
+    }, [newEventTitle, restoreCreateDraft]);
 
     /**
      * Öppna formuläret FÖRIFYLLT från ett befintligt eget event (kortets
@@ -726,11 +792,11 @@ export default function HomePage() {
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== 'Escape') return;
             if (repicking) { setRepicking(false); return; }
-            resetCreateFlow();
+            closeCreateFlow();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [creationMode, repicking, resetCreateFlow]);
+    }, [creationMode, repicking, closeCreateFlow]);
 
     // Inloggning i modal — man lämnar aldrig kartan. reason visas i modalen.
     const { user, loading: authLoading, ensureTipIdentity } = useAuth();
@@ -803,12 +869,27 @@ export default function HomePage() {
     // intro-resan hann visa hela landet. Intro-kameran är borttagen — kameran
     // landar numera i din stad så tidigt som möjligt, även bakom rutan.)
     const [welcomeDone, setWelcomeDone] = useState(false);
+    // STARTSTADSVÄLJAREN (ägarbeslut 8/10, förebild happymap.se): steg efter
+    // välkomstrutan - välj stad (+ ev. kategorier) eller hoppa över och
+    // hamna där man är. Visas EN gång per enhet/konto (utils/startChoice);
+    // ändras sedan via profilpanelen / inloggningsrutan. withCategories =
+    // onboardingen (två steg); från profilen byter man bara stad.
+    const [startPicker, setStartPicker] = useState<{ withCategories: boolean } | null>(null);
+    // Det aktiva valet, för väljarens markering och profilraden. Kameran
+    // läser lagringen direkt (readChosenCity/readStartCity) så den aldrig
+    // väntar på en omrendering.
+    const [chosenStart, setChosenStart] = useState<CityPoint | null>(null);
+    useEffect(() => { setChosenStart(readChosenCity()); }, []);
+    // Sant när besöket kom via en djuplänk (?plats=/?event=/?arrangor=) -
+    // då har man redan valt vart man ska, och väljaren får inte dyka upp.
+    const deepLinkVisitRef = useRef(false);
     // (STEG 2 i onboardingen — actionrutan med tipsa/önska/skapa — är borttagen
     // 26/8: för många popups. Plusset uppe till vänster är enda vägen in.)
     // Kromet (navbar, kategorikolumn, stadsruta …) ligger nere BARA under
     // välkomstrutan.
     const chromeHidden = welcomeOpen;
     const welcomeAutoShownRef = useRef(false);
+    const welcomeNewVisitRef = useRef<boolean | null>(null);
     useEffect(() => {
         if (authLoading || welcomeAutoShownRef.current) return;
         welcomeAutoShownRef.current = true;
@@ -830,8 +911,31 @@ export default function HomePage() {
                 return;
             }
         } catch { /* ingen läsbar URL — visa rutan som vanligt */ }
+        // Omladdning MITT I ett besök (iOS slängde fliken, tillbaka från
+        // arrangörssidan …) hoppar över rutan — annars ser det ut som att
+        // sidan hoppar till startsidan (användarmejl 8/10, utils/welcomeGate).
+        if (!(welcomeNewVisitRef.current ?? readShouldAutoShowWelcome())) {
+            setWelcomeDone(true);
+            return;
+        }
         setWelcomeOpen(true);
     }, [authLoading, user]);
+    // "Senast aktiv"-stämpeln som grinden ovan läser: vid mount och varje gång
+    // sidan döljs/lämnas (sista chansen innan iOS kan slänga fliken). Beslutet
+    // läses FÖRE mount-stämpeln och parkeras i en ref — welcome-effekten väntar
+    // på auth och skulle annars läsa vår egen färska stämpel.
+    useEffect(() => {
+        welcomeNewVisitRef.current = readShouldAutoShowWelcome();
+        markActive();
+        const onHide = () => { if (document.visibilityState === 'hidden') markActive(); };
+        const onPageHide = () => markActive();
+        document.addEventListener('visibilitychange', onHide);
+        window.addEventListener('pagehide', onPageHide);
+        return () => {
+            document.removeEventListener('visibilitychange', onHide);
+            window.removeEventListener('pagehide', onPageHide);
+        };
+    }, []);
 
     // Zoom-knappen i Nästa-pillen bumpar denna → V2Map zoomar in på det valda
     // eventet (klicket gör samtidigt "Nästa" i EventCard, så man landar inzoomad
@@ -915,6 +1019,7 @@ export default function HomePage() {
         const params = new URLSearchParams(window.location.search);
         if (params.has('plats') || params.has('event') || params.has('arrangor')) {
             tourAutoStartedRef.current = true;
+            deepLinkVisitRef.current = true;
             return;
         }
         setTourPlaying(true);
@@ -966,10 +1071,10 @@ export default function HomePage() {
     const [pulseArmedNonce, setPulseArmedNonce] = useState(-1);
     useEffect(() => {
         if (!tourPlaying || pulseSuppressed) return;
-        if (!welcomeDone || !eventsSettledHere || !mapPainted) return;
+        if (!welcomeDone || startPicker || !eventsSettledHere || !mapPainted) return;
         if (!cityTourTarget || landedTourKey !== cityTourTarget.key) return;
         setPulseArmedNonce(n => (n === tourCycleNonce ? n : tourCycleNonce));
-    }, [tourPlaying, pulseSuppressed, welcomeDone, eventsSettledHere, mapPainted, cityTourTarget, landedTourKey, tourCycleNonce]);
+    }, [tourPlaying, pulseSuppressed, welcomeDone, startPicker, eventsSettledHere, mapPainted, cityTourTarget, landedTourKey, tourCycleNonce]);
 
     // Målat-kvittot från V2Map (onPaintRoundDone): bumpas varje gång en
     // push-runda faktiskt målats klart på skärmen. Ref-spegeln låter timers
@@ -1930,6 +2035,7 @@ export default function HomePage() {
             if (!isTip && user) {
                 setPostCreateNudge({ id: docId, title: newEventTitle.trim() });
             }
+            if (!fulfillingWish) discardCreateDraft();
             resetCreateFlow();
         } catch (err) {
             // Bara koden till konsollen — inte hela felobjektet (se helpern).
@@ -1939,7 +2045,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeats, newEventRepeatInterval, newEventRepeatTimes, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeats, newEventRepeatInterval, newEventRepeatTimes, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, discardCreateDraft, editingEventId]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -1961,6 +2067,7 @@ export default function HomePage() {
             myWishesRef.current = [...myWishesRef.current, created];
             setWishes(prev => [...prev, created]);
             toast.success(`Önskan är ute på kartan! ✨ Den syns i ${WISH_LIFETIME_DAYS} dagar — eller tills någon skapar eventet.`);
+            discardCreateDraft();
             resetCreateFlow();
         } catch (err) {
             console.error(err);
@@ -1968,7 +2075,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventCategory, newEventDescription, user, openLogin, resetCreateFlow]);
+    }, [pickedLocation, newEventTitle, newEventCategory, newEventDescription, user, openLogin, resetCreateFlow, discardCreateDraft]);
 
     // Ta bort ett användarskapat event: Firestore-delete (reglerna avgör vem
     // som får) + optimistisk borttagning ur kartan/kortleken. Sitt eget alltid
@@ -2427,8 +2534,9 @@ export default function HomePage() {
         else t.setHours(t.getHours() + 1);
         const pad = (n: number) => String(n).padStart(2, '0');
         setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
+        restoreCreateDraft(role);
         setCreationMode('editing');
-    }, [dayOffset]);
+    }, [dayOffset, restoreCreateDraft]);
     /** Tom-promptens knapp: tipsa om något man VET händer (inget konto krävs). */
     const startTipHere = useCallback(() => startCreateHere('tip'), [startCreateHere]);
 
@@ -3543,9 +3651,15 @@ export default function HomePage() {
         if (tourAutoStartedRef.current) return;
         if (!tourPlaying) return;                       // stoppad innan vi hann starta
         if (!mapCenter) return;                         // kartan inte klar än
-        if (!userPos && !tourGpsWaitOver) return;       // ge platstjänsten en chans
+        // VALD STARTSTAD (8/10) vinner över GPS:en - ingen väntan på
+        // platstjänsten, och den GPS-landade staden skrivs inte över.
+        const chosen = readChosenCity();
+        if (!userPos && !tourGpsWaitOver && !chosen) return; // ge platstjänsten en chans
         tourAutoStartedRef.current = true;
-        if (userPos) {
+        if (chosen) {
+            tourCityIndexRef.current = nearestTourCityIndex(chosen.lat, chosen.lng);
+            flyToPoint(chosen.lat, chosen.lng, chosen.name);
+        } else if (userPos) {
             // ORTEN man är närmast (stora CITY_POINTS-listan) — inte den råa
             // GPS-punkten och inte närmsta storstad ur rundan. Samma regel som
             // skylt-knappen, så första besöket och en omstart landar likadant:
@@ -3592,6 +3706,83 @@ export default function HomePage() {
         writeStartCity({ lat: city.lat, lng: city.lng, zoom: TOUR_ZOOM, name: city.name });
         startCityPulse();                // staden får sin fulla tid från nu
     }, [userPos, tourPlaying, flyToPoint, startCityPulse]);
+
+    // ── Startstaden (8/10) ───────────────────────────────────────────────────
+    // Flyg till ett nytt startval: vald ort, eller (null) "där jag är" = orten
+    // närmast GPS:en. Utan GPS-svar än väntar vi in det via efterhämtningen
+    // ovan (blindflaggan), precis som en vanlig blindstart.
+    const flyToStartChoice = useCallback((city: CityPoint | null) => {
+        const target = city ?? (userPos ? nearestCityPoint(userPos.lat, userPos.lng) : null);
+        if (!target) {
+            if (tourAutoStartedRef.current) tourStartedBlindRef.current = true;
+            return;
+        }
+        tourAutoStartedRef.current = true;
+        tourStartedBlindRef.current = false;
+        tourCityIndexRef.current = nearestTourCityIndex(target.lat, target.lng);
+        flyToPoint(target.lat, target.lng, target.name);
+        if (!city) writeStartCity({ lat: target.lat, lng: target.lng, zoom: TOUR_ZOOM, name: target.name });
+        startCityPulse();
+    }, [userPos, flyToPoint, startCityPulse]);
+
+    const saveAccountStartChoice = useCallback((city: CityPoint | null) => {
+        if (!user) return;
+        setDoc(doc(db, 'users', user.uid), { startstad: city ? city.name : null }, { merge: true })
+            .catch(e => console.warn('Kunde inte spara startstaden:', e));
+    }, [user]);
+
+    const handleStartPickerDone = useCallback(({ city, kats }: { city: CityPoint | null; kats?: EventCategoryType[] }) => {
+        const changed = (readChosenCity()?.name ?? null) !== (city?.name ?? null);
+        writeChosenCity(city);
+        setChosenStart(city);
+        saveAccountStartChoice(city);
+        // Kategorierna blir kartans vanliga sparade filter (utils/mapFilter +
+        // users.mapFilter) - alltid synliga som brickor, 15/9-läxan håller.
+        if (kats) setMapCategories(new Set(kats));
+        setStartPicker(null);
+        setWelcomeDone(true);
+        // "Där jag är" vid första frågan = där vi redan står: inget hopp.
+        if (changed || city) flyToStartChoice(city);
+    }, [saveAccountStartChoice, flyToStartChoice]);
+
+    const handleStartPickerSkip = useCallback(() => {
+        // Hoppa över i onboardingen = dagens beteende, och frågan kommer inte
+        // igen (inte heller på kontots andra enheter). Avbryt från profilen
+        // ändrar ingenting.
+        if (startPicker?.withCategories && !readStartPickerDone()) {
+            markStartPickerDone();
+            saveAccountStartChoice(readChosenCity());
+        }
+        setStartPicker(null);
+        setWelcomeDone(true);
+    }, [startPicker, saveAccountStartChoice]);
+
+    // Kontots startstad (users.startstad), läst i kategorihydreringen nedan.
+    // Kontot vinner över enheten; saknas fältet tar kontot enhetens svar, och
+    // har ingen av dem svarat får inloggade frågan här (de ser aldrig
+    // välkomstrutan). Ref - hydreringen ligger längre ner i filen.
+    const startPickerAskedRef = useRef(false);
+    const applyAccountStartRef = useRef<(value: unknown) => void>(() => {});
+    applyAccountStartRef.current = (value: unknown) => {
+        const parsed = parseAccountStartChoice(value);
+        if (parsed.kind === 'unset') {
+            if (readStartPickerDone()) saveAccountStartChoice(readChosenCity());
+            else if (!deepLinkVisitRef.current && !startPickerAskedRef.current) {
+                startPickerAskedRef.current = true;
+                setStartPicker({ withCategories: true });
+            }
+            return;
+        }
+        const city = parsed.kind === 'city' ? parsed.city : null;
+        const before = readChosenCity()?.name ?? null;
+        writeChosenCity(city);
+        setChosenStart(city);
+        // Valet gjordes på en annan enhet: flytta bara om kartan fortfarande
+        // står orörd i startvyn - aldrig mitt i att man tittar.
+        if (before !== (city?.name ?? null) && tourPlayingRef.current && !deepLinkVisitRef.current) {
+            flyToStartChoice(city);
+        }
+    };
 
     // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
     // till eventets dag, välj det (kameran flyger dit) och stäng panelen.
@@ -4169,8 +4360,9 @@ export default function HomePage() {
             try {
                 const snap = await getDoc(doc(db, 'users', user.uid));
                 const data = snap.exists()
-                    ? snap.data() as { mapCategories?: unknown; mapFilter?: unknown; hasChildren?: unknown; age?: unknown; citySlug?: unknown }
+                    ? snap.data() as { mapCategories?: unknown; mapFilter?: unknown; hasChildren?: unknown; age?: unknown; citySlug?: unknown; startstad?: unknown }
                     : null;
+                if (!cancelled) applyAccountStartRef.current(data?.startstad);
                 // Opt-in-läget följer alltid profilen — även när en inkommande
                 // ?kategori=-länk vinner över det sparade kategorivalet.
                 profileAgeRef.current = data?.age;
@@ -4605,9 +4797,12 @@ export default function HomePage() {
             // länk till arrangörssidan (Josef 30/9, understruket). Länken
             // bara när arrangören har kommande event - sidan finns då alltid
             // (samma urval, utils/organizerPages), aldrig en tom sida.
+            // w-max (Josef 8/10): bannern får bli bredare än px-16-raden
+            // (den centreras ändå) så "Visar bara event från" ryms på en
+            // rad; taket är skärmen minus 16 px per sida, långa namn kortas.
             <div
                 onClick={() => startTransition(() => setMapOrganizer(null))}
-                className="pointer-events-auto flex cursor-pointer items-center gap-3 max-w-[88vw] rounded-2xl bg-[#006AA7] pl-4 pr-2 py-2 text-left text-white shadow-xl border border-white/20 hover:bg-[#005d93] transition animate-in fade-in slide-in-from-top-2 duration-300"
+                className="pointer-events-auto flex cursor-pointer items-center gap-3 w-max max-w-[calc(100vw-2rem)] rounded-2xl bg-[#006AA7] pl-4 pr-2 py-2 text-left text-white shadow-xl border border-white/20 hover:bg-[#005d93] transition animate-in fade-in slide-in-from-top-2 duration-300"
             >
                 <span className="min-w-0 flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-[0.14em] leading-none text-white/70">
@@ -5029,6 +5224,7 @@ export default function HomePage() {
                 saved={{ ids: savedEventIds, onRemove: handleUnsaveEvent }}
                 optInCategories={{ selected: selectedCategories, onToggle: handleToggleCategory }}
                 onOpenAbout={() => { setProfilePanelOpen(false); setWelcomeOpen(true); }}
+                startCity={{ name: chosenStart?.name ?? null, onChange: () => { setProfilePanelOpen(false); setStartPicker({ withCategories: false }); } }}
             />
 
             {/* 2. Fullskärmskarta underst */}
@@ -5134,7 +5330,7 @@ export default function HomePage() {
                     // Klick på bakgrunden stänger modalen (samma städning som
                     // Avbryt/Escape). Bara träffar PÅ överlägget självt räknas —
                     // klick inuti dialogen bubblar hit men filtreras bort här.
-                    onMouseDown={(e) => { if (e.target === e.currentTarget) resetCreateFlow(); }}
+                    onMouseDown={(e) => { if (e.target === e.currentTarget) closeCreateFlow(); }}
                 >
                     <div
                         role="dialog"
@@ -5548,7 +5744,7 @@ export default function HomePage() {
                         <div className="shrink-0 flex justify-end gap-2 border-t border-slate-100 dark:border-white/10 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-5">
                             <button
                                 type="button"
-                                onClick={resetCreateFlow}
+                                onClick={closeCreateFlow}
                                 className="px-4 py-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-semibold"
                             >
                                 Avbryt
@@ -5949,6 +6145,7 @@ export default function HomePage() {
                 reason={authModal.reason}
                 onClose={() => setAuthModal({ open: false })}
                 onOpenAbout={() => { setAuthModal({ open: false }); setWelcomeOpen(true); }}
+                startCity={{ name: chosenStart?.name ?? null, onChange: () => { setAuthModal({ open: false }); setStartPicker({ withCategories: false }); } }}
             />
 
             {/* Spridningsmodalen efter skapat event: dela → boost, två steg
@@ -5965,11 +6162,36 @@ export default function HomePage() {
                 info-knappen är riven 15/9. */}
             {welcomeOpen && (
                 <WelcomeOverlay
-                    onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
+                    onCreateAccount={() => {
+                        // Kontoskaparen först - väljaren kommer efter
+                        // registreringen (kontohydreringen frågar).
+                        setStartPicker(null);
+                        startPickerAskedRef.current = false;
+                        setWelcomeDone(true);
+                        openLogin('Skapa ett gratis konto — spara event och skapa egna');
+                    }}
                     todayEventCount={todayEventCount}
                     weekEventCount={weekEventCount}
-                    onClose={() => { setWelcomeOpen(false); setWelcomeDone(true); }}
+                    onClose={() => {
+                        setWelcomeOpen(false);
+                        // Steg 2: startstaden, en gång per enhet. Inloggade
+                        // frågas via kontohydreringen i stället.
+                        if (!user && !readStartPickerDone() && !startPickerAskedRef.current) {
+                            startPickerAskedRef.current = true;
+                            setStartPicker({ withCategories: true });
+                        } else setWelcomeDone(true);
+                    }}
                     underCard={!!selectedEvent}
+                />
+            )}
+
+            {startPicker && (
+                <StartCityPicker
+                    current={chosenStart}
+                    withCategories={startPicker.withCategories}
+                    initialCategories={mapCategories}
+                    onDone={handleStartPickerDone}
+                    onSkip={handleStartPickerSkip}
                 />
             )}
 

@@ -17,6 +17,9 @@ interface AuthModalProps {
     /** Öppna välkomstrutan (Om VADKUL). Utloggades enda väg dit sedan den
      *  flytande info-knappen revs 15/9. Utelämnad → länken döljs. */
     onOpenAbout?: () => void;
+    /** Kartans startstad (8/10) - utloggades väg att ändra den. name null =
+     *  "där jag är". Utelämnad → länken döljs. */
+    startCity?: { name: string | null; onChange: () => void };
 }
 
 /** Översätt Firebase-felkoder till begriplig svenska. */
@@ -40,7 +43,7 @@ function authErrorText(code: string): string {
  * Inloggning/registrering i en modal — man lämnar aldrig kartan.
  * Samma e-post+lösenord-flöde som gamla /login-sidan.
  */
-export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthModalProps) {
+export default function AuthModal({ open, onClose, reason, onOpenAbout, startCity }: AuthModalProps) {
     const { signIn, signInWithGoogle, register, resetPassword } = useAuth();
     // 'complete' = kompletteringssteget efter första Google-inloggningen:
     // registreringsblankettens statistik-/segmenteringsfält (ålder, kön,
@@ -518,6 +521,15 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
                         className="text-xs font-semibold text-white/50 hover:text-white transition-colors self-center"
                     >
                         Vad är VADKUL?
+                    </button>
+                )}
+                {startCity && (
+                    <button
+                        type="button"
+                        onClick={startCity.onChange}
+                        className="-mt-1 text-xs font-semibold text-white/50 hover:text-white transition-colors self-center"
+                    >
+                        Kartan startar i {startCity.name ?? 'där du är'} · Ändra
                     </button>
                 )}
                 </>

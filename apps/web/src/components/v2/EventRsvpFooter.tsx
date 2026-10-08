@@ -33,6 +33,10 @@ interface EventRsvpFooterProps {
     onVisitCta?: () => void;
     /** Vänknappen i inbjudningsbannern för utloggade: öppna inloggningen. */
     onRequireLogin?: () => void;
+    /** Toppraden (EventRsvpTopBar) har tagit över: raden göms direkt men
+     *  behåller sin plats i flödet, så det aldrig syns två
+     *  knapprader samtidigt i bytet (Josef 8/10). */
+    hidden?: boolean;
 }
 
 /** Liten profilbild i avatarraden — grå siluett för anonyma svar (inbjudna
@@ -267,7 +271,7 @@ export function EventRsvpTopBar({ event, myRsvp, onSetRsvp, onInvite, cta = null
  * (EventRsvpTopBar) över - knapparna syns alltså hela vägen.
  * Döljs i kompaktläget (EventCard) så sträck-stoppet visar titel + tid.
  */
-export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, invite, onDismissInvite, cta = null, onVisitCta, onRequireLogin }: EventRsvpFooterProps) {
+export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, invite, onDismissInvite, cta = null, onVisitCta, onRequireLogin, hidden = false }: EventRsvpFooterProps) {
     const { user } = useAuth();
     const { goingCount, interestedCount } = useRsvpCounts(event, myRsvp);
 
@@ -338,7 +342,10 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
         // under grip-zonen (39) och drag-strecken (40). -mt-px: på sin plats
         // under beskrivningen lägger sig border-t över kortets border-b i
         // stället för att bli ett dubbelstreck.
-        <div className="sticky bottom-0 z-30 -mt-px pointer-events-none">
+        <div
+            aria-hidden={hidden || undefined}
+            className={`sticky bottom-0 z-30 -mt-px pointer-events-none transition-opacity duration-75 ${hidden ? 'opacity-0 invisible' : ''}`}
+        >
             {/* Inbjudningsbannern — ovanpå footern så svaret är ett tryck bort. */}
             {invite && (
                 <div className="pointer-events-auto mx-3 mb-1.5 flex items-center gap-2 rounded-2xl bg-[#006AA7] text-white px-4 py-2.5 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -387,7 +394,11 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
             )}
             {/* Själva footern: solid platta med border-t, som kortets övriga ytor. */}
             <div className="pointer-events-auto bg-card border-t border-border px-3 py-2 flex flex-col gap-1">
-            <div className="flex items-center gap-2">
+            {/* flex-wrap: får inte allt plats (långa siffror + ANMÄL på
+                smal skärm) bryts ANMÄL/BOKA ner till en egen rad i stället
+                för att raden blir bredare än kortet och skjuter det i sidled
+                (Josef 8/10). */}
+            <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1.5">
                 {/* Avatarraden: de som kommer/är intresserade — överlappade
                     små profilbilder, anonyma som grå siluett. */}
                 {faces.length > 0 && (
@@ -401,6 +412,7 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
                     </div>
                 )}
                 <div className="flex-1" />
+                <div className="flex items-center gap-2 shrink-0">
                 <RsvpButtons
                     myRsvp={myRsvp}
                     goingCount={goingCount}
@@ -408,6 +420,7 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
                     onSetRsvp={onSetRsvp}
                     onInvite={onInvite}
                 />
+                </div>
                 {cta && <CtaPill cta={cta} onVisitCta={onVisitCta} />}
             </div>
             {/* Annons-märkningen för provisionslänkar — följde med BOKA hit

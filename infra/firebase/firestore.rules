@@ -716,6 +716,34 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
+    // FÖRTUREN till appen (8/10): oktobermejlet lovar förtur till den som
+    // bjuder med en vän som tackar ja, FB-inläggen till den som bjuder in en
+    // vän att bli medlem. forturInbjudningar/{inbjuden}_{fran} - ETT dokument
+    // per par (utils/forturInbjudan). Den INBJUDNA skriver posten själv, en
+    // gång (ingen uppdatering eller radering): 'konto' kräver riktigt konto,
+    // 'svar' kräver att svaret faktiskt ligger i eventRsvps (en exists-läsning
+    // per skapad post; anonyma svar räknas, precis som i eventRsvps). Ingen
+    // klient läser - listan tas ut med service-kontot
+    // (docs/outreach/build-forturlista.mjs).
+    match /forturInbjudningar/{postId} {
+      allow read, update, delete: if false;
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasOnly(['inbjuden', 'fran', 'typ', 'eventSlug', 'tid'])
+        && request.resource.data.inbjuden == request.auth.uid
+        && request.resource.data.fran is string
+        && request.resource.data.fran.matches('[A-Za-z0-9]{10,64}')
+        && request.resource.data.fran != request.auth.uid
+        && postId == request.auth.uid + '_' + request.resource.data.fran
+        && request.resource.data.tid == request.time
+        && ((request.resource.data.typ == 'konto'
+              && !isAnonymous()
+              && !('eventSlug' in request.resource.data))
+          || (request.resource.data.typ == 'svar'
+              && request.resource.data.eventSlug is string
+              && request.resource.data.eventSlug.matches('[0-9a-f]{16}')
+              && exists(/databases/$(database)/documents/eventRsvps/$(request.resource.data.eventSlug)/svar/$(request.auth.uid))));
+    }
+
     // 19. OUTREACH-KONTAKTER (FB-grupper, arrangörer, medlemslistan)
     // 20. OUTREACH-LOGG (varje publiceringsförsök, inkl. hela inläggstexten)
     // 21. OUTREACH-ANTECKNINGAR (Claudes insikter, Anta/Förkasta)

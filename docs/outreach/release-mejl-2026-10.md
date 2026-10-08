@@ -89,10 +89,8 @@ får City/Cityslug, och mappa kolumnerna email/firstname/city/cityslug.
 - [x] **Rules-deployen är körd** (`firebase deploy --only firestore:rules` -
       eventRsvps + eventStats-vitlistorna), annars failar svaren tyst.
       (Körd 7/10 22:21.)
-- [ ] Bestäm hur förturen bokförs: Bjud med-länken bär `?inb=1&fran=<uid>`,
-      men "vänner ur accepterade inbjudningar" (B6) är inte byggt än. Antingen
-      byggs en enkel bokföring av fran-uid vid accepterat svar, eller så mäts
-      förturen manuellt. Mejlet lovar bara "bjud in en vän som tackar ja".
+- [x] Bestäm hur förturen bokförs: byggt 8/10, se "Förturen" nedan. Kräver
+      rules-deployen INNAN webbkoden når main - annars nekas posterna tyst.
 - [ ] Notisen "när en vän tänker gå" är skriven som "på väg"/"snart" i mejlet
       (push till inbjudaren är inte byggd) - lova inte mer än så i ämnesraden.
 - [x] Siffran: 874 i ingressen och preheadern (= listan 8/10). Byggs listan
@@ -101,6 +99,32 @@ får City/Cityslug, och mappa kolumnerna email/firstname/city/cityslug.
 - [ ] Listan ombyggd 8/10 -> `medlemmar-2026-10-08.csv` (874 adresser, 840 med
       förnamn, 577 med stad, 530 med stadssideslug). Bygg om igen om utskicket
       dröjer mer än ett par dagar.
+
+## Förturen
+
+Löftet finns i två former: mejlet säger "bjud med en vän som tackar ja",
+FB-inläggen "bjud in en vän att bli medlem". Båda räknas.
+
+- En länk med `?fran=<uid>` (Bjud med, privata chatten - vilken vadkul.se-länk
+  som helst) lägger inbjudaren på besökarens enhet i 30 dagar, senaste länken
+  vinner (`apps/web/src/utils/forturInbjudan.ts`).
+- När besökaren sedan skapar konto (e-post eller Google) skrivs
+  `forturInbjudningar/{inbjuden}_{fran}` med `typ: 'konto'`; när hen svarar
+  Kommer/Intresserad (kartan eller stadssidan, även anonymt) med
+  `typ: 'svar'` + `eventSlug` (`apps/web/src/services/forturService.ts`).
+- Ett dokument per par: varje inbjudare vars vän tackar ja får förtur, även
+  om vännen bjudits av flera. Reglerna tillåter bara create av den inbjudnas
+  eget uid, och ett svar måste finnas i `eventRsvps`. Ingen klient läser.
+- Begränsning: bjuder man in från någon annans privata tråd bär länken
+  trådägarens uid, så trådägaren får krediten.
+
+Ta ut listan (läser bara forturInbjudningar, e-posten ur Auth):
+
+    PATH="$HOME/.nvm/versions/node/v22.22.0/bin:$PATH" \
+      node docs/outreach/build-forturlista.mjs
+
+Den skriver `fortur-<datum>.csv` (email, inbjudna, konto, svar, forst) -
+gitignorad, radera efter importen.
 
 ## Öppningar, klick och påminnelsen
 

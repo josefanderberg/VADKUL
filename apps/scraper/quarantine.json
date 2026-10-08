@@ -26,12 +26,8 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-01",
-      "emptyRetries": 6
-    },
-    "karlsborg": {
-      "since": "2026-09-29",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "lastRetry": "2026-10-08",
+      "emptyRetries": 7
     },
     "karlskoga": {
       "since": "2026-09-28",
@@ -52,8 +48,8 @@
     "nybro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-01",
-      "emptyRetries": 6
+      "lastRetry": "2026-10-08",
+      "emptyRetries": 7
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -66,6 +62,10 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-10-03",
       "emptyRetries": 6
+    },
+    "rumskulla-hembygdsforening": {
+      "since": "2026-10-08",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "sb-visitbastad-se": {
       "since": "2026-10-02",
