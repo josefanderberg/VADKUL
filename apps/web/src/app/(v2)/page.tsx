@@ -3734,7 +3734,7 @@ export default function HomePage() {
             .catch(e => console.warn('Kunde inte spara startstaden:', e));
     }, [user]);
 
-    const handleStartPickerDone = useCallback(({ city, kats }: { city: CityPoint | null; kats?: EventCategoryType[] }) => {
+    const handleStartPickerDone = useCallback(({ city, filter }: { city: CityPoint | null; filter?: { kats: EventCategoryType[]; pop: boolean; source: string | null } }) => {
         const changed = (readChosenCity()?.name ?? null) !== (city?.name ?? null);
         writeChosenCity(city);
         setStartPickerDone(true);
@@ -3742,7 +3742,13 @@ export default function HomePage() {
         saveAccountStartChoice(city);
         // Kategorierna blir kartans vanliga sparade filter (utils/mapFilter +
         // users.mapFilter) - alltid synliga som brickor, 15/9-läxan håller.
-        if (kats) setMapCategories(new Set(kats));
+        // 🔥 sparas med (mapFilter.pop); Fler-källan gäller besöket, som i
+        // sökpanelen - den sparas medvetet aldrig (utils/mapFilter).
+        if (filter) {
+            setMapCategories(new Set(filter.kats));
+            setPopularOnly(filter.pop);
+            setMapSource(filter.source);
+        }
         setStartPicker(null);
         setWelcomeDone(true);
         // "Där jag är" vid första frågan = där vi redan står: inget hopp.
@@ -6199,6 +6205,8 @@ export default function HomePage() {
                     current={chosenStart}
                     withCategories={startPicker.withCategories}
                     initialCategories={mapCategories}
+                    initialPopular={popularOnly}
+                    initialSource={mapSource}
                     onDone={handleStartPickerDone}
                     onSkip={handleStartPickerSkip}
                     onDismiss={() => { setStartPicker(null); setWelcomeDone(true); }}
