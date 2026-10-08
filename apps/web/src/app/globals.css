@@ -165,6 +165,16 @@
   }
 }
 
+/* Kartsidan (v2) är en helskärmsapp: inget dra-ned-för-att-uppdatera.
+   Ett svep nedåt på en panel (eventkortet, listan) kedjade annars upp till
+   sidan och laddade om den — för användaren såg det ut som att appen hoppade
+   tillbaka till startsidan (användarmejl 8/10). Stadssidorna (v1) rullar som
+   vanliga sidor och behåller beteendet. */
+html:has([data-app="v2"]),
+html:has([data-app="v2"]) body {
+  overscroll-behavior: none;
+}
+
 /* === Welcome Modal Animations === */
 @keyframes welcome-float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
