@@ -98,4 +98,12 @@ export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
     { slug: 'piteamuseum', name: 'Piteå museum', city: 'Piteå' },
     { slug: 'framnasfolkhogskola', name: 'Framnäs folkhögskola', city: 'Öjebyn' },
     { slug: 'piteaif', name: 'Piteå IF', city: 'Piteå' },
+
+    // ── Timrå (användartips via FB-meddelande 2026-10-08) ───────────────
+    // "Söråkers Folkets hus har många event men hittar inte att något var
+    // med." Bara deras FHP-/Riksteatern-turnéer och enstaka FB-event kom in;
+    // egna sajten (WordPress) saknar datum i markupen. Tillagd UTAN headless-
+    // verifiering (molnsession, FB blockerat) — 0 eventlänkar i nattloggen
+    // ⇒ kolla facebook.com/Sorakersfolketshus/events.
+    { slug: 'Sorakersfolketshus', name: 'Söråkers Folkets Hus', city: 'Timrå' },
 ];
