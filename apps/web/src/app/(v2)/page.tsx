@@ -28,6 +28,7 @@ import { inListWindow, isPopularListed } from '@/utils/popularList';
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { zoomInCenter } from '@/utils/zoomInCenter';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug } from '@/utils/organizerPages';
+import { markActive, readShouldAutoShowWelcome } from '@/utils/welcomeGate';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
@@ -808,6 +809,7 @@ export default function HomePage() {
     // välkomstrutan.
     const chromeHidden = welcomeOpen;
     const welcomeAutoShownRef = useRef(false);
+    const welcomeNewVisitRef = useRef<boolean | null>(null);
     useEffect(() => {
         if (authLoading || welcomeAutoShownRef.current) return;
         welcomeAutoShownRef.current = true;
@@ -829,8 +831,31 @@ export default function HomePage() {
                 return;
             }
         } catch { /* ingen läsbar URL — visa rutan som vanligt */ }
+        // Omladdning MITT I ett besök (iOS slängde fliken, tillbaka från
+        // arrangörssidan …) hoppar över rutan — annars ser det ut som att
+        // sidan hoppar till startsidan (användarmejl 8/10, utils/welcomeGate).
+        if (!(welcomeNewVisitRef.current ?? readShouldAutoShowWelcome())) {
+            setWelcomeDone(true);
+            return;
+        }
         setWelcomeOpen(true);
     }, [authLoading, user]);
+    // "Senast aktiv"-stämpeln som grinden ovan läser: vid mount och varje gång
+    // sidan döljs/lämnas (sista chansen innan iOS kan slänga fliken). Beslutet
+    // läses FÖRE mount-stämpeln och parkeras i en ref — welcome-effekten väntar
+    // på auth och skulle annars läsa vår egen färska stämpel.
+    useEffect(() => {
+        welcomeNewVisitRef.current = readShouldAutoShowWelcome();
+        markActive();
+        const onHide = () => { if (document.visibilityState === 'hidden') markActive(); };
+        const onPageHide = () => markActive();
+        document.addEventListener('visibilitychange', onHide);
+        window.addEventListener('pagehide', onPageHide);
+        return () => {
+            document.removeEventListener('visibilitychange', onHide);
+            window.removeEventListener('pagehide', onPageHide);
+        };
+    }, []);
 
     // Zoom-knappen i Nästa-pillen bumpar denna → V2Map zoomar in på det valda
     // eventet (klicket gör samtidigt "Nästa" i EventCard, så man landar inzoomad

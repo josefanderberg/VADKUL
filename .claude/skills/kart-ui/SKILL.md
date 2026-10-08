@@ -115,6 +115,7 @@ Dessa är etablerade beslut. Ifrågasätt dem inte i förbifarten och "återstä
 
 ## Stadssidorna och vägen in till kartan
 
+- **Välkomstrutan visas per BESÖK, inte per sidladdning** (8/10, efter användarmejlet "hoppar tillbaka till startsidan"): `utils/welcomeGate` stämplar "senast aktiv" vid mount/dold flik/pagehide, och en omladdning inom 30 min hoppar över rutan. Mobilen laddar om kartsidan av sig själv (iOS slänger bakgrundsfliken, tillbaka från arrangörssidan). Kartsidan har dessutom `overscroll-behavior: none` på html/body (globals.css) så ett svep nedåt på en panel inte drar-för-att-uppdatera.
 - **Djuplänk `?event=` HOPPAR ÖVER välkomstrutan** (ägarbeslut 1/9) — river 29/8-beslutet att kortet skulle läggas i helskärm ÖVER rutan. Har man klickat ett event på en stadssida är valet redan gjort. URL:en läses direkt i welcome-effekten; `deepLinkedRef` sätts först när eventlistan laddats och är för sen. Sätt `welcomeDone` (inte bara "visa inte"), annars öppnas aldrig landningspulsens grind.
 - **Eventets emoji på stadssidorna härleds ur `category`** via `emojiForCategory` i utils/categories. `events-destinations.json` bär INGEN `emoji` — den finns bara i kartans min-lager (fri LLM-emoji per event). `RawDest` påstod `emoji: string` fram till 1/9, vilket dolde att varje rad visade 📍.
 - **Stadssidornas listor renderar ALLT i server-HTML:n** och kapar först efter hydrering (bildsatta rader → 3 bildlösa → "Visa fler"). Det är avsiktligt för crawlbarhet — listan som "blandad" en kort stund efter sidladdning är hydreringsglappet, inte en sorteringsbugg.
