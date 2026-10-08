@@ -228,6 +228,8 @@ deploy-skillen ses över i fas 3 (nya functions-exporten). Inget annat i infra �
 - **State/data:** TanStack Query mot CDN-aggregaten + API:t; favoriter/stjärnor cacheas
   lokalt (offlineläge = appens mervärde). Ingen Firestore-SDK i appen — allt via API:t
   (mindre bundle, ingen rules-yta att underhålla, egress-kontrollen kvar på servern).
+  **ÄNDRAT 8/10 2026 (ägarbeslut): användardata går via `@react-native-firebase/firestore`
+  direkt mot webbens dokument och rules - se §10.** Eventflödet läses fortfarande bara via CDN.
 - **Auth:** Firebase Auth via `@react-native-firebase/auth`; Sign in with Apple är
   OBLIGATORISK på iOS så fort Google-inloggning finns (App Store-regel 4.8).
 - **Push: `@react-native-firebase/messaging`** — appens tokens landar i samma
@@ -304,3 +306,44 @@ Beslut som prövats mot alternativ och HÅLLIT — så resonemangen inte tappas 
    Avgörs i fas 1 — eget site ger renare cache-regler.
 4. **Android-push-nivå** — räcker FCM-notiser rakt av, eller behövs notifee för
    rikare notiser. Fas 3.
+
+---
+
+## 10. Paritet med webben före App Store (ägarbeslut 8/10 2026)
+
+Inventeringen 7/10 visade att appen hade kartan, eventkortet, sök och en enkel
+stadssida, men nästan inget av det interaktiva. Två beslut (Josef, 8/10):
+
+1. **Firestore direkt i appen.** `@react-native-firebase/firestore`, `/storage` och
+   `/messaging` mot samma dokument och rules som webben. Webbens services portas
+   nästan rakt; chatten blir live. /v1-API:t (§3) är inte längre vägen för appens
+   användardata. Eventflödet läses fortfarande bara via CDN-aggregaten.
+2. **TestFlight nu, App Store vid paritet.** v1 utan konton skickas inte till granskning.
+
+**Ordning:** native-grunden i ETT bygge (firestore/storage/messaging, expo-updates
+för OTA, bildväljare, associatedDomains/intentFilters) -> TestFlight -> resten som JS.
+
+**Gaplistan (bocka av här):**
+
+*Bara appkod / flödet*
+- [ ] Stadssidorna: hero-karta, periodval, sökfält, Fler-källor, stadstopplistan
+- [ ] Arrangörsskärm + arrangörsfilter på kartan (kräver `hostName` i appflödet)
+- [ ] Kartbanners: Veckans populära, Zooma in, Nytt sedan sist
+- [ ] Datumväljaren i dagväljaren
+- [ ] Familjefiltret + "Visa även på kartan" (opt-in-källor) i profilen
+- [ ] Listan under kortet: Har varit-sektionen, Visa/Dölj bilder
+- [ ] Kort öppnat från sök/profil/stadssida får Nästa + lista
+- [ ] Djuplänkar /e/<slug> och ?event= (AASA/assetlinks på vadkul.se + app.json)
+
+*Konto + Firestore*
+- [ ] Konton på (profil i users/{uid} direkt, radera konto)
+- [ ] Skapa event (arrangera/tipsa, serier, bild), redigera, ta bort, Mina event
+- [ ] Önska event + önskningar på kartan/stadssidan
+- [ ] Gilla synkat (users.savedEventIds + eventStats.likes), stjärnor
+- [ ] Push: FCM-token i fcmTokens, påminnelse 1 h före, helgtips, notisinställningar
+- [ ] RSVP synkat: räknare, avatarer, &fran=, inbjudningsbannern
+- [ ] Vänner, eventchatt, privat chatt
+- [ ] VADKUL-spotlight och önskningar på stadssidan
+
+*Aldrig i appen:* boost/priser/köp (Apple-reglerna, §1), PWA-installprompten,
+sådant webben själv rivit (livebilder, sidsvep, funktionsväskan).
