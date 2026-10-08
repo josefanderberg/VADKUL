@@ -1,5 +1,6 @@
 'use client';
 
+import { settleWithin, PROFILE_WRITE_WAIT_MS } from '@/utils/settleWithin';
 import { useEffect, useState } from 'react';
 import { X, LogIn, UserPlus, Check, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -179,7 +180,8 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout, startCit
         setError(null);
         try {
             const city = citySlug ? getCity(citySlug) : null;
-            await setDoc(doc(db, 'users', uid), {
+            // Högst några sekunder - se utils/settleWithin (8/10).
+            await settleWithin(setDoc(doc(db, 'users', uid), {
                 ...(age.trim() && Number.isFinite(Number(age)) ? { age: Number(age) } : {}),
                 ...(gender ? { gender } : {}),
                 ...(hasChildren ? { hasChildren: true } : {}),
@@ -189,7 +191,7 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout, startCit
                     citySource: (cityTouched ? 'manual' : 'gps') as 'gps' | 'manual',
                     cityUpdatedAt: serverTimestamp(),
                 } : {}),
-            }, { merge: true });
+            }, { merge: true }), PROFILE_WRITE_WAIT_MS);
             toast.success('Klart — profilen är sparad!');
             onClose();
         } catch (err) {
@@ -259,8 +261,7 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout, startCit
             {cityInfoOpen && (
                 <p id="auth-city-info" className="px-1 text-xs font-semibold leading-relaxed text-white/60">
                     Staden styr helgtipset på torsdagar – det som händer i och runt orten.
-                    Finns inte din ort? Välj den som ligger närmast, eller hoppa över. Tipsa
-                    oss gärna under Problem eller feedback i profilen så lägger vi till den.
+                    Finns inte din ort? Välj den som ligger närmast, eller hoppa över.
                 </p>
             )}
         </div>

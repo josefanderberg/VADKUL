@@ -1,5 +1,6 @@
 'use client';
 
+import { settleWithin, PROFILE_WRITE_WAIT_MS } from '../utils/settleWithin';
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
@@ -191,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           city = derived?.slug ? getCity(derived.slug) : null;
         } catch { /* ingen stads-prefill */ }
         const displayName = cred.user.displayName || googleName;
-        await setDoc(doc(db, 'users', cred.user.uid), {
+        await settleWithin(setDoc(doc(db, 'users', cred.user.uid), {
           uid: cred.user.uid,
           ...(cred.user.email ? { email: cred.user.email } : {}),
           ...(displayName ? { displayName } : {}),
@@ -202,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             cityUpdatedAt: serverTimestamp(),
           } : {}),
           createdAt: serverTimestamp(),
-        }, { merge: true });
+        }, { merge: true }), PROFILE_WRITE_WAIT_MS);
       } catch (e) {
         console.warn('Kunde inte spara profildata efter Google-inloggning:', e);
       }
@@ -242,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
       const { db } = await import('../lib/firebase');
-      await setDoc(doc(db, 'users', cred.user.uid), {
+      await settleWithin(setDoc(doc(db, 'users', cred.user.uid), {
         uid: cred.user.uid,
         email,
         displayName: name.trim(),
@@ -258,7 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           cityUpdatedAt: serverTimestamp(),
         } : {}),
         createdAt: serverTimestamp(),
-      }, { merge: true });
+      }, { merge: true }), PROFILE_WRITE_WAIT_MS);
     } catch (e) {
       console.warn('Kunde inte spara profildata (ålder/kön):', e);
     }
