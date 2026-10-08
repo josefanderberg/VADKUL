@@ -12,7 +12,7 @@ import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
 import FriendsSection from './FriendsSection';
 import SavedSection from './SavedSection';
-import { X, Pencil, Check, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info, LocateFixed } from 'lucide-react';
+import { X, Pencil, Check, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info, LocateFixed, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
 import { doc, getDoc, setDoc, deleteField, serverTimestamp, collection, getDocs, query, where, limit, Timestamp } from 'firebase/firestore';
@@ -21,6 +21,7 @@ import { CITIES, getCity } from '@/lib/cityUtils';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { boostedUntilLabel } from '@/utils/boostLabel';
 import { EVENT_CATEGORIES, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
+import { memberInviteUrl } from '@/utils/forturInbjudan';
 
 /** "Visa även på kartan"-raderna: opt-in-källorna + 🧸 (samma ordning som
  *  kategorikolumnen hade dem överst, innan den revs 15/9). */
@@ -497,6 +498,22 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
 
     const actionRow = 'w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800/60 transition-colors text-left';
 
+    // Personlig inbjudningslänk (förturen till appen, 8/10): vännen som skapar
+    // konto via länken bokförs i forturInbjudningar (se utils/forturInbjudan).
+    const handleInviteMember = async () => {
+        if (!user) return;
+        const url = memberInviteUrl(window.location.origin, user.uid);
+        const text = 'Häng med på VADKUL - kartan över allt kul som händer nära dig!';
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: 'VADKUL', text, url });
+                return;
+            }
+            await navigator.clipboard.writeText(`${text} ${url}`);
+            toast.success('Din inbjudningslänk är kopierad!');
+        } catch { /* avbruten delning är inget fel */ }
+    };
+
     return (
         <>
             {/* Klick utanför stänger panelen. z-[1164]/[1165] (som gamla sparat-panelen hade):
@@ -601,6 +618,20 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                 onRemove={saved.onRemove}
                             />
                         )}
+
+                        {/* Bjud in en vän (8/10): den personliga ?fran=-länken.
+                            Vänner som skapar konto via den ger förtur till appen. */}
+                        <div className="border-t border-slate-100 dark:border-slate-800">
+                            <button
+                                type="button"
+                                onClick={handleInviteMember}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                            >
+                                <UserPlus size={16} className="text-[#006AA7] shrink-0" />
+                                <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Bjud in en vän</span>
+                                <span className="text-[10px] font-bold text-slate-400">få appen först</span>
+                            </button>
+                        </div>
 
                         {/* Vänner (spår 3, 7/10 kväll): förfrågningar, vänlistan med
                             vännernas kommande Kommer/Intresserad-svar, och

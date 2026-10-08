@@ -51,6 +51,15 @@ export function franFromSearch(search: string): string | null {
     return fran && UID_RE.test(fran) ? fran : null;
 }
 
+/**
+ * Den personliga inbjudningslänken (profilens "Bjud in en vän"): startsidan
+ * med ?fran=<uid>, samma parameter som Bjud med bär. Ingen eventkoppling -
+ * vännen räknas när hen skapar konto (FB-inläggens "bli medlem").
+ */
+export function memberInviteUrl(origin: string, uid: string): string {
+    return `${origin}/?fran=${encodeURIComponent(uid)}`;
+}
+
 /** Det som skrivs till lagringen - exporterad för testerna. */
 export function serializePendingFortur(fran: string, nowMs: number): string {
     return JSON.stringify({ fran, at: nowMs });

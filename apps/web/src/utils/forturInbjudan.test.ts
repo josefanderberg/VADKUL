@@ -3,6 +3,7 @@ import {
     FORTUR_MAX_AGE_MS,
     forturPost,
     franFromSearch,
+    memberInviteUrl,
     parsePendingFortur,
     serializePendingFortur,
 } from './forturInbjudan';
@@ -91,5 +92,13 @@ describe('forturPost', () => {
 
     it('slug-mönstret matchar eventShareSlug (samma som i reglerna)', () => {
         expect(SLUG).toMatch(/^[0-9a-f]{16}$/);
+    });
+});
+
+describe('memberInviteUrl', () => {
+    it('ger startsidan med inbjudarens uid, som franFromSearch läser tillbaka', () => {
+        const url = memberInviteUrl('https://vadkul.se', INBJUDARE);
+        expect(url).toBe(`https://vadkul.se/?fran=${INBJUDARE}`);
+        expect(franFromSearch(new URL(url).search)).toBe(INBJUDARE);
     });
 });
