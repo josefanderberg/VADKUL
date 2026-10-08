@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-07T06:12:12.347Z",
+  "generatedAt": "2026-10-08T05:16:04.972Z",
   "counts": {
     "fel": 0,
-    "varning": 36,
-    "nollkoordinatTotalt": 711
+    "varning": 41,
+    "nollkoordinatTotalt": 684
   },
   "alerts": [
     {
@@ -23,9 +23,16 @@
     {
       "level": "varning",
       "kind": "tyst",
-      "source": "rumskulla-hembygdsforening",
-      "since": "2026-09-17",
-      "message": "gav 1 event 2026-09-10, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+      "source": "jonkoping",
+      "since": "2026-10-01",
+      "message": "gav 97 event 2026-09-28, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "svedala-kommun",
+      "since": "2026-10-01",
+      "message": "gav 120 event 2026-09-28, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -42,26 +49,32 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Fosie församling",
+      "message": "6 av 10 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Fässbergs församling",
+      "message": "12 av 19 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Hedemora Kommun",
-      "message": "33 av 51 kommande event ligger 2026-10-27 — sajtvitt datum i stället för eventets?"
+      "message": "33 av 39 kommande event ligger 2026-10-27 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Helsingborgs Gustav Adolfs församling",
+      "message": "7 av 11 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Hägerstens församling",
-      "message": "9 av 13 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Kalmar-Yttergrans församling",
-      "message": "6 av 10 kommande event ligger 2026-10-07 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Kolmårdens församling",
-      "message": "7 av 10 kommande event ligger 2026-10-07 — sajtvitt datum i stället för eventets?"
+      "message": "9 av 12 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -72,8 +85,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Mariestads församling",
-      "message": "8 av 13 kommande event ligger 2026-10-07 — sajtvitt datum i stället för eventets?"
+      "source": "Mora församling",
+      "message": "11 av 16 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -84,8 +97,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Nynäshamns församling",
-      "message": "6 av 10 kommande event ligger 2026-10-07 — sajtvitt datum i stället för eventets?"
+      "source": "Norrköpings Borgs församling",
+      "message": "7 av 11 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Tierps pastorat",
+      "message": "7 av 11 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Trollhättans församling",
+      "message": "13 av 21 kommande event ligger 2026-10-08 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -96,20 +121,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Ålidhems församling",
-      "message": "10 av 16 kommande event ligger 2026-10-07 — sajtvitt datum i stället för eventets?"
+      "source": "Visit Vemdalen",
+      "message": "86 av 123 kommande event ligger 2026-10-10 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Örebro läns museum",
-      "message": "14 av 17 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+      "message": "14 av 19 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "711 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 41, Billetto 33, Visit Vemdalen 24, Gotlands Museum 24, Equmenia 23"
+      "source": "684 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Visit Vemdalen 76, NBV 39, Billetto 33, Gotlands Museum 24, Equmenia 21"
     },
     {
       "level": "varning",
@@ -121,7 +146,13 @@
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (10 av 316 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (10 av 315 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Visit Vemdalen",
+      "message": "invariant-vakten larmar (85 av 123 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -157,13 +188,6 @@
       "source": "gotska-sandons-hembygdsforening",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "karlsborg",
-      "since": "2026-09-29",
-      "message": "i karantän sedan 2026-09-29: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
@@ -206,6 +230,13 @@
       "source": "rosendals-tradgard",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "rumskulla-hembygdsforening",
+      "since": "2026-10-08",
+      "message": "i karantän sedan 2026-10-08: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
