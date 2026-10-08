@@ -33,14 +33,36 @@ export function shouldAutoShowWelcome(raw: string | null, nowMs: number): boolea
     return nowMs - t > WELCOME_RESUME_MS;
 }
 
+/**
+ * ALLTID FÖR UTLOGGADE vid en ny navigering (ägarbeslut 8/10 kväll, Josef:
+ * "kan den inte alltid visas vid utloggat läge?"): ny flik, inskriven adress
+ * eller länk ('navigate') får alltid rutan. Bara när WEBBLÄSAREN laddar om
+ * sidan av sig själv eller via tillbaka ('reload'/'back_forward' - iOS
+ * slänger bakgrundsfliken, tillbaka från arrangörssidan) gäller 30-minuters-
+ * regeln ovan, så Håkan-felet ("hoppar till startsidan") inte kommer tillbaka.
+ * Okänd typ (gamla webbläsare) = bara 30-minutersregeln. REN funktion.
+ */
+export function shouldAutoShowWelcomeFor(navType: string | null, raw: string | null, nowMs: number): boolean {
+    if (navType === 'navigate') return true;
+    return shouldAutoShowWelcome(raw, nowMs);
+}
+
+/** Sidladdningens typ ur Navigation Timing, eller null. */
+function readNavigationType(): string | null {
+    try {
+        const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+        return nav?.type ?? null;
+    } catch {
+        return null;
+    }
+}
+
 /** Läs lagringen och avgör. Privat läge m.fl. kastar → behandla som nytt besök. */
 export function readShouldAutoShowWelcome(nowMs: number = Date.now()): boolean {
     if (typeof window === 'undefined') return true;
-    try {
-        return shouldAutoShowWelcome(window.localStorage.getItem(LAST_ACTIVE_KEY), nowMs);
-    } catch {
-        return true;
-    }
+    let raw: string | null = null;
+    try { raw = window.localStorage.getItem(LAST_ACTIVE_KEY); } catch { return true; }
+    return shouldAutoShowWelcomeFor(readNavigationType(), raw, nowMs);
 }
 
 /** Stämpla "senast aktiv". Tyst vid fel — det här är en bekvämlighet. */

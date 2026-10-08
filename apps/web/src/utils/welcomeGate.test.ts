@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldAutoShowWelcome, WELCOME_RESUME_MS } from './welcomeGate';
+import { shouldAutoShowWelcome, shouldAutoShowWelcomeFor, WELCOME_RESUME_MS } from './welcomeGate';
 
 // Välkomstrutan får inte dyka upp igen när mobilen laddar om sidan mitt i ett
 // besök (iOS slänger bakgrundsfliken, tillbaka från arrangörssidan …).
@@ -30,5 +30,23 @@ describe('shouldAutoShowWelcome', () => {
 
     it('framtida tidsstämpel (flyttad klocka) räknas som samma besök', () => {
         expect(shouldAutoShowWelcome(String(NOW + 60_000), NOW)).toBe(false);
+    });
+});
+
+describe('shouldAutoShowWelcomeFor (alltid vid ny navigering, 8/10 kväll)', () => {
+    const recent = String(NOW - 60_000);
+    it('ny flik/inskriven adress/länk får alltid rutan, även mitt i ett besök', () => {
+        expect(shouldAutoShowWelcomeFor('navigate', recent, NOW)).toBe(true);
+    });
+
+    it('omladdning och tillbaka följer 30-minutersregeln', () => {
+        expect(shouldAutoShowWelcomeFor('reload', recent, NOW)).toBe(false);
+        expect(shouldAutoShowWelcomeFor('back_forward', recent, NOW)).toBe(false);
+        expect(shouldAutoShowWelcomeFor('reload', String(NOW - WELCOME_RESUME_MS - 1), NOW)).toBe(true);
+    });
+
+    it('okänd typ faller tillbaka på 30-minutersregeln', () => {
+        expect(shouldAutoShowWelcomeFor(null, recent, NOW)).toBe(false);
+        expect(shouldAutoShowWelcomeFor(null, null, NOW)).toBe(true);
     });
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, LocateFixed, MapPin, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, LocateFixed, MapPin, Search, X } from 'lucide-react';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from '@/lib/firebase';
 import { searchCities, type CityPoint } from '@/utils/cityPoints';
@@ -18,8 +18,11 @@ interface StartCityPickerProps {
     initialCategories: ReadonlySet<EventCategoryType>;
     /** Klart. city null = "där jag är". kats bara när kategoristeget visats. */
     onDone: (choice: { city: CityPoint | null; kats?: EventCategoryType[] }) => void;
-    /** Hoppa över / stäng - inget ändras. */
+    /** "Hoppa över" - ett SVAR: dagens beteende, frågan kommer inte igen. */
     onSkip: () => void;
+    /** Kryss/utanför/Escape - INGET svar (Josef 8/10: "man kanske vill kunna
+     *  välja"): rutan stängs men frågan kommer igen nästa besök. */
+    onDismiss: () => void;
 }
 
 const CATEGORY_KEYS = (Object.keys(EVENT_CATEGORIES) as EventCategoryType[]).filter(k => k !== 'other');
@@ -35,14 +38,14 @@ function track(name: string) {
  * kartans vanliga sparade filter). "Hoppa över" ger dagens beteende.
  * Samma kortspråk som välkomstrutan.
  */
-export default function StartCityPicker({ current, withCategories, initialCategories, onDone, onSkip }: StartCityPickerProps) {
+export default function StartCityPicker({ current, withCategories, initialCategories, onDone, onSkip, onDismiss }: StartCityPickerProps) {
     const [step, setStep] = useState<'city' | 'categories'>('city');
     const [query, setQuery] = useState('');
     const [city, setCity] = useState<CityPoint | null>(current);
     const [kats, setKats] = useState<Set<EventCategoryType>>(() => new Set(initialCategories));
     const cardRef = useRef<HTMLDivElement>(null);
-    const onSkipRef = useRef(onSkip);
-    onSkipRef.current = onSkip;
+    const onDismissRef = useRef(onDismiss);
+    onDismissRef.current = onDismiss;
 
     const popular = useMemo(() => popularStartCities(12), []);
     const hits = useMemo(() => searchCities(query, 8), [query]);
@@ -50,7 +53,7 @@ export default function StartCityPicker({ current, withCategories, initialCatego
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') { track('startstad_skip'); onSkipRef.current(); }
+            if (e.key === 'Escape') { track('startstad_dismiss'); onDismissRef.current(); }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
@@ -73,11 +76,19 @@ export default function StartCityPicker({ current, withCategories, initialCatego
 
     return (
         <div role="dialog" aria-modal aria-label="Välj startstad" className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/[0.32]" onClick={() => { track('startstad_skip'); onSkip(); }} />
+            <div className="absolute inset-0 bg-black/[0.32]" onClick={() => { track('startstad_dismiss'); onDismiss(); }} />
             <div
                 ref={cardRef}
                 className="relative w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden bg-white rounded-[28px] shadow-2xl animate-in fade-in zoom-in-95 duration-300 px-6 pt-6 pb-5 flex flex-col gap-4"
             >
+                <button
+                    type="button"
+                    onClick={() => { track('startstad_dismiss'); onDismiss(); }}
+                    aria-label="Stäng"
+                    className="absolute top-3 right-3 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                    <X size={18} />
+                </button>
                 {step === 'city' ? (
                     <>
                         <div className="flex flex-col gap-1 text-center">
