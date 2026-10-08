@@ -3,6 +3,7 @@ import { collection, deleteDoc, doc, getDocs, limit as qLimit, orderBy, query, s
 import { db } from '../lib/firebase';
 import { eventShareSlug } from '../utils/eventShareSlug';
 import { rsvpShareId } from '../utils/rsvpTransition';
+import { recordForturInvite } from './forturService';
 import type { EventRsvpStatus } from '@/types';
 
 /**
@@ -54,6 +55,9 @@ export async function setRsvpStatus(
             ...(who.photoURL ? { photoURL: who.photoURL } : {}),
             createdAt: serverTimestamp(),
         });
+        // Förturen (8/10): kom man hit via en inbjudningslänk är det här
+        // "vännen som tackar ja" - inbjudaren bokförs (no-op annars).
+        void recordForturInvite(uid, 'svar', ref.parent.parent!.id);
     }
     facesCache.delete(ref.parent.parent!.id);
 }
