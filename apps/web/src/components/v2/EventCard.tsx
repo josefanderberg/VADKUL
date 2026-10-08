@@ -997,6 +997,8 @@ type ListSpot = {
     view: 'info' | 'chat' | 'nearby';
     /** Multieventets väljarlista som var framme, annars null. */
     group: LinkEvent[] | null;
+    /** Arkets höjd - bara sökarkets post (där öppnas arket igen). */
+    heightVh?: number;
 };
 
 interface EventCardProps {
@@ -1181,9 +1183,12 @@ interface EventCardProps {
      *  de nya eventen under en avdelare (utils/listZoomRings). Utelämnad =
      *  listan slutar som förut (utzoomat förbi golvet). */
     onListZoomOut?: (popularTab: boolean) => void;
+    /** Öppnar sökarket igen (sidans openSearchSheet) - ← ☰ på en träff man
+     *  valt ur arket tar en tillbaka till sökningen (8/10). */
+    onOpenSearchSheet?: () => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onZoomOutTo, onListZoomOut }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onZoomOutTo, onListZoomOut, onOpenSearchSheet }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -1372,6 +1377,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // utzoomning från listans botten (utils/listZoomRings). Nollas med
     // eventet - nästa kort börjar om på kartans nya zoomsteg.
     const [listRings, setListRings] = useState<ReadonlySet<string>[]>([]);
+    // Var man stod i SÖKARKETS lista när man valde en träff (8/10) - ← ☰ på
+    // det valda eventet öppnar arket igen där (sökord, lista, scroll, höjd).
+    const [searchReturn, setSearchReturn] = useState<ListSpot | null>(null);
     const [listZoomPending, setListZoomPending] = useState(false);
     // scrollTop vid senaste steget: auto-steget kräver att man scrollat
     // VIDARE sedan dess, annars kunde ett steg som gav få rader (botten
@@ -1472,7 +1480,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const listPickIdRef = useRef<string | null>(null);
     // Bakåt till en ListSpot väntar på att eventet (och ev. väljarlistan)
     // landat innan listan läggs tillbaka - se återställnings-effekten.
-    const pendingSpotRef = useRef<{ evtId: string; spot: ListSpot; groupAsked: boolean; armedAt: number } | null>(null);
+    const pendingSpotRef = useRef<{ evtId: string; spot: ListSpot; groupAsked: boolean; armedAt: number; search?: boolean } | null>(null);
+    // VAL UR SÖKARKET (8/10): kortet öppnas på arkets höjd i stället för att
+    // hoppa ner till default-höjden ("då ska ju inte det fönstret man är på
+    // ändras i höjd led"), och ← ☰ tar en tillbaka till sökningen.
+    const searchPickIdRef = useRef<string | null>(null);
     const restoreRafRef = useRef(0);
     const isFreshOpenRef = useRef(false);
     // Senast förbrukade helskärmsbegäran (fullOpenNonce) — se ankar-effekten.
@@ -1959,6 +1971,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             && Date.now() - step.armedAt < DAY_STEP_LANDING_MS;
         const isListPick = listPickIdRef.current === selectedEvent.id;
         listPickIdRef.current = null;
+        const isSearchPick = searchPickIdRef.current === selectedEvent.id;
+        searchPickIdRef.current = null;
         if (isPickNext) {
             // Intern navigering (Nästa/Bakåt) drev fram detta event — behåll
             // ankare, besökt-set OCH bakåt/framåt-stackarna.
@@ -1983,6 +1997,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             setVisitedEventIds(new Set());
             setHistoryStack([]);
             setForwardStack([]);
+            // Ett nytt val utifrån (kartklick) lämnar sökningen - inte
+            // träffen man just valde ur sökarket.
+            if (!isSearchPick) setSearchReturn(null);
         }
 
         setIsAnimating(true);
@@ -1992,7 +2009,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // redan är öppet behålls höjden (inget hopp).
         // Ett kort som var på väg ner i en stängning (höjd under peek-gränsen)
         // räknas också som ny öppning — annars öppnas det nya eventet osynligt.
-        const freshOpen = prevId === null || heightVhRef.current < collapsedVhRef.current;
+        // En träff ur sökarket är INTE en ny öppning: arket står redan uppe
+        // och kortet tar över på samma höjd (8/10, "mer statiskt").
+        const freshOpen = !isSearchPick && (prevId === null || heightVhRef.current < collapsedVhRef.current);
         isFreshOpenRef.current = freshOpen;
         // Stod kortet i KOMPAKTLÄGET (30/9) följer läget med till nästa event
         // i stället för den råa höjden: sträcket sitter olika högt beroende på
@@ -2227,7 +2246,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     useEffect(() => {
         // Rensa först när HELA arket är stängt — sökarket (filterknappen uppe
         // till höger) lever utan valt event och ska behålla termen.
-        if (!selectedEvent && !searchSheet) { setCardSearchQ(''); setCardSearchOpen(false); }
+        if (!selectedEvent && !searchSheet) { setCardSearchQ(''); setCardSearchOpen(false); setSearchReturn(null); }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEvent, searchSheet]);
     // SÖKARKETS ÖPPNING (7/10 kväll): fast höjd (sökrad + chips), chipsen
@@ -2236,14 +2255,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // filterknappens skipFocus).
     useEffect(() => {
         if (!searchOnly) return;
+        // Tillbaka till sökningen (← ☰, 8/10): samma höjd som när man valde
+        // träffen; lista och scroll läggs tillbaka av effekten längre ner.
+        const back = pendingSpotRef.current?.search ? pendingSpotRef.current.spot : null;
         setCardSearchOpen(true);
-        setCardView('info');
+        if (!back) setCardView('info');
         setIsAnimating(true);
         const raf = requestAnimationFrame(() => {
             // Är kartfiltret redan på visas träfflistan direkt (7/10 kväll)
             // — då öppnar arket fullhöjt så listan faktiskt syns.
-            updateHeightVh(cardFilterOn ? maxVhRef.current : searchSheetVh());
-            if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+            updateHeightVh(back?.heightVh ?? (cardFilterOn ? maxVhRef.current : searchSheetVh()));
+            if (!back && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
         });
         return () => cancelAnimationFrame(raf);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2433,6 +2455,20 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         setListRings([]);
         setListZoomPending(false);
         listZoomScrollRef.current = 0;
+    }, [searchOnly]);
+    // TILLBAKA TILL SÖKNINGEN (8/10): ligger efter nollställningarna
+    // (eventbytet, ringarna ovan) så listans läge vinner i samma commit.
+    useEffect(() => {
+        const p = pendingSpotRef.current;
+        if (!searchOnly || !p?.search) return;
+        pendingSpotRef.current = null;
+        setSearchReturn(null);
+        setListTab(p.spot.tab);
+        setDaysVisibleCount(p.spot.daysVisible);
+        setListRings(p.spot.rings);
+        setCardView(p.spot.view);
+        restoreScrollTo(p.spot.scrollTop);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchOnly]);
     // Kartan zoomar 0,9 s + listans lugnade ruta 0,6 s - sedan står den nya
     // ringen (eller inget nytt än) i listan.
@@ -3141,12 +3177,27 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // väljarlistan), och då tar den en till exakt samma ställe i listan
     // (ListSpot). Utan en sådan post: sidans gamla väg till väljarlistan.
     const listReturnEntry = backEntry?.spot && backEntry.spot.pickedId === selectedEvent?.id ? backEntry : undefined;
-    const showBackToGroup = !chooserActive && cardView === 'info' && (!!listReturnEntry || !!onBackToGroup);
-    const backToListCount = listReturnEntry ? (listReturnEntry.spot!.group?.length ?? 0) : backToGroupCount;
+    // Träffen man valde ur sökarket: pilen tar en tillbaka till sökningen.
+    const searchReturnHere = !listReturnEntry && !!searchReturn && !!onOpenSearchSheet
+        && searchReturn.pickedId === selectedEvent?.id;
+    const showBackToGroup = !chooserActive && cardView === 'info'
+        && (!!listReturnEntry || searchReturnHere || !!onBackToGroup);
+    const backToListCount = listReturnEntry ? (listReturnEntry.spot!.group?.length ?? 0)
+        : searchReturnHere ? 0 : backToGroupCount;
     const handleBackToList = () => {
         if (listReturnEntry) handleHistoryBack();
+        else if (searchReturnHere && searchReturn) {
+            if (didDragRef.current) { didDragRef.current = false; return; }
+            pendingSpotRef.current = { evtId: '', spot: searchReturn, groupAsked: false, armedAt: Date.now(), search: true };
+            onOpenSearchSheet?.();
+        }
         else onBackToGroup?.();
     };
+    // EN PIL TILLBAKA (ägarbeslut 8/10, Josef: "det ska bara vara en pil
+    // tillbaka om man går ifrån ett multi event och ska tillbaka till listan
+    // man var på. alltså inte med en sådan emoji i"): leder Bakåt till samma
+    // ställe i listan som ← ☰, göms emoji-brickan - bara pilen står kvar.
+    const hideHistoryBack = showBackToGroup && (!!listReturnEntry || (searchReturnHere && !backEvent));
 
     // Antal event i föregående events grupp (om det var en multibricka).
     // Räknas bara på dagens lista — över ett dagbyte visas ingen siffra.
@@ -3232,7 +3283,24 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // visade perioden väljs direkt som förut. Delas av listan,
     // arrangörsraden och väljarlistans fortsättning.
     const rememberListSpot = (picked: LinkEvent) => {
-        if (!selectedEvent) return; // sökarket: inget event att gå tillbaka till
+        if (!selectedEvent) {
+            // SÖKARKET (8/10): inget event att backa till - posten bor i
+            // searchReturn och ← ☰ öppnar arket igen.
+            if (searchOnly) {
+                setSearchReturn({
+                    pickedId: picked.id,
+                    scrollTop: scrollContainerRef.current?.scrollTop ?? 0,
+                    daysVisible: daysVisibleCount,
+                    tab: listTab,
+                    rings: listRings,
+                    view: cardView,
+                    group: null,
+                    heightVh: heightVhRef.current,
+                });
+                searchPickIdRef.current = picked.id;
+            }
+            return;
+        }
         pushHistory({
             evt: selectedEvent,
             dayOffset,
@@ -3481,7 +3549,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                 gruppen, som motpol till Nästa. Finns historik visar den
                                 föregående events emoji + bakåt-pil och tar en tillbaka;
                                 är man på första eventet (inget före än) visas en dämpad
-                                bakåt-pil. */}
+                                bakåt-pil. UNDANTAG 8/10: leder den till samma ställe
+                                i listan som ← ☰ göms den (hideHistoryBack) - en pil. */}
+                            {!hideHistoryBack && (
                             <button
                                 type="button"
                                 onClick={handleHistoryBack}
@@ -3516,6 +3586,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     <ArrowLeft size={18} className="text-[#006AA7]" />
                                 )}
                             </button>
+                            )}
                             {/* MULTIEVENT-PAGERN "1/11 →" (flyttad hit 16/9): satt
                                 tidigare på kortets platsrad och trängde undan tid,
                                 avstånd och plats på mobil. Här står den direkt till
@@ -3542,10 +3613,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     onPointerCancel={onButtonPointerUp}
                                     aria-label={backToListCount > 1
                                         ? `Tillbaka till de ${backToListCount} eventen på platsen`
-                                        : 'Tillbaka till listan'}
+                                        : searchReturnHere ? 'Tillbaka till sökningen' : 'Tillbaka till listan'}
                                     title={backToListCount > 1
                                         ? `Tillbaka till de ${backToListCount} eventen på platsen`
-                                        : 'Tillbaka till listan'}
+                                        : searchReturnHere ? 'Tillbaka till sökningen' : 'Tillbaka till listan'}
                                     className={`pointer-events-auto shrink-0${navMlAuto} h-[38px] px-3 flex items-center gap-1 bg-white/30 backdrop-blur-md rounded-full shadow-xl border border-white/50 text-[#006AA7] box-border select-none hover:bg-white/50 active:scale-95 transition-all`}
                                 >
                                     <ArrowLeft size={13} strokeWidth={2.5} className="shrink-0" />

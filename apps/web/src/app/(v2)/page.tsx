@@ -3369,6 +3369,10 @@ export default function HomePage() {
      * flytta en till en vy man inte bett om.
      */
     const handleSelectEventFromMap = useCallback((evt: LinkEvent | null) => {
+        // Tom karta-tap stänger också SÖKARKET (8/10, Josef: "det stängs
+        // inte ner automatiskt när man klickar på kartan") - arket har inget
+        // valt event, så null-valet nedan ändrade ingenting för det.
+        if (!evt) setSearchSheetOpen(false);
         selectEventSmooth(evt);
     }, [selectEventSmooth]);
 
@@ -6059,6 +6063,8 @@ export default function HomePage() {
                 // Listans botten zoomar ut kartan (8/10) - inte under
                 // golvet där "runtomkring" blir halva landet.
                 onListZoomOut={listCanZoomOut ? handleListZoomOut : undefined}
+                // ← ☰ på en träff ur sökarket öppnar arket igen (8/10).
+                onOpenSearchSheet={openSearchSheet}
                 // Kategorichipsen i kortet (6/10, ersätter Lista-ikonen):
                 // SAMMA filter och siffror som sökpanelen — ett val smalnar
                 // listan i kortet och kartan bakom, och persisteras som
