@@ -1,11 +1,12 @@
 # Social & Marknadsföring
 
-## Facebook-scraping
-Vi behöver bygga ut scraper-botten för att automatiskt hämta in lokala events från Facebook-grupper och sidor. Detta kommer öka mängden innehåll i appen dramatiskt och se till att användarna alltid hittar något kul att göra.
+Den här filen är ersatt. Marknadsföringen bor numera här:
 
-- [ ] Identifiera relevanta Facebook-grupper i Kronoberg
-- [ ] Bygga ut scraper-botten
-- [ ] Automatisera hämtning av events
-
-## Text till videon
-*[Skriv texten till videon här när vi har den klar]*
+- **Inlägg på Facebook och Instagram:** stilregler och planerbara inlägg i
+  [social/inlagg-plan.md](social/inlagg-plan.md). Instagram-versionerna av stadsinläggen
+  publiceras av launchd-jobbet `se.vadkul.ig-queue` (se `infra/launchd/README.md`).
+- **Videoinlägg och autopublicering** till TikTok, Reels, Shorts och Facebook: Vad
+  kul-studion, se `vadkulyt/README.md`.
+- **Mejl till arrangörer och användare:** [outreach/README.md](outreach/README.md).
+- **Facebook-skrapningen** (som den här filen ursprungligen handlade om) är byggd och körs
+  varje natt: [scrapers/facebook.md](scrapers/facebook.md).

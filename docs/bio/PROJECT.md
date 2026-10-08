@@ -1,3 +1,6 @@
+> **Historik.** Skrivet under Vite/Leaflet-tiden och inaktuellt (webben kör Next.js och MapLibre).
+> Aktuell översikt: [../PM.md](../PM.md) och [../README.md](../README.md).
+
 # VADKUL Project Management
 
 > Last Updated: 2026-02-06

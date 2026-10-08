@@ -1,50 +1,36 @@
 # VADKUL – Produktplan
 
-> Enkel översikt för att hålla koll på vad vi bygger, varför och vad som är på gång.
+> Kort översikt. Den levande färdplanen (läget, nästa steg, löpande rutiner) är
+> Claude-dokumentet [Vadkul – roadmap och nästa steg](https://claude.ai/code/artifact/e10eaead-e076-44cd-9c71-0066e5769864).
+> Alla arbetsdokument listas i [README.md](README.md).
 
-## Note
-npm run dashboard
+## Vision
 
-npm run dev
+**Hitta spontana events nära dig – i realtid.** En karta över allt som händer i Sverige,
+på webben (vadkul.se) och i appen.
 
-npm run today
+## Delarna
 
-npm run create-event
+| Del | Var | Läs först |
+|---|---|---|
+| Webben (karta, stadssidor, arrangörssidor) | `apps/web` | `.claude/skills/kart-ui/` |
+| Pipelinen (skrapning → Firestore → SQLite → aggregat) | `apps/scraper` | [scrapers/STATUS.md](scrapers/STATUS.md), `.claude/skills/pipeline/` |
+| Cloud Functions och /v1-API:t | `apps/functions` | [app-plattform-plan.md](app-plattform-plan.md) |
+| Kontraktet (`@vadkul/kontrakt` på npm) | `packages/kontrakt` | `../CLAUDE.md` |
+| Appen (Expo, MapLibre) | repot `vadkul-app` | [app-plattform-plan.md](app-plattform-plan.md) |
+| Marknadsföring och arrangörsmejl | repot `vadkulyt` (studion) | [outreach/README.md](outreach/README.md) |
 
-npm run start
+## Kommandon
 
-## 📚 Dokument & resurser
+```sh
+npm run dev       # dev-servern (kolla lsof -i :3000 först) + nattens larmlista
+npm run alerts    # nattens samlade skraplarm
+```
 
-[PROJECT.md](bio/PROJECT.md) – Teknisk projektöversikt och arkitektur
-[README.md](bio/README.md) – Introduktion och kom-igång-guide
-[AI_CONTENT.txt](bio/AI_CONTENT.txt) – AI-genererat innehåll och texter
-[social.md](social.md) – Facebook-scraping och marknadsföring
+## Att verifiera
 
-## 🎯 Vision
-
-**Hitta spontana events nära dig – i realtid.**
-
-VADKUL hjälper folk att upptäcka vad som händer just nu. Enkel sökning, bra karta, snabb bokning.
-
-## 🗂️ Områden
-
-### 1. Sökning & Upptäck
-**Mål:** Bättre sökfunktion med autocomplete som täcker alla events – inte bara de nära dig.
-
-- [ ] Autocomplete-sökning på alla events
-- [ ] Kartvy (redan klar ✅)
-- [ ] Snabb-modal / detaljsida när man klickar på ett event
-- [ ] VERIFIERA på mobil i prod: eventkortet ska gå att dra/scrolla även när
-      fingret börjar på en knapp (Anmäl/chatten/listan) — fixat 31/8
-      (`fe1f0c3`, pointer-capture på knappen själv + klick-svalning efter
-      drag). Rena klick och chattfältets textmarkering ska funka som vanligt.
-      **Ta bort den här raden så fort det är bekräftat klart.**
-
-### 2. Event-scraping
-**Mål:** Fyll appen med lokalt innehåll automatiskt.
-
-- [ ] Tickster / Upplev Växjö (utöka geografiskt)
-- [ ] Eventbrite – Kronoberg-regionen
-
-### 3. Marknadsföring
-Se [social.md](social.md) för Facebook-scraping och videotexter.
+- [ ] På mobil i prod: eventkortet ska gå att dra/scrolla även när fingret börjar på en
+      knapp (Anmäl/chatten/listan) — fixat 31/8 (`fe1f0c3`, pointer-capture på knappen
+      själv + klick-svalning efter drag). Rena klick och chattfältets textmarkering ska
+      funka som vanligt. **Ta bort raden så fort det är bekräftat.**
+- [ ] Vänflödet och privata chatten i webbläsaren, se [socialt-lager.md](socialt-lager.md).
