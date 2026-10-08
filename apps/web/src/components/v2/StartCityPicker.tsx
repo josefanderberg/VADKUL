@@ -7,6 +7,8 @@ import { analytics } from '@/lib/firebase';
 import { searchCities, type CityPoint } from '@/utils/cityPoints';
 import { popularStartCities, START_CITY_COUNT } from '@/utils/startChoice';
 import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
+import { SOURCE_DEFS } from '@/utils/sources';
+import { SOURCE_EMOJI } from './CategoryChipRow';
 
 interface StartCityPickerProps {
     /** Nuvarande val (markeras), null = "där jag är". */
@@ -16,8 +18,14 @@ interface StartCityPickerProps {
     withCategories: boolean;
     /** Förvalda kategorier i steg 2 (kartans nuvarande filter). */
     initialCategories: ReadonlySet<EventCategoryType>;
-    /** Klart. city null = "där jag är". kats bara när kategoristeget visats. */
-    onDone: (choice: { city: CityPoint | null; kats?: EventCategoryType[] }) => void;
+    /** Förvalt 🔥- och Fler-läge (kartans nuvarande). */
+    initialPopular: boolean;
+    initialSource: string | null;
+    /** Klart. city null = "där jag är". filter bara när kategoristeget visats -
+     *  samma regler som sökpanelens rad: Fler-källan utesluter kategorierna
+     *  och 🔥 (Josef 8/10 kväll: "populära först … fler så man kan välja pro,
+     *  svenska kyrkan och korpen"). */
+    onDone: (choice: { city: CityPoint | null; filter?: { kats: EventCategoryType[]; pop: boolean; source: string | null } }) => void;
     /** "Hoppa över" - ett SVAR: dagens beteende, frågan kommer inte igen. */
     onSkip: () => void;
     /** Kryss/utanför/Escape - INGET svar (Josef 8/10: "man kanske vill kunna
@@ -38,11 +46,14 @@ function track(name: string) {
  * kartans vanliga sparade filter). "Hoppa över" ger dagens beteende.
  * Samma kortspråk som välkomstrutan.
  */
-export default function StartCityPicker({ current, withCategories, initialCategories, onDone, onSkip, onDismiss }: StartCityPickerProps) {
+export default function StartCityPicker({ current, withCategories, initialCategories, initialPopular, initialSource, onDone, onSkip, onDismiss }: StartCityPickerProps) {
     const [step, setStep] = useState<'city' | 'categories'>('city');
     const [query, setQuery] = useState('');
     const [city, setCity] = useState<CityPoint | null>(current);
     const [kats, setKats] = useState<Set<EventCategoryType>>(() => new Set(initialCategories));
+    const [pop, setPop] = useState(initialPopular);
+    const [source, setSource] = useState<string | null>(initialSource);
+    const [moreOpen, setMoreOpen] = useState(initialSource !== null);
     const cardRef = useRef<HTMLDivElement>(null);
     const onDismissRef = useRef(onDismiss);
     onDismissRef.current = onDismiss;
@@ -66,11 +77,11 @@ export default function StartCityPicker({ current, withCategories, initialCatego
         else onDone({ city: c });
     };
 
-    const toggleKat = (k: EventCategoryType) => setKats(prev => {
+    const toggleKat = (k: EventCategoryType) => { setSource(null); setKats(prev => {
         const next = new Set(prev);
         if (next.has(k)) next.delete(k); else next.add(k);
         return next;
-    });
+    }); };
 
     const chipBase = 'px-3.5 py-2 rounded-full text-sm font-bold transition-colors active:scale-[0.97] outline-none focus-visible:ring-2 focus-visible:ring-[#006AA7]/40';
 
@@ -175,6 +186,15 @@ export default function StartCityPicker({ current, withCategories, initialCatego
                         </div>
 
                         <div className="flex flex-wrap gap-2 justify-center">
+                            <button
+                                type="button"
+                                aria-pressed={pop}
+                                onClick={() => { setPop(v => !v); setSource(null); }}
+                                className={`${chipBase} ${pop ? 'bg-[#c2410c] text-white' : 'bg-orange-50 text-[#c2410c] hover:bg-orange-100'}`}
+                            >
+                                <span aria-hidden className="mr-1">🔥</span>
+                                Populära
+                            </button>
                             {CATEGORY_KEYS.map(k => {
                                 const on = kats.has(k);
                                 return (
@@ -190,15 +210,42 @@ export default function StartCityPicker({ current, withCategories, initialCatego
                                     </button>
                                 );
                             })}
+                            <button
+                                type="button"
+                                aria-expanded={moreOpen}
+                                onClick={() => setMoreOpen(v => !v)}
+                                className={`${chipBase} bg-slate-100 text-slate-500 hover:bg-slate-200`}
+                            >
+                                {moreOpen ? 'Färre' : 'Fler …'}
+                            </button>
+                            {moreOpen && SOURCE_DEFS.map(s => {
+                                const on = source === s.key;
+                                return (
+                                    <button
+                                        key={s.key}
+                                        type="button"
+                                        aria-pressed={on}
+                                        onClick={() => {
+                                            const next = on ? null : s.key;
+                                            setSource(next);
+                                            if (next) { setKats(new Set()); setPop(false); }
+                                        }}
+                                        className={`${chipBase} ${on ? 'bg-[#006AA7] text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                                    >
+                                        <span aria-hidden className="mr-1">{SOURCE_EMOJI[s.key] ?? '•'}</span>
+                                        {s.label}
+                                    </button>
+                                );
+                            })}
                         </div>
 
                         <button
                             type="button"
                             autoFocus
-                            onClick={() => { track('startstad_done'); onDone({ city, kats: [...kats] }); }}
+                            onClick={() => { track('startstad_done'); onDone({ city, filter: { kats: [...kats], pop, source } }); }}
                             className="group w-full py-3.5 rounded-2xl bg-[#006AA7] hover:bg-[#005590] text-white font-black text-base shadow-lg shadow-[#006AA7]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 outline-none focus-visible:ring-4 focus-visible:ring-[#FECC02]/70"
                         >
-                            {kats.size > 0 ? 'Visa kartan' : 'Visa allt'}
+                            {kats.size > 0 || pop || source ? 'Visa kartan' : 'Visa allt'}
                             <ArrowRight size={19} strokeWidth={2.5} className="transition-transform group-hover:translate-x-1" />
                         </button>
                     </>
