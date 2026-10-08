@@ -3543,6 +3543,22 @@ export const SOURCES: Source[] = [
         discovery: { method: 'hint', probeUrl: 'https://musikhuset.nu/event/', date: '2026-09-08', rawEventCount: 33 },
     },
     {
+        id: 'vastbosportdansklubb',
+        hostName: 'Västbo Sportdansklubb',
+        region: 'gislaved',
+        engine: 'vastbosportdans',
+        config: {},
+        updateFrequency: 'weekly',
+        status: 'experimental',
+        windowDays: 180,
+        notes: 'Tipsad av användare 28/9 2026 (socialdans på Torghuset). Danskvällarna (bugg/FOX till '
+            + 'dansband i Smålandsstenar, Värnamo, Gislaved) står som text på /kurser-evenemang - '
+            + 'one.com-sajt utan JSON-LD eller detaljsidor. Veckodagen avgör året. Kurserna i '
+            + 'dans.se/CogWork tas medvetet inte in. FB-sidan ligger dessutom i FB-watchlisten.',
+        lastVerified: '2026-09-28',
+        discovery: { method: 'hint', probeUrl: 'https://vastbosportdansklubb.se/kurser-evenemang', date: '2026-09-28', rawEventCount: 2 },
+    },
+    {
         id: 'visitisabergsregionen',
         hostName: 'Visit Isabergsregionen',
         region: 'gislaved',
