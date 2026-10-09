@@ -74,6 +74,24 @@ describe('Umeå-husen i venueFixes (FB-kritiken 30/9)', () => {
     });
 });
 
+describe('Kulturhuset Saga i Torshälla (FB 30/9)', () => {
+    it('Ticksters namn flyttas från Eskilstunas stadspunkt till Storgatan 52', () => {
+        const e = { locationName: 'Kulturhuset Saga Torshälla', lat: 59.3717379, lng: 16.5051474 };
+        expect(applyVenueFixInPlace(e)).toBe(true);
+        expect(e.lat).toBeCloseTo(59.4235, 4);
+        expect(e.lng).toBeCloseTo(16.4709, 4);
+    });
+
+    it('bara Torshälla-kvalificerade namn — "Saga"/"Kulturhuset Saga" finns på fler orter', () => {
+        expect(matchVenueFix('Saga')).toBeNull();
+        expect(matchVenueFix('Kulturhuset Saga')).toBeNull();
+        expect(matchVenueFix('Saga Salongen')).toBeNull();
+        for (const name of ['Saga Torshälla', 'Saga Salongen Torshälla', 'Kulturhuset Saga, Torshälla']) {
+            expect(matchVenueFix(name)?.lat, name).toBeCloseTo(59.4235, 4);
+        }
+    });
+});
+
 describe('hockeyarenorna i venueFixes (0,0-matcherna 28/9)', () => {
     // Exakt de namn swehockey/sportality levererade och som låg på 0,0.
     const ZERO_ZERO: Record<string, string> = {

@@ -29,6 +29,8 @@ import { FACEBOOK_PAGE_WATCHLIST } from './watchlist';
 import { FACEBOOK_PAGE_WATCHLIST_NATIONAL } from './watchlist-national';
 import { matchesCityScope } from './scope';
 import { loadRejectMemory, saveRejectMemory, shouldSkip, rememberOutsideWindow, rememberNoDate } from './rejectMemory';
+import { canonicalFbEventUrl, tippedFbEventUrls } from './tipGuard';
+import { db } from '../../config/firebase';
 
 /**
  * Automatically dismisses cookie banners and overlay login walls if they appear.
@@ -364,9 +366,8 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 const seeds: Array<{ url: string; city?: string }> = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
                 let added = 0;
                 for (const s of seeds) {
-                    const m = String(s.url || '').match(/facebook\.com\/events\/(?:[a-zA-Z0-9_-]+\/)*(\d{10,})/);
-                    if (!m) continue;
-                    const url = `https://www.facebook.com/events/${m[1]}/`;
+                    const url = canonicalFbEventUrl(s.url);
+                    if (!url) continue;
                     if (!allEventUrls.has(url)) {
                         allEventUrls.set(url, { expectedDay: 'okänd', city: s.city, requiresParsedDate: true });
                         added++;
@@ -431,9 +432,25 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
         const rejectPath = path.resolve(__dirname, '../../../fb-reject-memory.json');
         const rejectMem = loadRejectMemory(rejectPath);
         let skippedRemembered = 0;
+        // Redan tipsade FB-event skrapas inte in en gång till — se tipGuard.ts.
+        // Bara tipsen läses (isTip-filter + select), en handfull doc-reads/natt.
+        let tippedUrls = new Set<string>();
+        try {
+            if (db) {
+                const tipSnap = await db.collection('linkEvents').where('isTip', '==', true).select('url').get();
+                tippedUrls = tippedFbEventUrls(tipSnap.docs.map(d => d.get('url')));
+            }
+        } catch (tipErr) {
+            console.log(`⚠️ Kunde inte läsa tipsade FB-event (skrapar som vanligt): ${(tipErr as Error)?.message}`);
+        }
+        let skippedTipped = 0;
         for (const [url, itemData] of allEventUrls.entries()) {
             const { expectedDay, city, requiresParsedDate, fromSearch } = itemData;
             processed++;
+            if (tippedUrls.has(url)) {
+                skippedTipped++;
+                continue;
+            }
             if (requiresParsedDate && shouldSkip(rejectMem, url)) {
                 skippedRemembered++;
                 continue;
@@ -920,6 +937,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
 
         saveRejectMemory(rejectPath, rejectMem);
         console.log(`🧠 Avfärdningsminnet: ${skippedRemembered} sidladdningar sparade (kända passerade/för avlägsna/datumlösa), ${Object.keys(rejectMem).length} poster.`);
+        console.log(`💡 Tipsade FB-event: ${skippedTipped} hoppades över (${tippedUrls.size} tips med FB-länk) — tipset är redan kartans bricka.`);
 
         console.log('\n==========================================');
         console.log('📅 SAMMANSTÄLLNING FÖR DEN KOMMANDE VECKAN:');
