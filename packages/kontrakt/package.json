@@ -1,6 +1,6 @@
 {
     "name": "@vadkul/kontrakt",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "VADKUL:s delade kontrakt: typer, kategori-nycklar och ren logik (eventShareSlug m.m.) som web, functions och appen delar. Publiceras som TS-KÄLLA (beslut 25/9, plan §9.1): enda registry-konsumenten är Expo-appen, vars Metro transpilerar TS i node_modules — web/functions läser workspace-källan direkt. Ingen dist-/build-kedja = inget stale-dist-fotgevär.",
     "type": "module",
     "main": "./src/index.ts",

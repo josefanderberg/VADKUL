@@ -91,7 +91,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "city-gaps": "ts-node src/scripts/city-gaps.ts",
-    "probe-datumslug": "ts-node src/scripts/probe-datumslug.ts"
+    "probe-datumslug": "ts-node src/scripts/probe-datumslug.ts",
+    "repair-tickster-office": "ts-node src/scripts/repair-tickster-office-address.ts"
   },
   "keywords": [],
   "author": "",

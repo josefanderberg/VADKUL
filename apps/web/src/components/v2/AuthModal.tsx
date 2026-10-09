@@ -1,5 +1,6 @@
 'use client';
 
+import { settleWithin, PROFILE_WRITE_WAIT_MS } from '@/utils/settleWithin';
 import { useEffect, useState } from 'react';
 import { X, LogIn, UserPlus, Check, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -17,6 +18,9 @@ interface AuthModalProps {
     /** Öppna välkomstrutan (Om VADKUL). Utloggades enda väg dit sedan den
      *  flytande info-knappen revs 15/9. Utelämnad → länken döljs. */
     onOpenAbout?: () => void;
+    /** Kartans startstad (8/10) - utloggades väg att ändra den. name null =
+     *  "där jag är". Utelämnad → länken döljs. */
+    startCity?: { name: string | null; onChange: () => void };
 }
 
 /** Översätt Firebase-felkoder till begriplig svenska. */
@@ -40,7 +44,7 @@ function authErrorText(code: string): string {
  * Inloggning/registrering i en modal — man lämnar aldrig kartan.
  * Samma e-post+lösenord-flöde som gamla /login-sidan.
  */
-export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthModalProps) {
+export default function AuthModal({ open, onClose, reason, onOpenAbout, startCity }: AuthModalProps) {
     const { signIn, signInWithGoogle, register, resetPassword } = useAuth();
     // 'complete' = kompletteringssteget efter första Google-inloggningen:
     // registreringsblankettens statistik-/segmenteringsfält (ålder, kön,
@@ -176,7 +180,8 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
         setError(null);
         try {
             const city = citySlug ? getCity(citySlug) : null;
-            await setDoc(doc(db, 'users', uid), {
+            // Högst några sekunder - se utils/settleWithin (8/10).
+            await settleWithin(setDoc(doc(db, 'users', uid), {
                 ...(age.trim() && Number.isFinite(Number(age)) ? { age: Number(age) } : {}),
                 ...(gender ? { gender } : {}),
                 ...(hasChildren ? { hasChildren: true } : {}),
@@ -186,7 +191,7 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
                     citySource: (cityTouched ? 'manual' : 'gps') as 'gps' | 'manual',
                     cityUpdatedAt: serverTimestamp(),
                 } : {}),
-            }, { merge: true });
+            }, { merge: true }), PROFILE_WRITE_WAIT_MS);
             toast.success('Klart — profilen är sparad!');
             onClose();
         } catch (err) {
@@ -256,8 +261,7 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
             {cityInfoOpen && (
                 <p id="auth-city-info" className="px-1 text-xs font-semibold leading-relaxed text-white/60">
                     Staden styr helgtipset på torsdagar – det som händer i och runt orten.
-                    Finns inte din ort? Välj den som ligger närmast, eller hoppa över. Tipsa
-                    oss gärna under Problem eller feedback i profilen så lägger vi till den.
+                    Finns inte din ort? Välj den som ligger närmast, eller hoppa över.
                 </p>
             )}
         </div>
@@ -518,6 +522,15 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout }: AuthMo
                         className="text-xs font-semibold text-white/50 hover:text-white transition-colors self-center"
                     >
                         Vad är VADKUL?
+                    </button>
+                )}
+                {startCity && (
+                    <button
+                        type="button"
+                        onClick={startCity.onChange}
+                        className="-mt-1 text-xs font-semibold text-white/50 hover:text-white transition-colors self-center"
+                    >
+                        Kartan startar i {startCity.name ?? 'där du är'} · Ändra
                     </button>
                 )}
                 </>

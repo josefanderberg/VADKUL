@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-    stripParishSegments, suffixQueries, firstWordPlaceQuery, classifyQueryPrecision, isForeignAddress,
+    stripParishSegments, suffixQueries, firstWordPlaceQuery, standaloneVenueQuery, classifyQueryPrecision, isForeignAddress,
 } from './venueCoordinates';
 import { isGenericLookupName, lookupVenueSmart, upsertKnownVenue } from './sqliteHelper';
 
@@ -85,8 +85,36 @@ describe('firstWordPlaceQuery', () => {
         expect(firstWordPlaceQuery('Växjö domkyrka', 'Växjö')).toBeNull();
     });
 
+    it('stadens namn i genitiv är heller ingen by (Götabiblioteken 2/10)', () => {
+        expect(firstWordPlaceQuery('Linköpings huvudbibliotek', 'Linköping')).toBeNull();
+        expect(firstWordPlaceQuery('Växjös stadsbibliotek', 'Växjö')).toBeNull();
+        // ...men en annan orts genitiv är fortfarande en kandidat
+        expect(firstWordPlaceQuery('Borensbergs bibliotek', 'Linköping')).toBe('Borensbergs, Linköping');
+    });
+
     it('bara huvudsegmentet används, inte adress-svansen', () => {
         expect(firstWordPlaceQuery('Rottne bibliotek, Storgatan 3', 'Växjö')).toBe('Rottne, Växjö');
+    });
+});
+
+describe('standaloneVenueQuery (Oviken-fallet 2026-10-08)', () => {
+    it('platsen i grannkommunen provas utan stadsankaret', () => {
+        expect(standaloneVenueQuery('Ovikens gamla kyrka, Östersund', 'Östersund')).toBe('Ovikens gamla kyrka');
+        expect(standaloneVenueQuery('Gemla bibliotek, Växjö', 'Växjö')).toBe('Gemla bibliotek');
+    });
+
+    it('generiska och stadens egna namn provas aldrig ensamma', () => {
+        expect(standaloneVenueQuery('Stora kyrkan, Östersund', 'Östersund')).toBeNull();
+        expect(standaloneVenueQuery('Folkets Hus, Östersund', 'Östersund')).toBeNull();
+        expect(standaloneVenueQuery('Scandic Hotel, Östersund', 'Östersund')).toBeNull();
+        expect(standaloneVenueQuery('Östersunds stadsbibliotek, Östersund', 'Östersund')).toBeNull();
+        expect(standaloneVenueQuery('Storsjöteatern, Östersund', 'Östersund')).toBeNull();
+    });
+
+    it('bara "Plats, Stad": mellansegment och fel stad lämnas åt suffixkedjan', () => {
+        expect(standaloneVenueQuery('VAIS-torpet, Fylleryd, Växjö', 'Växjö')).toBeNull();
+        expect(standaloneVenueQuery('Ovikens gamla kyrka, Berg', 'Östersund')).toBeNull();
+        expect(standaloneVenueQuery('Ovikens gamla kyrka', 'Östersund')).toBeNull();
     });
 });
 

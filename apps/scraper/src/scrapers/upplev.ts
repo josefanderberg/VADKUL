@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
-import { geocodeVenue } from '../utils/venueCoordinates';
+import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { searchGoogleImage } from '../utils/imageSearch';
 
 const UPPLEV_URL = 'https://upplev.vaxjo.se/evenemang';
@@ -366,10 +366,18 @@ export async function scrapeUpplevVaxjo() {
                 finalLocation = finalLocation?.trim() || 'Växjö';
                 if (!finalLocation || finalLocation.length < 2) finalLocation = 'Växjö';
 
-                // Resolve coordinates – always geocode by venue name for accuracy
-                const coords = await geocodeVenue(finalLocation);
-                const lat = coords ? coords[0] : 56.8796;
-                const lng = coords ? coords[1] : 14.8094;
+                // Plats: moderna kedjan (registret → cache → Nominatim med
+                // Växjö-vakt) i stället för gamla geocodeVenue, vars miss TYST
+                // blev en fast punkt vid Stortorget utan precisionsmärkning —
+                // osynlig för geo-refine och centroid-reparationen (2/10).
+                const hit = finalLocation.trim().toLowerCase() === 'växjö'
+                    ? null
+                    : await geocodeVenueSweden(finalLocation, { nearCity: 'Växjö' });
+                const centroid = hit ? null : await geocodeVenueSweden('Växjö');
+                const lat = hit?.[0] ?? centroid?.[0] ?? 56.8787;
+                const lng = hit?.[1] ?? centroid?.[1] ?? 14.8094;
+                const geoPrecision = hit ? (hit[2] ?? null) : 'stad-centroid';
+                const geocodedQuery = hit ? finalLocation : 'stad: Växjö';
 
                 const linkEvent = {
                     title: evt.title,
@@ -379,6 +387,8 @@ export async function scrapeUpplevVaxjo() {
                     locationName: finalLocation,
                     lat,
                     lng,
+                    geoPrecision,
+                    geocodedQuery,
                     hostName: 'Upplev Växjö',
                     category: guessCategoryFromTitle(evt.title),
                     createdAt: new Date(),

@@ -11,6 +11,7 @@ import { userService } from '@/services/userService';
 import { SOURCE_DEFS } from '@/utils/sources';
 import { cityOptInDefault, cityOptInJsonHref } from '@/utils/cityOptIn';
 import { categoryChipHref, activeCategorySlug } from '@/utils/categoryChips';
+import HScrollRow from '@/components/ui/HScrollRow';
 
 /**
  * Kategorichipsen på stads- och kategorisidorna ("Populärt i Stockholm") +
@@ -61,7 +62,7 @@ export type CategoryChip = {
     title: string;
 };
 
-const BASE = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-colors';
+const BASE = 'shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-colors';
 const IDLE = 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:border-[#006AA7]/40 dark:hover:border-sky-400/40 hover:text-[#006AA7] dark:hover:text-sky-400';
 const ON = 'bg-[#006AA7] border-[#006AA7] text-white';
 // 🔥-chippet sticker ut även avslaget: eldorange kant + text (samma orange som
@@ -164,14 +165,50 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
     };
     const allOn = !active && !popularOnly && !sourceOnly;
 
+    // DET VALDA SYNS ALLTID (8/10, Josef: "se vilka man valt att visa"):
+    // raden är EN rad som rullar i sidled, så ett val längre bort kunde
+    // ligga utanför bild. Vid varje byte rullas raden så det påslagna
+    // chippet står synligt (Alla = raden från början).
+    const rowRef = useRef<HTMLDivElement | null>(null);
+    const activeKey = active?.slug ?? (popularOnly ? 'pop' : sourceOnly ? `src:${sourceOnly}` : '');
+    useEffect(() => {
+        const row = rowRef.current;
+        if (!row) return;
+        if (!activeKey) { row.scrollTo({ left: 0, behavior: 'smooth' }); return; }
+        const chip = row.querySelector('[data-on="true"]') as HTMLElement | null;
+        if (!chip) return;
+        const r = row.getBoundingClientRect();
+        const c = chip.getBoundingClientRect();
+        if (c.left >= r.left + 16 && c.right <= r.right - 16) return;
+        row.scrollTo({ left: row.scrollLeft + (c.left - r.left) - 20, behavior: 'smooth' });
+    }, [activeKey]);
+
     return (
-        <div className="mt-8">
+        <>
             {/* "Populärt i {stad}" → "Utforska": 🔥-chippen äger ordet
                 Populära sedan 10/9 — två "populär" på samma skärm förvirrar. */}
             {hasCategories && (
-                <h2 className="text-sm font-black text-slate-900 dark:text-zinc-100 mb-2">Utforska {cityName}</h2>
+                <h2 className="mt-8 text-sm font-black text-slate-900 dark:text-zinc-100">Utforska {cityName}</h2>
             )}
-            <div className="flex flex-wrap gap-2">
+            {/* KLISTRAD UNDER TOPPNAVEN (ägarbeslut 8/10, Josef: "kategorierna
+                ska vara sticky över dagen och navbaren. fast filtret ska bara
+                vara på en rad då, så får man scrolla i sidled"): raden står
+                kvar på skärmen genom hela listan, dagrubrikerna fäster under
+                den (--chips-h i DayFilteredList, fast höjd 46 px - ändras den
+                måste värdet där följa med). Komponenten returnerar ett
+                fragment så raden är ett direkt barn till listans rot -
+                sticky håller bara inom föräldern. Bakgrunden går ut till
+                kolumnens kanter (-mx-5) som dagrubrikernas. panY: ett
+                lodrätt svep på raden scrollar sidan som vanligt. Småorterna
+                (bara Fler-chippen) klistrar inte - där finns inget att välja
+                mellan under scrollen. */}
+            <div
+                data-sticky-chips={hasCategories ? '' : undefined}
+                className={hasCategories
+                    ? 'sticky top-[57px] z-30 -mx-5 mt-1 bg-slate-50/95 dark:bg-zinc-950/95 backdrop-blur-sm'
+                    : '-mx-5 mt-8'}
+            >
+            <HScrollRow ref={rowRef} panY className="h-[46px] gap-2 px-5">
                 {/* 🔥 Populära (Josef 10/9) — ett FILTER, ingen kategorilänk:
                     ren knapp (ingen undersida att indexera), smalnar listan på
                     plats via kontexten. Bara på stadssidan (inPlace) — på
@@ -183,6 +220,7 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                         type="button"
                         onClick={togglePopular}
                         aria-pressed={popularOnly}
+                        data-on={popularOnly}
                         className={`${BASE} ${popularOnly ? POP_ON : POP_IDLE}`}
                     >
                         <span aria-hidden>🔥</span>
@@ -197,6 +235,7 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                         prefetch={inPlace ? false : undefined}
                         onClick={(ev) => { if (inPlace && isPlainClick(ev)) { setPopularOnly(false); setSourceOnly(null); } go(allHref)(ev); }}
                         aria-current={allOn ? 'page' : undefined}
+                        data-on={allOn}
                         className={`${BASE} ${allOn ? ON : IDLE}`}
                     >
                         Alla
@@ -213,6 +252,7 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                             prefetch={inPlace ? false : undefined}
                             onClick={go(href)}
                             aria-current={isOn ? 'page' : undefined}
+                            data-on={isOn}
                             className={`${BASE} ${isOn ? ON : IDLE}`}
                         >
                             <span aria-hidden>{cat.emoji}</span>
@@ -224,14 +264,16 @@ export default function CategoryChips({ citySlug, cityName, cityTitle, allCount,
                 {inPlace && (
                     <SourceChips citySlug={citySlug} sourceCounts={sourceCounts} sourceOnly={sourceOnly} onSelect={selectSource} />
                 )}
+            </HScrollRow>
             </div>
-        </div>
+        </>
     );
 }
 
-/** FLER-chippen + den utfällda källraden (se filhuvudet). Renderas inuti
- *  chip-radens flex-wrap: chippen ligger sist i raden och källraden bryter
- *  till en egen rad under (basis-full). */
+/** FLER-chippen + de utfällda källorna (se filhuvudet). Sedan 8/10 är
+ *  chip-raden EN rad som rullar i sidled, så källorna fälls ut PÅ RADEN
+ *  efter Fler (förr bröt de till en egen rad under). Är en källa vald och
+ *  raden hopfälld står källans namn i Fler-chippen - valet syns ändå. */
 function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
     citySlug: string;
     sourceCounts: Record<string, number>;
@@ -301,13 +343,14 @@ function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
                 onClick={() => setOpen(o => !o)}
                 aria-expanded={open}
                 aria-label={open ? 'Dölj fler källor' : 'Visa fler källor'}
+                data-on={anyOn && !open}
                 className={`${BASE} ${anyOn ? ON : IDLE}`}
             >
-                Fler
-                <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+                {anyOn && !open ? (SOURCE_DEFS.find(s => s.key === sourceOnly)?.label ?? 'Fler') : 'Fler'}
+                <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-90' : '-rotate-90'}`} aria-hidden />
             </button>
             {open && (
-                <div className="basis-full flex flex-wrap items-center gap-2 pt-1">
+                <>
                     {SOURCE_DEFS.map(s => {
                         const on = sourceOnly === s.key;
                         const n = counts[s.key];
@@ -317,6 +360,7 @@ function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
                                 type="button"
                                 onClick={() => pick(s.key)}
                                 aria-pressed={on}
+                                data-on={on}
                                 aria-busy={on && status === 'loading'}
                                 className={`${BASE} ${on ? ON : IDLE}`}
                             >
@@ -333,12 +377,12 @@ function SourceChips({ citySlug, sourceCounts, sourceOnly, onSelect }: {
                         inte funkar"): snurra i chippet + pulserande text här,
                         och laddrader i listan (DayFilteredList). */}
                     {status === 'loading' && (
-                        <span role="status" className="inline-flex items-center gap-1.5 text-[11px] font-black text-[#006AA7] dark:text-sky-400 animate-pulse">
+                        <span role="status" className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 text-[11px] font-black text-[#006AA7] dark:text-sky-400 animate-pulse">
                             Hämtar {SOURCE_DEFS.find(s => s.key === sourceOnly)?.label ?? ''}…
                         </span>
                     )}
-                    {status === 'failed' && <span className="text-[11px] font-bold text-rose-500">Kunde inte hämtas — tryck igen</span>}
-                </div>
+                    {status === 'failed' && <span className="shrink-0 whitespace-nowrap text-[11px] font-bold text-rose-500">Kunde inte hämtas — tryck igen</span>}
+                </>
             )}
         </>
     );

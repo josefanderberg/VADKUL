@@ -96,6 +96,10 @@ export const SOURCES: Source[] = [
             urlPatterns: [/^https:\/\/billetto\.se\/e\/[^/]+/],
             defaultCity: '',
             maxUrls: 400,
+            // JSON-LD:ns description är KAPAD (~230 tecken + "..."), hela
+            // texten står i sidans brödtext (1/10: 374 av 414 kommande event
+            // visade bara början, "…massor av skra...").
+            detailDescSelector: '.event-description',
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
@@ -494,6 +498,66 @@ export const SOURCES: Source[] = [
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.borgholmsslott.se/sitemap_index.xml', date: '2026-08-31', rawEventCount: 10 },
         notes: 'Probe 2026-08-31: 10 event i /evenemang/-arkivet. Detaljsidan saknar JSON-LD OCH pålitligt datum — textfallbacken plockade "Fler tips"-sektionens ANDRA events datum (7/10 fick 2026-09-11). Därför catalogDates: arkivets .dateoftheitem (ISO) styr dagen. Kör INTE via event-sitemap.xml.',
         lastVerified: '2026-08-31',
+    },
+    {
+        // Kulturhuset i Sävsjö (Röda Kvarn-salongen). Arrangören hörde av sig
+        // 2/10: "en del av våra evenemang syns, men långt ifrån allt" — Nortic
+        // gav bara de biljetterade (och serie-dedupen tog första tillfället).
+        id: 'kulturhuset-savsjo',
+        hostName: 'Kulturhuset i Sävsjö',
+        region: 'savsjo',
+        engine: 'sitemap',
+        config: {
+            // "Kommande"-listan, inte evenemang-sitemap.xml (218 URL:er sedan 2024).
+            sitemapUrl: 'https://kulturhuset.com/evenemang/',
+            isHtmlCatalog: true,
+            urlPatterns: [/^https:\/\/kulturhuset\.com\/evenemang\/[a-z0-9-]{3,}\/?$/i],
+            defaultCity: 'Sävsjö',
+            defaultVenue: 'Kulturhuset Sävsjö',   // venueFixes → OSM-punkten
+            // YOOtheme: sidans EGET datum står i första listraden ("söndag
+            // 1 november," + "kl. 15:00", inget år — veckodagen avgör året).
+            // Längre ner finns kort för andra event (Live på bio) — därför
+            // utpekat fält i stället för textfallbacken.
+            detailDateSelector: 'ul.uk-list li.el-item',
+            detailDescSelector: '.uk-panel.uk-text-lead',
+            // Värden svarar 466 (WAF) på Mozilla-UA från node — vår egen UA går igenom.
+            userAgent: 'VadKul/1.0 (+https://vadkul.se)',
+            maxUrls: 60,
+        },
+        windowDays: 180,
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'manual', probeUrl: 'https://kulturhuset.com/evenemang/', date: '2026-10-02' },
+        notes: 'Arrangörsförfrågan 2026-10-02 (Tobias Wigstrand). WordPress/YOOtheme, ingen event-REST. Bion ligger i egen källa (kulturhuset-savsjo-bio).',
+        lastVerified: '2026-10-02',
+    },
+    {
+        // Bion i samma hus (Röda Kvarn, drivs av föreningen Friskt Vågat).
+        // /film/<slug> är per FILM, inte per visning — samma film flera
+        // kvällar ger samma URL ⇒ runnerns URL-dedup behåller första
+        // visningen (samma medvetna serie-beteende som Bergmancenter/Nortic).
+        // Live på bio-kvällarna länkar till /evenemang/ och tas av huvudkällan.
+        id: 'kulturhuset-savsjo-bio',
+        hostName: 'Kulturhuset i Sävsjö',
+        region: 'savsjo',
+        engine: 'sitemap',
+        config: {
+            sitemapUrl: 'https://kulturhuset.com/bio/',
+            isHtmlCatalog: true,
+            urlPatterns: [/^https:\/\/kulturhuset\.com\/film\/[a-z0-9-]{3,}\/?$/i],
+            defaultCity: 'Sävsjö',
+            defaultVenue: 'Röda Kvarn, Kulturhuset Sävsjö',   // venueFixes → OSM-punkten
+            detailDateSelector: 'ul.uk-list li.el-item',
+            detailDescSelector: '.uk-panel.uk-text-lead',
+            userAgent: 'VadKul/1.0 (+https://vadkul.se)',
+            maxUrls: 40,
+        },
+        windowDays: 60,
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: { method: 'manual', probeUrl: 'https://kulturhuset.com/bio/', date: '2026-10-02' },
+        notes: 'Arrangörsförfrågan 2026-10-02. 9 aktuella filmer, 1–3 visningar var; en karta-bricka per film (första visningen).',
+        lastVerified: '2026-10-02',
     },
     {
         id: 'ekerum',

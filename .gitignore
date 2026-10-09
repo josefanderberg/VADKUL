@@ -81,6 +81,7 @@ apps/web/public/events-today.json
 
 # Medlemsexporter — innehåller e-postadresser, får ALDRIG committas
 medlemmar-*.csv
+fortur-*.csv
 
 # Vad kul-studion (klippverktyget) är ett eget git-repo med egen historik
 # (github.com/josefanderberg/vadkulyt). Mappen ligger här för närhet till

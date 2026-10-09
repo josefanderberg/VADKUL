@@ -297,6 +297,70 @@ tidsfönster (steg 3) — men det är ett SEO-/ägarbeslut (body-HTML:en är
 SEO-grunden, se seo-foundation). Deploy-FREKVENSEN kvarstår också som
 beteendefråga: squasha småfixar (35 deployer 10/9).
 
+### ✅ 7. Geografiska rutor + beskrivningshinkar (byggt 2026-10-03)
+
+**Utgångsläge 3/10:** 2 500 besökare/dygn, 18 GB Hosting-egress (~7 MB per
+besökare, ~30 kr/dygn). Kartan hämtade fortfarande HELA LANDETS data: en
+besökare som öppnade ett kort drog destinations-fönstret (1,22 MB), hela
+kortlagret (1,27 MB) och hela beskrivningslagret (2,1 MB) — fast hen bara
+tittade på sin stad.
+
+**Rutor (`utils/eventTiles`).** Fast rutnät 0,5° lat × 1° lng (~55 × 55 km).
+`/api/events/{destinations,cards}?tile=<lat>_<lng>` (kombineras med from/to)
+ger bara rutans event; kortslicen följer destinations-raderna i samma ruta.
+Kvantiserat precis som tidsfönstret — alla över samma stad ber om samma URL:er
+(CDN-träff). Routen avvisar rutor utanför rutområdet och icke-kanoniska
+nycklar med 400 (aldrig "hela lagret" — det vore 2 MB per påhittad URL).
+
+Kartsidan kör `subscribeToAll(..., { area: true })` och rapporterar sitt
+DATAOMRÅDE (`setDataArea`): vyn + veckovyns 60 km-cirkel kring mitten (så
+dag→vecka-pulsen aldrig väntar), stadshoppets mål redan när hoppet börjar,
+och ?plats=/sparad stad redan vid mount. Rutorna läggs bara till.
+
+Uppmätt på skarpa datat (brotli q6, 14-dagarsfönster):
+
+| | hela landet | rutläget (Stockholm, 9 rutor) |
+|---|---|---|
+| destinations | 1,22 MB | 0,25 MB |
+| cards (vid öppnat kort) | 1,27 MB | 0,14 MB |
+| descriptions (vid öppnat kort) | 2,1 MB | ~16 kB per hink |
+
+Summan av alla rutor är ~1,36 MB mot landslagrets 1,22 — uppdelningen kostar
+~10 % i komprimering, men ingen hämtar alla rutor.
+
+**Landslagret finns kvar** (gamla vägen, `requestNationwide`) för det som
+verkligen behöver hela Sverige: sökning, arrangörsfiltret (begärs direkt vid
+`?arrangor=` tillsammans med full tidslinje + kort) och en vy som är för bred
+för rutor (> `MAX_AREA_TILES` = 25) — efter 4 s första gången (första
+besökets Sverige-översikt hinner landa i en stad via GPS-/blindhoppet) och
+0,7 s därefter. Rutvägen som felar → landslagret (som har statisk reserv).
+
+**Beskrivningar per hink.** `?bucket=<n>` på descriptions: 512 hinkar på
+id:ts hash (`descBucketFor`), ~90 beskrivningar / ~16 kB. LinkEventCard
+begär sitt events hink per id (kortet återanvänds av Nästa), EventCard
+förhämtar högst 3 hinkar för Nästa-målen. Det gamla "hela lagret vid första
+kortet" är borta.
+
+**Det som annars hade tappat event utanför rutorna:**
+- Sparade event, boostar (boost-löftet "syns varje dag") och djuplänkens
+  event hämtas STYCKVIS ur `/api/event` (`ensureEvents`, bara skrapade id:n).
+  Boostar bortom fönstret drog förut hem HELA tidslinjen åt alla besökare.
+- Välkomstrutans "N event i hela Sverige" kommer från
+  `/api/events/destinations?counts=day` (~1 kB) + användarskapade.
+- Vakter: `isAreaLoaded(mapBounds)` → `eventsSettledHere` och `areaCounts =
+  null` medan vyns rutor hämtas (pillen "Laddar fler event…", inga falska
+  "Inget här"-prompter, inget auto-hopp till imorgon på halvladdad data).
+
+**Robusthet i routen:** diskcachen skrivs nu atomiskt (tempfil + rename) och
+valideras vid läsning — en halvskriven fil fick förut gunzip att kasta i
+slice-vägarna (503).
+
+**Kvar (ej byggt):** sökningen kan få en server-endpoint i stället för
+landslagret (sök är det vanligaste skälet att ladda hela landet nu);
+`events-today.json` + API-dagsslicen hämtas båda för alla (~0,1 MB var) —
+API-slicen behövs bara när den statiska är förlegad; bildernas tumnaglar
+(punkt 4, "omkomprimering") gäller fortfarande.
+
 ### ✅ 6. Död vikt — borttagen 11/9 (ingick i etapp 3)
 
 ---

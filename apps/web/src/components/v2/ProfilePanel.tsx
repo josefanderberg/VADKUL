@@ -7,9 +7,12 @@ import { isSeriesEvent } from '@/utils/weeklySeries';
 import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
+import { linkEventService } from '@/services/linkEventService';
 import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
-import { X, Pencil, Check, Heart, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info } from 'lucide-react';
+import FriendsSection from './FriendsSection';
+import SavedSection from './SavedSection';
+import { X, Pencil, Check, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info, LocateFixed, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
 import { doc, getDoc, setDoc, deleteField, serverTimestamp, collection, getDocs, query, where, limit, Timestamp } from 'firebase/firestore';
@@ -18,6 +21,7 @@ import { CITIES, getCity } from '@/lib/cityUtils';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { boostedUntilLabel } from '@/utils/boostLabel';
 import { EVENT_CATEGORIES, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
+import { memberInviteUrl } from '@/utils/forturInbjudan';
 
 /** "Visa även på kartan"-raderna: opt-in-källorna + 🧸 (samma ordning som
  *  kategorikolumnen hade dem överst, innan den revs 15/9). */
@@ -48,10 +52,10 @@ interface ProfilePanelProps {
     /** Radera det profilraden står för — EN lista med dokument-id, eftersom en
      *  rad kan vara flera tillfällen av samma event. */
     onDeleteEvent?: (ids: string[]) => void;
-    savedCount?: number;
-    /** Byt till sparat-panelen (stänger profilen). Utelämnad → Sparade-raden
-     *  döljs (stadssidan har ingen sparat-panel att byta till). */
-    onOpenSaved?: () => void;
+    /** Sparade event - mappen fälls ut I panelen (7/10; förr bytte raden
+     *  till en egen sparat-panel). Utelämnad → mappen döljs (stadssidan har
+     *  ingen laddad eventlista att plocka de sparade ur). */
+    saved?: { ids: ReadonlySet<string>; onRemove: (id: string) => void };
     /** Var panelen hänger: under profilknappen i kartans VÄNSTRA hörn
      *  (default) eller till höger (stadssidornas toppnav). */
     anchor?: 'left' | 'right';
@@ -61,6 +65,9 @@ interface ProfilePanelProps {
     optInCategories?: { selected: ReadonlySet<string>; onToggle: (id: string) => void };
     /** Öppna välkomstrutan (Om VADKUL). Utelämnad → raden döljs. */
     onOpenAbout?: () => void;
+    /** Kartans startstad (8/10): name null = "där jag är". onChange öppnar
+     *  väljaren. Utelämnad (stadssidornas toppnav) → raden döljs. */
+    startCity?: { name: string | null; onChange: () => void };
 }
 
 // Stabil tom lista när allEvents utelämnas — en ny [] per render hade varit
@@ -72,7 +79,7 @@ const NO_EVENTS: LinkEvent[] = [];
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, savedCount = 0, onOpenSaved, anchor = 'left', optInCategories, onOpenAbout }: ProfilePanelProps) {
+export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, saved, anchor = 'left', optInCategories, onOpenAbout, startCity }: ProfilePanelProps) {
     // Mina event HOPGRUPPERADE till en rad per sak man skapat (Josef 14/9:
     // "nu blir det en jättelång lista"): både veckoserier och samma event
     // inlagt på flera datum (Josef 16/9, destilleribesöken på Stobirk —
@@ -177,6 +184,18 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                     .filter((r): r is { eventId: string; appliedAt?: Timestamp } => typeof r.eventId === 'string')
                     .sort((a, b) => (b.appliedAt?.toMillis?.() ?? 0) - (a.appliedAt?.toMillis?.() ?? 0));
                 const byId = new Map(allEventsRef.current.map(e => [e.id, e]));
+                // Kartan laddar bara området runt sig (rutläget) — ett boostat
+                // skrapat event i en annan stad finns då inte i allEvents.
+                // Hämta de saknade styckvis så raden får titel och hopp.
+                const missing = receipts
+                    .map(r => r.eventId)
+                    .filter(id => id.includes('/') && !byId.has(id))
+                    .slice(0, 10);
+                if (missing.length) {
+                    const fetched = await linkEventService.ensureEvents(missing);
+                    for (const [id, e] of fetched) byId.set(id, e);
+                }
+                if (stale) return;
                 const seen = new Set<string>();
                 const out: MyBoost[] = [];
                 for (const r of receipts) {
@@ -479,9 +498,25 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
 
     const actionRow = 'w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800/60 transition-colors text-left';
 
+    // Personlig inbjudningslänk (förturen till appen, 8/10): vännen som skapar
+    // konto via länken bokförs i forturInbjudningar (se utils/forturInbjudan).
+    const handleInviteMember = async () => {
+        if (!user) return;
+        const url = memberInviteUrl(window.location.origin, user.uid);
+        const text = 'Häng med på VADKUL - kartan över allt kul som händer nära dig!';
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: 'VADKUL', text, url });
+                return;
+            }
+            await navigator.clipboard.writeText(`${text} ${url}`);
+            toast.success('Din inbjudningslänk är kopierad!');
+        } catch { /* avbruten delning är inget fel */ }
+    };
+
     return (
         <>
-            {/* Klick utanför stänger panelen. z-[1164]/[1165] som SavedPanel:
+            {/* Klick utanför stänger panelen. z-[1164]/[1165] (som gamla sparat-panelen hade):
                 panelen låg på 1040 — UNDER stadsrutan (1090), kategorikolumnen
                 (1150) och navbaren (1160), så knapparna och plattan målades
                 ovanpå panelinnehållet på mobilen (Josef 21/8). Nu över allt
@@ -572,16 +607,36 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                     </div>
 
                     <div className="overflow-y-auto custom-scrollbar">
-                        {/* Sparade event — genväg till hjärt-panelen (bara där
-                            det finns en: kartan skickar onOpenSaved, stadssidan inte) */}
-                        {onOpenSaved && (
-                            <button type="button" onClick={onOpenSaved} className={actionRow}>
-                                <Heart size={16} className="text-rose-500 shrink-0" fill={savedCount > 0 ? 'currentColor' : 'none'} />
-                                <span className="flex-1">Sparade event</span>
-                                <span className="text-xs font-black text-slate-400 tabular-nums">{savedCount}</span>
-                                <ChevronRight size={15} className="text-slate-400 shrink-0" />
-                            </button>
+                        {/* Sparade event - fälls ut på plats i panelen (bara där
+                            sidan har eventlistan: kartan skickar saved, stadssidan inte) */}
+                        {saved && (
+                            <SavedSection
+                                panelOpen={open}
+                                events={allEvents}
+                                savedEventIds={saved.ids}
+                                onPick={evt => onPickEvent?.(evt)}
+                                onRemove={saved.onRemove}
+                            />
                         )}
+
+                        {/* Bjud in en vän (8/10): den personliga ?fran=-länken.
+                            Vänner som skapar konto via den ger förtur till appen. */}
+                        <div className="border-t border-slate-100 dark:border-slate-800">
+                            <button
+                                type="button"
+                                onClick={handleInviteMember}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                            >
+                                <UserPlus size={16} className="text-[#006AA7] shrink-0" />
+                                <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Bjud in en vän</span>
+                                <span className="text-[10px] font-bold text-slate-400">få appen först</span>
+                            </button>
+                        </div>
+
+                        {/* Vänner (spår 3, 7/10 kväll): förfrågningar, vänlistan med
+                            vännernas kommande Kommer/Intresserad-svar, och
+                            integritetsreglaget. Läser Firestore först vid utfällning. */}
+                        <FriendsSection panelOpen={open} allEvents={allEvents} onPickEvent={onPickEvent} />
 
                         {/* Notiser — påminnelse 1 h innan gillade event börjar.
                             Permission-frågan får BARA ställas härifrån (riktig
@@ -949,6 +1004,21 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                 </div>
                             )}
                         </div>
+
+                        {/* Startstad (8/10) — var kartan öppnar. Skild från
+                            Min stad (helgtipset) under Inställningar. */}
+                        {startCity && (
+                            <div className="border-t border-slate-100 dark:border-slate-800">
+                                <button type="button" onClick={startCity.onChange} className={actionRow}>
+                                    {startCity.name
+                                        ? <MapPin size={16} className="text-[#006AA7] shrink-0" />
+                                        : <LocateFixed size={16} className="text-[#006AA7] shrink-0" />}
+                                    <span className="flex-1">Kartan startar i</span>
+                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate max-w-[40%]">{startCity.name ?? 'Där jag är'}</span>
+                                    <ChevronRight size={15} className="text-slate-400 shrink-0" />
+                                </button>
+                            </div>
+                        )}
 
                         {/* Om VADKUL — öppnar välkomstrutan igen (15/9: den
                             flytande info-knappen på kartan är riven). */}

@@ -87,6 +87,14 @@ export function isPlainClick(ev: {
  */
 export const EXPAND_ANCHOR_HEADER_PX = 120;
 
+/** Höjden på stadssidornas KLISTRADE KATEGORIRAD (CategoryChips, 8/10) -
+ *  den ligger under toppnaven, så allt som räknar "strax under naven" måste
+ *  lägga till den. 0 utan raden (arrangörssidan) eller utanför webbläsaren. */
+export function stickyChipsPx(): number {
+    if (typeof document === 'undefined') return 0;
+    return (document.querySelector('[data-sticky-chips]') as HTMLElement | null)?.offsetHeight ?? 0;
+}
+
 /**
  * Scrollkompensation när det utfällda eventet byts (DayFilteredList).
  *

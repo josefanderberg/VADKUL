@@ -1,5 +1,10 @@
 # Grok-videoprompt — VADKUL på TikTok/Reels/Shorts
 
+> **Stilen styrs numera av [grok-serie/BAS.md](grok-serie/BAS.md).** Där den
+> här filen säger något annat (färger, text som Grok ritar) gäller BAS:
+> Grok gör scenen, texten läggs på i klippet. Mallarna nedan är kvar för
+> veckans event-videor; byt brand-blocket mot BAS-blocken när du kör dem.
+
 Mallar för att generera veckans event-videor med Grok (eller annan
 videogenerator). Bifoga alltid loggan som referensbild. Manuset (eventlistan)
 hämtas ur kartdatat — be Claude: *"ge mig veckans videomanus för [stad/hela

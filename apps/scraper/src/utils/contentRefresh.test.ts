@@ -74,3 +74,21 @@ describe('looksStripped', () => {
         expect(looksStripped('Det är också roligt')).toBe(false);
     });
 });
+
+describe('pickBetterDescription - kapade utdrag (Billetto 1/10)', () => {
+    const utdrag = 'Nu är det äntligen dags igen: Lördagen den 3 oktober 2026 öppnar vi dörrarna kl. 18.00 för ännu en oförglömlig Oktoberfest i Rydaholms Folkets Park. Kvällen bjuder på klassisk oktoberfeststämning med god öl, mat och massor av skra...';
+    const hel = 'Nu är det äntligen dags igen: Lördagen den 3 oktober 2026 öppnar vi dörrarna kl. 18.00 för ännu en oförglömlig Oktoberfest i Rydaholms Folkets Park. Kvällen bjuder på klassisk oktoberfeststämning med god öl, mat, musik, dans och massor av skratt. Självklart finns både öl-, cider- och vinservering. I år serverar vi en läcker grilltallrik med grillat fläskytterfilé och kycklinglårfilé, potatisgratäng, bearnaise och sallad. Maten serveras endast kl 18-20.';
+
+    it('hel text ersätter ett kapat utdrag även när arrangören formulerat om sig', () => {
+        expect(pickBetterDescription(utdrag, hel)).toBe(hel);
+    });
+    it('inte när den färska också är ett utdrag', () => {
+        expect(pickBetterDescription(utdrag, `${hel.slice(0, 300)}...`)).toBeNull();
+    });
+    it('inte när den sparade inte var kapad', () => {
+        expect(pickBetterDescription(utdrag.replace(/\.\.\.$/, '.'), hel)).toBeNull();
+    });
+    it('inte när den färska bara är lite längre', () => {
+        expect(pickBetterDescription(utdrag, `${utdrag.slice(0, -3)}tt och dans.`)).toBeNull();
+    });
+});

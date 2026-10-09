@@ -19,6 +19,29 @@ interface PopularListCandidate {
     featuredUntil?: Date;
 }
 
+/** Listans horisont (Josef 24/9: "vi fokuserar mest på kommande månaden").
+ *  Räknas från IDAG, inte från den visade dagen. */
+export const LIST_HORIZON_DAYS = 30;
+
+/**
+ * Samma tidsfönster som listans flikar (Månaden · 🔥 Populärt): från den
+ * visade dagen (aldrig före idag) och framåt inom LIST_HORIZON_DAYS,
+ * passerade bort. Kategoriradens siffror räknar i samma fönster (Josef 7/10:
+ * "22 populära … sen står det något annat samtidigt" - chippet räknade
+ * dagen, fliken månaden och bannern veckan), så 🔥-chippet = Populärt-
+ * fliken och kategorierna går ihop med Månaden.
+ */
+export function inListWindow<T extends { time: Date }>(
+    e: T,
+    fromDayOffset: number,
+    now: Date,
+    isPast: (e: T) => boolean,
+): boolean {
+    if (isPast(e)) return false;
+    const d = dayOffsetOf(e.time, now);
+    return d >= Math.max(0, fromDayOffset) && d < LIST_HORIZON_DAYS;
+}
+
 export function isPopularListed(e: PopularListCandidate, nowMs: number): boolean {
     return e.pop === true || (!!e.featuredUntil && e.featuredUntil.getTime() > nowMs);
 }
@@ -82,14 +105,15 @@ export function popularDays<T extends PopularListCandidate>(
 }
 
 /** Kapar dagarna till de första `limit` raderna (pagineringen) — dagar som
- *  inte får någon rad alls följer inte med, den sista kan komma halv. */
-export function takeRows<T>(days: readonly { dayOffset: number; rows: T[] }[], limit: number): { dayOffset: number; rows: T[] }[] {
-    const out: { dayOffset: number; rows: T[] }[] = [];
+ *  inte får någon rad alls följer inte med, den sista kan komma halv.
+ *  Dagens övriga fält (listans zoomring) följer med oförändrade. */
+export function takeRows<D extends { rows: readonly unknown[] }>(days: readonly D[], limit: number): D[] {
+    const out: D[] = [];
     let left = limit;
     for (const day of days) {
         if (left <= 0) break;
         const rows = day.rows.slice(0, left);
-        out.push({ dayOffset: day.dayOffset, rows });
+        out.push({ ...day, rows });
         left -= rows.length;
     }
     return out;

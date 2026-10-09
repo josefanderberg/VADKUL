@@ -1,70 +1,39 @@
 # Arrangörs-outreach
 
-Målet: **riktiga inlänkar** till vadkul.se (SEO-flaskhalsen är auktoritet, inte
-teknik — 86 sidor låg "upptäckt – inte indexerad" 2026-07-15) + relationer med
-arrangörerna vars event redan visas på kartan.
+Målet: **länkar tillbaka** till vadkul.se (SEO-flaskhalsen är auktoritet, inte teknik) och
+**betalande arrangörer**. Planen, vem som får vilket erbjudande och reglerna står i
+[arrangorserbjudandet.md](arrangorserbjudandet.md).
 
-## Filerna
+## Var arbetet görs
+
+Allt sker i Vad kul-studion: **vadkul.se/admin → Marknad**.
+
+- Registret över arrangörerna, med visningar, klick och gillningar från nattkedjan
+  (`npm run organizer-stats` i apps/scraper). Siffrorna knappas aldrig in för hand.
+- E-postadresserna fylls i automatiskt från arrangörernas sajter, med källan synlig.
+- Mejlen skickas från **josef@vadkul.se** via Zoho Mail, med förslag anpassade efter
+  arrangörstyp. Facebook-arrangörerna får en Messenger-text.
+- Svar och mejl som skickats direkt i Zoho synkas var tionde minut och flyttar statusen.
+- Filtret *Följ upp* visar vem som ska få en påminnelse.
+
+Tekniken står i `vadkulyt/README.md` under Marknad.
+
+## Äldre filer (juli-augusti)
+
+Från tiden före studion. Läs dem som historik; studion har tagit över.
 
 | Fil | Vad |
 |---|---|
-| [arrangorer.md](arrangorer.md) | Bocklistan — 120 arrangörer ur riktiga eventdatat, prioriterade i tre nivåer |
-| [mail-mallar.md](mail-mallar.md) | Mall A (mejl), mall B (Facebook), uppföljning, stjärn-P.S., signatur |
-| [facebook-poster.md](facebook-poster.md) | Inläggsutkast för "Vad händer i [stad]"-grupperna (privata kontot) |
-| [generate-arrangorer.mjs](generate-arrangorer.mjs) | Bygger om arrangorer.md ur `apps/web/public/events-*.json` — **skriver över ibockningarna**, kopiera undan dem först |
+| [arrangorer.md](arrangorer.md) | Bocklistan från juli. De tio som bockades av finns med som Skickat i studion. |
+| [forsta-10-mejlen.md](forsta-10-mejlen.md) | De första tio mejlen, skickade 17/7 från info@vadkul.se. |
+| [mail-mallar.md](mail-mallar.md) | Julimallarna och HTML-signaturen. Studion har egna mallar nu. |
+| [facebook-poster.md](facebook-poster.md) | Inlägg för "Vad händer i [stad]"-grupperna (privata kontot). |
+| [generate-arrangorer.mjs](generate-arrangorer.mjs) | Byggde arrangorer.md. Används inte längre. |
 
-## Veckorutinen (≈30 min)
+## Stjärn-erbjudandet (valfri P.S.)
 
-1. Öppna [arrangorer.md](arrangorer.md), ta **5–10 orörda** rader uppifrån
-   (Prio 1 först).
-2. Hitta kontaktvägen: gå till domänen i raden → "Kontakt"/"Om oss" → mejladress.
-   Facebook-arrangörer (mall B): skriv till FB-sidan direkt.
-3. Kopiera mallen, **byt ut första raden** mot något om just deras event
-   (exempel-eventen står i raden) och klistra in rätt stadslänk.
-4. Skicka från **info@vadkul.se** (Zoho). Ett mejl i taget — aldrig BCC.
-5. Bocka i `- [x]`, fyll i `skickat: 2026-07-__`.
-6. Efter 7–10 dagar utan svar: EN uppföljning (mallen finns), sen släpp.
-7. När en länk är uppe: fyll i `länk:` — det är målraden.
-
-## Stjärn-erbjudandet (morotslänken i mejlet)
-
-`https://vadkul.se/?stjarna=ARRANGOR1` → arrangören skapar gratis konto,
-öppnar sitt event, trycker ⭐ → **guld-bricka, alltid synlig på kartan tills
-eventet ägt rum**. En stjärna per konto, server-säkrat. Attribution via
-`starGiftCode: 'ARRANGOR1'` på user-dokumentet — så här räknar du nappen
-(Firebase Console → Firestore → users, filtrera på fältet, eller be Claude).
-
-## Avsändare
-
-**info@vadkul.se** (Zoho — uppsatt 2026-07-16). Signaturen finns i
-[mail-mallar.md](mail-mallar.md) → Inställningar → Signatur i Zoho.
-
-## Vidarelänknings-statistiken (siffrorna till framtida mejl)
-
-Varje ANMÄL-klick på ett eventkort räknas i Firestore-collectionen
-**`eventStats`** (`recordEventClick` i `eventStatsService.ts`):
-
-- `clicks` — totalt antal besökare vi skickat vidare till eventet
-- `clicksByMonth` — `'2026-07': 12, '2026-08': 31 …` (tidsserien)
-- `hostName` / `domain` / `title` — inbakade så statistiken kan summeras
-  **per arrangör** även efter att eventet passerat och lämnat datat
-
-**Så läser du dem:** Firebase Console → Firestore → `eventStats`, eller be
-Claude summera per arrangör ("hur många klick har ABF fått totalt/per månad?").
-Användning i uppföljningsmejl/nya mejl: _"Sedan i somras har vi skickat
-**X besökare** vidare till era event via kartan."_ — konkret värde, svårslaget
-argument för en länk tillbaka.
-
-> OBS: räknaren kräver att firestore-reglerna deployats
-> (`firebase deploy --only firestore:rules`) — före det faller skrivningarna
-> tyst (medvetet: får aldrig störa utlänkningen).
-
-## Varför detta är rätt fokus
-
-- 10 riktiga länkar från arrangörer/kommuner/föreningar gör mer för
-  indexeringen än någon kodändring (ung domän = crawl-budgeten styrs av
-  auktoritet).
-- Arrangören får något konkret först (gratis synlighet + stjärnan) →
-  svarsfrekvensen blir bra.
-- Långsvansen (Prio 3) är lokala föreningar — precis de länkar Google värderar
-  för "vad händer i [stad]"-sökningar.
+`https://vadkul.se/?stjarna=ARRANGOR1`: arrangören skapar ett gratis konto, öppnar sitt event
+och trycker ⭐. Eventet får en guldbricka och syns alltid på kartan tills det har ägt rum.
+En stjärna per konto, server-säkrat. Koden ligger i `STAR_GIFT_CODES` i functions, och
+`starGiftCode: 'ARRANGOR1'` på user-dokumentet visar vilka som nappade. Den finns inte med i
+studions mallar, men går att lägga till som P.S. när det passar.

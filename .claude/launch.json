@@ -9,6 +9,12 @@
       "autoPort": true
     },
     {
+      "name": "studio-test",
+      "runtimeExecutable": "/bin/zsh",
+      "runtimeArgs": ["-c", "cd vadkulyt && exec python3 studio.py --port 8766 --ingen-webblasare --ingen-forhamtning"],
+      "port": 8766
+    },
+    {
       "name": "web-kartbilder",
       "runtimeExecutable": "/bin/zsh",
       "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.22.0/bin:$PATH\" && cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/{z}/{x}/{y}.pbf' exec ../../node_modules/.bin/next dev"],

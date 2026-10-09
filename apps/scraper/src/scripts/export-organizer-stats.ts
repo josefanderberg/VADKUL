@@ -25,14 +25,30 @@ import * as path from 'path';
 import { db } from '../config/firebase';
 import { cityPoints } from '../utils/cityLookup';
 import { mapPool } from '../utils/mapPool';
-import { chunk, groupOrganizers, nearestPlace, Organizer, OrganizerEventRow } from '../utils/organizerStats';
-import { sqlite } from '../utils/sqliteHelper';
+import { chunk, EventPopularity, groupOrganizers, nearestPlace, Organizer, OrganizerEventRow } from '../utils/organizerStats';
+import { buildTitleFreq, normTitlePop, popularRank, popularScore } from '../utils/popularEvent';
+import { allTatortNames, sqlite } from '../utils/sqliteHelper';
 
 const OUT = path.resolve(__dirname, '../../arrangorer-statistik.json');
 const UTAN_FIRESTORE = process.argv.includes('--utan-firestore');
 const BARA = process.argv.find(a => a.startsWith('--bara='))?.slice('--bara='.length).toLowerCase();
 
 interface Stats { visningar: number; klick: number; gillningar: number }
+
+interface PopRow {
+    hasSpecificTime: number | null;
+    coverImage: string | null;
+    price: string | null;
+    attendees: number | null;
+    locationName: string | null;
+}
+
+/** Samma tolkning som aggregate-events: NULL (legacy-rad) = "har tid" om klockslaget inte är midnatt. */
+function harKlockslag(r: { time: string | null; hasSpecificTime: number | null }): boolean {
+    if (r.hasSpecificTime != null) return r.hasSpecificTime === 1;
+    const t = new Date(String(r.time));
+    return !((t.getHours() === 0 && t.getMinutes() === 0) || (t.getUTCHours() === 0 && t.getUTCMinutes() === 0));
+}
 
 let queries = 0;
 
@@ -75,10 +91,40 @@ async function indexenFinns(): Promise<boolean> {
 async function main() {
     const nowIso = new Date().toISOString();
     const rows = sqlite.prepare(`
-        SELECT url, title, time, hostName, category, lat, lng
+        SELECT url, title, time, hostName, category, lat, lng,
+               hasSpecificTime, coverImage, price, attendees, locationName
         FROM link_events
         WHERE hidden = 0 AND status = 'published' AND hostName IS NOT NULL AND hostName <> ''
-    `).all() as OrganizerEventRow[];
+    `).all() as (OrganizerEventRow & PopRow)[];
+
+    // 🔥-klassningen, samma som aggregate-events bakar in i kartans lager: exemplen
+    // i outreach-mejlen ska vara arrangörens populäraste event, inte bara de närmaste.
+    // Titelfrekvensen räknas här över spegelns publicerade event (aggregatet räknar
+    // över sin egen radmängd - skillnaden är marginell och påverkar bara ordningen).
+    const allRows = sqlite.prepare(`SELECT title FROM link_events WHERE hidden = 0 AND status = 'published'`)
+        .all() as { title: string | null }[];
+    const titleFreq = buildTitleFreq(allRows);
+    const townNames = new Set(allTatortNames().map(normTitlePop));
+    const popularity = (r: OrganizerEventRow): EventPopularity => {
+        const row = r as OrganizerEventRow & PopRow;
+        const input = {
+            url: row.url,
+            title: row.title || '',
+            time: String(row.time),
+            category: row.category || 'other',
+            hasSpecificTime: harKlockslag(row),
+            coverImage: row.coverImage,
+            price: row.price,
+            attendees: Number(row.attendees) || 0,
+            locationName: row.locationName,
+        };
+        const repeat = titleFreq.get(normTitlePop(row.title || '')) ?? 1;
+        const isTownName = (stem: string) => townNames.has(stem);
+        return {
+            pop: popularRank(input, repeat, isTownName) !== undefined,
+            score: popularScore(input, repeat, isTownName),
+        };
+    };
 
     const places = cityPoints();
     const placeCache = new Map<string, string | null>();
@@ -89,7 +135,7 @@ async function main() {
         return placeCache.get(k)!;
     };
 
-    const orgs = groupOrganizers(rows, { nowIso, placeOf })
+    const orgs = groupOrganizers(rows, { nowIso, placeOf, popularity })
         .filter(o => !BARA || o.namn.toLowerCase().includes(BARA));
     console.log(`🏷️  ${orgs.length} arrangörer med minst 3 kommande event (av ${rows.length} event i spegeln)`);
 

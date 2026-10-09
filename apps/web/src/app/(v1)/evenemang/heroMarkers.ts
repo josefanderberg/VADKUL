@@ -44,6 +44,10 @@ export type HeroLiveEvent = {
     day: string;
     /** Kategorinyckeln — heron följer kategorichipsen precis som listan. */
     category: string;
+    /** 🔥 Populär (pipelinens klassning) — heron följer 🔥-chippet (7/10,
+     *  "inne på stadssidan ska ju de event man vill se visas"). Utelämnas
+     *  när inte populär (mindre HTML). */
+    pop?: boolean;
 };
 
 /** En placerad bricka: gruppens tidigaste event + hur många som delar platsen. */
@@ -79,13 +83,15 @@ export function pickHeroMarkers(
         dayKeys: readonly string[] | null;
         /** Vald kategorinyckel, eller null för alla. */
         category: string | null;
+        /** 🔥-chippet: bara pipelineklassade populära event (7/10). */
+        popularOnly?: boolean;
         /** Klockan nu — styr "har varit". */
         now: number;
         maxLive?: number;
         minDistPx?: number;
     },
 ): HeroMarker[] {
-    const { dayKeys, category, now } = opts;
+    const { dayKeys, category, popularOnly = false, now } = opts;
     const maxLive = opts.maxLive ?? MAX_LIVE;
     const minDist = opts.minDistPx ?? MIN_DIST_PX;
 
@@ -97,6 +103,7 @@ export function pickHeroMarkers(
         if (isPastEv(e, now)) continue;
         if (dayKeys && !dayKeys.includes(e.day)) continue;
         if (category !== null && e.category !== category) continue;
+        if (popularOnly && e.pop !== true) continue;
         const k = `${e.dx},${e.dy}`;
         const g = byCoord.get(k);
         if (g) g.push(e); else byCoord.set(k, [e]);

@@ -264,6 +264,32 @@ describe('runSource — geocoding', () => {
         expect(writtenEvents()[0].lat).toBe(59.32);
     });
 
+    it('en stadscentroid stoppar INTE kedjan — senare venue-träff vinner (Tickster 2/10)', async () => {
+        geocodeMock
+            .mockResolvedValueOnce([56.8787, 14.8094, 'stad-centroid'])   // "Magasinsgatan 8, Växjö" → mittpunkten
+            .mockResolvedValueOnce([56.87986, 14.80348, 'poi']);         // "Växjö Teater, Växjö" → registret
+        await run([makeEvent({ address: 'Magasinsgatan 8', venueName: 'Växjö Teater', city: 'Växjö' })]);
+        const w = writtenEvents()[0];
+        expect(w.lat).toBe(56.87986);
+        expect(w.geoPrecision).toBe('poi');
+        expect(w.geocodedQuery).toBe('Växjö Teater, Växjö');
+        expect(geocodeMock).toHaveBeenCalledTimes(2);   // stads-kandidaten provas aldrig
+    });
+
+    it('ger ingen kandidat mer än centroid används FÖRSTA centroiden som reserv', async () => {
+        geocodeMock
+            .mockResolvedValueOnce([58.4098, 15.6245, 'stad-centroid'])   // "Tjällmo bibliotek, Linköping"
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce([58.5877, 16.1924, 'stad-centroid']);  // "…, Norrköping"
+        await run([makeEvent({
+            geocodeCandidates: ['Tjällmo bibliotek, Linköping', 'Tjällmo bibliotek, Motala', 'Tjällmo bibliotek, Norrköping'],
+        })]);
+        const w = writtenEvents()[0];
+        expect(w.lat).toBe(58.4098);
+        expect(w.geoPrecision).toBe('stad-centroid');
+        expect(w.geocodedQuery).toBe('Tjällmo bibliotek, Linköping');
+    });
+
     it('geo-cachen återanvänder svar inom körningen (paraply: samma församling × N event)', async () => {
         geocodeMock.mockResolvedValue([57.0, 15.0, 'poi']);
         await run([

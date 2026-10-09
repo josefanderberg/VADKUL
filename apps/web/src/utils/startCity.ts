@@ -1,4 +1,5 @@
 import { isValidLatLng } from './mapUtils';
+import { readChosenCity, START_CHOICE_ZOOM } from './startChoice';
 
 /**
  * "Staden man är i" — vyn kartan ÖPPNAR i nästa gång man kommer tillbaka.
@@ -61,9 +62,26 @@ export function parseStartCity(raw: string | null, nowMs: number): StartCity | n
     };
 }
 
-/** Sparad stad, eller null (första besöket, rensad lagring, privat läge). */
+/**
+ * Djuplänkens startvy: `?plats=<lat>,<lng>[,zoom]` (stadssidornas kart-hero,
+ * arrangörssidans "Se alla på kartan", mejlens kartknapp). Vinner över den
+ * sparade staden. REN funktion; utan zoom blir det 11 (en innerstad), och
+ * zoomen hålls inom kartans 4-16 som den sparade stadens.
+ */
+export function parsePlatsParam(raw: string | null): { lat: number; lng: number; zoom: number } | null {
+    if (!raw) return null;
+    const [lat, lng, zoom] = raw.split(',').map(s => (s.trim() === '' ? NaN : Number(s)));
+    if (!isValidLatLng(lat, lng)) return null;
+    return { lat, lng, zoom: Number.isFinite(zoom) ? Math.min(16, Math.max(4, zoom)) : 11 };
+}
+
+/** Sparad stad, eller null (första besöket, rensad lagring, privat läge).
+ *  En AKTIVT VALD startstad (utils/startChoice, 8/10) vinner över den
+ *  GPS-landade - då öppnar kartan där oavsett var man är. */
 export function readStartCity(nowMs: number = Date.now()): StartCity | null {
     if (typeof window === 'undefined') return null;
+    const chosen = readChosenCity();
+    if (chosen) return { lat: chosen.lat, lng: chosen.lng, zoom: START_CHOICE_ZOOM, name: chosen.name, savedAt: nowMs };
     try {
         return parseStartCity(window.localStorage.getItem(START_CITY_KEY), nowMs);
     } catch {

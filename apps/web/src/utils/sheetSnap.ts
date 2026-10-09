@@ -57,3 +57,29 @@ export function snapDown(stops: number[], start: number, h: number, tolerance = 
     }
     return best;
 }
+
+/** Släpp efter ett LODRÄTT fingerdrag. edge = var sträcket mellan tid/plats
+ *  och arrangören sitter (kortets höjd när sträcket ligger precis i skärm-
+ *  kanten) - det är också kortets lägsta stopp, KOMPAKTLÄGET (Josef 30/9:
+ *  "dra ner det så inte arrangören syns, men drar man ner så det sträcket
+ *  mellan arrangören och tiden försvinner över kanten, så ska den
+ *  försvinna"). Ordning:
+ *  - uppåt → snapUp (minst ett stopp upp)
+ *  - nedåt kortare än minPull → tillbaka dit gesten började (darr på fingret)
+ *  - nedåt och sträcket har gått under kanten (h < edge) → null = stäng
+ *  - annars snapDown (null = inget stopp under start → stäng)
+ *  edge = null när kortet saknar sträcket (väljarlistan) - då avgör bara
+ *  stoppen. */
+export function snapRelease(
+    stops: number[],
+    start: number,
+    h: number,
+    edge: number | null,
+    minPull = 6,
+    tolerance = 4,
+): number | null {
+    if (h > start) return snapUp(stops, start, h, tolerance);
+    if (start - h < minPull) return start;
+    if (edge !== null && h < edge) return null;
+    return snapDown(stops, start, h, tolerance);
+}

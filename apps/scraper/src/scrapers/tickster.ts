@@ -1,6 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden, type GeoHit } from '../utils/venueCoordinates';
+import { firstPreciseHit } from '../utils/geocodeChain';
 import { venueBuildingOf } from '../utils/venueFromText';
 import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
 import { searchGoogleImage } from '../utils/imageSearch';
@@ -462,8 +463,10 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                     console.log(`     🧹 Tickster-kontorsadress detekterad (street="${details.street}", postal="${details.postal}", city="${details.city}") — kastar street/postal.`);
                     details.street = '';
                     details.postal = '';
-                    const parts = [details.city].filter(Boolean);
-                    details.geocodeQuery = parts.length > 0 ? parts.join(', ') : (details.venue || 'Sverige');
+                    // Venue FÖRST — bara staden gav stadscentroiden även när
+                    // venuet ("Växjö Teater") fanns i registret (2/10).
+                    const parts = [details.venue, details.city].filter(Boolean);
+                    details.geocodeQuery = parts.length > 0 ? parts.join(', ') : 'Sverige';
                 }
                 const ticksterLat = 57.7088, ticksterLng = 11.967;
                 if (
@@ -511,7 +514,15 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                 } else {
                     // Geocoda adressen med Sverige-bred sökning
                     console.log(`     🗺️  Geocodar: "${details.geocodeQuery}"`);
-                    const coords = await geocodeVenueSweden(details.geocodeQuery);
+                    // Adressfrågan först, sedan venue + ort: en stadscentroid
+                    // från adressen får inte vinna över ett känt venue.
+                    const venueQuery = [details.venue, details.city].filter(Boolean).join(', ');
+                    const best = await firstPreciseHit(
+                        [...new Set([details.geocodeQuery, venueQuery])].filter(Boolean),
+                        (q) => geocodeVenueSweden(q, details.city ? { nearCity: details.city } : undefined),
+                    );
+                    const coords = best?.hit ?? null;
+                    if (best) details.geocodeQuery = best.query;
                     if (coords) {
                         lat = coords[0];
                         lng = coords[1];

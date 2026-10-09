@@ -1,5 +1,6 @@
 'use client';
 
+import { settleWithin, PROFILE_WRITE_WAIT_MS } from '../utils/settleWithin';
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
@@ -24,6 +25,7 @@ import type { User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { DERIVED_CITY_KEY } from '../hooks/useSaveUserCity';
 import { getCity } from '../lib/cityUtils';
+import { rememberForturFran } from '../utils/forturInbjudan';
 
 interface AuthContextType {
   /**
@@ -82,11 +84,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Nytt konto: kom personen via en inbjudningslänk bokförs inbjudarens
+ *  förtur (no-op annars). Best-effort och lat laddad som profilspeglingen. */
+function bookForturKonto(uid: string) {
+  void import('../services/forturService')
+    .then(m => m.recordForturInvite(uid, 'konto'))
+    .catch(() => { /* bokföringen får aldrig fälla kontot */ });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   // rawUser = vad Firebase faktiskt har (kan vara en anonym tips-session).
   // `user` nedan är den filtrerade vyn som resten av appen ser.
   const [rawUser, setRawUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Förturen (8/10): ?fran=<uid> läggs på enheten redan i FÖRSTA
+  // klientrendern. Kartsidans effekter skriver om adressen och körs före den
+  // här komponentens effekter, så en useEffect hade kommit för sent.
+  useState(() => {
+    if (typeof window !== 'undefined') rememberForturFran();
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -175,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           city = derived?.slug ? getCity(derived.slug) : null;
         } catch { /* ingen stads-prefill */ }
         const displayName = cred.user.displayName || googleName;
-        await setDoc(doc(db, 'users', cred.user.uid), {
+        await settleWithin(setDoc(doc(db, 'users', cred.user.uid), {
           uid: cred.user.uid,
           ...(cred.user.email ? { email: cred.user.email } : {}),
           ...(displayName ? { displayName } : {}),
@@ -186,10 +203,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             cityUpdatedAt: serverTimestamp(),
           } : {}),
           createdAt: serverTimestamp(),
-        }, { merge: true });
+        }, { merge: true }), PROFILE_WRITE_WAIT_MS);
       } catch (e) {
         console.warn('Kunde inte spara profildata efter Google-inloggning:', e);
       }
+      bookForturKonto(cred.user.uid);
     }
     // Nytt/nylänkat konto saknar blankettfälten (ålder/kön/barn) → modalen
     // visar kompletteringssteget.
@@ -225,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
       const { db } = await import('../lib/firebase');
-      await setDoc(doc(db, 'users', cred.user.uid), {
+      await settleWithin(setDoc(doc(db, 'users', cred.user.uid), {
         uid: cred.user.uid,
         email,
         displayName: name.trim(),
@@ -241,10 +259,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           cityUpdatedAt: serverTimestamp(),
         } : {}),
         createdAt: serverTimestamp(),
-      }, { merge: true });
+      }, { merge: true }), PROFILE_WRITE_WAIT_MS);
     } catch (e) {
       console.warn('Kunde inte spara profildata (ålder/kön):', e);
     }
+    bookForturKonto(cred.user.uid);
   };
 
   const updateDisplayName = async (name: string) => {

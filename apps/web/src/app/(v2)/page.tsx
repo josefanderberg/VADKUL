@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { EventWish, LinkEvent } from '@/types';
+import { EventWish, LinkEvent, type EventRsvpStatus } from '@/types';
 import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
@@ -11,32 +11,42 @@ import CategoryChipRow, { SOURCE_EMOJI } from '@/components/v2/CategoryChipRow';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import HoverLabel from '@/components/v2/HoverLabel';
 import AuthModal from '@/components/v2/AuthModal';
-import EventCard from '@/components/v2/EventCard';
-import SearchResults from '@/components/v2/SearchResults';
-import SavedPanel from '@/components/v2/SavedPanel';
+import EventCard, { type ActiveFilter } from '@/components/v2/EventCard';
 import ProfilePanel from '@/components/v2/ProfilePanel';
 import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
+import StartCityPicker from '@/components/v2/StartCityPicker';
 import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
 import { storageService } from '@/services/storageService';
-import { recordEventView, recordEventLike } from '@/services/eventStatsService';
-import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus } from 'lucide-react';
+import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
+import { setRsvpStatus } from '@/services/rsvpService';
+import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY } from '@/utils/rsvpTransition';
+import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus, ListFilter as FilterIcon } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { passesPopularFilter } from '@/utils/popularFilter';
+import { inListWindow, isPopularListed } from '@/utils/popularList';
+import { LIST_ZOOM_OUT_FLOOR, nearestOutsideBounds } from '@/utils/listZoomRings';
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
-import { isFromOrganizer, organizerHref, organizerNameFromSlug } from '@/utils/organizerPages';
+import { zoomInCenter } from '@/utils/zoomInCenter';
+import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug } from '@/utils/organizerPages';
+import { markActive, readShouldAutoShowWelcome } from '@/utils/welcomeGate';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
+import { readMapFilter, writeMapFilter } from '@/utils/mapFilter';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
 import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFromQuery } from '@/utils/eventSearch';
 import { LABEL_TITLE_MIN_ZOOM, WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
-import { readStartCity, writeStartCity } from '@/utils/startCity';
+import { readStartCity, writeStartCity, parsePlatsParam } from '@/utils/startCity';
+import { markStartPickerDone, parseAccountStartChoice, readChosenCity, readStartPickerDone, writeChosenCity } from '@/utils/startChoice';
+import { circleBounds, unionBounds } from '@/utils/eventTiles';
+import { sumDayCounts } from '@/utils/dayCounts';
 import { cityPageHref, nearestCityPage } from '@/utils/cityPages';
 import { takeEventSeed, fetchDeepLinkEvent, mergeDeepLinkEvent } from '@/utils/eventSeed';
+import { loadCreateDraft, saveCreateDraft, clearCreateDraft, draftTimeStillValid } from '@/utils/createDraft';
 import { isEventPast, latestPastAt } from '@/components/v2/v2MapBricka';
 import { shouldAutoBumpDay } from '@/utils/autoDayBump';
 import { normalizeTipUrl } from '@/utils/tipUrl';
@@ -382,6 +392,15 @@ export default function HomePage() {
     // aggregaten gett kortet en plats.
     const deepLinkFlewRef = useRef(false);
     const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
+    // KOMMER/INTRESSERAD (6/10, spår 3): eget svar per event-id, ömsesidigt
+    // uteslutande - ett id ligger i högst ett av seten (utils/rsvpTransition).
+    // Kräver INGET konto: anonyma sessioner räknas med (som tips). Publika
+    // svaret (avatarer) bor i eventRsvps, räknarna i eventStats.
+    const [goingEventIds, setGoingEventIds] = useState<Set<string>>(new Set());
+    const [interestedEventIds, setInterestedEventIds] = useState<Set<string>>(new Set());
+    // Inbjudningsbannern (?event=...&inb=1&fran=<uid>): visas i kortets footer
+    // tills den stängs eller ett ANNAT event väljs.
+    const [cardInvite, setCardInvite] = useState<{ eventId: string; fran: string | null } | null>(null);
     const [discardedEventIds, setDiscardedEventIds] = useState<Set<string>>(new Set());
     const [dayOffset, setDayOffset] = useState(0);
     // Spridningsmodalen efter skapat event (dela → boost) — sätts vid lyckat
@@ -414,13 +433,18 @@ export default function HomePage() {
     // Sökfältet utfällt — speglas från FloatingNavbar så sökpanelen kan visa
     // kategoriraden även innan man skrivit något (16/9).
     const [searchOpen, setSearchOpen] = useState(false);
-    // KATEGORIFILTRET (Josef 16/9, åter efter användarfeedback): EN vanlig
-    // kategori åt gången, väljs i sökpanelen (CategoryChipRow). Eget state,
-    // skilt från selectedCategories (opt-in-källorna) — det här sparas ALDRIG
-    // i profilen, bara i besöket och URL:en (?kat=), och syns alltid som en
-    // bricka under dagplattan när det är på. Sparade vanliga kategorier var
-    // precis det som gav osynliga filter (15/9).
-    const [mapCategory, setMapCategory] = useState<EventCategoryType | null>(null);
+    // KATEGORIFILTRET (Josef 16/9, åter efter användarfeedback; FLERVAL +
+    // SPARAT 6/10: "Fixa en tydligare filter. som sparas med localStorage
+    // eller på sitt inlogg"): kategorier väljs i sökpanelen (CategoryChipRow),
+    // flera samtidigt, tom mängd = visa alla. Eget state, skilt från
+    // selectedCategories (opt-in-källorna). Persistens: localStorage
+    // (utils/mapFilter) för alla, users.mapFilter för inloggade (kontot
+    // vinner över enheten, en delad ?kat=-länk vinner över båda — se
+    // hydreringseffekterna nedan). 16/9-läget sparades ALDRIG eftersom ett
+    // sparat val 15/9 blev ett osynligt filter utan väg ut — det som gör
+    // persistensen okej nu är att valet ALLTID syns som brickor med ✕ under
+    // dagplattan. Ta aldrig bort brickorna utan att ta bort persistensen.
+    const [mapCategories, setMapCategories] = useState<ReadonlySet<EventCategoryType>>(() => new Set());
     // FLER-KÄLLAN (16/9): "visa bara" Svenska kyrkan / PRO / Korpen — Fler-
     // chippet längst till höger i kategoriraden, som på stadssidorna.
     // Utesluter kategorin (en sak åt gången) och 🔥 (källorna är aldrig
@@ -444,8 +468,6 @@ export default function HomePage() {
     // Bumpas när sökrutan ska fällas ihop utifrån (man valde en stad ur
     // träfflistan) — se closeSearchNonce i FloatingNavbar.
     const [closeSearchNonce, setCloseSearchNonce] = useState(0);
-    // Panel med sparade event (öppnas från Sparade-raden i profilpanelen).
-    const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     // Profilpanelen (profilknappen, inloggad) — allt konto-relaterat på kartan.
     const [profilePanelOpen, setProfilePanelOpen] = useState(false);
     // Kategorifilter (flerval). Tomt NORMAL-val = visa alla kategorier; opt-in-
@@ -467,6 +489,15 @@ export default function HomePage() {
     const [catPrefsUid, setCatPrefsUid] = useState<string | null>(null);
     const lastSavedCatsRef = useRef<string | null>(null);
     const urlHadCategoriesRef = useRef(false);
+    // Samma trio för det sparade KARTFILTRET (6/10): en delad ?kat=/?pop=-länk
+    // vinner över kontots sparade filter; lastSavedFilterRef håller baslinjen
+    // så spar-effekten bara skriver vid faktiska ändringar; mapFilterKeyRef
+    // speglar statens nyckel (sätts i localStorage-effekten) så hydreringen
+    // kan ta enhetens läge som baslinje utan att läsa statet asynkront.
+    const urlHadKatRef = useRef(false);
+    const lastSavedFilterRef = useRef<string | null>(null);
+    const mapFilterKeyRef = useRef<string>('|0');
+    const mapFilterWriteArmedRef = useRef(false);
     // Familj & barn ligger ALLTID bland opt-in-raderna (Josef 1/9) — inte bara
     // för inloggade vuxna utan barn som t.o.m. 31/8. Konstant, inte state:
     // profilen styr numera bara om cirkeln är FÖRVALD (utils/categoryDefaults),
@@ -486,8 +517,18 @@ export default function HomePage() {
     // Kontots sparade stad (users.citySlug), läst i samma hydrering - notis-
     // bannern lovar helgtips för DEN staden, det är den helgtipset skickas för.
     const [profileCitySlug, setProfileCitySlug] = useState<string | null>(null);
-    // "offset:days"-nyckel för att skilja dag-/intervallbyten från eventuppdateringar.
-    const prevDayKey = useRef(`${dayOffset}:${dayRangeDays}`);
+    // Dagnyckel för att skilja dag-/intervallbyten från eventuppdateringar
+    // (formatet ägs av dagbytes-effekten; null = inte satt än, första varvet
+    // är ingen byte).
+    const prevDayKey = useRef<string | null>(null);
+    // Dagbytet som ett EGET val gör (djuplänk, sökträff, sparat-listan):
+    // måldagen märks här så dagbytes-heuristiken låter det valda eventet stå.
+    // Formatoberoende med flit — förr förhandsskrevs prevDayKey (`${offset}:1`),
+    // och när nyckeln fick arrangörsläget som tredje del (af902967, 29/9)
+    // slutade de matcha: djuplänkens kort byttes direkt mot "närmast mitten",
+    // vid kall start ingenting alls (kortet blinkade och stängdes), och en
+    // sökträff på en annan dag öppnade fel event.
+    const ownDaySwitchRef = useRef<number | null>(null);
     // Bumpas vid dagbyte → V2Map låter bli att flytta kameran till det nyvalda eventet.
     const [daySwitchNonce, setDaySwitchNonce] = useState(0);
     // Bumpas vid intern kort-navigering (Nästa/Föregående/svep) → kameran står kvar
@@ -512,6 +553,14 @@ export default function HomePage() {
     // Tom-läget håller tyst tills dess — annars hann prompten påstå "inget här"
     // medan ladda-pillen fortfarande sa "Ritar ut eventen…".
     const [mapPainted, setMapPainted] = useState(false);
+    // Rutläget: är rutorna under kartans ruta hämtade? Läses per render (som
+    // tidshorisonten) — varje landning följs av en emit → re-render. En vy
+    // vars rutor inte landat är "laddar", aldrig "tomt": alla vakter nedan
+    // som annars bara frågar eventsSettled frågar eventsSettledHere.
+    const areaLoaded = linkEventService.isAreaLoaded(mapBounds);
+    const eventsSettledHere = eventsSettled && areaLoaded;
+    // Landslagret inne (sökningens/arrangörens siffror räknar hela landet).
+    const nationwideNow = linkEventService.isNationwide();
     const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [newEventTitle, setNewEventTitle] = useState('');
     const [newEventTime, setNewEventTime] = useState('');           // datetime-local-sträng
@@ -607,6 +656,65 @@ export default function HomePage() {
         editingOriginalRef.current = null;
     }, []);
 
+    // UTKASTET (Josef 8/10, se utils/createDraft): att STÄNGA rutan utan att
+    // skapa sparar det man skrivit — alla flikar delar samma fält, så texten
+    // står kvar oavsett flik — och nästa öppning lägger tillbaka det. Bilden
+    // (en File) kan inte ligga i sessionStorage och hålls här i minnet.
+    const draftImageRef = useRef<{ file: File; preview: string } | null>(null);
+    const closeCreateFlow = useCallback(() => {
+        // Redigering och önske-förifyllning är inget eget utkast — de får
+        // varken skriva över eller rensa ett sparat.
+        if (creationMode === 'editing' && !editingEventId && !fulfillingWish) {
+            saveCreateDraft({
+                v: 1,
+                kind: createKind,
+                role: newEventRole,
+                title: newEventTitle,
+                time: newEventTime,
+                category: newEventCategory,
+                place: newEventPlace,
+                price: newEventPrice,
+                description: newEventDescription,
+                url: newEventUrl,
+                host: newEventHost,
+                repeats: newEventRepeats,
+                repeatInterval: newEventRepeatInterval,
+                repeatTimes: newEventRepeatTimes,
+                showMoreDetails,
+            });
+            draftImageRef.current = newEventImage ? { file: newEventImage, preview: newEventImagePreview } : null;
+        }
+        resetCreateFlow();
+    }, [creationMode, editingEventId, fulfillingWish, createKind, newEventRole, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventUrl, newEventHost, newEventRepeats, newEventRepeatInterval, newEventRepeatTimes, showMoreDetails, newEventImage, newEventImagePreview, resetCreateFlow]);
+    /** Efter lyckad skapning: utkastet har gjort sitt. */
+    const discardCreateDraft = useCallback(() => {
+        clearCreateDraft();
+        draftImageRef.current = null;
+    }, []);
+    /** Lägg tillbaka ett sparat utkast i fälten (anropas när rutan öppnas).
+     *  role tvingar fliken när öppningsknappen själv valt den. */
+    const restoreCreateDraft = useCallback((role?: 'host' | 'tip') => {
+        const d = loadCreateDraft();
+        if (d) {
+            setCreateKind(role ? 'event' : d.kind);
+            setNewEventRole(role ?? d.role);
+            setNewEventTitle(d.title);
+            if (draftTimeStillValid(d.time, Date.now())) setNewEventTime(d.time);
+            setNewEventCategory(d.category in EVENT_CATEGORIES ? d.category : 'other');
+            setNewEventPlace(d.place);
+            setNewEventPrice(d.price);
+            setNewEventDescription(d.description);
+            setNewEventUrl(d.url);
+            setNewEventHost(d.host);
+            setNewEventRepeats(d.repeats);
+            setNewEventRepeatInterval(d.repeatInterval);
+            setNewEventRepeatTimes(d.repeatTimes);
+            setShowMoreDetails(d.showMoreDetails);
+        }
+        const img = draftImageRef.current;
+        if (img) { setNewEventImage(img.file); setNewEventImagePreview(img.preview); }
+    }, []);
+
     /**
      * Öppna skapa-/tipsa-formuläret på KARTANS MITT, med tiden förifylld till
      * nästa hela timme. Hit kommer man via bekräfta-knappen i slutet av
@@ -621,8 +729,11 @@ export default function HomePage() {
         const t = new Date(); t.setMinutes(0, 0, 0); t.setHours(t.getHours() + 1);
         const pad = (n: number) => String(n).padStart(2, '0');
         setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
+        // Ett sparat utkast tar över — utom när en djuplänk redan lagt in en
+        // titel (?skapa=…), då gäller länkens.
+        if (!newEventTitle) restoreCreateDraft();
         setCreationMode('editing');
-    }, []);
+    }, [newEventTitle, restoreCreateDraft]);
 
     /**
      * Öppna formuläret FÖRIFYLLT från ett befintligt eget event (kortets
@@ -681,11 +792,11 @@ export default function HomePage() {
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== 'Escape') return;
             if (repicking) { setRepicking(false); return; }
-            resetCreateFlow();
+            closeCreateFlow();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [creationMode, repicking, resetCreateFlow]);
+    }, [creationMode, repicking, closeCreateFlow]);
 
     // Inloggning i modal — man lämnar aldrig kartan. reason visas i modalen.
     const { user, loading: authLoading, ensureTipIdentity } = useAuth();
@@ -758,12 +869,30 @@ export default function HomePage() {
     // intro-resan hann visa hela landet. Intro-kameran är borttagen — kameran
     // landar numera i din stad så tidigt som möjligt, även bakom rutan.)
     const [welcomeDone, setWelcomeDone] = useState(false);
+    // STARTSTADSVÄLJAREN (ägarbeslut 8/10, förebild happymap.se): steg efter
+    // välkomstrutan - välj stad (+ ev. kategorier) eller hoppa över och
+    // hamna där man är. Visas EN gång per enhet/konto (utils/startChoice);
+    // ändras sedan via profilpanelen / inloggningsrutan. withCategories =
+    // onboardingen (två steg); från profilen byter man bara stad.
+    const [startPicker, setStartPicker] = useState<{ withCategories: boolean } | null>(null);
+    // Det aktiva valet, för väljarens markering och profilraden. Kameran
+    // läser lagringen direkt (readChosenCity/readStartCity) så den aldrig
+    // väntar på en omrendering.
+    const [chosenStart, setChosenStart] = useState<CityPoint | null>(null);
+    // Har väljaren besvarats på enheten? Då visar välkomstrutan i stället en
+    // "Kartan startar i … · Byt"-rad (ingen automatisk fråga efter rutan).
+    const [startPickerDone, setStartPickerDone] = useState(false);
+    useEffect(() => { setChosenStart(readChosenCity()); setStartPickerDone(readStartPickerDone()); }, []);
+    // Sant när besöket kom via en djuplänk (?plats=/?event=/?arrangor=) -
+    // då har man redan valt vart man ska, och väljaren får inte dyka upp.
+    const deepLinkVisitRef = useRef(false);
     // (STEG 2 i onboardingen — actionrutan med tipsa/önska/skapa — är borttagen
     // 26/8: för många popups. Plusset uppe till vänster är enda vägen in.)
     // Kromet (navbar, kategorikolumn, stadsruta …) ligger nere BARA under
     // välkomstrutan.
     const chromeHidden = welcomeOpen;
     const welcomeAutoShownRef = useRef(false);
+    const welcomeNewVisitRef = useRef<boolean | null>(null);
     useEffect(() => {
         if (authLoading || welcomeAutoShownRef.current) return;
         welcomeAutoShownRef.current = true;
@@ -785,8 +914,31 @@ export default function HomePage() {
                 return;
             }
         } catch { /* ingen läsbar URL — visa rutan som vanligt */ }
+        // Omladdning MITT I ett besök (iOS slängde fliken, tillbaka från
+        // arrangörssidan …) hoppar över rutan — annars ser det ut som att
+        // sidan hoppar till startsidan (användarmejl 8/10, utils/welcomeGate).
+        if (!(welcomeNewVisitRef.current ?? readShouldAutoShowWelcome())) {
+            setWelcomeDone(true);
+            return;
+        }
         setWelcomeOpen(true);
     }, [authLoading, user]);
+    // "Senast aktiv"-stämpeln som grinden ovan läser: vid mount och varje gång
+    // sidan döljs/lämnas (sista chansen innan iOS kan slänga fliken). Beslutet
+    // läses FÖRE mount-stämpeln och parkeras i en ref — welcome-effekten väntar
+    // på auth och skulle annars läsa vår egen färska stämpel.
+    useEffect(() => {
+        welcomeNewVisitRef.current = readShouldAutoShowWelcome();
+        markActive();
+        const onHide = () => { if (document.visibilityState === 'hidden') markActive(); };
+        const onPageHide = () => markActive();
+        document.addEventListener('visibilitychange', onHide);
+        window.addEventListener('pagehide', onPageHide);
+        return () => {
+            document.removeEventListener('visibilitychange', onHide);
+            window.removeEventListener('pagehide', onPageHide);
+        };
+    }, []);
 
     // Zoom-knappen i Nästa-pillen bumpar denna → V2Map zoomar in på det valda
     // eventet (klicket gör samtidigt "Nästa" i EventCard, så man landar inzoomad
@@ -870,6 +1022,7 @@ export default function HomePage() {
         const params = new URLSearchParams(window.location.search);
         if (params.has('plats') || params.has('event') || params.has('arrangor')) {
             tourAutoStartedRef.current = true;
+            deepLinkVisitRef.current = true;
             return;
         }
         setTourPlaying(true);
@@ -921,10 +1074,10 @@ export default function HomePage() {
     const [pulseArmedNonce, setPulseArmedNonce] = useState(-1);
     useEffect(() => {
         if (!tourPlaying || pulseSuppressed) return;
-        if (!welcomeDone || !eventsSettled || !mapPainted) return;
+        if (!welcomeDone || startPicker || !eventsSettledHere || !mapPainted) return;
         if (!cityTourTarget || landedTourKey !== cityTourTarget.key) return;
         setPulseArmedNonce(n => (n === tourCycleNonce ? n : tourCycleNonce));
-    }, [tourPlaying, pulseSuppressed, welcomeDone, eventsSettled, mapPainted, cityTourTarget, landedTourKey, tourCycleNonce]);
+    }, [tourPlaying, pulseSuppressed, welcomeDone, startPicker, eventsSettledHere, mapPainted, cityTourTarget, landedTourKey, tourCycleNonce]);
 
     // Målat-kvittot från V2Map (onPaintRoundDone): bumpas varje gång en
     // push-runda faktiskt målats klart på skärmen. Ref-spegeln låter timers
@@ -1294,11 +1447,48 @@ export default function HomePage() {
             // Definitivt besked = även en äkta tom dag (0 aggregat-event) räknas
             // som "siffran är klar" — annars stod badgen på "…" för evigt.
             setDayCountReady(true);
-        });
+        }, { area: true });
         // Säkerhetsnät om nätverket HÄNGER (fetch som aldrig resolvar → ingen signal):
         // efter 15 s räknas det ändå som laddat så spinnern inte snurrar för evigt.
         const hangGuard = setTimeout(() => { setEventsLoaded(true); setEventsSettled(true); setDayCountReady(true); }, 15000);
         return () => { unsubscribe(); clearTimeout(hangGuard); };
+    }, []);
+    // RUTLÄGET (utils/eventTiles, docs/egress-optimering.md): servicen hämtar
+    // bara de fasta rutorna runt kartan, inte hela Sverige. Oftast vet vi
+    // redan vid mount var kartan öppnar — ?plats= eller den sparade staden,
+    // samma källor som V2Map:s startvy — så rutorna hämtas parallellt med
+    // kartans uppstart i stället för efter den. (Djuplänkar flyger till
+    // eventet och arrangörsfiltret behöver hela landet — de tar sina egna
+    // vägar.)
+    useEffect(() => {
+        try {
+            const q = new URLSearchParams(window.location.search);
+            // Arrangörsfiltret behöver hela landet, hela tidslinjen och
+            // kortlagret ändå — begär allt direkt, så varken kartans rutor
+            // eller landets 14-dagarsfönster hämtas i onödan först.
+            if (q.has('arrangor')) {
+                linkEventService.requestFullTimeline();
+                void linkEventService.requestCards();
+                void linkEventService.requestNationwide();
+                return;
+            }
+            if (q.has('event')) return;
+            const plats = q.get('plats');
+            const start = plats ? parsePlatsParam(plats) : readStartCity();
+            if (start) linkEventService.setDataArea(circleBounds(start.lat, start.lng, WEEK_AREA_MIN_RADIUS_KM));
+            else if (!plats) {
+                // FÖRSTA BESÖKET: ingen sparad stad och ingen ?plats=. Kameran
+                // blindstartar i TOUR_CITIES[0] om platstjänsten inte hinner
+                // svara (vanligast på mobil) - förhämta DEN stadens rutor, så
+                // att tyst-fallbacken i rutläget (6 s utan område -> hela
+                // landets 14-dagarsfönster, ~1 MB) aldrig går av bara för att
+                // kartan laddar långsamt. Svarar platstjänsten med en annan
+                // stad läggs dess rutor till vid landningen som vanligt;
+                // förhämtningen är en liten begränsad merkostnad, inte ett fel.
+                const c = TOUR_CITIES[0];
+                linkEventService.seedArea(circleBounds(c.lat, c.lng, WEEK_AREA_MIN_RADIUS_KM));
+            }
+        } catch { /* ingen URL/lagring — kartans ruta tar det */ }
     }, []);
 
     // (KVÄLLSLANDNINGEN 13/9 låg här - ersatt 24/9 av auto-hoppet till
@@ -1482,11 +1672,38 @@ export default function HomePage() {
         if (delta !== 0) dayFlashArmedRef.current = true;
         handleTourDayStep(delta, selectEventId);
     }, [handleTourDayStep]);
+    // NÄSTA ZOOMAR UT (7/10 sent): kortet har gått igenom eventen i bild och
+    // valt nästa obesökta utanför bild samma dag - kartan zoomar ut till det
+    // (V2Map zoomRevealTarget) och dagplattan BLINKAR så man ser att det är
+    // samma dag igen. Kortets eget steg, så 4/9-regeln (blinken bara vid
+    // kortets egna steg, aldrig på dag-nyckeln rakt av) håller.
+    const [zoomRevealTarget, setZoomRevealTarget] = useState<{ lat: number; lng: number; nonce: number; minSteps?: number } | null>(null);
+    const handleCardZoomOut = useCallback((target: LinkEvent) => {
+        if (!hasValidCoords(target)) return;
+        setZoomRevealTarget(prev => ({ lat: target.lat!, lng: target.lng!, nonce: (prev?.nonce ?? 0) + 1 }));
+        setDayFlashNonce(n => n + 1);
+    }, []);
     const weekAreaKey = effectiveRangeDays >= WEEK_RANGE_MIN_DAYS && weekAreaCenter
         ? `${Math.round(weekAreaCenter.lat * 20) / 20}:${Math.round(weekAreaCenter.lng * 20) / 20}:${
             Math.max(WEEK_AREA_MIN_RADIUS_KM, Math.ceil(viewRadiusKm / 5) * 5)
         }`
         : null;
+    // Rutläget: kartans DATAOMRÅDE = vyn + veckovyns cirkel kring mitten
+    // (minst WEEK_AREA_MIN_RADIUS_KM, samma radie som veckoläget ritar) —
+    // dag→vecka-pulsen vid landningen ska aldrig vänta på en ny hämtning.
+    // Rutorna läggs bara till; en vy som är för bred för rutor (utzoomat
+    // över landet) ger landslagret efter en kort paus.
+    useEffect(() => {
+        if (!mapBounds || !mapCenter) return;
+        const radius = Math.max(WEEK_AREA_MIN_RADIUS_KM, viewRadiusKm);
+        linkEventService.setDataArea(unionBounds(mapBounds, circleBounds(mapCenter.lat, mapCenter.lng, radius)));
+    }, [mapBounds, mapCenter, viewRadiusKm]);
+    // Stadshopp (GPS-landning, skylt, stadssök, djuplänk): målet är känt i
+    // cityTourTarget långt före moveend — hämta dess rutor medan kameran flyger.
+    useEffect(() => {
+        if (!cityTourTarget) return;
+        linkEventService.setDataArea(circleBounds(cityTourTarget.lat, cityTourTarget.lng, WEEK_AREA_MIN_RADIUS_KM));
+    }, [cityTourTarget]);
     // Perioden som URVAL, med startdag som argument: används av filteredEvents
     // (aktuell period) OCH av förbakningen (nästa/föregående period — se
     // prebakeEvents nedan). Samma regler oavsett vilken period som skivas.
@@ -1588,6 +1805,53 @@ export default function HomePage() {
         }, 800);
         return () => clearTimeout(t);
     }, [savedEventIds, user]);
+
+    // Kommer/Intresserad överlever omladdning — samma mönster som sparade.
+    // Nyckeln är DELAD med stadssidornas svar (hooks/useEventRsvp).
+    useEffect(() => {
+        try {
+            const local = parseRsvpLocal(localStorage.getItem(RSVP_EVENTS_KEY));
+            if (local.going.length) setGoingEventIds(new Set(local.going));
+            if (local.interested.length) setInterestedEventIds(new Set(local.interested));
+        } catch { /* korrupt localStorage — börja om tomt */ }
+    }, []);
+    useEffect(() => {
+        localStorage.setItem(RSVP_EVENTS_KEY, JSON.stringify({
+            going: [...goingEventIds], interested: [...interestedEventIds],
+        }));
+    }, [goingEventIds, interestedEventIds]);
+
+    // Inloggad: Kommer/Intresserad synkas till users/{uid} (union vid
+    // inloggning, debouncad spegel) — precis som sparade event ovan.
+    const rsvpSyncReady = useRef(false);
+    const goingRef = useRef(goingEventIds);
+    goingRef.current = goingEventIds;
+    const interestedRef = useRef(interestedEventIds);
+    interestedRef.current = interestedEventIds;
+    useEffect(() => {
+        rsvpSyncReady.current = false;
+        if (!user) return;
+        let cancelled = false;
+        (async () => {
+            const remote = await userService.getRsvpEventIds(user.uid);
+            if (cancelled) return;
+            const going = new Set([...goingRef.current, ...remote.going]);
+            // Ömsesidigt uteslutande även efter union: Kommer vinner vid krock.
+            const interested = new Set([...interestedRef.current, ...remote.interested].filter(id => !going.has(id)));
+            rsvpSyncReady.current = true;
+            setGoingEventIds(going);
+            setInterestedEventIds(interested);
+        })();
+        return () => { cancelled = true; };
+    }, [user]);
+    useEffect(() => {
+        if (!user || !rsvpSyncReady.current) return;
+        const t = setTimeout(() => {
+            userService.setRsvpEventIds(user.uid, [...goingEventIds], [...interestedEventIds]).catch(err =>
+                console.warn('Kunde inte synka kommer/intresserad:', err));
+        }, 800);
+        return () => clearTimeout(t);
+    }, [goingEventIds, interestedEventIds, user]);
 
     // Skapa event på riktigt: skrivs till Firestore (reglerna begränsar formen)
     // och dyker upp direkt på kartan via optimistisk insättning (pollen plockar
@@ -1774,6 +2038,7 @@ export default function HomePage() {
             if (!isTip && user) {
                 setPostCreateNudge({ id: docId, title: newEventTitle.trim() });
             }
+            if (!fulfillingWish) discardCreateDraft();
             resetCreateFlow();
         } catch (err) {
             // Bara koden till konsollen — inte hela felobjektet (se helpern).
@@ -1783,7 +2048,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeats, newEventRepeatInterval, newEventRepeatTimes, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, editingEventId]);
+    }, [pickedLocation, newEventTitle, newEventTime, newEventCategory, newEventPlace, newEventPrice, newEventDescription, newEventImage, newEventImagePreview, newEventRole, newEventUrl, newEventHost, newEventRepeats, newEventRepeatInterval, newEventRepeatTimes, user, ensureTipIdentity, openLogin, fulfillingWish, resetCreateFlow, discardCreateDraft, editingEventId]);
 
     // Önska ett event: kräver konto (samma spärr som skapa), skrivs till den
     // EGNA collectionen eventWishes (aldrig linkEvents) och dyker upp direkt
@@ -1805,6 +2070,7 @@ export default function HomePage() {
             myWishesRef.current = [...myWishesRef.current, created];
             setWishes(prev => [...prev, created]);
             toast.success(`Önskan är ute på kartan! ✨ Den syns i ${WISH_LIFETIME_DAYS} dagar — eller tills någon skapar eventet.`);
+            discardCreateDraft();
             resetCreateFlow();
         } catch (err) {
             console.error(err);
@@ -1812,7 +2078,7 @@ export default function HomePage() {
         } finally {
             setCreatingEvent(false);
         }
-    }, [pickedLocation, newEventTitle, newEventCategory, newEventDescription, user, openLogin, resetCreateFlow]);
+    }, [pickedLocation, newEventTitle, newEventCategory, newEventDescription, user, openLogin, resetCreateFlow, discardCreateDraft]);
 
     // Ta bort ett användarskapat event: Firestore-delete (reglerna avgör vem
     // som får) + optimistisk borttagning ur kartan/kortleken. Sitt eget alltid
@@ -1967,8 +2233,10 @@ export default function HomePage() {
         if (searchQ) {
             linkEventService.requestCards();
             // Sökningen går över ALLA dagar ("Håkan Hellström om tre veckor")
-            // — fönsterdatat räcker inte, hämta hela tidslinjen.
+            // — fönsterdatat räcker inte, hämta hela tidslinjen. Och över
+            // hela landet: rutorna runt kartan räcker inte heller.
             linkEventService.requestFullTimeline();
+            void linkEventService.requestNationwide();
         }
     }, [searchQ]);
     // Arrangörsfiltret behöver också värdnamnen (kortlagret) och hela
@@ -1978,7 +2246,10 @@ export default function HomePage() {
         if (!organizerSlug) return;
         linkEventService.requestFullTimeline();
         let alive = true;
-        linkEventService.requestCards().then(() => { if (alive) setOrganizerCardsReady(true); });
+        // Arrangörens event finns var som helst i landet — rutorna runt
+        // kartan räcker inte. Redo när BÅDE kortlagret och landslagret landat.
+        Promise.all([linkEventService.requestCards(), linkEventService.requestNationwide()])
+            .then(() => { if (alive) setOrganizerCardsReady(true); });
         return () => { alive = false; };
     }, [organizerSlug]);
     // Ny arrangör = börja om på Alla.
@@ -1993,6 +2264,34 @@ export default function HomePage() {
         const nowMs = Date.now();
         return events.filter(evt => isFromOrganizer(evt.hostName, evt.id, organizerSlug) && !isEventPast(evt, nowMs));
     }, [events, organizerSlug]);
+    // "Fler från samma arrangör"-raden i kortet (6/10): det VALDA eventets
+    // arrangör, över ALLA laddade dagar (kortets events-prop är dagfiltrerad).
+    // Max 12 i tidsordning. Har arrangören en arrangörssida används SIDANS
+    // urval (isFromOrganizer) + direktlänken dit; annars (biljettplattformar,
+    // opt-in-källor, användarskapade) matchas på VÄRDNAMNET rakt av och
+    // länken utelämnas — raden ska synas även utan sida (Josef 6/10: "ser
+    // inte den arrangörslistan"). hostName landar när kortlagret mergats
+    // (kortet begär det vid mount).
+    const cardOrganizerRow = useMemo(() => {
+        if (!selectedEvent) return null;
+        const name = (selectedEvent.hostName ?? '').replace(/\s+/g, ' ').trim();
+        const slug = selectedEvent.userCreated ? null : organizerPageSlug(selectedEvent.hostName, selectedEvent.id);
+        if (!slug && name.length < 3) return null;
+        const nameNorm = name.toLowerCase();
+        const sameHost = (evt: LinkEvent) => slug
+            ? isFromOrganizer(evt.hostName, evt.id, slug)
+            : (evt.hostName ?? '').replace(/\s+/g, ' ').trim().toLowerCase() === nameNorm;
+        const nowMs = Date.now();
+        const rows = events
+            .filter(evt => evt.id !== selectedEvent.id && sameHost(evt) && !isEventPast(evt, nowMs))
+            .sort((a, b) => (a.time?.getTime() ?? 0) - (b.time?.getTime() ?? 0))
+            .slice(0, 12);
+        // Med arrangörssida visas sektionen ÄVEN utan fler laddade event
+        // (7/10 kväll: "jag måste ju kunna gå till alla som är på
+        // arrangörssidan ifrån eventkortet" - knappen dit ska alltid finnas).
+        if (rows.length === 0 && !slug) return null;
+        return { slug, name: name || organizerNameFromSlug(slug ?? '') || 'arrangören', rows };
+    }, [selectedEvent, events]);
     // Ligger eventet i perioden som börjar `offset` dagar fram och är `days`
     // dagar lång? Samma dygnsgränser som periodSlice (lokal midnatt).
     const inPeriod = useCallback((evt: LinkEvent, offset: number, days: number) => {
@@ -2029,11 +2328,12 @@ export default function HomePage() {
     // Opt-in-källor (Svenska kyrkan/PRO) har väldigt många event och är
     // avstängda som default: deras event GÖMS tills användaren själv kryssar i
     // källan (profilpanelens "Visa även"). 🧸 Familj & barn beter sig likadant
-    // (familyOptIn). KATEGORIFILTRET (mapCategory, sökpanelen sedan 16/9)
-    // smalnar allt annat till EN kategori — även ikryssade opt-in-källor.
-    // matchesFilterFor tar kategorin som argument, så kategoriradens siffror
-    // räknar "vad visas om jag trycker här" med exakt samma regler.
-    const matchesFilterFor = useCallback((evt: LinkEvent, category: EventCategoryType | null, source: string | null = null) => {
+    // (familyOptIn). KATEGORIFILTRET (mapCategories, sökpanelen sedan 16/9,
+    // flerval 6/10) smalnar allt annat till de valda kategorierna — även
+    // ikryssade opt-in-källor. matchesFilterFor tar kategorimängden som
+    // argument, så kategoriradens siffror räknar "vad visas om jag trycker
+    // här" med exakt samma regler (en enelements-mängd per chip).
+    const matchesFilterFor = useCallback((evt: LinkEvent, cats: ReadonlySet<string> | null, source: string | null = null) => {
         // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
         // hela filtret, även ett aktivt kategorival.
         if (evt.userCreated) return true;
@@ -2046,18 +2346,19 @@ export default function HomePage() {
         // källan inte är ikryssad i profilen; valet är ju just att se den.
         if (source) return src === source;
         const cat = categoryKeyOf(evt);
-        if (category && cat !== category) return false;
+        const hasCats = !!cats && cats.size > 0;
+        if (hasCats && !cats.has(cat)) return false;
         // Special-källa: syns bara om den är ikryssad (ingår inte i "visa alla").
         if (src) return selectedCategories.has(src);
         // Familj & barn: bara exakt kategori 'family' berörs — breda event som
         // passar både barn och vuxna klassas som music/party av pipelinen och
         // göms aldrig här. Väljer man Familj-chippet vill man se dem.
-        if (familyOptIn && cat === 'family') return selectedCategories.has('family') || category === 'family';
+        if (familyOptIn && cat === 'family') return selectedCategories.has('family') || (hasCats && cats.has('family'));
         return true;
     }, [selectedCategories, familyOptIn, popularOnly]);
     const matchesFilter = useCallback(
-        (evt: LinkEvent) => matchesFilterFor(evt, mapCategory, mapSource),
-        [matchesFilterFor, mapCategory, mapSource],
+        (evt: LinkEvent) => matchesFilterFor(evt, mapCategories, mapSource),
+        [matchesFilterFor, mapCategories, mapSource],
     );
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
@@ -2076,7 +2377,7 @@ export default function HomePage() {
     // Siffrorna i arrangörsläget är klara först när BÅDE värdnamnen (kort-
     // lagret) och hela tidslinjen landat - annars klättrar de (27 -> 47)
     // medan resten av veckorna laddas. Till dess visas "…".
-    const organizerCountsReady = organizerCardsReady && timelineHorizonMs === null;
+    const organizerCountsReady = organizerCardsReady && timelineHorizonMs === null && nationwideNow;
     // Väljaren i arrangörsläget: från Alla -> den dag/vecka väljaren står
     // på; därefter växlar den dag <-> vecka som vanligt (utan zoomlåset -
     // arrangörens vecka är ingen områdesvy).
@@ -2125,7 +2426,9 @@ export default function HomePage() {
         const start = new Date(); start.setHours(0, 0, 0, 0);
         const end = new Date(start); end.setDate(end.getDate() + 7);
         const matchText = searchCity && searchText ? searchText : undefined;
-        const pool = eventsSettled
+        // Hela landet krävs (sökningen begär det) — med bara rutorna runt
+        // kartan hade en annan ort räknats som tom.
+        const pool = eventsSettled && nationwideNow
             ? events.filter(evt =>
                 matchesFilter(evt) && hasValidCoords(evt) && evt.time >= start && evt.time < end
                 && (!matchText || eventSearchTier(evt, matchText) >= 0))
@@ -2137,7 +2440,7 @@ export default function HomePage() {
                 ? pool.filter(evt => haversineKm(city.lat, city.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM).length
                 : null,
         }));
-    }, [searchQuery, searchCity, searchText, events, eventsSettled, matchesFilter]);
+    }, [searchQuery, searchCity, searchText, events, eventsSettled, nationwideNow, matchesFilter]);
 
     // Tidsfönstret: visas en dag bortom den laddade horisonten är datat inte
     // "settled" för den vyn — kartan visar sin vanliga "Laddar fler event…"-
@@ -2145,13 +2448,13 @@ export default function HomePage() {
     // landat. ensureTimelineCovers-effekten uppe vid dagvalet har redan
     // begärt den (timelineHorizonMs deklareras där).
     const eventsSettledForView = useMemo(() => {
-        if (!eventsSettled) return false;
+        if (!eventsSettledHere) return false;
         if (timelineHorizonMs == null) return true;
         const end = new Date();
         end.setHours(0, 0, 0, 0);
         end.setDate(end.getDate() + dayOffset + dayRangeDays);
         return end.getTime() <= timelineHorizonMs;
-    }, [eventsSettled, timelineHorizonMs, dayOffset, dayRangeDays]);
+    }, [eventsSettledHere, timelineHorizonMs, dayOffset, dayRangeDays]);
 
     // FÖRBAKNINGS-underlag till kartan (Josef 13/9 "gör det också"): nästa och
     // föregående periods event genom SAMMA kedja som kartans events-prop
@@ -2234,30 +2537,42 @@ export default function HomePage() {
         else t.setHours(t.getHours() + 1);
         const pad = (n: number) => String(n).padStart(2, '0');
         setNewEventTime(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`);
+        restoreCreateDraft(role);
         setCreationMode('editing');
-    }, [dayOffset]);
+    }, [dayOffset, restoreCreateDraft]);
     /** Tom-promptens knapp: tipsa om något man VET händer (inget konto krävs). */
     const startTipHere = useCallback(() => startCreateHere('tip'), [startCreateHere]);
 
+    // Välkomstmodalens siffror gäller HELA SVERIGE ("N event den närmaste
+    // veckan i hela Sverige"), men kartan laddar bara området runt sig
+    // (rutläget). Landets antal per dag kommer därför från servern (~1 kB)
+    // när rutan öppnas; användarskapade event (som kartan alltid har för
+    // hela landet) läggs på. Tills svaret landat — eller om landslagret
+    // ändå är inne — räknas kartans egna event som förut.
+    const [nationalDayCounts, setNationalDayCounts] = useState<Record<string, number> | null>(null);
+    useEffect(() => {
+        if (!welcomeOpen || nationalDayCounts) return;
+        let alive = true;
+        linkEventService.fetchNationalDayCounts().then((c) => { if (alive && c) setNationalDayCounts(c); });
+        return () => { alive = false; };
+    }, [welcomeOpen, nationalDayCounts]);
+    const countFromToday = useCallback((days: number) => {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(end.getDate() + days);
+        const inRange = (evt: LinkEvent) => evt.time >= start && evt.time < end;
+        if (!nationalDayCounts || nationwideNow) return events.filter(inRange).length;
+        return sumDayCounts(nationalDayCounts, start, days)
+            + events.filter(evt => evt.userCreated && inRange(evt)).length;
+    }, [events, nationalDayCounts, nationwideNow]);
     // Antal event totalt för idag (oavsett filter) för välkomstmodalen
-    const todayEventCount = useMemo(() => {
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const endOfToday = new Date();
-        endOfToday.setHours(23, 59, 59, 999);
-        return events.filter(evt => evt.time >= startOfToday && evt.time <= endOfToday).length;
-    }, [events]);
+    const todayEventCount = useMemo(() => countFromToday(1), [countFromToday]);
 
     // Antal event den närmaste veckan (oavsett filter) — välkomstmodalens
     // huvudsiffra (Josef 11/8): dagssiffran sålde inte databasens storlek,
     // veckovolymen gör det.
-    const weekEventCount = useMemo(() => {
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 7);
-        return events.filter(evt => evt.time >= start && evt.time < end).length;
-    }, [events]);
+    const weekEventCount = useMemo(() => countFromToday(7), [countFromToday]);
 
     // ("Börjar inom en timme"-räknaren i välkomstmodalen är borttagen —
     // ägarbeslut 26/8: rutan ska inte visa den infon.)
@@ -2315,12 +2630,22 @@ export default function HomePage() {
     // Nästa-knappens automatiska dagbyte (EventCard advanceToNextDay).
     useEffect(() => {
         const dayKey = `${dayOffset}:${dayRangeDays}:${organizerRange}`;
-        if (prevDayKey.current !== dayKey) {
+        if (prevDayKey.current === null) {
+            prevDayKey.current = dayKey;   // första varvet: ingen byte
+        } else if (prevDayKey.current !== dayKey) {
             prevDayKey.current = dayKey;
             // Ett begärt landningsevent (kortets Bakåt/Nästa över ett dagbyte)
             // gäller bara DETTA byte — läs och nolla oavsett vad som händer nedan.
             const wantedId = daySwitchSelectIdRef.current;
             daySwitchSelectIdRef.current = null;
+            // Ett eget val (djuplänk/sökträff) har redan valt eventet på den här
+            // dagen: rör varken valet eller kameran — precis som när prevDayKey
+            // förr förhandsskrevs och bytet aldrig syntes här. Förbrukas vid
+            // nästa byte oavsett vems det var (samma dag = inget byte; då
+            // ligger märkningen kvar ofarligt tills dagen byts).
+            const ownSwitch = ownDaySwitchRef.current;
+            ownDaySwitchRef.current = null;
+            if (ownSwitch === dayOffset) return;
             // Bildspelets blink växlar dag↔vecka en gång i halvsekunden. Det ska bara
             // ändra vad kartan VISAR — inte öppna ett eventkort per blink.
             if (tourPlayingRef.current) return;
@@ -2414,6 +2739,10 @@ export default function HomePage() {
         // stad som står i rubriken. Zoom och panorering rör inte nyckeln, så
         // siffrorna får uppdatera sig fritt medan man utforskar.
         if (cityTourTarget && boundsCityKey !== cityTourTarget.key) return null;
+        // Rutläget: vyns rutor inte hämtade än → "…", inte 0 (allt som
+        // läser null — tom-/allt-har-varit-prompterna, veckoerbjudandet,
+        // auto-hoppet till imorgon — väntar då in datat).
+        if (!areaLoaded) return null;
         const start = new Date();
         start.setDate(start.getDate() + dayOffset);
         start.setHours(0, 0, 0, 0);
@@ -2445,7 +2774,7 @@ export default function HomePage() {
             dayAllPastAt: latestPastAt(day),
             weekAllPastAt: latestPastAt(week),
         };
-    }, [cityTourTarget, mapBounds, boundsCityKey, inMapView, dayOffset, events, matchesFilter]);
+    }, [cityTourTarget, mapBounds, boundsCityKey, areaLoaded, inMapView, dayOffset, events, matchesFilter]);
 
     /**
      * Får en botten-prompt synas just nu? Delad grind för BÅDA prompterna
@@ -2464,10 +2793,10 @@ export default function HomePage() {
      * något annat pågår — skapa-flödet, ett öppet kort eller en aktiv sökning.
      */
     const promptContextQuiet = useMemo(() => (
-        eventsSettled && mapPainted && !tourPlaying
+        eventsSettledHere && mapPainted && !tourPlaying
         && creationMode === 'idle' && !selectedEvent && !selectedWish
         && !searchQuery.trim()
-    ), [eventsSettled, mapPainted, tourPlaying, creationMode, selectedEvent, selectedWish, searchQuery]);
+    ), [eventsSettledHere, mapPainted, tourPlaying, creationMode, selectedEvent, selectedWish, searchQuery]);
 
     /**
      * "Här händer ingenting"-läget: stadsrutans siffra för valt läge är NOLL.
@@ -2571,15 +2900,22 @@ export default function HomePage() {
     const canOfferWeek = weekUnlocked && dayRangeDays < WEEK_RANGE_MIN_DAYS && (areaCounts?.week ?? 0) > 0;
     // Tomlägets filterfall: 🔥 och/eller kategorin har smalnat bort allt —
     // svaret är då "släpp filtret", inte "zooma ut".
-    const filterActive = popularOnly || mapCategory !== null || mapSource !== null || mapOrganizer !== null;
+    const filterActive = popularOnly || mapCategories.size > 0 || mapSource !== null || mapOrganizer !== null;
     const sourceLabel = mapSource ? (SOURCE_DEFS.find(s => s.key === mapSource)?.label ?? mapSource) : null;
+    // "Sport", "Sport eller Musik", "Sport, Musik eller Quiz" — tomlägets fras
+    // vid flerval (6/10).
+    const katPhrase = useMemo(() => {
+        const labels = [...mapCategories].map(k => categoryLabel(k));
+        if (labels.length <= 1) return labels[0] ?? '';
+        return `${labels.slice(0, -1).join(', ')} eller ${labels[labels.length - 1]}`;
+    }, [mapCategories]);
     const filterPhrase = mapOrganizer
         ? `Inga kommande event från ${organizerName ?? 'arrangören'}`
         : popularOnly
-        ? `Inga populära event${mapCategory ? ` inom ${categoryLabel(mapCategory)}` : ''}`
+        ? `Inga populära event${katPhrase ? ` inom ${katPhrase}` : ''}`
         : sourceLabel
             ? `Inget från ${sourceLabel}`
-            : `Inget inom ${mapCategory ? categoryLabel(mapCategory) : ''}`;
+            : `Inget inom ${katPhrase}`;
 
     /**
      * Stadsnamnet i rutan FÖLJER KARTAN (Josef 10/8): närmsta ort ur den stora
@@ -2680,7 +3016,7 @@ export default function HomePage() {
     // dag-vecka-dag har gått"), även medan landningspulsen kör. Räkningen går
     // på veckofönstret från vald dag och påverkas inte av pulsens växling.
     // (Grinden som väntade ut pulsen, landingPulseAllowsPrompt, är riven.)
-    const popularWeekQuiet = eventsSettled && mapPainted
+    const popularWeekQuiet = eventsSettledHere && mapPainted
         && creationMode === 'idle' && !selectedEvent && !selectedWish && !searchQuery.trim();
     // Två tal: `qualifying` = riktiga KOMMANDE populära (grinden "mer än 5"),
     // `shown` = exakt det dagväljarens veckorad visar efter trycket (samma
@@ -2701,14 +3037,14 @@ export default function HomePage() {
         let shown = 0;
         for (const evt of events) {
             if (!(evt.time >= start && evt.time <= end) || !inMapView(evt)) continue;
-            if (!matchesFilterFor(evt, mapCategory, mapSource)) continue;
+            if (!matchesFilterFor(evt, mapCategories, mapSource)) continue;
             const popular = !evt.userCreated && passesPopularFilter(evt, true);
             if (!popular && !evt.userCreated) continue;
             shown++;
             if (popular && !isEventPast(evt, nowMs)) qualifying++;
         }
         return { qualifying, shown };
-    }, [popularWeekQuiet, popularOnly, popularWeekDismissed, events, inMapView, dayOffset, matchesFilterFor, mapCategory, mapSource]);
+    }, [popularWeekQuiet, popularOnly, popularWeekDismissed, events, inMapView, dayOffset, matchesFilterFor, mapCategories, mapSource]);
     const showPopularWeek = popularWeekQuiet && !nearbyIsEmpty && !nearbyAllPast
         && !showNotisBanner && !inCityJump
         && shouldOfferPopularWeek({
@@ -2727,17 +3063,31 @@ export default function HomePage() {
     const showZoomIn = popularWeekQuiet && !nearbyIsEmpty && !nearbyAllPast && !showNotisBanner && !inCityJump
         && popularOnly && !mapOrganizer && !zoomInDismissed && !!zoomCity
         && mapZoom !== null && mapZoom < LABEL_TITLE_MIN_ZOOM;
-    // Målzoomen är titelgränsen + en halv (Josef: "så att man ser eventens
-    // titlar under eventmarkörerna och lite till"). Zoomnivå med flit: det är
-    // lagrets egen zoomgräns som avgör om titlarna syns, inte ett metermått.
+    // Målzoomen är titelgränsen + en och en halv (Josef: "så att man ser
+    // eventens titlar under eventmarkörerna och lite till"; 30/9 kväll ett
+    // steg till: "ännu mer inzoomad. ta en enhet mer inzoomat" - var + 0,5).
+    // Zoomnivå med flit: det är lagrets egen zoomgräns som avgör om titlarna
+    // syns, inte ett metermått.
+    // Målpunkten är MARKÖRERNAS mitt i orten, inte ortens mittpunkt (Josef
+    // 1/10: "centrera oss mer i den genomsnittliga mitt av de markörer som
+    // finns") - mitten av den tätaste klungan, se utils/zoomInCenter. Det
+    // som syns på kartan just nu (visibleEvents, 🔥 är på), kommande i
+    // första hand; har allt redan varit räknas de passerade.
     const handleZoomIn = useCallback(() => {
         if (!zoomCity) return;
         setZoomInDismissed(true);
         // Ett eget val: en sen platsuppgift får inte flyga "hem" på stadsnivå
         // och ta tillbaka zoomen (samma som när man tar i kartan).
         tourStartedBlindRef.current = false;
-        flyToPoint(zoomCity.lat, zoomCity.lng, zoomCity.name, LABEL_TITLE_MIN_ZOOM + 0.5);
-    }, [zoomCity, flyToPoint]);
+        const nowMs = Date.now();
+        const placed = visibleEvents.filter(hasValidCoords);
+        const upcoming = placed.filter(evt => !isEventPast(evt, nowMs));
+        const target = zoomInCenter(
+            (upcoming.length > 0 ? upcoming : placed).map(evt => ({ lat: evt.lat!, lng: evt.lng! })),
+            zoomCity,
+        );
+        flyToPoint(target.lat, target.lng, zoomCity.name, LABEL_TITLE_MIN_ZOOM + 1.5);
+    }, [zoomCity, flyToPoint, visibleEvents]);
 
     // Kartklicket stänger bara ett meddelande som faktiskt SYNS - annars
     // stängde klicket som avbryter landningen bannern innan den kommit upp.
@@ -2804,13 +3154,28 @@ export default function HomePage() {
         }
     }, [user, openLogin, notisCity]);
 
-    // Eventen i KARTANS RUTA (dagens + sök-filtrerade), smalnade med 🔥-läget
-    // men FÖRE kategorifiltret: 🔥-knappens badge och kategoriradens siffror
-    // räknar härifrån. (Hette categoryPanelEvents t.o.m. 15/9, sedan
-    // popularButtonEvents.)
+    // Eventen i KARTANS RUTA, smalnade med 🔥-läget men FÖRE kategorifiltret:
+    // kategoriradens siffror (🔥 + kategorierna) räknar härifrån. (Hette
+    // categoryPanelEvents t.o.m. 15/9, sedan popularButtonEvents.)
+    // SAMMA TIDSFÖNSTER SOM LISTANS FLIKAR sedan 7/10 (Josef: "22 populära
+    // … sen står det något annat samtidigt. hur kan de skilja sig åt alla"):
+    // raden räknade den visade dagen, flikarna månaden och bannern veckan,
+    // så 🔥 3 stod mot POPULÄRT · 32. Nu = från den visade dagen inom
+    // LIST_HORIZON_DAYS, passerade bort (utils/popularList inListWindow), och
+    // utan det öppna eventet - fliken visar det inte heller. Sök/arrangör
+    // smalnar som förut (searchFilteredEvents); utan dem räknas alla laddade
+    // dagar, inte bara periodens slice. Veckobannern säger själv "i veckan".
     const viewEvents = useMemo(
-        () => searchFilteredEvents.filter(e => inMapView(e) && passesPopularFilter(e, popularOnly)),
-        [searchFilteredEvents, inMapView, popularOnly],
+        () => {
+            const now = new Date();
+            const nowMs = now.getTime();
+            const base = searchQ || organizerEvents ? searchFilteredEvents : events;
+            return base.filter(e => e.id !== selectedEvent?.id
+                && inMapView(e)
+                && passesPopularFilter(e, popularOnly)
+                && inListWindow(e, dayOffset, now, evt => isEventPast(evt, nowMs)));
+        },
+        [searchQ, organizerEvents, searchFilteredEvents, events, selectedEvent, inMapView, popularOnly, dayOffset],
     );
     // Eventkortets listflikar Alla · 🔥 Populärt (Josef 23/9, 24/9): eventen
     // i KARTANS RUTA som passerar kartans filter, ALLA dagar — inte bara den
@@ -2842,14 +3207,41 @@ export default function HomePage() {
         },
         [events, settledMapBounds, matchesFilter],
     );
+    // LISTAN ZOOMAR UT (ägarbeslut 8/10, Josef: "när man scrollat ner i
+    // listan för man redan sett allt denna månaden på eventkorten. Då ska ju
+    // kartan zooma ut så att listan kan börja om på nästa zoomsteg"): kortets
+    // lista har nått botten - zooma ut kring SAMMA mitt (ingen panorering,
+    // 2/9) minst ett steg och så långt att närmaste event utanför listans
+    // ruta syns (samma filter + tidsfönster som listan, Populärt smalnar).
+    // Kortet fryser det den redan visat och lägger de nya under en avdelare
+    // (utils/listZoomRings). Ingen dagblink - dagen byts inte.
+    const listCanZoomOut = mapZoom != null && mapZoom > LIST_ZOOM_OUT_FLOOR;
+    const handleListZoomOut = useCallback((popularTab: boolean) => {
+        const b = settledMapBounds ?? mapBounds;
+        if (!b) return;
+        const c = mapCenter ?? { lat: (b.south + b.north) / 2, lng: (b.west + b.east) / 2 };
+        const now = new Date();
+        const nowMs = now.getTime();
+        const target = nearestOutsideBounds(events, b, c, e =>
+            matchesFilter(e)
+            && inListWindow(e, dayOffset, now, x => isEventPast(x, nowMs))
+            && (!popularTab || isPopularListed(e, nowMs)));
+        const at = target ? { lat: target.lat!, lng: target.lng! } : c;
+        setZoomRevealTarget(prev => ({ ...at, minSteps: 1, nonce: (prev?.nonce ?? 0) + 1 }));
+    }, [settledMapBounds, mapBounds, mapCenter, events, matchesFilter, dayOffset]);
     // Kategoriradens siffror: per kategori, med ALLA filter utom själva
-    // kategorivalet (opt-in-källor, familjegrinden) — alltså exakt det kartan
-    // visar om man trycker på just den kategorin.
+    // kategorivalet (opt-in-källor, familjegrinden) — alltså vad kategorin
+    // bidrar med om dess chip är valt (enelements-mängd per kategori;
+    // flervalet 6/10 ändrar inte siffrorna, de räknar fortfarande kategorin
+    // för sig).
     const categoryChipCounts = useMemo(() => {
         const counts = new Map<string, number>();
+        const single = new Map<string, Set<string>>();
         for (const evt of viewEvents) {
             const cat = categoryKeyOf(evt);
-            if (!matchesFilterFor(evt, cat)) continue;
+            let catSet = single.get(cat);
+            if (!catSet) { catSet = new Set([cat]); single.set(cat, catSet); }
+            if (!matchesFilterFor(evt, catSet)) continue;
             counts.set(cat, (counts.get(cat) ?? 0) + 1);
         }
         return counts;
@@ -2870,9 +3262,14 @@ export default function HomePage() {
     // snapshoten, 5-min-API-cachen) saknar fältet helt — då döljs cirkeln i
     // stället för att erbjuda ett filter som tömmer kartan.
     const popularAvailable = useMemo(() => events.some(e => e.pop), [events]);
-    // 🔥-chippets siffra: pop-flaggade i kartans ruta (det 🔥-knappens badge
-    // räknade t.o.m. 24/9).
-    const popularChipCount = useMemo(() => viewEvents.reduce((n, e) => n + (e.pop ? 1 : 0), 0), [viewEvents]);
+    // 🔥-chippets siffra = Populärt-flikens (Josef 7/10: "den filterknappen där
+    // det står populära = hur många som står åt höger om månaden"): samma
+    // populärregel som fliken (pop-flaggan ELLER aktiv boost) och samma
+    // kartfilter, så en vald kategori smalnar båda.
+    const popularChipCount = useMemo(() => {
+        const nowMs = Date.now();
+        return viewEvents.reduce((n, e) => n + (isPopularListed(e, nowMs) && matchesFilter(e) ? 1 : 0), 0);
+    }, [viewEvents, matchesFilter]);
 
     // Dag-/kategori-/eventval renderar om stora träd (kortet, listorna) och
     // triggar kartans GL-uppdateringar — som transitions är omrenderingen
@@ -2900,31 +3297,66 @@ export default function HomePage() {
         });
     }, [popularOnly]);
 
-    // Kategoriradens val (16/9) — ett AKTIVT val precis som 🔥-klicket, så
-    // landningspulsen fryser i stället för att kasta tillbaka vyn.
-    const handleSelectMapCategory = useCallback((category: EventCategoryType | null) => {
+    // Kategoriradens val (16/9, FLERVAL 6/10) — ett AKTIVT val precis som
+    // 🔥-klicket, så landningspulsen fryser i stället för att kasta tillbaka
+    // vyn. Ett chip togglar sin kategori i mängden; null = släpp alla
+    // (brickans ✕ och tomlägets Visa alla).
+    const handleToggleMapCategory = useCallback((category: EventCategoryType | null) => {
         setPulseSuppressed(true);
         startTransition(() => {
-            setMapCategory(category);
-            // En sak åt gången: en kategori släpper Fler-källan.
-            if (category) setMapSource(null);
+            if (category === null) {
+                setMapCategories(new Set());
+                return;
+            }
+            setMapCategories(prev => {
+                const next = new Set(prev);
+                if (next.has(category)) next.delete(category);
+                else next.add(category);
+                return next;
+            });
+            // Kategorier och Fler-källan utesluter varandra som förut.
+            setMapSource(null);
         });
     }, []);
-    // Fler-källan (16/9): utesluter kategorin och 🔥, som på stadssidorna.
+    // Fler-källan (16/9): utesluter kategorierna och 🔥, som på stadssidorna.
     const handleSelectMapSource = useCallback((source: string | null) => {
         setPulseSuppressed(true);
         startTransition(() => {
             setMapSource(source);
             if (source) {
-                setMapCategory(null);
+                setMapCategories(new Set());
                 setPopularOnly(false);
             }
         });
     }, []);
-    // Tomlägets "Visa alla": släpper kategorin, Fler-källan och 🔥.
+    // De påslagna filtren som brickor i kortlistans flikrad (7/10 sent, Josef:
+    // "jämte månadens / populära. då ska det ju synas de kategorier man har
+    // iklickade"): en per vald kategori + Fler-källan. 🔥 har redan sin flik
+    // (Populärt) och visas inte dubbelt.
+    const cardActiveFilters = useMemo<ActiveFilter[]>(() => {
+        const out: ActiveFilter[] = [];
+        for (const key of mapCategories) {
+            if (!(key in EVENT_CATEGORIES)) continue;
+            const cat = key as EventCategoryType;
+            out.push({ key: `cat:${cat}`, emoji: EVENT_CATEGORIES[cat].emoji, label: categoryLabel(cat) });
+        }
+        if (mapSource) {
+            out.push({
+                key: `src:${mapSource}`,
+                emoji: SOURCE_EMOJI[mapSource] ?? '•',
+                label: SOURCE_DEFS.find(d => d.key === mapSource)?.label ?? mapSource,
+            });
+        }
+        return out;
+    }, [mapCategories, mapSource]);
+    const handleRemoveCardFilter = useCallback((key: string) => {
+        if (key.startsWith('cat:')) handleToggleMapCategory(key.slice(4) as EventCategoryType);
+        else if (key.startsWith('src:')) handleSelectMapSource(null);
+    }, [handleToggleMapCategory, handleSelectMapSource]);
+    // Tomlägets "Visa alla": släpper kategorierna, Fler-källan och 🔥.
     const handleClearFilters = useCallback(() => {
         startTransition(() => {
-            setMapCategory(null);
+            setMapCategories(new Set());
             setMapSource(null);
             setPopularOnly(false);
             setMapOrganizer(null);
@@ -2937,6 +3369,73 @@ export default function HomePage() {
         setPulseSuppressed(true);
         startTransition(() => setMapOrganizer({ slug, name }));
     }, []);
+
+    // KOMMER/INTRESSERAD (6/10, spår 3): optimistiskt — seten styr UI:t
+    // direkt, svarsdokumentet (eventRsvps) och räknardeltan (eventStats)
+    // skrivs i bakgrunden. INGET konto krävs: anonyma sessioner räknas med
+    // ("okända från typ facebook ska räknas med"), utan namn/bild.
+    const handleSetRsvp = useCallback(async (evt: LinkEvent, pressed: EventRsvpStatus) => {
+        const prev: EventRsvpStatus | null = goingEventIds.has(evt.id) ? 'going'
+            : interestedEventIds.has(evt.id) ? 'interested' : null;
+        const next = nextRsvp(prev, pressed);
+        setGoingEventIds(ids => {
+            const n = new Set(ids);
+            if (next === 'going') n.add(evt.id); else n.delete(evt.id);
+            return n;
+        });
+        setInterestedEventIds(ids => {
+            const n = new Set(ids);
+            if (next === 'interested') n.add(evt.id); else n.delete(evt.id);
+            return n;
+        });
+        // Räknaren på SERIENS dokument för veckoserietillfällen — samma id
+        // som svarsdokumentet och delningslänken (rsvpShareId).
+        recordEventRsvpCount(rsvpShareId(evt.id, evt.userCreated), rsvpCountDeltas(prev, next));
+        try {
+            const uid = await ensureTipIdentity();
+            await setRsvpStatus(evt.id, evt.userCreated, uid, next, {
+                name: user?.displayName || null,
+                photoURL: user?.photoURL || null,
+            });
+        } catch (err) {
+            // Svarsdokumentet nådde inte fram (offline/regler) — det egna
+            // läget står kvar lokalt och synkas via users-spegeln senare.
+            console.warn('Kunde inte spara svaret:', err);
+        }
+    }, [goingEventIds, interestedEventIds, ensureTipIdentity, user]);
+
+    // BJUD MED (6/10): den som bjuder markeras själv som Kommer ("man visar
+    // att man kommer när man delar den") och delningsarket öppnas med
+    // inbjudningslänken /e/<slug>?inb=1&fran=<uid> — mottagaren får bannern i
+    // kortets footer och svarar utan konto. /e/-sidan för frågeparametrarna
+    // vidare till kartan (MapRedirect).
+    const handleInviteFriend = useCallback(async (evt: LinkEvent) => {
+        if (!goingEventIds.has(evt.id)) void handleSetRsvp(evt, 'going');
+        // Starta den PRIVATA tråden för ens inbjudna (spår 3) i bakgrunden —
+        // mottagaren av länken ska kunna gå med även innan man själv öppnat
+        // chatten igen. Best-effort: delningen är huvudsaken, och innan
+        // rules-deployen loggar den bara en varning.
+        if (user) {
+            void import('@/services/privateChatService').then(m =>
+                m.ensurePrivateThread(evt.id, evt.userCreated, { uid: user.uid, name: user.displayName || null }));
+        }
+        const url = inviteUrl(window.location.origin, evt.id, evt.userCreated, user?.uid ?? null);
+        const text = `Följer du med på ${evt.title}?`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: evt.title, text, url });
+                return;
+            }
+            await navigator.clipboard.writeText(`${text} ${url}`);
+            toast.success('Inbjudningslänk kopierad!');
+        } catch { /* avbruten delning är inget fel */ }
+    }, [goingEventIds, handleSetRsvp, user]);
+
+    // Bannern gäller det inbjudna eventet — väljer man ett ANNAT släcks den.
+    useEffect(() => {
+        if (!cardInvite || !selectedEvent) return;
+        if (selectedEvent.id !== cardInvite.eventId) setCardInvite(null);
+    }, [selectedEvent, cardInvite]);
 
     // Byt visad dag/intervall — från dagväljaren eller återställningsknappen.
     // Ett medvetet dagval är att ta över rodret: stoppa bildspelet, annars
@@ -2956,6 +3455,22 @@ export default function HomePage() {
         startTransition(() => setSelectedEvent(evt));
     }, []);
 
+    // SÖKARKET (7/10 kväll): filterknappen uppe till höger (där "+ Lägg till"
+    // stod) öppnar eventkortet UTAN event — bara kortsöket + kategorichipsen;
+    // träffarna dyker upp när man söker. Stängs av kortet (drag ner/✕) eller
+    // automatiskt när ett event väljs (kortet visar då eventet i stället).
+    const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+    const openSearchSheet = useCallback(() => {
+        startTransition(() => {
+            setGroupChoice(null);
+            setSelectedEvent(null);
+            setSearchSheetOpen(true);
+        });
+    }, []);
+    useEffect(() => {
+        if (selectedEvent) setSearchSheetOpen(false);
+    }, [selectedEvent]);
+
     /**
      * Kartklick UNDER (eller precis efter) bildspelet. Klicket stoppar blinket
      * och vyn FRYSER PÅ DEN FAS SOM VISAS (Josef 9/8) — står det "Idag" blir det
@@ -2965,6 +3480,10 @@ export default function HomePage() {
      * flytta en till en vy man inte bett om.
      */
     const handleSelectEventFromMap = useCallback((evt: LinkEvent | null) => {
+        // Tom karta-tap stänger också SÖKARKET (8/10, Josef: "det stängs
+        // inte ner automatiskt när man klickar på kartan") - arket har inget
+        // valt event, så null-valet nedan ändrade ingenting för det.
+        if (!evt) setSearchSheetOpen(false);
         selectEventSmooth(evt);
     }, [selectEventSmooth]);
 
@@ -3042,13 +3561,12 @@ export default function HomePage() {
         groupRepRef.current = null;
     }, [selectedEvent, groupReturn]);
 
-    // Sök-, sparat- och profilpanelen delar plats under navbaren — en i taget.
+    // Sök- och profilpanelen delar plats under navbaren - en i taget.
     useEffect(() => {
-        if (searchQuery.trim()) { setSavedPanelOpen(false); setProfilePanelOpen(false); }
+        if (searchQuery.trim()) setProfilePanelOpen(false);
     }, [searchQuery]);
     const handleToggleProfile = useCallback(() => {
         setProfilePanelOpen(o => !o);
-        setSavedPanelOpen(false);
         setSearchQuery('');
     }, []);
 
@@ -3074,18 +3592,15 @@ export default function HomePage() {
         [events, user]
     );
 
-    // Aktivt sparade = sparade event som ÄNNU INTE passerat (samma isEventPast-
-    // gräns som SavedPanel/kartan: start + 1 h, kl 20 för event utan klockslag).
-    // Passerade sparade räknas som HISTORIK och ska inte blåsa upp
-    // hjärt-badgen / "Sparade event"-räknaren — de ligger under Historik i panelen.
-    const activeSavedCount = useMemo(() => {
-        const nowMs = Date.now();
-        let n = 0;
-        for (const e of events) {
-            if (savedEventIds.has(e.id) && !isEventPast(e, nowMs)) n++;
-        }
-        return n;
-    }, [events, savedEventIds]);
+    // Rutläget: ett sparat event i en annan del av landet (eller bortom
+    // tidsfönstret) finns inte i rutorna - hämta det styckvis, annars
+    // försvann det tyst ur profilens Sparade-mapp. De senast sparade räcker
+    // (äldre sparningar har oftast passerat och finns inte i datat alls;
+    // varje id kostar ett litet uppslag).
+    useEffect(() => {
+        if (!eventsSettled || !savedEventIds.size) return;
+        void linkEventService.ensureEvents([...savedEventIds].slice(-30));
+    }, [eventsSettled, savedEventIds]);
 
     // Användarens GPS-position — rapporteras upp från kartan (den blå plats-
     // pricken; tyst hämtning vid start + "Min plats"-knappen). EventCard visar
@@ -3117,6 +3632,13 @@ export default function HomePage() {
             : { href: '/evenemang', label: 'Evenemang stad för stad', aria: `Evenemang stad för stad — se allt i ${liveCityName ?? 'Sverige'} och andra städer` };
     }, [cityTourTarget, boundsCityKey, liveCityName, mapCenter, userPos]);
 
+    // Dagplattans etikett (delas av plattan och dess aria). Fillets-mätningen
+    // som stod här är RIVEN 7/10 kväll (tredje varvet, Josef: "den ser jätte
+    // konstig ut") — plattan är nu EN kapsel med dagchipet INUTI, se JSX:en.
+    const plattaDayLabel = mapOrganizer && organizerRange === 'all'
+        ? 'Alla'
+        : getDayLabel(dayOffset, mapOrganizer ? organizerDays : effectiveRangeDays);
+
     // ── Var kartan LANDAR ────────────────────────────────────────────────────
     // I staden du är i, inte Stockholm (Josef 9/8). Ligger här nere för att
     // effekten behöver userPos; själva bildspelet bor långt ovanför.
@@ -3132,9 +3654,15 @@ export default function HomePage() {
         if (tourAutoStartedRef.current) return;
         if (!tourPlaying) return;                       // stoppad innan vi hann starta
         if (!mapCenter) return;                         // kartan inte klar än
-        if (!userPos && !tourGpsWaitOver) return;       // ge platstjänsten en chans
+        // VALD STARTSTAD (8/10) vinner över GPS:en - ingen väntan på
+        // platstjänsten, och den GPS-landade staden skrivs inte över.
+        const chosen = readChosenCity();
+        if (!userPos && !tourGpsWaitOver && !chosen) return; // ge platstjänsten en chans
         tourAutoStartedRef.current = true;
-        if (userPos) {
+        if (chosen) {
+            tourCityIndexRef.current = nearestTourCityIndex(chosen.lat, chosen.lng);
+            flyToPoint(chosen.lat, chosen.lng, chosen.name);
+        } else if (userPos) {
             // ORTEN man är närmast (stora CITY_POINTS-listan) — inte den råa
             // GPS-punkten och inte närmsta storstad ur rundan. Samma regel som
             // skylt-knappen, så första besöket och en omstart landar likadant:
@@ -3182,19 +3710,104 @@ export default function HomePage() {
         startCityPulse();                // staden får sin fulla tid från nu
     }, [userPos, tourPlaying, flyToPoint, startCityPulse]);
 
+    // ── Startstaden (8/10) ───────────────────────────────────────────────────
+    // Flyg till ett nytt startval: vald ort, eller (null) "där jag är" = orten
+    // närmast GPS:en. Utan GPS-svar än väntar vi in det via efterhämtningen
+    // ovan (blindflaggan), precis som en vanlig blindstart.
+    const flyToStartChoice = useCallback((city: CityPoint | null) => {
+        const target = city ?? (userPos ? nearestCityPoint(userPos.lat, userPos.lng) : null);
+        if (!target) {
+            if (tourAutoStartedRef.current) tourStartedBlindRef.current = true;
+            return;
+        }
+        tourAutoStartedRef.current = true;
+        tourStartedBlindRef.current = false;
+        tourCityIndexRef.current = nearestTourCityIndex(target.lat, target.lng);
+        flyToPoint(target.lat, target.lng, target.name);
+        if (!city) writeStartCity({ lat: target.lat, lng: target.lng, zoom: TOUR_ZOOM, name: target.name });
+        startCityPulse();
+    }, [userPos, flyToPoint, startCityPulse]);
+
+    const saveAccountStartChoice = useCallback((city: CityPoint | null) => {
+        if (!user) return;
+        setDoc(doc(db, 'users', user.uid), { startstad: city ? city.name : null }, { merge: true })
+            .catch(e => console.warn('Kunde inte spara startstaden:', e));
+    }, [user]);
+
+    const handleStartPickerDone = useCallback(({ city, filter }: { city: CityPoint | null; filter?: { kats: EventCategoryType[]; pop: boolean; source: string | null } }) => {
+        const changed = (readChosenCity()?.name ?? null) !== (city?.name ?? null);
+        writeChosenCity(city);
+        setStartPickerDone(true);
+        setChosenStart(city);
+        saveAccountStartChoice(city);
+        // Kategorierna blir kartans vanliga sparade filter (utils/mapFilter +
+        // users.mapFilter) - alltid synliga som brickor, 15/9-läxan håller.
+        // 🔥 sparas med (mapFilter.pop); Fler-källan gäller besöket, som i
+        // sökpanelen - den sparas medvetet aldrig (utils/mapFilter).
+        if (filter) {
+            setMapCategories(new Set(filter.kats));
+            setPopularOnly(filter.pop);
+            setMapSource(filter.source);
+        }
+        setStartPicker(null);
+        setWelcomeDone(true);
+        // "Där jag är" vid första frågan = där vi redan står: inget hopp.
+        if (changed || city) flyToStartChoice(city);
+    }, [saveAccountStartChoice, flyToStartChoice]);
+
+    const handleStartPickerSkip = useCallback(() => {
+        // Hoppa över i onboardingen = dagens beteende, och frågan kommer inte
+        // igen (inte heller på kontots andra enheter). Avbryt från profilen
+        // ändrar ingenting.
+        if (startPicker?.withCategories && !readStartPickerDone()) {
+            markStartPickerDone();
+            setStartPickerDone(true);
+            saveAccountStartChoice(readChosenCity());
+        }
+        setStartPicker(null);
+        setWelcomeDone(true);
+    }, [startPicker, saveAccountStartChoice]);
+
+    // Kontots startstad (users.startstad), läst i kategorihydreringen nedan.
+    // Kontot vinner över enheten; saknas fältet tar kontot enhetens svar, och
+    // har ingen av dem svarat får inloggade frågan här (de ser aldrig
+    // välkomstrutan). Ref - hydreringen ligger längre ner i filen.
+    const startPickerAskedRef = useRef(false);
+    const applyAccountStartRef = useRef<(value: unknown) => void>(() => {});
+    applyAccountStartRef.current = (value: unknown) => {
+        const parsed = parseAccountStartChoice(value);
+        if (parsed.kind === 'unset') {
+            if (readStartPickerDone()) saveAccountStartChoice(readChosenCity());
+            else if (!deepLinkVisitRef.current && !startPickerAskedRef.current) {
+                startPickerAskedRef.current = true;
+                setStartPicker({ withCategories: true });
+            }
+            return;
+        }
+        const city = parsed.kind === 'city' ? parsed.city : null;
+        const before = readChosenCity()?.name ?? null;
+        writeChosenCity(city);
+        setStartPickerDone(true);
+        setChosenStart(city);
+        // Valet gjordes på en annan enhet: flytta bara om kartan fortfarande
+        // står orörd i startvyn - aldrig mitt i att man tittar.
+        if (before !== (city?.name ?? null) && tourPlayingRef.current && !deepLinkVisitRef.current) {
+            flyToStartChoice(city);
+        }
+    };
+
     // Hoppa till ett specifikt event (från sökträff eller sparat-listan): byt
     // till eventets dag, välj det (kameran flyger dit) och stäng panelen.
-    // prevDayKey markeras som hanterad så dagbytes-heuristiken inte byter bort
-    // vårt val mot närmaste-event-logiken.
+    // Dagbytet märks som eget (ownDaySwitchRef) så dagbytes-heuristiken inte
+    // byter bort vårt val mot närmaste-event-logiken.
     const jumpToEvent = useCallback((evt: LinkEvent) => {
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
         const offset = Math.floor((evt.time.getTime() - startOfToday.getTime()) / 86_400_000);
-        prevDayKey.current = `${offset}:1`;
+        ownDaySwitchRef.current = offset;
         // Panelerna stängs urgent (direkt visuell respons); dag+val är den
         // tunga omrenderingen och körs som transition.
         setSearchQuery('');
-        setSavedPanelOpen(false);
         setProfilePanelOpen(false);
         startTransition(() => {
             setDayOffset(offset);
@@ -3427,6 +4040,21 @@ export default function HomePage() {
     // dag/kategorier till URL:en med replaceState (ingen history-spam, ingen
     // Next-navigation). Att dela länken återskapar exakt vy.
     const urlApplied = useRef(false);
+    // ?plats= (stadssidornas kartbild, arrangörssidans och mejlens kartknapp)
+    // fångas när sidan monteras och skickas till V2Map. URL-synken nedan skriver
+    // om adressfältet utan plats= så fort eventen landat, och den dynamiskt
+    // importerade kartan monteras ofta EFTER det (mätt 1/10: adressen omskriven
+    // efter 1,4 s, kartan monterad efter 2,8 s). Då öppnade kartan i den sparade
+    // staden: Växjö-besökaren som klickade Linköpings kartknapp hamnade i Växjö,
+    // med arrangörsfiltret på 0 event i bild.
+    // I en EFFEKT, inte vid första renderingen: kommer man hit via en intern
+    // Link (arrangörssidans "Se alla på kartan") visar adressfältet förra sidan
+    // ända tills Next bytt historiken i commit-fasen. Monteras kartan före den
+    // här effekten (chunken redan laddad) läser den adressfältet själv.
+    const [startPlats, setStartPlats] = useState<string | null>(null);
+    useEffect(() => {
+        setStartPlats(new URLSearchParams(window.location.search).get('plats'));
+    }, []);
     // Sant när en delad länk styrde dag eller event — då ska auto-hoppet till
     // Imorgon (nedan) aldrig lägga sig i.
     const deepLinkedRef = useRef(false);
@@ -3438,6 +4066,9 @@ export default function HomePage() {
     // Nu ligger id:t kvar här och prövas om vid varje events-uppdatering tills
     // det hittas eller datat är definitivt klart (eventsSettled).
     const pendingEventIdRef = useRef<string | null>(null);
+    // Djuplänks-id vars styckuppslag (ensureEvents) är klart — först då får
+    // "hittades inte"-toasten gå (eventets ruta kan annars bara vara ohämtad).
+    const [deepLinkLookupDone, setDeepLinkLookupDone] = useState<string | null>(null);
 
     // Djuplänksöppningen sker i HELSKÄRM (Josef 29/8): den som klickat ett
     // event på en stadssida ska se hela eventet direkt — kortet täcker skärmen
@@ -3452,7 +4083,7 @@ export default function HomePage() {
     const applyDeepLinkedEvent = useCallback((target: LinkEvent) => {
         const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
         const offset = Math.floor((target.time.getTime() - startOfToday.getTime()) / 86_400_000);
-        prevDayKey.current = `${offset}:1`;
+        ownDaySwitchRef.current = offset;
         setDayOffset(offset);
         setSelectedEvent(target);
         setFullOpenNonce(n => n + 1);
@@ -3548,17 +4179,66 @@ export default function HomePage() {
             setSelectedCategories(new Set(valid));
             urlHadCategoriesRef.current = true;
         }
-        // Kategorifiltret (16/9) står i ?kat=; äldre länkar med en vanlig
-        // kategori i ?kategori= tolkas likadant. Det syns alltid som bricka.
+        // SPARAT KARTFILTER (6/10): enhetens localStorage-läge appliceras
+        // FÖRST, så att en delad ?kat=/?pop=-länk nedan kan skriva över det.
+        // Kontots sparade filter (inloggade) appliceras i user-hydreringen
+        // och vinner i sin tur över enheten — men aldrig över länken
+        // (urlHadKatRef). Brickorna under dagplattan visar läget direkt.
+        let hydratedKats: readonly string[] = [];
+        let hydratedPop = false;
+        const stored = readMapFilter();
+        if (stored) {
+            if (stored.kats.length) {
+                setMapCategories(new Set(stored.kats));
+                hydratedKats = stored.kats;
+            }
+            if (stored.pop) {
+                setPopularOnly(true);
+                hydratedPop = true;
+            }
+        }
+        // Kategorifiltret (16/9, flerval 6/10) står i ?kat= — kommaseparerat
+        // vid flerval, en källnyckel när Fler-källan är vald. Äldre länkar med
+        // en vanlig kategori i ?kategori= tolkas likadant. Syns alltid som
+        // brickor.
         const kat = params.get('kat') ?? katParts.find(k => k in EVENT_CATEGORIES && !valid.includes(k)) ?? null;
-        if (kat && kat in EVENT_CATEGORIES) setMapCategory(kat as EventCategoryType);
-        else if (kat && SOURCE_DEFS.some(s => s.key === kat)) setMapSource(kat);
+        if (kat) {
+            const katList = kat.split(',').filter(Boolean);
+            const katCats = katList.filter((k): k is EventCategoryType => k in EVENT_CATEGORIES);
+            if (katCats.length) {
+                setMapCategories(new Set(katCats));
+                hydratedKats = katCats;
+                urlHadKatRef.current = true;
+            } else if (katList.length === 1 && SOURCE_DEFS.some(s => s.key === katList[0])) {
+                setMapSource(katList[0]);
+                urlHadKatRef.current = true;
+            }
+        }
         // 🔥-läget i en delad länk — samma mönster som ?kategori=.
-        if (params.get('pop') === '1') setPopularOnly(true);
+        if (params.get('pop') === '1') {
+            setPopularOnly(true);
+            hydratedPop = true;
+            urlHadKatRef.current = true;
+        }
+        // Armera filter-persistensen med hydreringens nyckel: spar-effekten
+        // skriver bara när läget AVVIKER härifrån (eget val), aldrig för
+        // hydreringens eget eko eller en delad länks filter.
+        mapFilterKeyRef.current = `${[...hydratedKats].sort().join(',')}|${hydratedPop ? '1' : '0'}`;
+        mapFilterWriteArmedRef.current = true;
         // Arrangörsfiltret (arrangörssidans "Se på kartan", 29/9).
         const arrangor = params.get('arrangor');
         if (arrangor && /^[a-z0-9-]{2,80}$/.test(arrangor)) setMapOrganizer({ slug: arrangor, name: null });
         const dag = parseInt(params.get('dag') ?? '', 10);
+        // Inbjudan (6/10): ?inb=1 på en eventlänk visar bannern i kortets
+        // footer; ?fran=<uid> ger inbjudarens namn (users är publikt läsbar).
+        const inviteEventId = params.get('event');
+        if (inviteEventId && params.get('inb') === '1') {
+            const fran = params.get('fran');
+            setCardInvite({
+                eventId: inviteEventId,
+                fran: fran && /^[A-Za-z0-9]{10,64}$/.test(fran) ? fran : null,
+            });
+        }
         const dagar = parseInt(params.get('dagar') ?? '', 10);
         const eventId = params.get('event');
         // Redan ett event-ID i länken (hittat eller ej) räknas som djuplänk —
@@ -3574,6 +4254,10 @@ export default function HomePage() {
             applyDeepLinkedEvent(target);
         } else if (eventId) {
             pendingEventIdRef.current = eventId;
+            // Rutläget: eventet kan ligga i en ruta som inte hämtats (kameran
+            // har inte flugit dit än — eller kan inte, utan koordinater). Slå
+            // upp det styckvis; "hittades inte" först när uppslaget är klart.
+            void linkEventService.ensureEvents([eventId]).then(() => setDeepLinkLookupDone(eventId));
         }
         if (!target && !Number.isNaN(dag)) {
             setDayOffset(dag);
@@ -3597,11 +4281,11 @@ export default function HomePage() {
         if (target) {
             pendingEventIdRef.current = null;
             applyDeepLinkedEvent(target);
-        } else if (eventsSettled) {
+        } else if (eventsSettled && deepLinkLookupDone === id) {
             pendingEventIdRef.current = null;
             toast('Eventet i länken kunde inte hittas — det kan ha passerat eller tagits bort.', { icon: '🤷' });
         }
-    }, [events, eventsSettled, applyDeepLinkedEvent]);
+    }, [events, eventsSettled, deepLinkLookupDone, applyDeepLinkedEvent]);
 
     useEffect(() => {
         if (!urlApplied.current) return;   // skriv inte förrän ev. inkommande länk applicerats
@@ -3630,12 +4314,30 @@ export default function HomePage() {
             params.set('kategori', [...selectedCategories].join(','));
         }
         if (popularOnly) params.set('pop', '1');
-        const kat = mapCategory ?? mapSource;
+        const kat = mapSource ?? ([...mapCategories].join(',') || null);
         if (kat) params.set('kat', kat);
         if (mapOrganizer) params.set('arrangor', mapOrganizer.slug);
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user, popularOnly, mapCategory, mapSource, mapOrganizer]);
+    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user, popularOnly, mapCategories, mapSource, mapOrganizer]);
+
+    // SPARAT KARTFILTER, enhetsdelen (6/10): kategorivalet + 🔥 skrivs till
+    // localStorage vid varje ändring så det överlever nästa besök (30 dagars
+    // TTL i utils/mapFilter — ett urgammalt filter ska inte smalna kartan i
+    // evighet). URL-effekten armar och lägger hydreringens nyckel i
+    // mapFilterKeyRef — skrivningen sker alltså bara vid en FAKTISK avvikelse
+    // från det hydrerade läget, aldrig av mount-tomrummet eller hydreringens
+    // eget eko (en skrivning där hade raderat nyckeln som just lästs). En
+    // ?kat=-länks filter skrivs därmed inte heller: länkens filter gäller
+    // besöket, det sparade är ens eget val. Tömt filter tar bort nyckeln.
+    useEffect(() => {
+        if (!mapFilterWriteArmedRef.current) return;
+        const kats = [...mapCategories];
+        const key = `${[...kats].sort().join(',')}|${popularOnly ? '1' : '0'}`;
+        if (key === mapFilterKeyRef.current) return;
+        mapFilterKeyRef.current = key;
+        writeMapFilter({ kats, pop: popularOnly });
+    }, [mapCategories, popularOnly]);
 
     // ── Sparade kategorifilter (inloggade) ──────────────────────────────────
     // Aktiverar man t.ex. Svenska kyrkan eller PRO ska valet överleva nästa
@@ -3664,11 +4366,15 @@ export default function HomePage() {
         let cancelled = false;
         (async () => {
             let baseline = [...selectedCategories].sort().join(',');
+            // Kartfiltrets baslinje: enhetens läge tills kontot säger annat —
+            // speglas av localStorage-effekten, så ingen asynkron state-läsning.
+            let filterBaseline = mapFilterKeyRef.current;
             try {
                 const snap = await getDoc(doc(db, 'users', user.uid));
                 const data = snap.exists()
-                    ? snap.data() as { mapCategories?: unknown; hasChildren?: unknown; age?: unknown; citySlug?: unknown }
+                    ? snap.data() as { mapCategories?: unknown; mapFilter?: unknown; hasChildren?: unknown; age?: unknown; citySlug?: unknown; startstad?: unknown }
                     : null;
+                if (!cancelled) applyAccountStartRef.current(data?.startstad);
                 // Opt-in-läget följer alltid profilen — även när en inkommande
                 // ?kategori=-länk vinner över det sparade kategorivalet.
                 profileAgeRef.current = data?.age;
@@ -3719,9 +4425,32 @@ export default function HomePage() {
                         if (!cancelled) setSelectedCategories(new Set(defaults));
                     }
                 }
+                // KARTFILTRET (6/10): kontots sparade mapFilter vinner över
+                // enhetens localStorage-läge (som redan applicerats i URL-
+                // effekten) — men aldrig över en inkommande ?kat=/?pop=-länk.
+                // Saknas fältet behålls enhetens läge, och baslinjen blir det
+                // (mapFilterKeyRef) så spar-effekten inte skriver förrän man
+                // själv ändrar något.
+                if (!urlHadKatRef.current) {
+                    const mf = data?.mapFilter && typeof data.mapFilter === 'object'
+                        ? data.mapFilter as { kats?: unknown; pop?: unknown }
+                        : null;
+                    if (mf) {
+                        const kats = Array.isArray(mf.kats)
+                            ? mf.kats.filter((k): k is EventCategoryType => typeof k === 'string' && k in EVENT_CATEGORIES)
+                            : [];
+                        const pop = mf.pop === true;
+                        if (!cancelled) {
+                            setMapCategories(new Set(kats));
+                            setPopularOnly(pop);
+                        }
+                        filterBaseline = `${kats.slice().sort().join(',')}|${pop ? '1' : '0'}`;
+                    }
+                }
             } catch { /* best-effort — kartan störs aldrig av prefs */ }
             if (!cancelled) {
                 lastSavedCatsRef.current = baseline;
+                lastSavedFilterRef.current = filterBaseline;
                 setCatPrefsUid(user.uid);
             }
         })();
@@ -3739,6 +4468,9 @@ export default function HomePage() {
         setSelectedCategories(new Set(defaultSpecialCategories({ loggedIn: false })));
         setCatPrefsUid(null);
         lastSavedCatsRef.current = null;
+        // Kartfiltret står KVAR vid utloggning — det är enhetens läge
+        // (localStorage) och syns som brickor; bara konto-baslinjen nollas.
+        lastSavedFilterRef.current = null;
         profileAgeRef.current = undefined;
         profileHasChildrenRef.current = undefined;
     }, [user]);
@@ -3756,6 +4488,22 @@ export default function HomePage() {
         }, 1200);
         return () => clearTimeout(t);
     }, [selectedCategories, user, catPrefsUid]);
+
+    // SPARAT KARTFILTER, kontodelen (6/10): samma mönster som mapCategories
+    // ovan — först efter hydrering (catPrefsUid), debouncat, bara vid faktisk
+    // ändring. Även tömning sparas (aktivt "visa alla" ska följa med mellan
+    // enheter). localStorage-effekten ovan skriver enhetens kopia parallellt.
+    useEffect(() => {
+        if (!user || catPrefsUid !== user.uid) return;
+        const key = `${[...mapCategories].sort().join(',')}|${popularOnly ? '1' : '0'}`;
+        if (key === lastSavedFilterRef.current) return;
+        const t = setTimeout(() => {
+            setDoc(doc(db, 'users', user.uid), { mapFilter: { kats: [...mapCategories], pop: popularOnly } }, { merge: true })
+                .then(() => { lastSavedFilterRef.current = key; })
+                .catch(() => { /* best-effort */ });
+        }, 1200);
+        return () => clearTimeout(t);
+    }, [mapCategories, popularOnly, user, catPrefsUid]);
 
     // ── Auto-hopp till Imorgon när dagen är slut I KARTANS RUTA ─────────────
     // Kommer man till en stad sent när allt redan varit ska kartan själv stå
@@ -3899,35 +4647,46 @@ export default function HomePage() {
                 rutan stängs (och deras egna fade-in-animationer spelar då upp,
                 så kromet tonar in i stället för att smälla fram). */}
 
-            {/* 1. Svävande transparent Navbar överst — bara profil + sök (15/9) */}
+            {/* 1. Svävande transparent Navbar överst — BARA profilen sedan
+                7/10 (ägarbeslut: "vi kan ju ta bort sök och filter på kartan",
+                kortets sök/filter-ikon tog över jobbet; + bor i högra hörnet). */}
             {!chromeHidden && (
             <FloatingNavbar
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                closeSearchNonce={closeSearchNonce}
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
-                onSearchOpenChange={setSearchOpen}
             />
             )}
 
-            {/* 1b. SKAPA-KNAPPEN under profilen uppe till vänster (ägarbeslut
-                24/9 — bodde i botten-dockans vänstra hörn 15/9–24/9). 🔥-knappen
-                i nedre högra hörnet är RIVEN samma dag: 🔥 Populära är första
-                chippet i sökpanelens kategorirad. Ligger under eventkortet
-                (z-1090, som väljaren). */}
+            {/* 1b. FILTERKNAPPEN i ÖVRE HÖGRA hörnet (ägarbeslut 7/10 kväll:
+                "Ta bort lägg till som är uppe åt höger. ha en vanlig
+                filtersymbol där. om man klickar på den öppnar eventkortet,
+                men bara med sök och att vi visa filterna och inga event") —
+                ersätter "+ Lägg till"-pillen, som blev en rund + ovanför
+                dagväljarens högerkolumn (CreateEventButton, se 1b1b). Samma
+                vita 44px-formspråk som profilknappen; blå prick när kartans
+                filter är på (6/10-receptet — arrangörsfiltret räknas inte,
+                det har sin banner). Ligger under eventkortet (z-1090). */}
             {!chromeHidden && (
-            <CreateEventButton
-                creationMode={creationMode}
-                enabled={shopFlags.createEvent}
-                onStartCreate={() => setCreationMode('placing')}
-                onConfirmPlacement={openCreateFormHere}
-                hint={tourHint === 'create'}
-            />
+            <div className="fixed inset-x-0 top-6 px-4 z-[1090] pointer-events-none">
+                <div className="max-w-[1400px] mx-auto flex justify-end">
+                    <button
+                        type="button"
+                        onClick={openSearchSheet}
+                        aria-label="Sök och filtrera event"
+                        title="Sök och filtrera event"
+                        className="pointer-events-auto relative h-11 w-11 flex items-center justify-center bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200"
+                    >
+                        <FilterIcon size={19} className="text-slate-700" />
+                        {(popularOnly || mapCategories.size > 0 || mapSource !== null) && (
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
+                        )}
+                    </button>
+                </div>
+            </div>
             )}
 
-            {/* 1b1a. DAGEN ÖVERST, staden som liten rad under (Josef 2/9 — se
-                span-kommentarerna). Plattan är kvar i mitten överst (Josef 31/8)
+            {/* 1b1a. STADEN ÖVERST, dagen under (Josef 7/10 kväll — se
+                className-kommentaren). Plattan är kvar i mitten överst (Josef 31/8)
                 och är en LÄNK till STADSSIDAN för staden man är i (Josef 2/9,
                 cityLink ovan; /evenemang-indexet bara som fallback) i stället för
                 dag/vecka-växeln, som flyttat ner till botten (1b1b). Hörn-
@@ -3941,10 +4700,21 @@ export default function HomePage() {
                 moveend. key på HOPP-nyckeln → plattan tonar in på nytt vid
                 stadshopp men inte vid egen panorering.
                 Mörk platta som förut: kartan är ljus och vit skugg-text blir
-                gröt över ljusa kvarter. px-16 håller den fri från navbarens
-                knappkolumner i hörnen. */}
+                gröt över ljusa kvarter. Gridet runt plattan håller den fri
+                från hörnknapparna (se kommentaren vid gridet). */}
 {!chromeHidden && (
-    <div className="fixed inset-x-0 top-6 z-[1090] flex flex-col items-center gap-1.5 px-16 pointer-events-none">
+    <div className="fixed inset-x-0 top-6 z-[1090] flex flex-col items-center gap-1.5 pointer-events-none">
+        {/* Plattans rad: samma kolumn som hörnknapparna (px-4 + max-w-[1400px])
+            i ett tredelat grid. Sidokolumnerna delar luften lika (plattan står
+            mitt på skärmen) men blir aldrig smalare än knappen i sitt hörn +
+            8 px luft: 52 = profilen/filterknappen 44 + 8 (sedan 7/10 kväll är
+            båda hörnen 44px-cirklar — "+ Lägg till"-pillen som krävde 118 bor
+            nu vid dagväljaren). Ett långt stadsnamn knuffar plattan i sidled i
+            stället för in under knappen (som iOS-titlar); först när hela
+            mitten är full kapas namnet med …. */}
+        <div className="w-full px-4">
+        <div className="max-w-[1400px] mx-auto grid grid-cols-[minmax(52px,1fr)_minmax(0,auto)_minmax(52px,1fr)]">
+        <div className="col-start-2 min-w-0 relative flex flex-col items-center">
         <a
             key={cityTourTarget?.key ?? 0}
             href={cityLink.href}
@@ -3955,50 +4725,74 @@ export default function HomePage() {
             // styr inflygningens animation OCH övergångarna — hovern ska vara
             // lika kvick som knapparna (200 ms).
             // tourHint 'city' = visningsrundans sista steg: samma hover-läge i 4 s.
-            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center rounded-full backdrop-blur-md px-7 py-2.5 shadow-2xl border border-white/10 transition-[background-color,transform] active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-[#FECC02]/70 ${
-                tourHint === 'city' ? 'bg-slate-900/90 scale-105' : 'bg-slate-900/80 hover:bg-slate-900/90 hover:scale-105'
+            // STADEN STORT + DAGCHIPET (7/10 kväll, tre varv: "större text ...
+            // dagen ... egen background med borderradius på alla hörn utan de
+            // som är upp mot staden" → fliken under pillen och fillets-bygget
+            // PRÖVADE OCH RIVNA samma kväll — "går inte alls ihop" / "ser
+            // jätte konstig ut" → nu EN kapsel med dagchipet inuti, se
+            // kommentaren vid blocket nedan). Hela blocket är länken till
+            // stadssidan; stadsraden är h-11 (44 px som profilknappen).
+            className={`peer relative pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-500 flex flex-col items-center min-w-0 max-w-full transition-transform active:scale-[0.99] outline-none group/platta ${
+                tourHint === 'city' ? 'scale-105' : 'hover:scale-105'
             }`}
             style={{ transitionDuration: '200ms' }}
         >
-            {/* BARA stadsnamnet (Josef 31/8: "Evenemang stad för stad"-under-
-                raden revs samma kväll som den lades till — namnet ÄR länken,
-                utan skylt). Länkens ärende ligger i title/aria + sr-only-
-                texten nedan, som också är det Google läser.
-                sm:leading-none MÅSTE upprepas: sm:text-2xl sätter om
-                line-height till 32px i breakpointen och vinner annars över
-                bara leading-none — då växer plattan i onödan på desktop. */}
-            {/* DAGEN står överst (Josef 2/9: "där det står staden längst upp —
-                där ska det stå vilken dag man är på, så man ser det"): Nästa-
-                bläddringen byter dag av sig själv när eventen i bild är slut,
-                och dagväljaren i botten ligger bakom kortet just då. Samma
-                etikett som väljaren (getDayLabel) så texterna aldrig går isär;
-                effectiveRangeDays = det kartan faktiskt visar (veckan faller
-                till en dag utzoomad). */}
-            {/* Ringen + texten får key=dayFlashNonce → remount → engångs-
-                blinken spelas om vid varje dagbyte (se dayFlashNonce). */}
-            {dayFlashNonce > 0 && (
-                <span key={`ring-${dayFlashNonce}`} aria-hidden className="day-flash-ring absolute inset-0 rounded-full pointer-events-none" />
-            )}
-            <span
-                key={`day-${dayFlashNonce}`}
-                className={`block first-letter:uppercase text-xl sm:text-2xl font-black tracking-tight text-white leading-none sm:leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
-            >
-                {mapOrganizer && organizerRange === 'all'
-                    ? 'Alla'
-                    : getDayLabel(dayOffset, mapOrganizer ? organizerDays : effectiveRangeDays)}
-            </span>
-            {/* Staden som liten underrad: plattan är länken till stadens
-                egen /evenemang-sida (cityLink; indexet som fallback — Googles
-                väg in i stadshierarkin), och namnet säger vart den leder. */}
-            <span className="mt-1 block text-[11px] font-bold uppercase tracking-wider text-white/70 leading-none">
-                {liveCityName ?? 'Sverige'}
+            {/* Stadspillen. truncate + leading-tight: klipper utan att tappa
+                nederstaplarna i "Göteborg"/"Helsingborg" (leading-none åt
+                dem). Mörk platta som förut: vit skugg-text blir gröt över
+                ljusa kvarter. w-full: pillen spänner alltid över HELA
+                kolumnen (= bredaste av stad/dagflik), så fliken aldrig
+                sticker utanför pillen - förutsättningen för de inåtvända
+                hörnen nedan. */}
+            {/* EN KAPSEL MED DAGCHIPET INUTI (7/10 kväll, tredje varvet -
+                Josef: "den ser jätte konstig ut"; ersätter både fliken
+                under pillen och fillets-bygget): hela plattan är ETT mörkt
+                rundat block - staden stort överst, och DAGEN i ett eget
+                ljusare chip (bg-white/10, "egen background") längst ner i
+                blocket, med rundade hörn BARA nedtill (rounded-b-2xl = 16 =
+                blockets 22 minus insatsen 6, koncentriskt) - hörnen mot
+                staden är raka. Chipet är w-full av blockets innervidd, så
+                stadens och dagens längder aldrig kan gå isär - allt "går
+                ihop" per konstruktion, utan mätning.
+                Dagen ska fortfarande synas här (Josef 2/9): Nästa-
+                bläddringen byter dag av sig själv och dagväljaren ligger
+                bakom kortet just då; samma etikett som väljaren
+                (plattaDayLabel/getDayLabel) så texterna aldrig går isär.
+                Ringen + texten får key=dayFlashNonce → remount → engångs-
+                blinken spelas om vid varje dagbyte. */}
+            <span className={`flex flex-col items-center min-w-0 max-w-full rounded-[22px] backdrop-blur-md px-1.5 pb-1.5 shadow-2xl border border-white/10 transition-colors duration-200 group-focus-visible/platta:ring-2 group-focus-visible/platta:ring-[#FECC02]/70 ${
+                tourHint === 'city' ? 'bg-slate-900/90' : 'bg-slate-900/80 group-hover/platta:bg-slate-900/90'
+            }`}>
+                <span className="flex items-center justify-center min-w-0 max-w-full h-11 px-3 sm:px-4">
+                    <span className="block max-w-full truncate text-xl sm:text-2xl font-black tracking-tight text-white leading-tight sm:leading-tight">
+                        {liveCityName ?? 'Sverige'}
+                    </span>
+                </span>
+                <span className="relative w-full flex items-center justify-center rounded-b-2xl bg-white/10 px-3 pt-1 pb-1.5">
+                    {dayFlashNonce > 0 && (
+                        <span key={`ring-${dayFlashNonce}`} aria-hidden className="day-flash-ring absolute inset-0 rounded-b-2xl pointer-events-none" />
+                    )}
+                    <span
+                        key={`day-${dayFlashNonce}`}
+                        className={`block whitespace-nowrap text-[11px] font-black uppercase tracking-wider text-white/90 leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
+                    >
+                        {plattaDayLabel}
+                    </span>
+                </span>
             </span>
             <span className="sr-only">{cityLink.label}</span>
         </a>
         {/* Visningsrundans sista steg ('city') SÄGER vad plattan gör (Josef
             15/9: "skriva gå till stadssida typ") — samma pill som skapa- och
             🔥-stegen, och på desktop även vid hover (peer på länken). */}
-        <HoverLabel show={tourHint === 'city'}>Gå till stadssidan</HoverLabel>
+        {/* absolute under plattan: i flödet gjorde den (osynlig, 126 px)
+            gridets mittkolumn bredare än plattan och knuffade den ur mitten. */}
+        <HoverLabel show={tourHint === 'city'} className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2">Gå till stadssidan</HoverLabel>
+        </div>
+        </div>
+        </div>
+        {/* Bannern och filterbrickorna under: centrerade på skärmen, px-16. */}
+        <div className="w-full px-16 flex flex-col items-center gap-1.5">
         {/* FILTRET PÅ (16/9) — kategori, Fler-källa eller 🔥 (24/9): alltid synligt
             under plattan, ett filter får aldrig vara osynligt när sökpanelen
             är stängd. Tryck = släpp filtret. */}
@@ -4015,9 +4809,12 @@ export default function HomePage() {
             // länk till arrangörssidan (Josef 30/9, understruket). Länken
             // bara när arrangören har kommande event - sidan finns då alltid
             // (samma urval, utils/organizerPages), aldrig en tom sida.
+            // w-max (Josef 8/10): bannern får bli bredare än px-16-raden
+            // (den centreras ändå) så "Visar bara event från" ryms på en
+            // rad; taket är skärmen minus 16 px per sida, långa namn kortas.
             <div
                 onClick={() => startTransition(() => setMapOrganizer(null))}
-                className="pointer-events-auto flex cursor-pointer items-center gap-3 max-w-[88vw] rounded-2xl bg-[#006AA7] pl-4 pr-2 py-2 text-left text-white shadow-xl border border-white/20 hover:bg-[#005d93] transition animate-in fade-in slide-in-from-top-2 duration-300"
+                className="pointer-events-auto flex cursor-pointer items-center gap-3 w-max max-w-[calc(100vw-2rem)] rounded-2xl bg-[#006AA7] pl-4 pr-2 py-2 text-left text-white shadow-xl border border-white/20 hover:bg-[#005d93] transition animate-in fade-in slide-in-from-top-2 duration-300"
             >
                 <span className="min-w-0 flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-[0.14em] leading-none text-white/70">
@@ -4052,8 +4849,8 @@ export default function HomePage() {
                 </button>
             </div>
         )}
-        {(mapCategory || mapSource || popularOnly) && (
-        <div className="flex items-center gap-1.5">
+        {(mapCategories.size > 0 || mapSource || popularOnly) && (
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
         {popularOnly && (
             <button
                 type="button"
@@ -4066,20 +4863,38 @@ export default function HomePage() {
                 <X size={13} strokeWidth={3} className="text-slate-400" aria-hidden />
             </button>
         )}
-        {(mapCategory || mapSource) && (
+        {/* En bricka PER vald kategori (flervalet 6/10) — varje ✕ släpper sin
+            kategori, inte hela filtret. Brickorna är persistensens synliga
+            kvitto (15/9-läxan): filtret laddas från lagringen och måste
+            alltid gå att se och släppa härifrån. */}
+        {[...mapCategories].map(cat => (
             <button
+                key={cat}
                 type="button"
-                onClick={() => (mapCategory ? handleSelectMapCategory(null) : handleSelectMapSource(null))}
-                aria-label={`Visar bara ${mapCategory ? categoryLabel(mapCategory) : sourceLabel} — tryck för att visa allt`}
+                onClick={() => handleToggleMapCategory(cat)}
+                aria-label={`Visar bara ${categoryLabel(cat)} — tryck för att släppa kategorin`}
                 className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-slate-800 shadow-lg border border-white/50 hover:bg-white active:scale-95 transition animate-in fade-in duration-200"
             >
-                <span aria-hidden>{mapCategory ? EVENT_CATEGORIES[mapCategory].emoji : (SOURCE_EMOJI[mapSource ?? ''] ?? '•')}</span>
-                {mapCategory ? categoryLabel(mapCategory) : sourceLabel}
+                <span aria-hidden>{EVENT_CATEGORIES[cat].emoji}</span>
+                {categoryLabel(cat)}
+                <X size={13} strokeWidth={3} className="text-slate-400" aria-hidden />
+            </button>
+        ))}
+        {mapSource && (
+            <button
+                type="button"
+                onClick={() => handleSelectMapSource(null)}
+                aria-label={`Visar bara ${sourceLabel} — tryck för att visa allt`}
+                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-slate-800 shadow-lg border border-white/50 hover:bg-white active:scale-95 transition animate-in fade-in duration-200"
+            >
+                <span aria-hidden>{SOURCE_EMOJI[mapSource] ?? '•'}</span>
+                {sourceLabel}
                 <X size={13} strokeWidth={3} className="text-slate-400" aria-hidden />
             </button>
         )}
         </div>
         )}
+        </div>
     </div>
 )}
 
@@ -4371,6 +5186,22 @@ export default function HomePage() {
                     </button>
                 )}
 
+                {/* 2d. SKAPA-KNAPPEN (+) — RAKT OVANFÖR FRAMÅTPILEN, spegel-
+                    bilden av ↺ (ägarbeslut 7/10 kväll: "lägg till symbolen
+                    som ett plus på motsvarande sida som den reset knappen.
+                    alltså ovanför åt höger om dagsväljaren"). Samma tryckyte-
+                    recept som 2b/2c; i placerings-läget är den ✓-knappen med
+                    etiketten "Välj denna plats" ovanför. Bor INUTI väljarens
+                    container så onClickCapture ovan kvitterar skylten — samma
+                    regel som ↺. */}
+                <CreateEventButton
+                    creationMode={creationMode}
+                    enabled={shopFlags.createEvent}
+                    onStartCreate={() => setCreationMode('placing')}
+                    onConfirmPlacement={openCreateFormHere}
+                    hint={tourHint === 'create'}
+                />
+
                 {/* (Emoji-raden som låg här under rutan är BORTTAGEN 10/8 — dess
                     jobb görs av kategorikolumnen till höger, som visar antal per
                     kategori i vyn och dessutom filtrerar på riktigt.) */}
@@ -4383,39 +5214,16 @@ export default function HomePage() {
                 Klick hoppar till kommentarens event (samma väg som sök/sparat).
                 Ligger nere medan välkomstrutan är uppe, som allt annat krom. */}
 
-            {/* 1c. Sökträffar: STÄDER överst (klick flyger dit) och därunder
-                event ur alla kommande dagar (klick hoppar till eventets dag). */}
-            <SearchResults
-                query={searchQuery}
-                results={searchResults}
-                onPick={jumpToEvent}
-                cities={cityHits}
-                onPickCity={handlePickSearchCity}
-                open={searchOpen}
-                chips={
-                    <CategoryChipRow
-                        counts={categoryChipCounts}
-                        selected={mapCategory}
-                        onSelect={handleSelectMapCategory}
-                        sourceCounts={sourceChipCounts}
-                        selectedSource={mapSource}
-                        onSelectSource={handleSelectMapSource}
-                        popular={popularAvailable || popularOnly ? { on: popularOnly, count: popularChipCount, onToggle: handleTogglePopular } : undefined}
-                    />
-                }
-                cityName={searchCity?.name}
-                highlightQuery={searchText}
-            />
+            {/* (1c. SÖKPANELEN/SearchResults är BORTTAGEN 7/10 med sök-
+                knappen — kortets sök/filter-ikon äger sök + chips numera.
+                Stadssöket försvann med den (medvetet, Josefs beslut efter
+                påpekande); stadshopp sker via kartan/topplattan. Sökmaskineriet
+                (searchQuery/searchResults/cityHits) står kvar orört för en
+                framtida väg in.) */}
 
-            {/* 1d. Sparade event — öppnas från profilpanelens Sparade-rad */}
-            <SavedPanel
-                open={savedPanelOpen}
-                events={events}
-                savedEventIds={savedEventIds}
-                onPick={jumpToEvent}
-                onRemove={handleUnsaveEvent}
-                onClose={() => setSavedPanelOpen(false)}
-            />
+            {/* (1d. Sparat-panelen är BORTTAGEN 7/10 - Sparade event fälls ut
+                som en mapp i profilpanelen i stället för att öppna ett eget
+                fönster, Josef: "vi kan ju bara ändra de befintliga".) */}
 
             {/* 1e. Profilen — allt konto-relaterat utan att lämna kartan */}
             <ProfilePanel
@@ -4425,10 +5233,10 @@ export default function HomePage() {
                 allEvents={events}
                 onPickEvent={jumpToEvent}
                 onDeleteEvent={handleDeleteOwnEvent}
-                savedCount={activeSavedCount}
-                onOpenSaved={() => { setProfilePanelOpen(false); setSavedPanelOpen(true); }}
+                saved={{ ids: savedEventIds, onRemove: handleUnsaveEvent }}
                 optInCategories={{ selected: selectedCategories, onToggle: handleToggleCategory }}
                 onOpenAbout={() => { setProfilePanelOpen(false); setWelcomeOpen(true); }}
+                startCity={{ name: chosenStart?.name ?? null, onChange: () => { setProfilePanelOpen(false); setStartPicker({ withCategories: false }); } }}
             />
 
             {/* 2. Fullskärmskarta underst */}
@@ -4452,6 +5260,7 @@ export default function HomePage() {
                 onPaintRoundDone={handlePaintRoundDone}
                 zoomToEventTrigger={zoomToEventTrigger}
                 zoomOutTrigger={zoomOutTrigger}
+                zoomRevealTarget={zoomRevealTarget}
                 // Stadsrutans "Hela veckan" i utzoomat läge: zooma in till
                 // veckotröskeln åt användaren (31/8) — växlingen fullföljs av
                 // weekUnlocked-effekten när zoomen är framme.
@@ -4478,7 +5287,7 @@ export default function HomePage() {
                 // kvar så en ny knapp bara behöver sätta det här till sitt gamla
                 // villkor: !signsOn || !tourPlaying || chromeHidden || okänd/för
                 // låg zoom (< SIGNPOST_MIN_ZOOM) || creationMode !== 'idle' ||
-                // cardExpanded || savedPanelOpen ||
+                // cardExpanded ||
                 // profilePanelOpen || funcBagOpen || pågående sökning.
                 signpostsHidden
                 // Klick på kartan (inte dragning — MapLibre fyrar ingen 'click'
@@ -4514,6 +5323,7 @@ export default function HomePage() {
                 // redan över din stad (31/8: intro-kameran är borttagen).
                 chromeHidden={chromeHidden}
                 onUserInteraction={handleMapUserInteraction}
+                startPlats={startPlats}
             />
 
 
@@ -4532,7 +5342,7 @@ export default function HomePage() {
                     // Klick på bakgrunden stänger modalen (samma städning som
                     // Avbryt/Escape). Bara träffar PÅ överlägget självt räknas —
                     // klick inuti dialogen bubblar hit men filtreras bort här.
-                    onMouseDown={(e) => { if (e.target === e.currentTarget) resetCreateFlow(); }}
+                    onMouseDown={(e) => { if (e.target === e.currentTarget) closeCreateFlow(); }}
                 >
                     <div
                         role="dialog"
@@ -4946,7 +5756,7 @@ export default function HomePage() {
                         <div className="shrink-0 flex justify-end gap-2 border-t border-slate-100 dark:border-white/10 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-5">
                             <button
                                 type="button"
-                                onClick={resetCreateFlow}
+                                onClick={closeCreateFlow}
                                 className="px-4 py-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-semibold"
                             >
                                 Avbryt
@@ -4989,7 +5799,7 @@ export default function HomePage() {
             {nearbyIsEmpty && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
-                        <span className="text-2xl" aria-hidden>{popularOnly ? '🔥' : mapCategory ? EVENT_CATEGORIES[mapCategory].emoji : canOfferWeek ? '📅' : '🤷'}</span>
+                        <span className="text-2xl" aria-hidden>{popularOnly ? '🔥' : mapCategories.size > 0 ? EVENT_CATEGORIES[[...mapCategories][0]].emoji : canOfferWeek ? '📅' : '🤷'}</span>
                         <div className="min-w-0">
                             {/* 🔥-läget först: siffran är noll för att FILTRET smalnat
                                 bort allt — svaret är då "släpp filtret", inte "zooma
@@ -5347,6 +6157,7 @@ export default function HomePage() {
                 reason={authModal.reason}
                 onClose={() => setAuthModal({ open: false })}
                 onOpenAbout={() => { setAuthModal({ open: false }); setWelcomeOpen(true); }}
+                startCity={{ name: chosenStart?.name ?? null, onChange: () => { setAuthModal({ open: false }); setStartPicker({ withCategories: false }); } }}
             />
 
             {/* Spridningsmodalen efter skapat event: dela → boost, två steg
@@ -5363,11 +6174,42 @@ export default function HomePage() {
                 info-knappen är riven 15/9. */}
             {welcomeOpen && (
                 <WelcomeOverlay
-                    onCreateAccount={() => openLogin('Skapa ett gratis konto — spara event och skapa egna')}
+                    onCreateAccount={() => {
+                        // Kontoskaparen först - väljaren kommer efter
+                        // registreringen (kontohydreringen frågar).
+                        setStartPicker(null);
+                        startPickerAskedRef.current = false;
+                        setWelcomeDone(true);
+                        openLogin('Skapa ett gratis konto — spara event och skapa egna');
+                    }}
                     todayEventCount={todayEventCount}
                     weekEventCount={weekEventCount}
-                    onClose={() => { setWelcomeOpen(false); setWelcomeDone(true); }}
+                    onClose={(toMap) => {
+                        setWelcomeOpen(false);
+                        // Steg 2: startstaden, en gång per enhet. Inloggade
+                        // frågas via kontohydreringen i stället. Klick bredvid
+                        // rutan (toMap) = rakt till kartan där man är, ingen
+                        // fråga (Josef 8/10 kväll) - den kommer nästa besök.
+                        if (!toMap && !user && !readStartPickerDone() && !startPickerAskedRef.current) {
+                            startPickerAskedRef.current = true;
+                            setStartPicker({ withCategories: true });
+                        } else setWelcomeDone(true);
+                    }}
                     underCard={!!selectedEvent}
+                    startCity={startPickerDone ? { name: chosenStart?.name ?? null, onChange: () => setStartPicker({ withCategories: false }) } : undefined}
+                />
+            )}
+
+            {startPicker && (
+                <StartCityPicker
+                    current={chosenStart}
+                    withCategories={startPicker.withCategories}
+                    initialCategories={mapCategories}
+                    initialPopular={popularOnly}
+                    initialSource={mapSource}
+                    onDone={handleStartPickerDone}
+                    onSkip={handleStartPickerSkip}
+                    onDismiss={() => { setStartPicker(null); setWelcomeDone(true); }}
                 />
             )}
 
@@ -5432,6 +6274,57 @@ export default function HomePage() {
                 onPlaceStar={handlePlaceStar}
                 fullOpenNonce={fullOpenNonce}
                 viewEvents={listViewEvents}
+                // Kommer/Intresserad-footern (6/10, spår 3) + Bjud med +
+                // inbjudningsbannern (?inb=1).
+                myRsvp={selectedEvent
+                    ? (goingEventIds.has(selectedEvent.id) ? 'going'
+                        : interestedEventIds.has(selectedEvent.id) ? 'interested' : null)
+                    : null}
+                onSetRsvp={handleSetRsvp}
+                onInviteFriend={handleInviteFriend}
+                cardInvite={cardInvite}
+                onDismissInvite={() => setCardInvite(null)}
+                // Fler från samma arrangör + stadssidelänken (kortsökets term
+                // följer med som ?q=) — ägarbeslut 6/10.
+                organizerRow={cardOrganizerRow}
+                cityLink={{ href: cityLink.href, label: cityLink.label }}
+                // Sök/filter-ikonen i knappraden lyser när kartfiltret är på
+                // (7/10) — arrangörsfiltret räknas inte (egen banner).
+                cardFilterOn={popularOnly || mapCategories.size > 0 || mapSource !== null}
+                // Sökarket (7/10 kväll): filterknappen uppe till höger öppnar
+                // kortet med bara sök + chips; stängs när ett event väljs.
+                searchSheet={searchSheetOpen}
+                onCloseSearchSheet={() => setSearchSheetOpen(false)}
+                // 🔥-chippet kopplar listan till Populärt-fliken (7/10 kväll).
+                popularFilterOn={popularOnly}
+                activeFilters={cardActiveFilters}
+                onRemoveFilter={handleRemoveCardFilter}
+                onZoomOutTo={handleCardZoomOut}
+                // Listans botten zoomar ut kartan (8/10) - inte under
+                // golvet där "runtomkring" blir halva landet.
+                onListZoomOut={listCanZoomOut ? handleListZoomOut : undefined}
+                // ← ☰ på en träff ur sökarket öppnar arket igen (8/10).
+                onOpenSearchSheet={openSearchSheet}
+                // Kategorichipsen i kortet (6/10, ersätter Lista-ikonen):
+                // SAMMA filter och siffror som sökpanelen — ett val smalnar
+                // listan i kortet och kartan bakom, och persisteras som
+                // vanligt (utils/mapFilter + users.mapFilter).
+                filterChips={
+                    <CategoryChipRow
+                        tone="light"
+                        wheel={false}
+                        counts={categoryChipCounts}
+                        selected={mapCategories}
+                        onToggle={handleToggleMapCategory}
+                        sourceCounts={sourceChipCounts}
+                        selectedSource={mapSource}
+                        onSelectSource={handleSelectMapSource}
+                        popular={popularAvailable || popularOnly ? { on: popularOnly, count: popularChipCount, onToggle: handleTogglePopular } : undefined}
+                        // Det öppna eventets kategori står först efter de
+                        // valda, markerad men inte vald (7/10 sent).
+                        highlight={selectedEvent ? (selectedEvent.category && selectedEvent.category in EVENT_CATEGORIES ? selectedEvent.category : 'other') : null}
+                    />
+                }
             />
 
         </main>

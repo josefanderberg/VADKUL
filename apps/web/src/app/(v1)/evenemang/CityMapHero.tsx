@@ -138,6 +138,7 @@ function buildLiveEvents(city: City, events: CityEvent[]): HeroLiveEvent[] {
                 hour: e.hasSpecificTime ? hourOf(e.time) : null,
                 day: dayKey(e.time),
                 category: e.category,
+                ...(e.pop ? { pop: true } : {}),
             };
         });
 }

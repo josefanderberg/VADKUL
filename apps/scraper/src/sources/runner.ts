@@ -20,6 +20,7 @@ import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic, type GeoHit } from '../utils/venueCoordinates';
+import { firstPreciseHit } from '../utils/geocodeChain';
 import { cleanLocationName } from '../utils/text';
 import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
@@ -101,6 +102,7 @@ export function geocodeQueriesFor(e: RawEvent): string[] {
     // Dedupa (address kan vara identisk med venueName) och släng korta/tomma.
     return [...new Set(candidates)].filter((q) => q && q.trim().length > 2);
 }
+
 
 /**
  * Kända URL:er som motorn släppte helt (returnerade inte). Motorer som frågar
@@ -276,12 +278,14 @@ export async function runSource(
                         const q = e.venueName ? `${e.venueName}, ${e.city}` : e.city!;
                         // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
                         let hit: GeoHit | null = e.coords ? [e.coords[0], e.coords[1], 'kallkoordinat'] : null;
-                        for (const cand of (e.geocodeCandidates ?? [])) {
-                            if (hit) break;
-                            hit = await geocodeVenueSweden(cand, { nearCity: e.city! });
-                        }
                         // Bara ort (ingen venue) → rakt till overifierad centroid nedan.
-                        if (!hit && e.venueName) hit = await geocodeVenueSweden(q, { nearCity: e.city! });
+                        if (!hit) {
+                            const best = await firstPreciseHit(
+                                [...(e.geocodeCandidates ?? []), ...(e.venueName ? [q] : [])],
+                                (cand) => geocodeVenueSweden(cand, { nearCity: e.city! }),
+                            );
+                            hit = best?.hit ?? null;
+                        }
                         // Sista utväg för OGEOKODADE: stadscentrum (synligt på kartan, och
                         // geo-refine-klustren tar det vidare) — men märk som overifierat.
                         let verified = true;
@@ -342,7 +346,7 @@ export async function runSource(
                 lat = 0; lng = 0; geocodedQuery = ''; geoPrecision = null;
             }
             if (!opts.dryRun && !lat && !lng) {
-                for (const q of geocodeQueriesFor(e)) {
+                const best = await firstPreciseHit(geocodeQueriesFor(e), async (q) => {
                     // nearCity-validering: känner källan till staden får Nominatim
                     // inte returnera en namne i fel stad ("S:t Nikolai kyrka" →
                     // Örebro för Halmstad-event). Cache-nyckeln MÅSTE inkludera
@@ -351,8 +355,11 @@ export async function runSource(
                     if (!geoCache.has(cacheKey)) {
                         geoCache.set(cacheKey, await geocodeVenueSweden(q, e.city ? { nearCity: e.city } : undefined));
                     }
-                    const coords = geoCache.get(cacheKey);
-                    if (coords) { lat = coords[0]; lng = coords[1]; geocodedQuery = q; geoPrecision = coords[2] ?? null; break; }
+                    return geoCache.get(cacheKey);
+                });
+                if (best) {
+                    lat = best.hit[0]; lng = best.hit[1];
+                    geocodedQuery = best.query; geoPrecision = best.hit[2] ?? null;
                 }
             }
 

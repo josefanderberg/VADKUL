@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eventDays, isPopularListed, popularDays, takeRows } from './popularList';
+import { eventDays, inListWindow, isPopularListed, LIST_HORIZON_DAYS, popularDays, takeRows } from './popularList';
 
 // Fast "nu": onsdag 23/9 kl 12 lokal tid.
 const NOW = new Date(2026, 8, 23, 12, 0);
@@ -64,6 +64,16 @@ describe('takeRows', () => {
     it('gränsen större än allt → allt', () => {
         expect(takeRows(days, 99)).toEqual(days);
     });
+    it('dagens övriga fält (listans zoomring) följer med', () => {
+        const ringed = [
+            { dayOffset: 0, ring: 0, rows: [1, 2] },
+            { dayOffset: 0, ring: 1, rows: [3, 4] },
+        ];
+        expect(takeRows(ringed, 3)).toEqual([
+            { dayOffset: 0, ring: 0, rows: [1, 2] },
+            { dayOffset: 0, ring: 1, rows: [3] },
+        ]);
+    });
 });
 
 describe('eventDays', () => {
@@ -101,5 +111,35 @@ describe('eventDays', () => {
         const expected = ['m', 'q', 'z', 'a'];
         expect(orderOf(evts)).toEqual(expected);
         expect(orderOf([...evts].reverse())).toEqual(expected);
+    });
+});
+
+describe('inListWindow', () => {
+    it('från den visade dagen till horisonten (räknad från idag)', () => {
+        expect(inListWindow({ time: at(0, 18) }, 0, NOW, never)).toBe(true);
+        expect(inListWindow({ time: at(0, 18) }, 1, NOW, never)).toBe(false);
+        expect(inListWindow({ time: at(LIST_HORIZON_DAYS - 1, 18) }, 5, NOW, never)).toBe(true);
+        expect(inListWindow({ time: at(LIST_HORIZON_DAYS, 18) }, 0, NOW, never)).toBe(false);
+    });
+    it('negativ visad dag räknas som idag, passerade bort', () => {
+        expect(inListWindow({ time: at(-1, 18) }, -1, NOW, never)).toBe(false);
+        expect(inListWindow({ time: at(0, 18) }, -1, NOW, never)).toBe(true);
+        expect(inListWindow({ time: at(0, 10) }, 0, NOW, () => true)).toBe(false);
+    });
+    it('samma urval som listans dagar - 🔥-chippet och Populärt-fliken räknar lika', () => {
+        const evts = [
+            { id: 'a', time: at(0, 18), pop: true },
+            { id: 'b', time: at(2, 18), pop: true },
+            { id: 'c', time: at(2, 19) },
+            { id: 'd', time: at(LIST_HORIZON_DAYS + 2, 18), pop: true },
+            { id: 'e', time: at(-1, 18), pop: true },
+        ];
+        const nowMs = NOW.getTime();
+        const chip = evts.filter(e => inListWindow(e, 0, NOW, never) && isPopularListed(e, nowMs)).length;
+        const tab = popularDays(evts, 0, NOW, never)
+            .filter(d => d.dayOffset < LIST_HORIZON_DAYS)
+            .reduce((n, d) => n + d.events.length, 0);
+        expect(chip).toBe(2);
+        expect(chip).toBe(tab);
     });
 });

@@ -32,6 +32,36 @@ describe('nearestPlace', () => {
 });
 
 describe('groupOrganizers', () => {
+    it('väljer de populäraste som exempel: 🔥 först, sedan poäng, sedan tid', () => {
+        const rows = [
+            ev({ url: 'https://abf.se/1', title: 'Stickcafé', time: '2026-09-29T18:00:00.000Z' }),
+            ev({ url: 'https://abf.se/2', title: 'Visafton', time: '2026-10-02T18:00:00.000Z' }),
+            ev({ url: 'https://abf.se/3', title: 'Stor konsert', time: '2026-11-20T18:00:00.000Z' }),
+            ev({ url: 'https://abf.se/4', title: 'Föreläsning', time: '2026-10-01T18:00:00.000Z' }),
+        ];
+        const pop: Record<string, { pop: boolean; score: number }> = {
+            'https://abf.se/1': { pop: false, score: 5 },
+            'https://abf.se/2': { pop: false, score: 30 },
+            'https://abf.se/3': { pop: true, score: 55 },
+            'https://abf.se/4': { pop: false, score: 30 },
+        };
+        const [o] = groupOrganizers(rows, { nowIso: NOW, placeOf, popularity: r => pop[r.url] });
+        expect(o.exempel.map(e => e.titel)).toEqual(['Stor konsert', 'Föreläsning', 'Visafton', 'Stickcafé']);
+        expect(o.exempel[0].pop).toBe(true);
+        expect(o.populara).toBe(1);
+    });
+
+    it('utan popularitet: de närmaste, som förut', () => {
+        const rows = [
+            ev({ url: 'https://abf.se/1', title: 'Senare', time: '2026-10-05T18:00:00.000Z' }),
+            ev({ url: 'https://abf.se/2', title: 'Först', time: '2026-09-29T18:00:00.000Z' }),
+            ev({ url: 'https://abf.se/3', title: 'Mitten', time: '2026-10-01T18:00:00.000Z' }),
+        ];
+        const [o] = groupOrganizers(rows, { nowIso: NOW, placeOf });
+        expect(o.exempel.map(e => e.titel)).toEqual(['Först', 'Mitten', 'Senare']);
+        expect(o.populara).toBe(0);
+    });
+
     it('grupperar på namn + domän och räknar kommande', () => {
         const rows = [
             ev({ url: 'https://abf.se/1' }),

@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -641,5 +641,33 @@ Programmet hittar du på vår hemsida.</div></body></html>`;
     it('saknat eller för kort fält → null (meta-beskrivningen behålls)', () => {
         expect(descFromDetailSelector(html, '.finns-inte')).toBeNull();
         expect(descFromDetailSelector('<div class="b">Kort.</div>', '.b')).toBeNull();
+    });
+});
+
+describe('Tickster-sidfotens kontorsadress (2/10)', () => {
+    // Tickster-sida UTAN Google Maps-länk: venue + ort i location-microdata,
+    // sidfoten med Tickster AB:s Magasinsgatan 8. Förr blev sidfoten
+    // eventets adress och "Magasinsgatan 8, Växjö" geokodades först.
+    const PAGE = `<html><head><title>Mårten Cvetkovic | Tickster</title>
+<script type="application/ld+json">{"@type":"Event","name":"Mårten Cvetkovic","startDate":"2026-10-20T19:00:00+02:00","location":{"@type":"Place","name":"Växjö Teater"}}</script>
+</head><body>
+<span itemscope itemtype="http://schema.org/Place" itemprop="location"><span itemprop="name">Växjö Teater</span> i
+<span itemprop="address" itemscope itemtype="http://schema.org/PostalAddress"><span itemprop="addressLocality">Växjö</span></span></span>
+<footer><p>Tickster AB, Magasinsgatan 8, 411 18 Göteborg</p></footer>
+</body></html>`;
+
+    it('Tickster-sidans fallback-adress blir INTE sidfotens kontor', () => {
+        const ev = extractFromHtml(PAGE, 'https://www.tickster.com/se/sv/events/ef2xwnlx2u3z/2026-10-20/marten', 'Göteborg')!;
+        expect(ev).not.toBeNull();
+        expect(ev.venueName).toBe('Växjö Teater');
+        expect(ev.address).toBeUndefined();
+    });
+
+    it('vakten är snäv: bara Magasinsgatan 8 på tickster.com', () => {
+        expect(isVendorFooterAddress('Magasinsgatan 8', 'https://www.tickster.com/se/sv/events/x')).toBe(true);
+        expect(isVendorFooterAddress('Storgatan 8', 'https://www.tickster.com/se/sv/events/x')).toBe(false);
+        // Fat Daves på Magasinsgatan 8 i Malmö — egen sajt, riktig adress
+        expect(isVendorFooterAddress('Magasinsgatan 8', 'https://fatdaves.se/event/x')).toBe(false);
+        expect(isVendorFooterAddress('Magasinsgatan 8', 'inte en url')).toBe(false);
     });
 });

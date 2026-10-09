@@ -122,6 +122,36 @@ export const userService = {
     await setDoc(doc(db, 'users', uid), { savedEventIds: arrayRemove(id) }, { merge: true });
   },
 
+  // Kommer/Intresserad (6/10): egna svaret speglas på kontot som sparlistan,
+  // så det följer med mellan enheter. Det publika svaret bor i eventRsvps.
+  async getRsvpEventIds(uid: string): Promise<{ going: string[]; interested: string[] }> {
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      const data = snap.exists() ? snap.data() as { goingEventIds?: unknown; interestedEventIds?: unknown } : null;
+      const list = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+      return { going: list(data?.goingEventIds), interested: list(data?.interestedEventIds) };
+    } catch (e) {
+      console.warn('Kunde inte läsa kommer/intresserad:', e);
+      return { going: [], interested: [] };
+    }
+  },
+  async setRsvpEventIds(uid: string, going: string[], interested: string[]): Promise<void> {
+    await setDoc(doc(db, 'users', uid), {
+      goingEventIds: going.slice(-500),
+      interestedEventIds: interested.slice(-500),
+    }, { merge: true });
+  },
+  // En ENSKILD svarsändring från stadssidorna (7/10): arrayUnion/arrayRemove
+  // av samma skäl som addSavedEventId ovan — stadssidan ser bara sin egen
+  // enhets localStorage och får inte skriva över svar gjorda på andra
+  // enheter. Ett svar i taget: läggs i den nya listan, tas ur den andra.
+  async applyRsvpEventId(uid: string, id: string, next: 'going' | 'interested' | null): Promise<void> {
+    await setDoc(doc(db, 'users', uid), {
+      goingEventIds: next === 'going' ? arrayUnion(id) : arrayRemove(id),
+      interestedEventIds: next === 'interested' ? arrayUnion(id) : arrayRemove(id),
+    }, { merge: true });
+  },
+
   // Lägg till eller uppdatera omdöme
   async addReview(targetUid: string, review: { rating: number; comment: string; reviewer: UserProfile }) {
     const userRef = doc(db, 'users', targetUid);

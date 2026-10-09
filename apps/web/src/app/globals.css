@@ -48,6 +48,16 @@
 }
 .feature-blink-blue { animation: feature-blink-blue 1s ease-in-out infinite; }
 
+/* "Hämtar beskrivning…" i eventkortet på kartan och i stadssidornas utfällda
+   event (Josef 1/10: "lugnt blinka så man ser att det är lite mer aktivt").
+   Tailwinds animate-pulse bleknade bara till halv styrka och syntes knappt.
+   Lugn andning, ingen stress: full styrka -> svag -> full på 1,4 s. */
+@keyframes loading-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+.loading-blink { animation: loading-blink 1.4s ease-in-out infinite; }
+
 /* DAGBLINKEN på kartans toppplatta (Josef 2/9): när dagen byts — av Nästa-
    knappens automatiska dagbyte eller ett dagsteg — ska dagens namn "blinka
    till" så man uppfattar bytet. ENGÅNGS (ingen infinite): texten svälls upp
@@ -153,6 +163,16 @@
     @apply bg-background text-foreground;
     color-scheme: light dark;
   }
+}
+
+/* Kartsidan (v2) är en helskärmsapp: inget dra-ned-för-att-uppdatera.
+   Ett svep nedåt på en panel (eventkortet, listan) kedjade annars upp till
+   sidan och laddade om den — för användaren såg det ut som att appen hoppade
+   tillbaka till startsidan (användarmejl 8/10). Stadssidorna (v1) rullar som
+   vanliga sidor och behåller beteendet. */
+html:has([data-app="v2"]),
+html:has([data-app="v2"]) body {
+  overscroll-behavior: none;
 }
 
 /* === Welcome Modal Animations === */
@@ -566,3 +586,24 @@
   animation: scroll-nudge 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
+
+/* NÄSTA ZOOMAR UT (7/10 sent, EventCard zoomOutBanner): de vågräta strecken
+   växer ut från mitten - vyn vidgas - och hela bannern tonar ut av sig
+   själv efter ~2,8 s (samma tid som komponentens timer). */
+@keyframes zoomout-banner {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes zoomout-line {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.zoomout-banner { animation: zoomout-banner 2.8s ease-out both; }
+.zoomout-line { animation: zoomout-line 700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.zoomout-line-l { transform-origin: right center; }
+.zoomout-line-r { transform-origin: left center; }
+@media (prefers-reduced-motion: reduce) {
+  .zoomout-line { animation: none; }
+}

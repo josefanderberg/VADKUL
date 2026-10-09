@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { svList } from '../../evenemang/cityData';
 import { EventDayList, buildEventsJsonLd, buildBreadcrumbJsonLd } from '../../evenemang/EventList';
 import TopNav from '../../evenemang/TopNav';
-import { cityMapHref } from '../../evenemang/CityMapHero';
+import CityMapHero, { cityMapHref } from '../../evenemang/CityMapHero';
 import { DayFilterProvider } from '../../evenemang/dayFilter';
 import { getOrganizer, getNationalUpcomingCountRuntime, type Organizer } from '../organizerData';
 import { ORGANIZER_PAGE_INDEX_MIN, organizerHref } from '@/utils/organizerPages';
@@ -117,6 +117,13 @@ export default async function OrganizerPage({ params }: { params: Promise<{ slug
                 </div>
 
                 <DayFilterProvider>
+                    {/* KART-HERON (7/10, Josef: "kan vi inte bara ha en karta
+                        också inne på arrangören ... så man kan se eventen
+                        utplacerade"): samma förrenderade stadsbild + levande
+                        brickor som stadssidorna, fast med BARA arrangörens
+                        event. Periodchipsen i heron styr listan nedanför via
+                        samma delade dagfilter. */}
+                    {home && <CityMapHero city={home} events={o.events} recommended={[]} />}
                     <EventDayList events={o.events} cityName={home?.name ?? o.name} />
                 </DayFilterProvider>
 
@@ -145,6 +152,17 @@ export default async function OrganizerPage({ params }: { params: Promise<{ slug
                             Allt som händer i {home.name} →
                         </Link>
                     )}
+                    {/* Lägg till-vägen (7/10, Josef: "man måste kunna lägga
+                        till event"): samma platsval-först-flöde (&skapa=1)
+                        som stadssidornas skapa-knappar - saknades här. */}
+                    <p className="mt-4">
+                        <Link
+                            href={home ? `${cityMapHref(home)}&skapa=1` : '/?skapa=1'}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-3.5 py-2 text-xs font-black text-slate-600 dark:text-zinc-400 hover:border-[#006AA7]/40 hover:text-[#006AA7] dark:hover:text-sky-400 transition-colors"
+                        >
+                            + Lägg till ett event{home ? ` i ${home.name}` : ''}
+                        </Link>
+                    </p>
                     <p className="mt-6 text-xs text-slate-400 dark:text-zinc-500 font-medium">
                         Eventen hämtas automatiskt från {site ? site.replace(/^https:\/\//, '') : 'arrangörens egna kanaler'} och
                         {' '}visas gratis på VADKUL. Är du från {o.name}? Hör av dig till{' '}

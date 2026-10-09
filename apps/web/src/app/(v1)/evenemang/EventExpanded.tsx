@@ -3,20 +3,43 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarDays, Check, Lock, MapPin, Map as MapIcon, MessageCircle, Share2, Ticket, Users, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, Lock, MapPin, Map as MapIcon, MessageCircle, Share2, Ticket, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { LinkEvent } from '@/types';
 import { fetchDeepLinkEvent } from '@/utils/eventSeed';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { isTicketmasterEvent } from '@/utils/ticketmasterEvent';
 import { isAffiliateUrl, AFFILIATE_DISCLOSURE } from '@/utils/affiliateLink';
-import { descriptionText, eventOutlink, hostFaviconUrl, pickDescription } from '@/utils/eventExpand';
+import { descriptionText, eventOutlink, hostFaviconUrl, pickDescription, stickyChipsPx } from '@/utils/eventExpand';
 import { recordEventClick } from '@/services/eventStatsService';
 import { linkEventService, type RsvpAttendee } from '@/services/linkEventService';
 import { useAuth } from '@/context/AuthContext';
+import { useEventRsvp } from '@/hooks/useEventRsvp';
+import { inviteUrl } from '@/utils/rsvpTransition';
 import EventChatPanel from '@/components/v2/EventChatPanel';
+import HScrollRow from '@/components/ui/HScrollRow';
+import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import type { ListedEvent } from './DayFilteredList';
 import { organizerHref } from '@/utils/organizerPages';
+
+/** En bricka i "Fler från samma arrangör"-raden (7/10) — plockad ur stadens
+ *  redan laddade lista av DayFilteredList (organizerRowFor). repId/dayKey
+ *  behövs för hoppet: utfällningen sitter på REPRESENTANTENS rad. */
+export interface ExpandedOrganizerItem {
+    id: string;
+    repId: string;
+    dayKey: string;
+    dayLabel: string;
+    title: string;
+    emoji: string;
+    coverImage?: string;
+    clock: string | null;
+}
+export interface ExpandedOrganizerRow {
+    slug: string | null;
+    name: string;
+    items: ExpandedOrganizerItem[];
+}
 
 // Inloggningsmodalen laddas först när något faktiskt kräver konto (RSVP/chatt)
 // — stadssidorna är SEO-ytor och ska inte bära den i förstabundlen.
@@ -35,7 +58,7 @@ const AuthModal = dynamic(() => import('@/components/v2/AuthModal'), { ssr: fals
 // texten och kortets utlänk (för Ticketmaster: affiliate-redirecten, som id:t
 // saknar). Ingen Firestore-läsning från klienten.
 
-export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick, hosted = false }: {
+export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick, hosted = false, organizerRow = null, onPickOrganizerEvent }: {
     e: Omit<ListedEvent, 'dups'>;
     /** Sant när det utfällda är ett av gruppradens ÖVRIGA tillfällen (dups)
      *  — då står titeln med i panelen, eftersom radens rubrik är
@@ -51,6 +74,12 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
      *  sidan (RSVP-knapp + vilka som kommer), som på kartkortet (Josef 6/9).
      *  Bara spotlight-raderna kan vara hosted; daglistans rader är skrapade. */
     hosted?: boolean;
+    /** "Fler från samma arrangör" (7/10, Josef: "precis som i eventkorten på
+     *  kartan") — DayFilteredList räknar fram raden ur stadens lista. */
+    organizerRow?: ExpandedOrganizerRow | null;
+    /** Brickklick: hoppar till det eventet i listan (avtäcker dagen, fäller
+     *  ut och scrollar dit — DayFilteredList äger mekanismen). */
+    onPickOrganizerEvent?: (item: ExpandedOrganizerItem) => void;
 }) {
     const rootRef = useRef<HTMLDivElement>(null);
     // undefined = svaret väntas, null = miss/fel (kapade texten får duga).
@@ -114,7 +143,7 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
         const r = el.getBoundingClientRect();
         const overflow = r.bottom - window.innerHeight + 16;
         if (overflow <= 0) return;
-        window.scrollBy({ top: Math.min(overflow, Math.max(0, r.top - 120)), behavior: 'instant' });
+        window.scrollBy({ top: Math.min(overflow, Math.max(0, r.top - 120 - stickyChipsPx())), behavior: 'instant' });
     }, [e.id]);
 
     // Escape stänger, som kortet på kartan.
@@ -133,13 +162,58 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
     const faviconUrl = hostFaviconUrl(outlink ?? e.id);
     // Ticketmaster = biljettköp, inte anmälan (ägarbeslut 1/9): BOKA i guld.
     const tm = isTicketmasterEvent({ id: e.id, url: api?.url });
-    const text = descriptionText(pickDescription(api?.description, e.description), api === undefined);
+    const description = pickDescription(api?.description, e.description);
+    const text = descriptionText(description, api === undefined);
+    // "Hämtar beskrivning…" blinkar lugnt, som i kartans eventkort.
+    const descriptionPending = !description && api === undefined;
 
     // Vidarelänknings-statistiken (outreach-underlaget) — samma räknare som
     // kortets ANMÄL. Fire-and-forget; länken öppnas av <a> oavsett.
     const trackOutlink = () => {
         if (!outlink) return;
         recordEventClick({ id: e.id, url: outlink, title: e.title, hostName: e.hostName ?? undefined });
+    };
+
+    // KOMMER/INTRESSERAD (7/10): samma svar som kartkortets footer — delad
+    // localStorage-nyckel, samma eventRsvps/eventStats-skrivningar, inget
+    // konto krävs (anonym session). Skilt från hosted-ANMÄLAN ovan.
+    const rsvp = useEventRsvp(e.id, hosted);
+
+    // BJUD MED (7/10 kväll, Josef: "vi behöver de intresserad, kommer, anmäl
+    // och bjud inne på stadssidorna"): samma flöde som kartkortets footer -
+    // den som bjuder blir själv Kommer och delar inbjudningslänken (inviteUrl,
+    // delad med kartan). Mottagaren landar på kartan med bannern och svarar
+    // utan konto. press togglar, så Kommer sätts bara om det inte redan är på.
+    // "Kul att du kommer"-erbjudandet: tänds när Kommer just slagits PÅ via
+    // knappen (inte via Bjud med, inte när man släpper svaret).
+    const [inviteNudge, setInviteNudge] = useState(false);
+    const handleGoingPress = async () => {
+        const turningOn = rsvp.my !== 'going';
+        setInviteNudge(turningOn);
+        await rsvp.press('going');
+    };
+
+    const handleInvite = async () => {
+        setInviteNudge(false);
+        if (rsvp.my !== 'going') void rsvp.press('going');
+        // Starta den privata tråden för ens inbjudna (spår 3) — samma
+        // best-effort som kartans Bjud med; delningen får aldrig vänta på den.
+        if (user) {
+            void import('@/services/privateChatService').then(m =>
+                m.ensurePrivateThread(e.id, hosted, { uid: user.uid, name: user.displayName || null }));
+        }
+        const url = inviteUrl(window.location.origin, e.id, hosted, user?.uid ?? null);
+        const text = `Följer du med på ${e.title}?`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: e.title, text, url });
+                return;
+            }
+            await navigator.clipboard.writeText(`${text} ${url}`);
+            toast.success('Inbjudningslänk kopierad!');
+        } catch {
+            // Avbruten delning är inget fel.
+        }
     };
 
     // CHATT-GRINDEN (Josef 6/9, justerad samma dag): bara VADKUL-värdade
@@ -175,9 +249,10 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
             ref={rootRef}
             className="border-t border-slate-100 dark:border-zinc-800 px-4 pt-3 pb-4 animate-in fade-in slide-in-from-top-1 duration-200"
         >
-            {/* Knappraden — samma formspråk som eventkortets header: runda
-                ikonknappar (Dela, Karta) och det helrundade ANMÄL/BOKA-pillret
-                med glidande pil. Stäng-krysset längst till höger. */}
+            {/* Knappraden — runda ikonknappar (Dela, Karta) och stäng-krysset.
+                (ANMÄL/BOKA-pillret som satt här är FLYTTAT ner i svarsraden
+                7/10 kväll — Josef: "intresserad, kommer, bjud in och anmäl i
+                samma rad". Lägg inte tillbaka det här.) */}
             <div className="flex items-center gap-2">
                 <button type="button" onClick={handleShare} aria-label="Dela eventet" title="Dela eventet" className={roundBtn}>
                     <Share2 size={15} />
@@ -192,18 +267,6 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                     Karta
                 </Link>
                 <span className="flex-1" />
-                {outlink && (
-                    <a
-                        href={outlink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={trackOutlink}
-                        className={`group/anmal shrink-0 h-8 pl-3.5 pr-2.5 rounded-full text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md ring-1 ring-inset hover:shadow-lg active:scale-[0.97] transition-all ${ctaGradient}`}
-                    >
-                        {tm ? 'BOKA' : 'ANMÄL'}
-                        <ArrowRight size={13} className="shrink-0 transition-transform group-hover/anmal:translate-x-0.5" />
-                    </a>
-                )}
                 <button type="button" onClick={onClose} aria-label="Stäng" title="Stäng" className={roundBtn}>
                     <X size={15} />
                 </button>
@@ -266,35 +329,120 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                 )}
             </div>
 
-            <p className="mt-3 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
-                {text}
-            </p>
-
-            {/* Stora CTA:n under texten — samma som kortets, i CTA-storlek:
-                den som läst klart ska inte behöva leta upp lilla pillret igen. */}
-            {outlink && (
-                <>
+            {/* SVARSRADEN (7/10, omgjord samma kväll — Josef: "då ska den
+                breda anmälknappen ha först intresserad, kommer, bjud in och
+                anmäl i samma rad"): Intresserad · Kommer · Bjud med · ANMÄL,
+                ALLT i en rad — ersätter både knappradens lilla pill och den
+                breda CTA:n under texten. Samma svar, räknare och inbjudan som
+                kartkortets footer (hooks/useEventRsvp): ömsesidigt
+                uteslutande, inget konto krävs, inga emojis i knapparna
+                (footer-beslutet). Hosted-anmälan (riktiga platser) är kvar
+                som egen knapp längre ner. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    aria-pressed={rsvp.my === 'interested'}
+                    onClick={() => void rsvp.press('interested')}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
+                        rsvp.my === 'interested'
+                            ? 'bg-[#006AA7] text-white border-[#005590] shadow-md'
+                            : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40'
+                    }`}
+                >
+                    Intresserad
+                    {rsvp.interestedCount !== null && rsvp.interestedCount > 0 && (
+                        <span className={`tabular-nums ${rsvp.my === 'interested' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.interestedCount}</span>
+                    )}
+                </button>
+                <button
+                    type="button"
+                    aria-pressed={rsvp.my === 'going'}
+                    onClick={() => void handleGoingPress()}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
+                        rsvp.my === 'going'
+                            ? 'bg-[#006AA7] text-white border-[#005590] shadow-md'
+                            : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40'
+                    }`}
+                >
+                    <Check size={14} strokeWidth={3} aria-hidden />
+                    Kommer
+                    {rsvp.goingCount !== null && rsvp.goingCount > 0 && (
+                        <span className={`tabular-nums ${rsvp.my === 'going' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.goingCount}</span>
+                    )}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => void handleInvite()}
+                    aria-label="Bjud med någon — dela eventet"
+                    title="Bjud med någon"
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40"
+                >
+                    <UserPlus size={14} strokeWidth={2.5} aria-hidden />
+                    {/* Bara ikonen på mobil (som kartkortets footer): med
+                        texten bröts raden i 375 px nu när ANMÄL också bor här. */}
+                    <span className="hidden sm:inline">Bjud med</span>
+                </button>
+                {outlink && (
                     <a
                         href={outlink}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={trackOutlink}
-                        className={`group/anmalcta mt-4 flex items-center justify-center gap-2.5 w-full py-3 rounded-full text-base font-black uppercase tracking-widest shadow-lg ring-1 ring-inset hover:shadow-xl transition-all active:scale-[0.97] ${ctaGradient}`}
+                        className={`group/anmal shrink-0 pl-3.5 pr-2.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest inline-flex items-center justify-center gap-1 shadow-md ring-1 ring-inset hover:shadow-lg active:scale-[0.97] transition-all ${ctaGradient}`}
                     >
-                        <span>{tm ? 'Boka biljetter' : 'Anmäl dig här'}</span>
-                        <ArrowRight size={18} className="shrink-0 transition-transform group-hover/anmalcta:translate-x-1" />
+                        {tm ? 'BOKA' : 'ANMÄL'}
+                        <ArrowRight size={13} className="shrink-0 transition-transform group-hover/anmal:translate-x-0.5" />
                     </a>
-                    {/* Provisionslänkar MÅSTE märkas "Annons" (marknadsförings-
-                        lagen + Impact-villkoren, docs/affiliate.md). Gäller även
-                        lilla BOKA-pillret överst — märkningen står i samma
-                        utfällda block. */}
-                    {isAffiliateUrl(outlink) && (
-                        <p className="mt-1.5 text-center text-[10px] font-semibold text-slate-400 dark:text-zinc-500">
-                            {AFFILIATE_DISCLOSURE}
-                        </p>
-                    )}
-                </>
+                )}
+            </div>
+            {/* Provisionslänkar MÅSTE märkas "Annons" (marknadsföringslagen +
+                Impact-villkoren, docs/affiliate.md) — märkningen följer med
+                BOKA-knappen hit från den rivna breda CTA:n. */}
+            {outlink && isAffiliateUrl(outlink) && (
+                <p className="mt-1.5 text-[10px] font-semibold text-slate-400 dark:text-zinc-500">
+                    {AFFILIATE_DISCLOSURE}
+                </p>
             )}
+            {/* BJUD MED-ERBJUDANDET (7/10 kväll, Josef: "om man klickar
+                kommer så kan man välja att dela med folk ... eller bjuda in
+                vänner"): dyker upp när man just tryckt Kommer — ett tryck
+                delar inbjudningslänken (samma handleInvite). Försvinner om
+                svaret ändras, vid ✕ eller efter delningen. */}
+            {inviteNudge && rsvp.my === 'going' && (
+                <div className="mt-2 flex items-center gap-2 rounded-xl border border-[#006AA7]/25 bg-sky-50 dark:bg-sky-950/30 px-3 py-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <p className="flex-1 min-w-0 text-xs font-bold text-slate-700 dark:text-zinc-200">
+                        Kul att du kommer! Vill du bjuda med någon?
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => { setInviteNudge(false); void handleInvite(); }}
+                        className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-[#006AA7] px-3 py-1.5 text-xs font-black text-white hover:bg-[#00598c] active:scale-95 transition"
+                    >
+                        <UserPlus size={13} strokeWidth={2.5} aria-hidden />
+                        Bjud med
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setInviteNudge(false)}
+                        aria-label="Nej tack"
+                        className="shrink-0 p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
+                    >
+                        <X size={14} aria-hidden />
+                    </button>
+                </div>
+            )}
+
+            <p className="mt-3 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
+                {descriptionPending
+                    ? <span className="loading-blink text-slate-500 dark:text-zinc-400">{text}</span>
+                    : text}
+            </p>
+
+            {/* (Den BREDA ANMÄL-CTA:n som stod här är RIVEN 7/10 kväll —
+                Josef: "då ska den breda anmälknappen ha först intresserad,
+                kommer, bjud in och anmäl i samma rad". ANMÄL/BOKA bor nu i
+                svarsraden ovanför beskrivningen, med Annons-märkningen.
+                Lägg inte tillbaka den breda knappen.) */}
 
             {/* VADKUL-värdade event: anmälan sker HÄR på sidan (ingen extern
                 länk) — knappen togglar din anmälan och listan visar vilka som
@@ -346,6 +494,48 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                 </div>
             )}
 
+            {/* FLER FRÅN SAMMA ARRANGÖR (7/10, Josef: "precis som i event-
+                korten på kartan"): sidledsrullande brickor med bild-fyrkant
+                till vänster (emoji som reserv). Klick hoppar till det eventet
+                i listan. Länken till arrangörssidan bor i värdnamnet överst. */}
+            {organizerRow && organizerRow.items.length > 0 && (
+                <div className="mt-4">
+                    <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400 truncate">
+                        Fler från {organizerRow.name}
+                    </p>
+                    <HScrollRow className="-mx-4 px-4 gap-2">
+                        {organizerRow.items.map(item => {
+                            const img = usableImageUrl(item.coverImage);
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => onPickOrganizerEvent?.(item)}
+                                    className="shrink-0 w-56 text-left rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2 flex items-center gap-2.5 hover:border-[#006AA7]/40 active:scale-[0.98] transition"
+                                >
+                                    {img ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={img} alt="" loading="lazy" className="shrink-0 w-12 h-12 rounded-lg object-cover bg-slate-200 dark:bg-zinc-700" />
+                                    ) : (
+                                        <span aria-hidden className="shrink-0 w-12 h-12 rounded-lg bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-xl leading-none">
+                                            {item.emoji}
+                                        </span>
+                                    )}
+                                    <span className="flex-1 min-w-0">
+                                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400 truncate first-letter:uppercase">
+                                            {item.dayLabel}{item.clock ? ` kl ${item.clock}` : ''}
+                                        </span>
+                                        <span className="block mt-0.5 text-xs font-bold text-slate-800 dark:text-zinc-100 leading-snug line-clamp-2">
+                                            {item.title}
+                                        </span>
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </HScrollRow>
+                </div>
+            )}
+
             {/* Chatten — SAMMA panel (och samma trådar) som eventkortet på
                 kartan: id:t är detsamma, så det man skriver här syns där.
                 Externa event: inloggning räcker (panelens egen låsta rad).
@@ -356,6 +546,10 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                     <EventChatPanel
                         eventId={e.id}
                         eventTitle={e.title}
+                        // hosted = userCreated-spåret (samma tolkning som
+                        // useEventRsvp ovan) — privata tråden går då på
+                        // SERIENS dokument, som inbjudningslänken.
+                        userCreated={hosted}
                         onRequireLogin={() => setAuthOpen('Logga in för att chatta')}
                     />
                 ) : (

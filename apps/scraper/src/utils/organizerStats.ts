@@ -28,6 +28,15 @@ export interface OrganizerExample {
     tid: string;
     ort: string | null;
     url: string;
+    /** 🔥 Populärt enligt kartans klassning (popularRank). */
+    pop: boolean;
+}
+
+/** Hur populärt ett event är: 🔥-flaggan och poängen bakom den (popularScore),
+ *  samma klassning som kartans Populära. Skriptet räknar den; här sorteras bara. */
+export interface EventPopularity {
+    pop: boolean;
+    score: number;
 }
 
 export interface Organizer {
@@ -40,7 +49,11 @@ export interface Organizer {
     kommande: number;
     orter: string[];           // vanligaste orterna först, max 3
     kategorier: string[];      // vanligaste först, max 3
-    exempel: OrganizerExample[]; // närmaste kommande event, max 5
+    /** Deras populäraste kommande event, max 5: 🔥 först, sedan högst poäng,
+     *  sedan närmast i tid. Outreach-mejlen nämner de två första. */
+    exempel: OrganizerExample[];
+    /** Hur många av de kommande eventen som är 🔥 Populära. */
+    populara: number;
     urls: string[];            // alla eventets id:n = eventStats.eventId
     /** Arrangörssidans slug på vadkul.se (/arrangor/<sida>), eller null när
      *  arrangören inte får någon sida (opt-in-källorna Svenska kyrkan/PRO/
@@ -90,9 +103,16 @@ function topKeys(m: Map<string, number>, n: number): string[] {
 
 export function groupOrganizers(
     rows: OrganizerEventRow[],
-    opts: { nowIso: string; placeOf: (lat: number | null, lng: number | null) => string | null; minUpcoming?: number },
+    opts: {
+        nowIso: string;
+        placeOf: (lat: number | null, lng: number | null) => string | null;
+        minUpcoming?: number;
+        /** Utan den (tester, --utan-popularitet) väljs de närmaste eventen. */
+        popularity?: (r: OrganizerEventRow) => EventPopularity;
+    },
 ): Organizer[] {
     const minUpcoming = opts.minUpcoming ?? 3;
+    const popOf = (r: OrganizerEventRow): EventPopularity => opts.popularity?.(r) ?? { pop: false, score: 0 };
     interface Acc {
         namn: Map<string, number>;
         doman: string;
@@ -124,8 +144,13 @@ export function groupOrganizers(
     const out: Organizer[] = [];
     for (const [nyckel, g] of groups) {
         if (g.kommande.length < minUpcoming) continue;
+        const pops = new Map(g.kommande.map(e => [e, popOf(e)] as const));
         const exempel = [...g.kommande]
-            .sort((a, b) => String(a.time).localeCompare(String(b.time)))
+            .sort((a, b) => {
+                const pa = pops.get(a)!, pb = pops.get(b)!;
+                return Number(pb.pop) - Number(pa.pop) || pb.score - pa.score
+                    || String(a.time).localeCompare(String(b.time));
+            })
             .filter((e, i, arr) => arr.findIndex(x => x.title === e.title) === i) // en per titel
             .slice(0, 5)
             .map(e => ({
@@ -133,6 +158,7 @@ export function groupOrganizers(
                 tid: String(e.time),
                 ort: opts.placeOf(e.lat, e.lng),
                 url: e.url,
+                pop: pops.get(e)!.pop,
             }));
         out.push({
             nyckel,
@@ -144,6 +170,7 @@ export function groupOrganizers(
             orter: topKeys(g.orter, 3),
             kategorier: topKeys(g.kategorier, 3),
             exempel,
+            populara: [...pops.values()].filter(p => p.pop).length,
             urls: g.urls,
             sida: organizerPageSlug(topKeys(g.namn, 1)[0], g.urls[0]),
         });

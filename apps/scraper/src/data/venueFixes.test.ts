@@ -121,3 +121,38 @@ describe('hockeyarenorna i venueFixes (0,0-matcherna 28/9)', () => {
         expect(all.filter((n, i) => all.indexOf(n) !== i)).toEqual([]);
     });
 });
+
+describe('Växjö/Linköping-granskningen i venueFixes (ägarrapport 2/10)', () => {
+    it('domkyrkan, konserthuset och teatern landar på OSM-objekten', () => {
+        expect(matchVenueFix('Växjö domkyrka, Växjö stads- och domkyrkoförsamling')?.lat).toBeCloseTo(56.8774, 4);
+        expect(matchVenueFix('Växjö domkyrka')?.lng).toBeCloseTo(14.81213, 4);
+        expect(matchVenueFix('Växjö Konserthus')?.lat).toBeCloseTo(56.8804, 4);
+        expect(matchVenueFix('Växjö Teater')?.lng).toBeCloseTo(14.80348, 4);
+        expect(matchVenueFix('Växjö teater')?.lng).toBeCloseTo(14.80348, 4);
+        expect(matchVenueFix('Linköpings huvudbibliotek')?.city).toBe('Linköping');
+        expect(matchVenueFix('Linköping Konsert & Kongress')?.lat).toBeCloseTo(58.41369, 4);
+    });
+
+    it('generiska namn matchar INTE — matchningen är stadsblind', () => {
+        for (const generic of ['Domkyrkan', 'Konserthuset', 'Teatern', 'Palladium', 'Huvudbiblioteket',
+            'Huvudbiblioteket, Scenen', 'Agora', 'Skylten', 'Filmstaden', 'Stadsbiblioteket', 'Spiris Arena']) {
+            expect(matchVenueFix(generic), generic).toBeNull();
+        }
+        // Grannstädernas konserthus/K&K får aldrig sugas till Linköping/Växjö.
+        expect(matchVenueFix('Jönköping Konsert & Kongress')).toBeNull();
+        expect(matchVenueFix('Uppsala Konsert & Kongress')).toBeNull();
+    });
+
+    it('inget namn förekommer i två fixar (första träffen vinner annars tyst)', () => {
+        // Dubbletter INOM en fix (skiftlägesvarianter) är ofarliga — samma punkt.
+        const seen = new Map<string, number>();
+        VENUE_FIXES.forEach((fix, i) => {
+            for (const n of fix.names) {
+                const k = n.trim().toLowerCase();
+                const prev = seen.get(k);
+                expect(prev === undefined || prev === i, `"${n}" finns redan i ${VENUE_FIXES[prev ?? 0].city}-fixen`).toBe(true);
+                seen.set(k, i);
+            }
+        });
+    });
+});

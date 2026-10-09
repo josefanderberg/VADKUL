@@ -8,9 +8,10 @@ import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Lock, Users, Fla
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView, LABEL_TITLE_MIN_ZOOM } from '../../utils/mapUtils';
-import { readStartCity } from '../../utils/startCity';
+import { parsePlatsParam, readStartCity } from '../../utils/startCity';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
 import { nextFront, overlapClusters, type OverlapPoint } from '../../utils/overlapCycle';
+import { zoomOutStepsToReveal } from '../../utils/viewportTour';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
 // Nöjesfälts-kartan (enda basstilen) + klot/terräng-hjälpare. Voyager-URL:en är
@@ -23,8 +24,8 @@ import {
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
     BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
-    BRICKA_BODY_ALPHA, brickaBodyBg, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
-    makeBrickaImageData, sourceGradientCss,
+    BRICKA_BODY_ALPHA, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
+    makeBrickaImageData, selectedMarkerColors, sourceGradientCss,
 } from './v2MapBricka';
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
@@ -36,9 +37,11 @@ import CitySignposts, { type SignpostCity } from './CitySignposts';
 const HOVER_PEEK_LIFT_PX = 62;
 const HOVER_PEEK_MAX_EMOJI = 8;
 
-// Etikett-stegen: från vilken zoom kategorinamnet under brickorna syns, och
-// från vilken den kapade eventtiteln tar över (minzoom + text-field-steget i
-// etikettlagret läser båda härifrån så de aldrig glider isär).
+// Etiketternas minzoom: under den är etiketter brus (Sverige-vyn). SEDAN
+// 7/10 kväll visas TITELN på alla etikett-zoomar när den får plats, med
+// kategorin som reserv (tvålagers-tricket vid LABEL_LAYER_IDS) — z13-steget
+// som lät titeln "ta över" är ersatt. LABEL_TITLE_MIN_ZOOM (13) används
+// fortfarande av zoom-bannern och reveal-ransonen som "titlarna syns brett".
 const LABEL_CAT_MIN_ZOOM = 9;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -74,8 +77,8 @@ type PlainFeature = {
     // gruppen visas som sin nål-prick (dämpad till 50 %).
     // dim = gruppen matchar INTE den emoji man klickat fram i emoji-raden under
     // stadsrutan → tonas ned och hamnar under de matchande i staplingen.
-    // labelCat/labelTitle = etikettlagrets text (kategorinamn vid mellanzoom,
-    // kapad titel vid hög zoom) — läses av spegelkällan 'plain-events-labels'.
+    // labelCat/labelTitle = etikettlagrens text (titeln när den får plats,
+    // kategorin som reserv) — läses av spegelkällan 'plain-events-labels'.
     properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean; dim: boolean; labelCat: string; labelTitle: string };
 };
 
@@ -262,7 +265,17 @@ const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
 // Etikettlagren (texten under brickorna): bottenlagret ritas UNDER brick-lagret
 // (en etikett får aldrig skymma en bricka), topplagret bär bara den VALDA
 // gruppens etikett (sortKey ≥ 1e6) ovanpå. Alla synlighetsväxlar går över båda.
-const LABEL_LAYER_IDS = ['plain-events-labels', 'plain-events-labels-top'] as const;
+// TITEL FÖRE KATEGORI NÄR DEN FÅR PLATS (ägarbeslut 7/10 kväll, Josef: "vi
+// skippar kategori om titel får plats ... titel går före allt då. om det inte
+// konkurrerar med en annan titel och blir kategori pga av det" — ersätter
+// zoom-steget labelCat→labelTitle vid z13): TRE etikettlager ur samma källa.
+// Titellagret ligger ÖVER kategorilagret, och MapLibre placerar symboler
+// UPPIFRÅN OCH NER (PauseablePlacement börjar på order.length-1) — titlarna
+// tar plats först, och kategorietiketten för SAMMA markör krockar med sin
+// egen titel (samma ankare/offset) och visas därför BARA när titeln inte
+// fick plats; får ingen av dem plats visas inget. -top är den valda gruppens
+// lager (alltid överst, placeras först av alla → titeln vinner alltid där).
+const LABEL_LAYER_IDS = ['plain-events-labels', 'plain-events-labels-titles', 'plain-events-labels-top'] as const;
 // ── Z-växlingen för överlappande brickor ──────────────────────────────────────
 // Grannbrickor (egna grupper >11 m isär) som täcker varandra på skärmen turas
 // om att ligga överst. Mekaniken är en SPEGELKÄLLA: brickan som "har ordet"
@@ -335,7 +348,7 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
 // SKÄRMENS MITT (Josef 26/8 — de 50 ska stå öppna utan klick). Panorerar man
 // själv följer urvalet med till nya mitten ("man flyttar sig för att flytta
 // den" — se mitt-följningen i init-effekten). Ett TRYCK tänder de
-// REVEAL_NEAREST_COUNT närmaste kring trycket och sätter ett ankare som
+// urvalet kring trycket (pickRevealKeys) och sätter ett ankare som
 // vinner över mitt-följningen tills nästa användar-gest; ett drag INOM de
 // tända brickornas ram flyttar ankaret direkt med fingret. Vid ett nytt tryck
 // BYTS urvalet ut med en kugghjuls-effekt (se nedan). Ingen
@@ -343,11 +356,27 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
 // själva (O(antal), kvadrerat + cos-lat-skalad longitud) och sätter
 // feature-state direkt via nyckeln (promoteId 'key'). Aldrig fler än
 // ~N synliga samtidigt = ingen lagg.
-const REVEAL_NEAREST_COUNT = 50;      // antal markörer kring ett tap (de N närmaste)
-const REVEAL_SEED_COUNT = 50;         // antal tända vid start kring användarens plats (utan tap)
-// (Ett spridningstak — max N brickor per skärmruta så täta vyer inte klumpar —
-// byggdes och REVS SAMMA DAG 31/8, Josef: "alla de 50 som är närmast
-// mittpunkten ska visas, det gör inget om de är i en hög". Sprid inte seedet.)
+const REVEAL_SEED_COUNT = 50;         // KANDIDAT-taket: de N närmaste punkten (seed OCH tap)
+// ── ZOOM-RANSONEN + POPULÄRA FÖRST (ägarbeslut 7/10 kväll, Josef: "inte
+// öppnar alla brickor över där man är. utan vi tar de som är mest populära.
+// så får man zooma in för att fler av dem ska visas. tills man zoomat in mera
+// så att fler kan visa titel eller kategori. så öppnas eventkorten") ───────
+// Hur många av kandidaterna som faktiskt TÄNDS beror på zoomen: vid stads-
+// landningen (TOUR_ZOOM 10) bara REVEAL_MIN_COUNT, linjärt upp till alla 50
+// vid LABEL_TITLE_MIN_ZOOM (13, där titlarna börjar under markörerna) — där
+// "öppnas eventkorten" helt. URVALET rankas populära först (pop-flaggan/guld,
+// närmast först inom varje skikt) — pickRevealKeys. Sticky-brickorna (TM/
+// egna/gillade/stjärnor/boostar) lyser alltid, som förr.
+// (Detta ERSÄTTER 31/8-regeln "alla de 50 närmast mittpunkten ska visas".
+// Spridningstaket per skärmruta från 31/8 är fortfarande rivet — sprid inte.)
+const REVEAL_MIN_COUNT = 12;          // tända vid stadszoom (populärast först)
+const REVEAL_RAMP_START_ZOOM = 10.5;  // under/vid denna: bara REVEAL_MIN_COUNT
+const revealAllowance = (zoom: number): number => {
+    if (zoom >= LABEL_TITLE_MIN_ZOOM) return REVEAL_SEED_COUNT;
+    if (zoom <= REVEAL_RAMP_START_ZOOM) return REVEAL_MIN_COUNT;
+    const t = (zoom - REVEAL_RAMP_START_ZOOM) / (LABEL_TITLE_MIN_ZOOM - REVEAL_RAMP_START_ZOOM);
+    return Math.round(REVEAL_MIN_COUNT + (REVEAL_SEED_COUNT - REVEAL_MIN_COUNT) * t);
+};
 // Övergång mellan två klickpunkter = en PARALLELL MIGRATION: de N brickorna "flyttar"
 // sig mot klicket var och en i sin egen takt (olika hastigheter). Några skjuter fram
 // och syns vid destinationen nästan direkt, andra släpar — jämn spridning längs vägen,
@@ -491,6 +520,11 @@ interface V2MapProps {
     zoomToEventTrigger?: number;
     /** Bumpas av zooma-ut-knappen i Nästa-pillen → zooma UT (samma center). */
     zoomOutTrigger?: number;
+    /** NÄSTA ZOOMAR UT (7/10 sent): ny nonce → zooma ut kring SAMMA mitt
+     *  precis så mycket att punkten hamnar i bild ovanför kortet.
+     *  minSteps (listans utzoomning 8/10): zooma ut MINST så många nivåer
+     *  även om punkten redan syns - "nästa zoomsteg". */
+    zoomRevealTarget?: { lat: number; lng: number; nonce: number; minSteps?: number } | null;
     /** Bumpas av stadsrutans "Hela veckan"-klick i utzoomat läge (31/8) →
      *  zooma IN till veckotröskeln kring samma center; page.tsx växlar sedan
      *  till veckan när weekUnlocked kvitterat att zoomen är framme. */
@@ -607,6 +641,9 @@ interface V2MapProps {
      *  försvinner") — lager-knappen, väskan och ladd-/bytessnurrorna göms.
      *  (Bar villkoret hette introGlide t.o.m. 31/8, då intro-kameran fanns.) */
     chromeHidden?: boolean;
+    /** ?plats= som sidan fångade när den monterades (null = ingen eller inte
+     *  fångad än). Läses BARA vid map-init - se där varför. */
+    startPlats?: string | null;
 }
 
 export default function V2Map({
@@ -622,6 +659,7 @@ export default function V2Map({
     eventsSettled = true,
     zoomToEventTrigger = 0,
     zoomOutTrigger = 0,
+    zoomRevealTarget = null,
     weekZoomInTrigger = 0,
     daySwitchNonce = 0,
     prebakeEvents = null,
@@ -647,6 +685,7 @@ export default function V2Map({
     onUserInteraction,
     onCityLandingDone,
     chromeHidden = false,
+    startPlats,
 }: V2MapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -1264,7 +1303,7 @@ export default function V2Map({
     // ── "Skrapa fram"-markörer (de N närmaste pekaren) ────────────────────────
     // GL-brickorna börjar dolda (icon-opacity 0 via feature-state 'reveal'). Bara
     // ~REVEAL_SEED_COUNT syns från start (närmast mitten); i övrigt visas de
-    // REVEAL_NEAREST_COUNT grupper som är NÄRMAST pekaren och följer hovern. Vi
+    // grupper ur urvalet NÄRMAST pekaren och följer hovern. Vi
     // räknar avstånden själva (billigt) och sätter feature-state direkt via nyckeln
     // — ingen queryRenderedFeatures (det var det som laggade).
     const revealSeedRef = useRef<Set<string>>(new Set());                 // vilo-uppsättningen (vid start: ~10 nära mitten; efter tap: N närmast trycket)
@@ -1278,7 +1317,7 @@ export default function V2Map({
     // försvinna. Den valda visas som vit-kantad DOM-markör; när den lämnar valt läge
     // håller denna uppsättning kvar den i GL-lagret. GL-motsvarighet till revealedKeysRef.
     const revealStickyRef = useRef<Set<string>>(new Set());
-    const revealCoordsRef = useRef<{ key: string; lng: number; lat: number }[]>([]); // platt lista för avståndsberäkning
+    const revealCoordsRef = useRef<{ key: string; lng: number; lat: number; pop: boolean }[]>([]); // platt lista för avstånd + populärrank
     const revealWrittenRef = useRef<Map<string, number>>(new Map());      // senast skrivet opacitetsvärde (skippa redundanta skrivningar)
     const revealRafRef = useRef<number | null>(null);
     const revealCleanupRef = useRef<null | (() => void)>(null);
@@ -1679,13 +1718,10 @@ export default function V2Map({
                 const ev = shownCycleEvent(rot, cycleFrameIndexRef.current, groupsRef.current.get(f.properties.key) ?? []);
                 return ev ? { ...f, properties: { ...f.properties, ...eventLabels(ev.title, ev.category) } } : f;
             });
-            // Zoom-medveten signatur: under z13 visar text-field bara labelCat —
-            // ett titelbyte i en cyklande grupp ska då INTE kosta ett tile-byte.
-            // Tier-markören tvingar en skrivning när man korsar z13 (exitZooming
-            // schemalägger en sync), så titlarna är färska när de börjar visas.
-            const withTitles = map.getZoom() >= 13;
-            const sig = (withTitles ? 'T' : 'C')
-                + feats.map(f => `${f.properties.key}${f.properties.labelCat}${withTitles ? f.properties.labelTitle : ''}`).join('');
+            // Titlarna visas på ALLA etikett-zoomar sedan 7/10 kväll (titel
+            // före kategori när den får plats) — signaturen bär alltid båda
+            // fälten. (Zoom-tiern C/T vid z13 gick med steg-uttrycket.)
+            const sig = feats.map(f => `${f.properties.key}${f.properties.labelCat}${f.properties.labelTitle}`).join('');
             if (sig === labelSigRef.current) return;
             labelSigRef.current = sig;
             src.setData({ type: 'FeatureCollection', features: feats as unknown as GeoJSON.Feature[] });
@@ -1834,6 +1870,11 @@ export default function V2Map({
             for (const layerId of LABEL_LAYER_IDS) {
                 if (map.getLayer(layerId)) continue;
                 const isTop = layerId === 'plain-events-labels-top';
+                // Titellagret (och den valda gruppens -top) visar TITELN på
+                // alla etikett-zoomar; bas-lagret visar KATEGORIN och vinner
+                // bara när titeln inte fick plats (se LABEL_LAYER_IDS-
+                // kommentaren — zoom-steget vid z13 är ersatt 7/10 kväll).
+                const isTitle = layerId === 'plain-events-labels-titles' || isTop;
                 map.addLayer({
                     id: layerId,
                     type: 'symbol',
@@ -1845,7 +1886,7 @@ export default function V2Map({
                         ? ['>=', ['coalesce', ['get', 'sortKey'], 0], 1_000_000]
                         : ['<', ['coalesce', ['get', 'sortKey'], 0], 1_000_000],
                     layout: {
-                        'text-field': ['step', ['zoom'], ['get', 'labelCat'], LABEL_TITLE_MIN_ZOOM, ['get', 'labelTitle']],
+                        'text-field': isTitle ? ['get', 'labelTitle'] : ['get', 'labelCat'],
                         'text-font': ['Open Sans Bold'],
                         'text-size': ['interpolate', ['linear'], ['zoom'], 9, 11, 13, 12.5, 16, 13.5],
                         // Spetsen (icon-anchor bottom) står på koordinaten → texten
@@ -2023,7 +2064,7 @@ export default function V2Map({
 
     // Avslöjning sker BARA via vilo-uppsättningen (seed): de REVEAL_SEED_COUNT
     // närmast SKÄRMENS MITT (default, följer panorering), eller de
-    // REVEAL_NEAREST_COUNT närmaste kring ANKARET (senaste tap/områdes-drag).
+    // urvalet kring ANKARET (senaste tap/områdes-drag).
     // INGEN hover-följning. Engångsskrivning per recompute/tap (ingen rAF-loop
     // i vila).
     const pumpReveal = useCallback(() => {
@@ -2070,6 +2111,47 @@ export default function V2Map({
         return new Set(bestKey);
     }, []);
 
+    // KANDIDATERNA kring en punkt: de REVEAL_SEED_COUNT närmaste, med avstånd
+    // och populärflagga — samma billiga partiella urval som nearestKeysTo.
+    const nearestRevealCands = useCallback((lng: number, lat: number): { key: string; d2: number; pop: boolean }[] => {
+        const coords = revealCoordsRef.current;
+        const kx = Math.cos(lat * Math.PI / 180);
+        const cap = REVEAL_SEED_COUNT;
+        const best: { key: string; d2: number; pop: boolean }[] = [];
+        let worst = -Infinity, worstIdx = -1;
+        for (let i = 0; i < coords.length; i++) {
+            const c = coords[i];
+            const dx = kx * (c.lng - lng), dy = c.lat - lat;
+            const d2 = dx * dx + dy * dy;
+            if (best.length < cap) {
+                best.push({ key: c.key, d2, pop: c.pop });
+                if (d2 > worst) { worst = d2; worstIdx = best.length - 1; }
+            } else if (d2 < worst) {
+                best[worstIdx] = { key: c.key, d2, pop: c.pop };
+                worst = -Infinity;
+                for (let j = 0; j < cap; j++) if (best[j].d2 > worst) { worst = best[j].d2; worstIdx = j; }
+            }
+        }
+        return best;
+    }, []);
+
+    // URVALET som faktiskt tänds kring en punkt (ägarbeslut 7/10 kväll, se
+    // konstantblocket): populära/guld först (närmast först inom varje skikt),
+    // antal efter zoom-ransonen (revealAllowance). Returen är AVSTÅNDS-
+    // sorterad — insugs-animationen drar närmast-först. Delas av seedet
+    // (recomputeRevealSeed), tap-migrationen och isSameRevealTarget så alla
+    // tre alltid pekar på samma uppsättning.
+    const pickRevealKeys = useCallback((lng: number, lat: number): string[] => {
+        const zoom = mapRef.current?.getZoom() ?? START_ZOOM_MAX;
+        const cand = nearestRevealCands(lng, lat);
+        cand.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (a.d2 - b.d2));
+        const picked = cand.slice(0, revealAllowance(zoom));
+        picked.sort((a, b) => a.d2 - b.d2);
+        return picked.map(c => c.key);
+    }, [nearestRevealCands]);
+    const pickRevealKeysRef = useRef(pickRevealKeys);
+    pickRevealKeysRef.current = pickRevealKeys;
+
     // PARALLELL MIGRATION: vid ett tryck "flyttar" de N brickorna sig mot klickpunkten
     // var och en i SIN EGEN takt (parallella körfält på olika nivåer): några skjuter i
     // väg och dyker upp längst fram nästan direkt, andra kryper — så att de vid varje
@@ -2085,11 +2167,11 @@ export default function V2Map({
         if (revealTweenRef.current != null) return false;
         const cur = revealSeedRef.current;
         if (cur.size === 0) return false;
-        const target = nearestKeysTo(lng, lat, REVEAL_NEAREST_COUNT);
+        const target = new Set(pickRevealKeys(lng, lat));
         if (target.size !== cur.size) return false;
         for (const k of target) if (!cur.has(k)) return false;
         return true;
-    }, [nearestKeysTo]);
+    }, [pickRevealKeys]);
     const isSameRevealTargetRef = useRef(isSameRevealTarget);
     isSameRevealTargetRef.current = isSameRevealTarget;
 
@@ -2121,10 +2203,11 @@ export default function V2Map({
             });
         };
 
-        const N = REVEAL_NEAREST_COUNT;
-        // Slutläget = de N närmast klicket.
-        const destArr = [...nearestKeysTo(toLng, toLat, N)];
+        // Slutläget = urvalet kring klicket (populära först + zoom-ransonen,
+        // 7/10 kväll — pickRevealKeys är redan avståndssorterad för insuget).
+        const destArr = pickRevealKeys(toLng, toLat);
         const destSet = new Set(destArr);
+        const N = destArr.length;
 
         const p0 = map.project([fromLng, fromLat]);
         const p1 = map.project([toLng, toLat]);
@@ -2183,7 +2266,7 @@ export default function V2Map({
             else { revealTweenRef.current = requestAnimationFrame(tick); }
         };
         revealTweenRef.current = requestAnimationFrame(tick);
-    }, [nearestKeysTo, reportRevealCount, writeReveal]);
+    }, [nearestKeysTo, pickRevealKeys, reportRevealCount, writeReveal]);
     startRevealTravelRef.current = startRevealTravel;
 
     // Välj seed = de REVEAL_SEED_COUNT markörerna närmast utgångspunkten. Körs
@@ -2192,29 +2275,15 @@ export default function V2Map({
     // Avståndet skalar longitud med cos(latitud) så det blir rätt på svenska breddgrader.
     const recomputeRevealSeed = useCallback(() => {
         const map = mapRef.current;
-        // Utgångspunkt: alltid SKÄRMENS MITT (de 50 kring mitten ska stå öppna).
-        // GPS-positionen är bara sista fallback innan kartan finns.
-        const count = REVEAL_SEED_COUNT;
-        const origin = (map ? map.getCenter() : null) ?? userPosRef.current;
+        // Utgångspunkt: alltid SKÄRMENS MITT. GPS-positionen är bara sista
+        // fallback innan kartan finns.
         // BARA icke-passerade grupper (revealCoordsRef är förfiltrerad på past) —
         // "har varit"-grupper ritas aldrig som brickor (bara prickar) och får inte
-        // äta upp seed-platser: sent på kvällen såg man annars en handfull brickor
-        // fast 50 relevanta fanns längre bort. Samma urval som tap-migrationen
-        // (nearestKeysTo), så seed-omräkningen efter minut-ticken inte byter
-        // uppsättning mot en med osynliga platser.
-        const coords = new Map<string, [number, number]>();
-        for (const c of revealCoordsRef.current) coords.set(c.key, [c.lng, c.lat]);
-        let seedKeys: string[] = [];
-        if (origin) {
-            const allKeys = [...coords.keys()];
-            if (allKeys.length > count) {
-                const cl = origin.lng, ca = origin.lat;
-                const kx = Math.cos(ca * Math.PI / 180);
-                const d2 = (p: [number, number]) => (kx * (p[0] - cl)) ** 2 + (p[1] - ca) ** 2;
-                allKeys.sort((a, b) => d2(coords.get(a)!) - d2(coords.get(b)!));
-            }
-            seedKeys = allKeys.slice(0, count);
-        }
+        // äta upp seed-platser. Urvalet (populära först + zoom-ransonen, 7/10
+        // kväll) delas med tap-migrationen via pickRevealKeys, så seed-
+        // omräkningen aldrig byter uppsättning mot en annan sorts urval.
+        const origin = (map ? map.getCenter() : null) ?? userPosRef.current;
+        const seedKeys: string[] = origin ? pickRevealKeysRef.current(origin.lng, origin.lat) : [];
         const newSeed = new Set(seedKeys);
         // Göm gamla seed-nycklar som inte längre är seed (men aldrig klickade/sticky).
         if (map && layerExists(map, 'plain-events')) {
@@ -2261,9 +2330,15 @@ export default function V2Map({
         // prickar), så de ska inte äta upp reveal-platser kring ett tap/seedet.
         // Önskningarna likaså: de är REDAN alltid tända (sticky) och ska inte
         // äta upp seed-/tap-platser eller dras med i reveal-vandringen.
-        revealCoordsRef.current = plainData.features.filter(f => !f.properties.past && !f.properties.key.startsWith('wish:')).map(f => ({
-            key: f.properties.key, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
-        }));
+        revealCoordsRef.current = plainData.features.filter(f => !f.properties.past && !f.properties.key.startsWith('wish:')).map(f => {
+            // Populärranken (7/10 kväll): pop-flaggan/guldet bor i den bakade
+            // brick-infon (ikon-registret), inte i featuren — slå upp per ikon.
+            const info = plainData.icons.get(f.properties.icon);
+            return {
+                key: f.properties.key, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
+                pop: !!(info?.pop || info?.gold),
+            };
+        });
         const map = mapRef.current;
         if (!map) return;
         // GRINDEN FÅR INTE VARA isStyleLoaded() (Josefs dagbytesbugg 13/9):
@@ -2511,7 +2586,7 @@ export default function V2Map({
         // Samma sak för event SKAPADE PÅ VADKUL (userCreated): sajtens kärna ska
         // aldrig behöva skrapas fram utan syns alltid, för alla besökare.
         {
-            // Samma isEventPast-gräns som dämpningen/SavedPanel (start + 1 h,
+            // Samma isEventPast-gräns som dämpningen/SavedSection (start + 1 h,
             // kl 20 för event utan klockslag).
             const stickyNowMs = Date.now();
             for (const [key, group] of groupsRef.current) {
@@ -2883,15 +2958,20 @@ export default function V2Map({
             mapContainerRef.current.clientHeight,
         );
         {
-            const plats = new URLSearchParams(window.location.search).get('plats');
-            if (plats) {
-                const [la, ln, z] = plats.split(',').map(Number);
-                if (Number.isFinite(la) && Number.isFinite(ln)) {
-                    startCenter = [ln, la];
-                    startZoom = Number.isFinite(z) ? Math.min(Math.max(z, 4), 16) : 11;
-                    revealAnchorPtRef.current = { lng: ln, lat: la };
-                }
-            } else {
+            // Sidan fångar ?plats= när den monteras och skickar ner den
+            // (startPlats): när den här dynamiskt importerade kartan monteras
+            // har sidans URL-synk ofta redan skrivit om adressfältet utan
+            // plats= (mätt 1/10: adressen omskriven efter 1,4 s, kartan
+            // monterad efter 2,8 s) - då öppnade kartan i den sparade staden.
+            // Inget fångat än (kartan monterades före sidans effekt) = läs
+            // adressfältet, som då inte hunnit skrivas om.
+            const plats = startPlats ?? new URLSearchParams(window.location.search).get('plats');
+            const djup = parsePlatsParam(plats);
+            if (djup) {
+                startCenter = [djup.lng, djup.lat];
+                startZoom = djup.zoom;
+                revealAnchorPtRef.current = { lng: djup.lng, lat: djup.lat };
+            } else if (!plats) {
                 // INGEN djuplänk: öppna i DIN STAD direkt (Josef 31/8 — "vi ska
                 // direkt blicka över staden man är i, inget intro"). Staden är
                 // den vi landade i förra besöket (writeStartCity i page.tsx);
@@ -3663,6 +3743,31 @@ export default function V2Map({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [zoomOutTrigger]);
 
+    // 2c1. NÄSTA ZOOMAR UT (ägarbeslut 7/10 sent, Josef: "när vi har gått
+    //      genom alla de som vi inom det området där vi är. då ska ju kartan
+    //      automatiskt zooma ut"): eventkortet har gått igenom eventen i bild
+    //      och valt nästa obesökta utanför. Zooma ut kring SAMMA mitt - ingen
+    //      panorering, kartan "hoppar" fortfarande aldrig (2/9) - precis så
+    //      mycket att målet syns ovanför kortet (utils/viewportTour, samma
+    //      täckmått som sidans inTourView), plus en liten marginal.
+    const prevRevealZoomRef = useRef(zoomRevealTarget?.nonce ?? 0);
+    useEffect(() => {
+        if (!zoomRevealTarget || zoomRevealTarget.nonce === prevRevealZoomRef.current) return;
+        prevRevealZoomRef.current = zoomRevealTarget.nonce;
+        const map = mapRef.current;
+        if (!map || !isValidLatLng(zoomRevealTarget.lat, zoomRevealTarget.lng)) return;
+        const center = map.project(map.getCenter());
+        const target = map.project([zoomRevealTarget.lng, zoomRevealTarget.lat]);
+        const el = map.getContainer();
+        const steps = zoomOutStepsToReveal(target.x - center.x, target.y - center.y, el.clientWidth, el.clientHeight);
+        const out = Math.max(zoomRevealTarget.minSteps ?? 0, steps > 0 ? steps + 0.15 : 0);
+        if (out <= 0) return;
+        map.easeTo({
+            zoom: Math.max(map.getMinZoom(), map.getZoom() - out),
+            duration: 900,
+        });
+    }, [zoomRevealTarget]);
+
     // 2c2. Auto-inzoomning till veckovyn (31/8): stadsrutans "Hela veckan"-
     //      klick i utzoomat läge bumpar triggern → zooma in till veckotröskeln
     //      kring samma center. REN zoom genom kartans vanliga maskineri —
@@ -3947,6 +4052,11 @@ export default function V2Map({
                 // kategorifärgningen → standardmörk bricka; övriga får sin kategori-
                 // färg. Speciella tillstånd (vald/featured/sparad) går alltid före nedan.
                 const catColorHex = brickaBodyHex(rep);
+                // VALD bricka (30/9): kroppen = brickans färg till 50 % över vitt
+                // (svart i mörkt läge, via .pin-bubble-selected) och färgen i
+                // ramen, med svepet (.pin-ring). Guld (boost/TM) är brickans
+                // färg för de eventen.
+                const sel = selectedMarkerColors(isGoldStar || isTicketmasterGold ? '#f59e0b' : catColorHex);
 
                 // Nål-brickans utseende per tillstånd. Mörkgrå standardbricka med
                 // mjuk gradient för djup; VADKUL-skapade event får en smaragdgrön
@@ -3963,7 +4073,7 @@ export default function V2Map({
                     ? sourceGradientCss(catColorHex, BRICKA_BODY_ALPHA)
                     : BRICKA_DARK_BG;
                 const pinBorder = isSelected
-                    ? '3px solid #ffffff'
+                    ? `3px solid ${sel.ringA}`
                     : isGoldStar || isTicketmasterGold
                     ? '3px solid #fbbf24'
                     : isSaved
@@ -3995,10 +4105,17 @@ export default function V2Map({
                 // Multi-event-brickan krymps till single-event-storlek: DOM-brickans
                 // kropp är 44px, GL-single-brickans 40px → 40/44 ≈ 0.91. Enda kvar-
                 // varande skillnaden mot en single blir då siffer-badgen.
-                // Vald bricka får BARA vit kant (se pinBorder) — den ska INTE bli större
-                // eller skifta plats (scale 1.2 gjorde båda). Behåll normal storlek.
+                // Vald bricka är LITE STÖRRE (Josef 30/9: "gör eventmarkören lite
+                // större istället, så man ser tydligare vilken man är på") -
+                // ersätter "bara vit kant, normal storlek". Växer runt bottom
+                // center, så spetsen står kvar på koordinaten (scale 1.2 med
+                // förflyttning prövades förr och avvisades). Offseten nedan
+                // räknas på baseScale, INTE med valfaktorn, så det är spetsen
+                // och inte kroppens mitt som ligger kvar.
+                const SELECTED_SCALE = 1.15;
                 const baseScale = count > 1 ? 0.91 : 1;
-                const scaleStyle = `scale(${baseScale})`;
+                const shownScale = isSelected ? baseScale * SELECTED_SCALE : baseScale;
+                const scaleStyle = `scale(${shownScale})`;
 
                 // Den valda gruppen ritas i BÅDA lagren (GL-brickan ligger kvar
                 // under DOM-markören, se plainData) — då måste de ligga exakt på
@@ -4046,8 +4163,8 @@ export default function V2Map({
                 // --pop-scale styr animationens slutvärde (se @keyframes marker-pop-in)
                 // så multi-event-brickan landar på rätt storlek även efter pop-in.
                 const pinAnimationStyle = showImmediately
-                    ? `--pop-scale: ${baseScale}; animation: none !important; opacity: 1 !important; transform: ${scaleStyle} !important;`
-                    : `--pop-scale: ${baseScale}; transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
+                    ? `--pop-scale: ${shownScale}; animation: none !important; opacity: 1 !important; transform: ${scaleStyle} !important;`
+                    : `--pop-scale: ${shownScale}; transform: ${scaleStyle}; animation-delay: ${Math.round(animDelay)}ms;`;
 
                 // OBS: emojin sätts med textContent NEDANFÖR — aldrig i mallen.
                 // Fältet kommer från användare (tips) och AI-audit av skrapat
@@ -4058,9 +4175,10 @@ export default function V2Map({
                 markerData.element.innerHTML = `
                     <div class="custom-marker-wrapper" style="${opacityStyle}; ${wrapperStyle}">
                         <div class="pin-element" style="${pinAnimationStyle}">
-                            <div class="pin-bubble" style="background:${pinBg}; border:${pinBorder}; box-shadow: ${pinShadow};">
+                            <div class="pin-bubble${isSelected ? ' pin-bubble-selected' : ''}" style="${isSelected ? `--sel-body:${sel.body}; ` : `background:${pinBg}; `}border:${pinBorder}; box-shadow: ${pinShadow};">
                                 <div class="pin-emoji"></div>
                             </div>
+                            ${isSelected ? `<div class="pin-ring" aria-hidden="true" style="--ring-a:${sel.ringA}; --ring-b:${sel.ringB};"></div>` : ''}
                             ${countBadge}
                             ${boostBadge}
                         </div>
@@ -4077,13 +4195,22 @@ export default function V2Map({
                 const selEmoji = eventEmoji(inGroupSelected);
                 const emojiEl = markerData.element.querySelector('.pin-emoji');
                 if (emojiEl && emojiEl.textContent !== selEmoji) emojiEl.textContent = selEmoji;
-                // Brickans kropp följer det bläddrade eventet (samma skäl som i
-                // cyclern). Fasta tillstånd (sparad, guld) äger färgen och rörs
-                // ej — guldet sitter på GRUPPEN (som GL:s drawGold) och ska inte
-                // blinka bort när man bläddrar till ett oboostat event i högen.
-                if (!isSaved && !isGoldStar && !isTicketmasterGold) {
+                // Den valda brickans kropp och ram följer det bläddrade eventets
+                // färg (samma skäl som i cyclern). Guldet sitter på GRUPPEN (som
+                // GL:s drawGold) och ska inte blinka bort när man bläddrar till
+                // ett oboostat event i högen.
+                if (!isGoldStar && !isTicketmasterGold) {
+                    const c = selectedMarkerColors(brickaBodyHex(inGroupSelected));
                     const bubble = markerData.element.querySelector('.pin-bubble') as HTMLElement | null;
-                    if (bubble) bubble.style.background = brickaBodyBg(inGroupSelected);
+                    if (bubble) {
+                        bubble.style.setProperty('--sel-body', c.body);
+                        bubble.style.borderColor = c.ringA;
+                    }
+                    const ring = markerData.element.querySelector('.pin-ring') as HTMLElement | null;
+                    if (ring) {
+                        ring.style.setProperty('--ring-a', c.ringA);
+                        ring.style.setProperty('--ring-b', c.ringB);
+                    }
                 }
 
                 // Siffran = count − position i bläddrings-ordningen. Nästa → index
@@ -4253,6 +4380,55 @@ export default function V2Map({
                     position: relative;
                     transition: transform 0.18s ease, filter 0.18s ease;
                 }
+                /* VALD bricka (ägarbeslut 30/9, Josef: "tydligare vilken markör
+                   vi har valt" - den vita ramen såg ut som 🔥-brickornas):
+                   - lite STÖRRE (SELECTED_SCALE, spetsen kvar på platsen),
+                   - KROPPEN = brickans färg till 50 % över VITT, i mörkt läge
+                     över SVART (--sel-body från selectedMarkerColors; ingen
+                     inline-bakgrund för vald). Ogenomskinlig - kartan syns
+                     inte igenom (Josef: "inte så man ser kartan").
+                   - RAMEN i brickans egen färg (kategori/grön/guld) med samma
+                     vandrande nyansskifte som zoom-bannerns text
+                     (map-portal-sweep i globals.css, 7 s).
+                   .pin-ring ligger OVANPÅ bubblan och täcker exakt dess 3 px-
+                   kant (masken släpper bara igenom kanten; bubblan har
+                   overflow:hidden och ::before är upptagen). Bubblans egen kant
+                   har ringens basfärg, så inget annat skymtar i kantens
+                   kantutjämning. --ring-a/--ring-b sätts per markör.
+                   PRÖVAT OCH RIVET samma dag: eldfärgat skimmer ("inte
+                   gulding"), vit-grått skimmer på vanlig kropp, helvit/svart
+                   kropp, och en ram som
+                   pulserade i tjocklek - inåt, utåt (skakade: border-width
+                   avrundas till hela pixlar) och som skalad ring bakom bubblan
+                   ("skippa den pulserande storleken"). */
+                .pin-bubble.pin-bubble-selected {
+                    background: var(--sel-body), #ffffff;
+                }
+                .dark .pin-bubble.pin-bubble-selected {
+                    background: var(--sel-body), #000000;
+                }
+                .pin-ring {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 44px;
+                    height: 44px;
+                    box-sizing: border-box;
+                    padding: 3px;
+                    border-radius: 50% 50% 0 50%;
+                    transform: rotate(45deg);
+                    background-image: linear-gradient(90deg, var(--ring-a, #ffffff) 0%, var(--ring-b, #94a3b8) 50%, var(--ring-a, #ffffff) 100%);
+                    background-size: 200% auto;
+                    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                    -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+                    animation: map-portal-sweep 7s linear infinite;
+                    pointer-events: none;
+                    transition: transform 0.18s ease;
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .pin-ring { animation: none; }
+                }
                 /* Glansig topp-highlight ger brickan en kupad känsla — ligger
                    under emojin (.pin-emoji har z-index 1) och följer bubblans
                    rundning via border-radius: inherit. */
@@ -4285,6 +4461,9 @@ export default function V2Map({
                     .v2-custom-marker:hover .pin-bubble {
                         transform: rotate(45deg) scale(1.07);
                         filter: brightness(1.05);
+                    }
+                    .v2-custom-marker:hover .pin-ring {
+                        transform: rotate(45deg) scale(1.07);
                     }
                 }
                 .badge-count {

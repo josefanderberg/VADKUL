@@ -21,6 +21,9 @@ const JUNK_DESCRIPTION = [
     /^\s*Integritet\s*[·•]?\s*(?:\n\s*)?·?\s*Användarvillkor/i,   // Facebook-sidfot
     /^\s*Hoppa till huvudinnehåll/i,
     /^\s*(?:Vi använder|Denna webbplats använder) cookies/i,
+    // Billettos egen säljtext, som sidan bär när arrangören inte skrivit
+    // någon beskrivning (1/10: 5 event visade reklam för Billetto i kortet).
+    /^\s*Maximera ditt events framgång med Billetto/i,
 ];
 
 const MAX_DESCRIPTION = 12000;  // bara städning — engines bestämmer själva längd (max i DB ~9.7k)

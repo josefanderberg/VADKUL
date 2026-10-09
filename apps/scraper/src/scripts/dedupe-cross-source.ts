@@ -27,6 +27,7 @@ import Database from 'better-sqlite3';
 import { db } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
 import { isAffiliateLink } from '../utils/ticketSources';
+import { organizerPageSlug } from '../utils/organizerPage';
 
 const apply = process.argv.includes('--apply');
 
@@ -43,6 +44,10 @@ interface Row {
     firestoreId: string;
     /** Avgör vilken omdöpt rad som bär den aktuella slugen (renameGhosts). */
     createdAt?: string | null;
+    /** 0 = källan gav bara dagen (klockan är 12:00Z-platshållaren). */
+    hasSpecificTime?: number | null;
+    /** Centroid-placerade rader står inte i ett hus — se sameVenue. */
+    geoPrecision?: string | null;
 }
 
 export function normalizeTitle(s: string): string {
@@ -300,6 +305,47 @@ export function isTitleVariant(a: string, b: string): boolean {
     return l.startsWith(s + ' ');
 }
 
+/**
+ * SVANSREGELN (2026-10-02, Kulturhuset i Sävsjö): etiketten står FRAMFÖR
+ * titeln och skiljer sig mellan källorna — "Live på Bio – Macbeth" (husets
+ * sajt), "Opera På Bio - Macbeth" (Nortic), "Macbeth" (Folkets Hus och
+ * Parker); "Teater – Kvinnor och äppelträd" / "Kvinnor och äppelträd".
+ * Titlarna delar en ordsvans på minst 6 tecken och:
+ *  - bara den ena har förled → högst 4 ord ("Bio Halvåtta: Arkipelag"),
+ *  - båda har förled → båda består ENBART av etikettord. Annars delar
+ *    "Resemässan Stockholm 16-17 oktober 2026" och "Seniorfestivalen
+ *    Stockholm 16-17 oktober 2026" svans — två mässor, inte ett event.
+ * Kräver i titleVariantLinks samma HUS (≤ 200 m), inte bara samma 5 km-ruta.
+ */
+const LABEL_WORDS = new Set([
+    'live', 'pa', 'bio', 'opera', 'met', 'metropolitan', 'liveopera', 'livebio', 'kultur',
+    'teater', 'barnteater', 'konsert', 'film', 'filmvisning', 'dans', 'forestallning',
+    'musikal', 'gastspel', 'program', 'scen', 'show', 'foredrag', 'forelasning', 'cirkus',
+]);
+
+export function sharesTitleTail(a: string, b: string): boolean {
+    if (!a || !b || a === b) return false;
+    const wa = a.split(' '), wb = b.split(' ');
+    let n = 0;
+    while (n < wa.length && n < wb.length && wa[wa.length - 1 - n] === wb[wb.length - 1 - n]) n++;
+    if (n === 0 || wa.slice(wa.length - n).join(' ').length < 6) return false;
+    const pa = wa.slice(0, wa.length - n), pb = wb.slice(0, wb.length - n);
+    if (pa.length === 0 || pb.length === 0) return Math.max(pa.length, pb.length) <= 4;
+    return pa.length <= 3 && pb.length <= 3 && [...pa, ...pb].every((w) => LABEL_WORDS.has(w));
+}
+
+const SAME_VENUE_KM = 0.2;
+/** Samma HUS: ≤ 200 m och ingen av dem på en ort-/stadscentroid (två olika
+ *  event på Jönköpings mittpunkt är inte "samma plats"). */
+export function sameVenue(x: Pick<Row, 'lat' | 'lng' | 'geoPrecision'>, y: Pick<Row, 'lat' | 'lng' | 'geoPrecision'>): boolean {
+    if (!x.lat || !x.lng || !y.lat || !y.lng) return false;
+    if (/centroid/.test(x.geoPrecision ?? '') || /centroid/.test(y.geoPrecision ?? '')) return false;
+    const R = 6371, rad = (d: number) => (d * Math.PI) / 180;
+    const dLat = rad(y.lat - x.lat), dLng = rad(y.lng - x.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(x.lat)) * Math.cos(rad(y.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h)) <= SAME_VENUE_KM;
+}
+
 /** Inställt/flyttat i titeln — en sådan variant slås aldrig ihop: vann den
  *  vanliga titeln skulle ett inställt event se ut att bli av. */
 const CANCELLED_RE = /\b(installd|installt|installda|cancelled|canceled|uppskjuten|uppskjutet|flyttad|flyttat)\b/;
@@ -339,14 +385,73 @@ export function titleVariantLinks(rows: Row[]): [Row, Row][] {
         for (let i = 0; i < b.length; i++) {
             for (let j = i + 1; j < b.length; j++) {
                 const [x, y] = [norm[i], norm[j]];
-                if (!isTitleVariant(x, y)) continue;
+                if (CANCELLED_RE.test(x) || CANCELLED_RE.test(y)) continue;
                 const short = x.length <= y.length ? x : y;
-                if (ambiguous.has(short) || CANCELLED_RE.test(x) || CANCELLED_RE.test(y)) continue;
-                links.push([b[i], b[j]]);
+                // Prefix: serierubrik-spärren gäller ("Barnens konstfredag: …").
+                // Suffix: olika etiketter framför SAMMA titel i samma hus är
+                // samma kväll — där är flera längre varianter väntat, inte en
+                // serierubrik, så spärren gäller inte.
+                const prefix = isTitleVariant(x, y) && !ambiguous.has(short);
+                const tail = sharesTitleTail(x, y) && sameVenue(b[i], b[j]);
+                if (prefix || tail) links.push([b[i], b[j]]);
             }
         }
     }
+    links.push(...dateOnlyTwinLinks(rows));
     return links;
+}
+
+/**
+ * Datumlösa rader (källan gav bara dagen — Folkets Hus och Parker: "Macbeth"
+ * 3/10 utan klockslag) hamnar aldrig i samma exakt-tid-hink som sina
+ * tidsatta tvillingar. Länka en sådan rad till den tidsatta raden samma dag
+ * i samma hus med titelvariant/titelsvans — men BARA när kandidaterna har
+ * EN och samma starttid (matiné + kvällsvisning får aldrig dras ihop via den).
+ */
+export function dateOnlyTwinLinks(rows: Row[]): [Row, Row][] {
+    const byDay = new Map<string, Row[]>();
+    for (const r of rows) {
+        const lk = locationKey(r);
+        if (!lk || !r.lat || !r.lng) continue;
+        const k = `${localDay(r.time)}|${lk}`;
+        if (!byDay.has(k)) byDay.set(k, []);
+        byDay.get(k)!.push(r);
+    }
+    const links: [Row, Row][] = [];
+    for (const b of byDay.values()) {
+        const dateOnly = b.filter((r) => r.hasSpecificTime === 0);
+        if (dateOnly.length === 0) continue;
+        const timed = b.filter((r) => r.hasSpecificTime !== 0);
+        for (const d of dateOnly) {
+            const nd = normalizeTitle(d.title);
+            if (CANCELLED_RE.test(nd)) continue;
+            const hits = timed.filter((t) => {
+                const nt = normalizeTitle(t.title);
+                return !CANCELLED_RE.test(nt) && sameVenue(d, t)
+                    && (nt === nd || isTitleVariant(nd, nt) || sharesTitleTail(nd, nt));
+            });
+            // Flera kandidater med SAMMA starttid är en och samma kväll (och
+            // länkas ihop av tidshinken ovan); olika klockslag = olika visningar.
+            if (hits.length > 0 && new Set(hits.map((h) => h.time)).size === 1) links.push([d, hits[0]]);
+        }
+    }
+    return links;
+}
+
+/**
+ * Högst poäng först. Vid LIKA poäng:
+ *  1. riktigt klockslag före datumlöst (svansregelns tvillingar: Folkets Hus
+ *     och Parkers "Macbeth" utan tid får inte slå "Live på Bio – Macbeth" kl 19),
+ *  2. arrangörens egen sida före en återförsäljare — bara den ger eventet en
+ *     arrangörssida (organizerPageSlug); Nortic-kopian av husets egen kväll
+ *     hade annars hållit kvällen borta från /arrangor/kulturhuset-i-savsjo.
+ * Stabil i övrigt — ordningen i gruppen avgör som förut.
+ */
+export function compareScored(a: { r: Row; s: number }, b: { r: Row; s: number }): number {
+    if (b.s !== a.s) return b.s - a.s;
+    const timed = Number(b.r.hasSpecificTime !== 0) - Number(a.r.hasSpecificTime !== 0);
+    if (timed !== 0) return timed;
+    return Number(!!organizerPageSlug(b.r.hostName, b.r.url)) - Number(!!organizerPageSlug(a.r.hostName, a.r.url));
 }
 
 export function scoreOf(r: Row): number {
@@ -377,7 +482,7 @@ async function main() {
 
     const allRows: Row[] = sqliteDb.prepare(`
         SELECT url, title, time, locationName, coverImage, description, lat, lng,
-               isLocationVerified, hostName, firestoreId, createdAt
+               isLocationVerified, hostName, firestoreId, createdAt, hasSpecificTime, geoPrecision
         FROM link_events
         WHERE hidden = 0 AND firestoreId IS NOT NULL AND title IS NOT NULL AND time IS NOT NULL
     `).all() as Row[];
@@ -416,7 +521,7 @@ async function main() {
 
     const toHide: Row[] = [...ghosts];
     for (const arr of dupGroups) {
-        const scored = arr.map((r) => ({ r, s: scoreOf(r) })).sort((a, b) => b.s - a.s);
+        const scored = arr.map((r) => ({ r, s: scoreOf(r) })).sort(compareScored);
         const keeper = scored[0].r;
         const losers = scored.slice(1).map((x) => x.r);
         console.log(`  [behåll s=${scored[0].s}] ${keeper.hostName.padEnd(18)} ${keeper.title.slice(0, 50)}`);

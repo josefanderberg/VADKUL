@@ -10,9 +10,11 @@ import {
     ONE_HOUR_MS,
     brickaBodyHex,
     USER_EVENT_HEX,
+    selectedMarkerColors,
+    SELECTED_RING_FALLBACK_HEX,
 } from './v2MapBricka';
 
-// "Har varit"-logiken delas av ALLA ytor (kartan, EventCard, SavedPanel,
+// "Har varit"-logiken delas av ALLA ytor (kartan, EventCard, SavedSection,
 // stadssidorna) — en regression här dimmar/visar fel event överallt samtidigt.
 
 const ev = (time: Date | null, hasSpecificTime?: boolean): LinkEvent =>
@@ -130,5 +132,23 @@ describe('brickaBodyHex', () => {
     it('TIPS (userCreated MED länk) räknas inte som värdat → kategorifärg', () => {
         const tip = { userCreated: true, url: 'https://example.com/e', category: 'art' } as unknown as LinkEvent;
         expect(brickaBodyHex(tip)).toBe('#f97316');
+    });
+});
+
+describe('selectedMarkerColors (vald bricka, 30/9)', () => {
+    it('ramen sveper från en mörkare till en ljusare nyans av färgen', () => {
+        const c = selectedMarkerColors('#ff0000');
+        expect(c.ringA).toBe('rgb(204,0,0)');
+        expect(c.ringB).toBe('rgb(255,77,77)');
+    });
+
+    it('kroppen är brickans gradient på 50 % alfa (läggs över vitt/svart i CSS)', () => {
+        expect(selectedMarkerColors('#ff0000').body).toContain('rgba(255,0,0,0.5)');
+    });
+
+    it('ingen kategorifärg → skiffer', () => {
+        expect(selectedMarkerColors(null).body).toContain(
+            selectedMarkerColors(SELECTED_RING_FALLBACK_HEX).body,
+        );
     });
 });
