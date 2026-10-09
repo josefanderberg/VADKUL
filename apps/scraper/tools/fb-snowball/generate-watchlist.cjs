@@ -30,10 +30,16 @@ const nordicCount = db.prepare(`
 // utelämnas också (linje med Gotland-kurateringen).
 const POLICY_RE = /svenskakyrkan|f[oö]rsamling|domkyrk|pastorat|socialdemokrat|v[aä]nsterpartiet|moderaterna|centerpartiet|kristdemokrat|liberalerna|sverigedemokrat|milj[oö]partiet/i;
 
+// Utländska arrangörer som spärras i skrapan (junk.ts FOREIGN_HOSTS) - tas
+// aldrig in igen, även om något av deras event ligger kvar synligt i Norden.
+const junk = fs.readFileSync(`${REPO}/apps/scraper/src/scrapers/facebook/junk.ts`, 'utf8');
+const FOREIGN = new Set([...junk.match(/FOREIGN_HOSTS = new Set\(\[([\s\S]*?)\]\)/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]));
+
 const keep = probe
     .filter((r) => !r.unavailable && !r.error && r.nEvents > 0)
     .filter((r) => !existing.has(r.slug.toLowerCase()))
     .filter((r) => !POLICY_RE.test(r.slug) && !POLICY_RE.test(r.host || ''))
+    .filter((r) => !FOREIGN.has(String(r.host || '').trim().replace(/\s+/g, ' ').toLowerCase()))
     .filter((r) => nordicCount.get(r.host).c > 0);
 
 function cityFor(r) {

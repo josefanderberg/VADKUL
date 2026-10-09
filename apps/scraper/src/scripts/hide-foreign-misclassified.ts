@@ -14,6 +14,8 @@
  *   - texten är på främmande språk medan positionen är en gissning
  *     (stads-/ortscentroid eller 0,0) — se storedForeignFbReason.
  *
+ * Sedan 2026-10-09 även arrangörerna på FB-spärrlistan (junk.ts isForeignHost).
+ *
  * Strategi:
  *   - För varje misstänkt event: hide=1 (raderar inte, kan revert)
  *   - Logga reason så vi kan revidera regler
@@ -29,6 +31,7 @@ import { setHidden } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import { isForeignAddress } from '../utils/venueCoordinates';
 import { storedForeignFbReason } from '../scrapers/facebook/centroidGuard';
+import { isForeignHost } from '../scrapers/facebook/junk';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -93,7 +96,7 @@ async function main() {
     console.log(APPLY ? '🔧 APPLY' : '🔍 DRY-RUN');
 
     const rows = sqliteDb.prepare(`
-        SELECT firestoreId, url, title, locationName, extractedAddress, description, lat, lng, geoPrecision
+        SELECT firestoreId, url, title, locationName, extractedAddress, description, lat, lng, geoPrecision, hostName
         FROM link_events
         WHERE hidden = 0 AND time >= datetime('now')
         AND firestoreId IS NOT NULL
@@ -124,6 +127,9 @@ async function main() {
         }
         // Utländsk text på gissad position — se storedForeignFbReason.
         if (!reason) reason = storedForeignFbReason(r);
+        // Utländska arrangörer på FB-spärrlistan (2026-10-09: SO36 i Trosa,
+        // Diamonds Direct i Göteborg) - oavsett adress och position.
+        if (!reason && isForeignHost(r.hostName)) reason = `utländsk arrangör (${r.hostName})`;
         if (reason) {
             matches.push({ id: r.firestoreId, title: (r.title || '').slice(0, 50), reason, url: r.url });
         }

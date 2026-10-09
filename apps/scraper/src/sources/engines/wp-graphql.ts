@@ -3,7 +3,7 @@
  * WPGraphQL (upptäckt på boras.com 2026-07-27: Next.js-frontend, WP-backend
  * på cms.boras.com med öppen /graphql).
  *
- * Query-formen följer ACF-fältgruppen "acfEvents" (Borås TME:s schema):
+ * Query-formen följer ACF-fältgruppen "acfEvents" (Borås & Co:s, f.d. Borås TME, schema):
  *   events(first: N, after: cursor) { nodes { title uri excerpt
  *     featuredImage { node { sourceUrl } }
  *     acfEvents { eventDateFrom eventDateTo eventTime eventPlace

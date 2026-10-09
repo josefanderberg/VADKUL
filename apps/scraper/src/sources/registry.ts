@@ -3098,7 +3098,9 @@ export const SOURCES: Source[] = [
     },
     {
         id: 'boras-com',
-        hostName: 'Borås TME',
+        // Hette Borås TME till 20/8 2025 (pressmeddelande via TT). Sparade
+        // event döptes om av oneoff-boras-co-2026-10-09.ts.
+        hostName: 'Borås & Co',
         region: 'boras',
         engine: 'wp-graphql',
         config: {

@@ -23,7 +23,6 @@ export const FACEBOOK_PAGE_WATCHLIST_NATIONAL: FacebookPageWatch[] = [
     { slug: 'vaxjobibliotek', name: 'Växjö bibliotek' }, // 46 ev i juli, 8 synliga
     { slug: 'kulturaktiebolaget', name: 'Kulturaktiebolaget', city: 'Karlstad' }, // 37 ev i juli, 8 synliga
     { slug: 'StudieforbundetVuxenskolanVast', name: 'Studieförbundet Vuxenskolan Väst', city: 'Uddevalla' }, // 35 ev i juli, 6 synliga
-    { slug: 'diamondsdirectstore', name: 'Diamonds Direct' }, // 33 ev i juli, 8 synliga
     { slug: 'stadsbiblioteketgbg', name: 'Göteborgs stadsbibliotek' }, // 32 ev i juli, 8 synliga
     { slug: 'ABFsorm', name: 'ABF Sörmland', city: 'Katrineholm' }, // 31 ev i juli, 8 synliga
     { slug: 'Megascope', name: 'Megascope' }, // 29 ev i juli, 8 synliga
@@ -64,7 +63,6 @@ export const FACEBOOK_PAGE_WATCHLIST_NATIONAL: FacebookPageWatch[] = [
     { slug: 'jazzclubfasching', name: 'Fasching' }, // 18 ev i juli, 8 synliga
     { slug: 'Debasersthlm', name: 'Debaser', city: 'Stockholm' }, // 18 ev i juli, 6 synliga
     { slug: 'varnamobibliotekochkultur', name: 'Värnamo bibliotek och kultur' }, // 17 ev i juli, 8 synliga
-    { slug: 'Esso36', name: 'SO36' }, // 17 ev i juli, 8 synliga
     { slug: 'dismitt', name: 'Dis-Mitt', city: 'Gävle' }, // 17 ev i juli, 1 synliga
     { slug: 'mejeriet', name: 'Mejeriet', city: 'Lund' }, // 17 ev i juli, 7 synliga
     { slug: 'Midsommargarden', name: 'Midsommargården' }, // 17 ev i juli, 8 synliga
@@ -138,7 +136,6 @@ export const FACEBOOK_PAGE_WATCHLIST_NATIONAL: FacebookPageWatch[] = [
     { slug: 'arbisnkpg', name: 'Arbis' }, // 12 ev i juli, 8 synliga
     { slug: 'vaxjokommun', name: 'Växjö kommun' }, // 11 ev i juli, 7 synliga
     { slug: 'vewcs', name: 'Victor Evelina West Coast Swing', city: 'Uppsala' }, // 11 ev i juli, 8 synliga
-    { slug: 'foxfairoak', name: 'The Fox Fair Oak' }, // 11 ev i juli, 8 synliga
     { slug: 'svgavleborg', name: 'Studieförbundet Vuxenskolan Gävleborg', city: 'Gävle' }, // 11 ev i juli, 8 synliga
     { slug: 'biblioteketsimrishamn', name: 'Simrishamns bibliotek', city: 'Simrishamn' }, // 11 ev i juli, 8 synliga
     { slug: 'svorebrolan', name: 'Studieförbundet Vuxenskolan Örebro Län', city: 'Nora' }, // 11 ev i juli, 7 synliga

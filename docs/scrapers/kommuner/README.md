@@ -36,7 +36,7 @@ Totalt: **351** kommun-källor i registry.
 | [Borlänge Kommun](./borlange.md) | `sitemap` | 2026-06-04 | — |
 | [Borås Kommun](./boras.md) | `sitemap` | 2026-06-04 | — |
 | [Borås Stadsteater](./boras-stadsteater.md) | `sitemap` | 2026-07-27 | — |
-| [Borås TME](./boras-com.md) | `wp-graphql` | 2026-07-27 | — |
+| [Borås & Co](./boras-com.md) | `wp-graphql` | 2026-07-27 | — |
 | [Båstad](./bastad.md) | `wp-rest (tribe)` | 2026-06-01 | 24 |
 | [Cirkus Stockholm](./cirkus.md) | `sitemap` | — | — |
 | [Conventum](./conventum.md) | `sitemap` | 2026-06-24 | — |

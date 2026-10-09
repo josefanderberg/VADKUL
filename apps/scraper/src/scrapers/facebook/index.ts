@@ -10,7 +10,7 @@ import { anchorCityOverride } from './anchorCity';
 import { classifyEvent } from '../../utils/classify';
 import { normalizeDescription } from '../../utils/normalizeEvent';
 import { extractPriceFromText } from '../../utils/priceFromText';
-import { isResellerJunk, cleanFacebookTitle } from './junk';
+import { isResellerJunk, isForeignHost, cleanFacebookTitle } from './junk';
 import { isGenericHost, hostFromOgDescription, hostFromPageJson } from './hostFallback';
 
 /**
@@ -463,6 +463,13 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 const storedDesc = String(existingEvent?.description ?? '').trim();
                 const descRetry = !!existingEvent && (storedDesc.length < 40 || /^Integritet/i.test(storedDesc)) && extractHostRetried < MAX_HOST_RETRY;
                 const hostRetry = (!!existingEvent && isGenericHost(existingEvent.hostName) && extractHostRetried < MAX_HOST_RETRY) || descRetry;
+                // Utländsk arrangör på spärrlistan (junk.ts) - fräscha inte upp
+                // det sparade eventet; nattvakten hide-foreign döljer det.
+                if (existingEvent && isForeignHost(existingEvent.hostName)) {
+                    console.log(`    ⏩ Skippar utländsk arrangör (spärrlista): "${existingEvent.title}" (värd: ${existingEvent.hostName})`);
+                    extractSkippedForeign++;
+                    continue;
+                }
                 if (existingEvent && !isFbImageExpired(existingEvent.coverImage) && !hostRetry) {
                     console.log(`  📄 Detaljer för: ${url}`);
                     console.log(`    👉 Redan sparad i databasen: "${existingEvent.title}"`);
@@ -606,6 +613,12 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                 if (isResellerJunk(details.title, finalHostName, details.description, locInfo.fullAddress || locInfo.name)) {
                     console.log(`    ⏩ Skippar biljettannons (återförsäljare): "${details.title}" (värd: ${finalHostName})`);
                     extractSkippedJunk++;
+                    continue;
+                }
+                // Utländska arrangörer utan läsbar adress (SO36 i Berlin hamnade i Trosa).
+                if (isForeignHost(finalHostName)) {
+                    console.log(`    ⏩ Skippar utländsk arrangör (spärrlista): "${details.title}" (värd: ${finalHostName})`);
+                    extractSkippedForeign++;
                     continue;
                 }
 

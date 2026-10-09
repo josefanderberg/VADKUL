@@ -45,6 +45,26 @@ export function isResellerJunk(
 }
 
 /**
+ * Utländska arrangörer som snöbollsrundan 2026-07-27 tog in i sidbevakningen
+ * eller seed-filen. Adresserna saknas eller är amerikanska/brittiska ("Diamonds
+ * Direct (Orlando, FL)", "SO50 7HB") och slinker förbi utlandsfiltret, så
+ * geokodaren lade dem på svenska orter (SO36 i Berlin hamnade i Trosa).
+ * Granskningen 2026-10-09. Norska/danska sidor hör INTE hit - de ligger på
+ * riktiga NO/DK-platser och grannländerna visas medvetet.
+ */
+const FOREIGN_HOSTS = new Set([
+    'diamonds direct',
+    'kalamazoo nature center',
+    'the fox fair oak',
+    'so36',
+]);
+
+/** Är värden en känd utländsk arrangör vars event aldrig hör hemma på kartan? */
+export function isForeignHost(hostName: string | null | undefined): boolean {
+    return FOREIGN_HOSTS.has((hostName ?? '').trim().replace(/\s+/g, ' ').toLowerCase());
+}
+
+/**
  * Städa biljettsvansar ur FB-titlar: "Sailing Day Tour (Stockholm) Tickets"
  * → "Sailing Day Tour". Stads-parentesen tas bara när den sitter ihop med
  * Tickets-svansen (Fever-mönstret) — "(Stockholm)" mitt i en titel lämnas.

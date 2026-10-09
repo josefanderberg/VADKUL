@@ -1,4 +1,4 @@
-# Borås TME
+# Borås & Co (f.d. Borås TME)
 
 > Auto-genererad från `src/sources/registry.ts` + `src/sources/data/provenance.ts`.
 > Re-generera med `npx ts-node src/scripts/gen-source-playbooks.ts`.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isResellerJunk, cleanFacebookTitle } from './junk';
+import { isResellerJunk, isForeignHost, cleanFacebookTitle } from './junk';
 
 describe('isResellerJunk', () => {
     it('känner igen återförsäljarvärdar', () => {
@@ -26,5 +26,21 @@ describe('cleanFacebookTitle', () => {
     it('rör inte vanliga titlar', () => {
         expect(cleanFacebookTitle('Afterwork på Kappa Bar (Malmö)')).toBe('Afterwork på Kappa Bar (Malmö)');
         expect(cleanFacebookTitle('Tickets')).toBe('Tickets');
+    });
+});
+
+describe('isForeignHost', () => {
+    it('spärrar de utländska arrangörerna oavsett skiftläge och mellanslag', () => {
+        expect(isForeignHost('Diamonds Direct')).toBe(true);
+        expect(isForeignHost('  kalamazoo  nature center ')).toBe(true);
+        expect(isForeignHost('The Fox Fair Oak')).toBe(true);
+        expect(isForeignHost('SO36')).toBe(true);
+    });
+    it('rör inte svenska eller nordiska arrangörer', () => {
+        expect(isForeignHost('Visit Örebro')).toBe(false);
+        expect(isForeignHost('Nieu Torshov')).toBe(false);     // Oslo - grannlandet visas medvetet
+        expect(isForeignHost('Diamonds Direct Göteborg')).toBe(false); // bara exakta namn
+        expect(isForeignHost('')).toBe(false);
+        expect(isForeignHost(null)).toBe(false);
     });
 });
