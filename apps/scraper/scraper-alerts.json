@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-09T06:12:00.960Z",
+  "generatedAt": "2026-10-10T07:05:13.871Z",
   "counts": {
     "fel": 0,
-    "varning": 35,
-    "nollkoordinatTotalt": 636
+    "varning": 41,
+    "nollkoordinatTotalt": 601
   },
   "alerts": [
     {
@@ -36,14 +36,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Astrid Lindgrens Värld",
-      "message": "18 av 18 kommande event ligger 2026-10-16 — sajtvitt datum i stället för eventets?"
+      "source": "Askims församling",
+      "message": "7 av 10 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Easyfairs Nordic AB (DK)",
-      "message": "11 av 11 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+      "source": "Astrid Lindgrens Värld",
+      "message": "18 av 18 kommande event ligger 2026-10-16 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -54,20 +54,50 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Hässleholms församling",
-      "message": "8 av 13 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+      "source": "Limhamns församling",
+      "message": "8 av 10 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Korpen Vänersborg",
-      "message": "8 av 13 kommande event ligger 2026-10-11 — sajtvitt datum i stället för eventets?"
+      "source": "Linköpings domkyrkoförsamling",
+      "message": "9 av 10 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Luleå domkyrkoförsamling",
+      "message": "8 av 12 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Mötesplatser Nordost",
+      "message": "9 av 15 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Nässjö pastorat",
-      "message": "12 av 14 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+      "message": "12 av 12 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Stiftelsen Läckö Slott",
+      "message": "7 av 10 kommande event ligger 2026-10-29 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Stora Tuna församling",
+      "message": "7 av 10 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Söderköpingsguiden",
+      "message": "38 av 58 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -78,20 +108,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Växjö stads- och domkyrkoförsamling",
-      "message": "8 av 11 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Örebro läns museum",
       "message": "14 av 19 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "636 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Visit Vemdalen 76, NBV 37, Billetto 33, Gotlands Museum 25, Medleymalmo 22"
+      "source": "601 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Visit Vemdalen 76, NBV 57, Billetto 32, Gotlands Museum 24, Medleymalmo 21"
     },
     {
       "level": "varning",
@@ -104,6 +128,18 @@
       "kind": "invariant",
       "source": "SHL",
       "message": "invariant-vakten larmar (8 av 306 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Superettan",
+      "message": "invariant-vakten larmar (8 av 37 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Söderköpingsguiden",
+      "message": "invariant-vakten larmar (17 av 57 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
