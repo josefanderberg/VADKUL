@@ -160,7 +160,7 @@ export const ARENA_PLACES: Record<string, { city: string; osm?: string }> = {
     'Himmelstalundshallen': { city: 'Norrköping' },
     'Husqvarna Garden': { city: 'Jönköping' },
     'Jössarinken A-hall': { city: 'Mörrum', osm: 'Jössarinken' },
-    'KFK Mekan Arena': { city: 'Vetlanda' },
+    'KFK Mekan Arena': { city: 'Landsbro', osm: 'Borohallen' },   // ex Borohallen, Sävsjövägen 27 — INTE Vetlanda tätort
     'LF Arena': { city: 'Västervik' },
     'Mariehus Arena': { city: 'Mariestad' },
     'NKT Arena Karlskrona A-Hall': { city: 'Karlskrona', osm: 'NKT Arena Karlskrona' },
