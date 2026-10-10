@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSchedule, gameUrl } from './swehockey';
+import { parseSchedule, gameUrl, gameToRawEvent, ARENA_PLACES } from './swehockey';
 
 // Utdrag ur stats.swehockey.se/ScheduleAndResults/Schedule/20961 (2026-09-09).
 // Första matchen en speldag bär datumet i egen cell; nästa match samma dag
@@ -76,5 +76,65 @@ describe('gameUrl', () => {
         expect(a).not.toBe(b);
         expect(a).toBe(gameUrl('20961', '90001001'));
         expect(a.startsWith('https://stats.swehockey.se/')).toBe(true);
+    });
+});
+
+// Utdrag ur Schedule/21044 (Hockeyettan Södra, 2026-10-10). Annan markup än
+// SHL-sidan: självstängande <td/>-celler och en mobil datumcell
+// ("<bold>datum</bold><br />tid").
+const ETTAN_HTML = `
+<table>
+<tr><td class="tdOdd paddingTop d-none d-sm-table-cell">2026-10-18</td><td class="tdOdd paddingTop d-table-cell d-sm-none"><bold>2026-10-18</bold><br />14:00</td><td class="tdOdd paddingTop d-none d-sm-table-cell" style="white-space: nowrap;"><div class="dateLink"><span href="#" class="lnkTooltip" title="90256203">14:00</span></div></td><td class="tdOdd paddingTop">Hanvikens SK
+             - 
+            Tyringe SoSS</td><td class="tdOdd paddingTop" colspan="1"> </td><td class="tdOdd paddingTop d-none d-sm-table-cell" /><td class="tdOdd paddingTop d-none d-md-table-cell" /><td class="tdOdd paddingTop">Tyresö Ishall</td></tr>
+<tr><td class="tdOdd standardPaddingTop d-table-cell d-sm-none">16:00</td><td class="tdOdd standardPaddingTop d-none d-sm-table-cell" /><td class="tdOdd standardPaddingTop d-none d-sm-table-cell" style="white-space: nowrap;"><div class="dateLink"><span href="#" class="lnkTooltip" title="90256261">16:00</span></div></td><td class="tdOdd standardPaddingTop">Västerviks IK
+             - 
+            Nyköpings SK</td><td class="tdOdd standardPaddingTop" colspan="1"> </td><td class="tdOdd standardPaddingTop d-none d-sm-table-cell" /><td class="tdOdd standardPaddingTop d-none d-md-table-cell" /><td class="tdOdd standardPaddingTop">LF Arena </td></tr>
+</table>`;
+
+const ETTAN = { leagueId: '21044', leagueName: 'Hockeyettan Södra' };
+
+describe('Hockeyettan (21044)', () => {
+    it('läser båda raderna och ärver datumet', () => {
+        const games = parseSchedule(ETTAN_HTML);
+        expect(games).toHaveLength(2);
+        const vik = games[1];
+        expect(vik.home).toBe('Västerviks IK');
+        expect(vik.away).toBe('Nyköpings SK');
+        expect(vik.arena).toBe('LF Arena');
+        expect(vik.gameNo).toBe('90256261');
+        expect(vik.startsAt.getDate()).toBe(18);
+        expect(vik.startsAt.getMonth()).toBe(9);
+        expect(vik.startsAt.getHours()).toBe(16);
+    });
+
+    it('LF Arena geokodas i Västervik — namnet finns även i Piteå', () => {
+        const e = gameToRawEvent(ETTAN, parseSchedule(ETTAN_HTML)[1]);
+        expect(e.title).toBe('Västerviks IK – Nyköpings SK');
+        expect(e.venueName).toBe('LF Arena');
+        expect(e.city).toBe('Västervik');
+        expect(e.geocodeCandidates).toEqual(['LF Arena, Västervik', 'Västervik']);
+        expect(e.url).toBe(gameUrl('21044', '90256261'));
+    });
+
+    it('provar OSM-namnet före sponsornamnet', () => {
+        const g = { ...parseSchedule(ETTAN_HTML)[1], arena: 'Stora Hallen' };
+        expect(gameToRawEvent(ETTAN, g).geocodeCandidates)
+            .toEqual(['Rosvalla, Nyköping', 'Stora Hallen, Nyköping', 'Nyköping']);
+    });
+
+    it('slutar alltid på orten — en arenamiss får inte bli 0,0', () => {
+        for (const [arena, place] of Object.entries(ARENA_PLACES)) {
+            const g = { ...parseSchedule(ETTAN_HTML)[0], arena };
+            const candidates = gameToRawEvent(ETTAN, g).geocodeCandidates ?? [];
+            expect(candidates[candidates.length - 1]).toBe(place.city);
+        }
+    });
+
+    it('okänd arena lämnas åt runnerns vanliga geokodning', () => {
+        const e = gameToRawEvent({ leagueId: '20961', leagueName: 'SHL' }, parseSchedule(HTML)[0]);
+        expect(e.venueName).toBe('Scandinavium');
+        expect(e.city).toBeUndefined();
+        expect(e.geocodeCandidates).toBeUndefined();
     });
 });
