@@ -192,14 +192,16 @@ export function townFromTeam(team: string): string | undefined {
 
 /**
  * Geokodningsled för en match: OSM-namnet, arenan, sist orten — orten ur
- * HOCKEY_ARENAS, annars hemmalagets. Utan någon ort lämnas geokodningen åt
- * runnern (arenanamnet ensamt), som förut.
+ * HOCKEY_ARENAS, annars hemmalagets. Verifierade koordinater i tabellen går
+ * före allt. Utan någon ort lämnas geokodningen åt runnern (arenanamnet
+ * ensamt), som förut.
  */
-export function arenaGeo(arena: string, homeTeam = ''): Pick<RawEvent, 'city' | 'geocodeCandidates'> {
+export function arenaGeo(arena: string, homeTeam = ''): Pick<RawEvent, 'city' | 'geocodeCandidates' | 'coords'> {
     const known = HOCKEY_ARENAS[arena];
     const city = known?.city ?? townFromTeam(homeTeam);
     if (!city) return {};
     return {
+        ...(known?.coords ? { coords: known.coords } : {}),
         city,
         geocodeCandidates: [
             ...(known?.osm ? [`${known.osm}, ${city}`] : []),

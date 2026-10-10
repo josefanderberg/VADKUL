@@ -19,6 +19,12 @@
  *           provas först.
  * `foreign` — arenan ligger utomlands (danska lag spelar i södra serierna);
  *           matcherna där hoppas över, kartan är svensk.
+ * `coords` — verifierad position (adress ur klubbens/kommunens sida, källan i
+ *           kommentaren) för arenor som saknas i OSM i orter där ortnamnet
+ *           geokodas till KOMMUNENS mittpunkt — Krokom 47 km, Orsa 21, Ludvika
+ *           20 km från tätorten (10/10). Skickas som eventets koordinater; ingen
+ *           geokodning. Här och inte i venueFixes: venueFixes matchar namnet i
+ *           ALLA källor, och "Hitachi Arena" finns också i Västerås.
  *
  * Säsong 2026/27: Hockeyettan + alla U18/U20-serier. Okända arenor loggas av
  * motorn ("okänd arena") och geokodas på hemmalagets ort — lägg till dem här.
@@ -28,6 +34,7 @@ export interface HockeyArena {
     city: string;
     osm?: string;
     foreign?: true;
+    coords?: [number, number];
 }
 
 export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
