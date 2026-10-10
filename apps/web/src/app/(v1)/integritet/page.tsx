@@ -27,9 +27,18 @@ export default function IntegritetPage() {
             title: 'Utan konto',
             body: (
                 <>Du kan använda hela kartan utan konto, och då lagrar vi inga personuppgifter om dig.
-                Event du sparar (hjärtan) ligger bara lokalt i din webbläsare. Trycker du på
-                ”Min plats” används din position enbart i webbläsaren för att flytta kartan —
-                den skickas aldrig till våra servrar.</>
+                Event du sparar (hjärtan) ligger bara lokalt i din webbläsare.</>
+            ),
+        },
+        {
+            title: 'Din plats',
+            body: (
+                <>Kartan frågar inte om din plats när du öppnar den. Frågan kommer först när du
+                går vidare till kartan utan att ha valt en stad, och du kan alltid välja en stad i
+                stället eller svara nej. Säger du ja används positionen i din webbläsare för att visa
+                kartan där du är och avståndet till eventen. Koordinaterna skickas aldrig till
+                våra servrar. Har du konto sparar vi bara namnet på närmaste ort (t.ex. ”Falun”)
+                på kontot, så att utskick kan handla om din stad. Det ändrar du i profilen.</>
             ),
         },
         {
@@ -90,7 +99,7 @@ export default function IntegritetPage() {
                 </Link>
 
                 <h1 className="mt-5 text-3xl font-black text-[#006AA7] tracking-tight">Integritet på VADKUL</h1>
-                <p className="mt-1 text-xs font-bold text-slate-400">Senast uppdaterad 11 juni 2026</p>
+                <p className="mt-1 text-xs font-bold text-slate-400">Senast uppdaterad 10 oktober 2026</p>
 
                 <div className="mt-8 flex flex-col gap-7">
                     {sections.map(s => (

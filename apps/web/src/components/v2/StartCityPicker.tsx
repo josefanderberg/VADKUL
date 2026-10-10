@@ -31,6 +31,9 @@ interface StartCityPickerProps {
     /** Kryss/utanför/Escape - INGET svar (Josef 8/10: "man kanske vill kunna
      *  välja"): rutan stängs men frågan kommer igen nästa besök. */
     onDismiss: () => void;
+    /** Trycket på "Där jag är" - DÅ (inte vid sidladdningen) ber sidan om
+     *  platsen (Josef 10/10), redan innan kategoristeget är klart. */
+    onPickHere?: () => void;
 }
 
 const CATEGORY_KEYS = (Object.keys(EVENT_CATEGORIES) as EventCategoryType[]).filter(k => k !== 'other');
@@ -46,7 +49,7 @@ function track(name: string) {
  * kartans vanliga sparade filter). "Hoppa över" ger dagens beteende.
  * Samma kortspråk som välkomstrutan.
  */
-export default function StartCityPicker({ current, withCategories, initialCategories, initialPopular, initialSource, onDone, onSkip, onDismiss }: StartCityPickerProps) {
+export default function StartCityPicker({ current, withCategories, initialCategories, initialPopular, initialSource, onDone, onSkip, onDismiss, onPickHere }: StartCityPickerProps) {
     const [step, setStep] = useState<'city' | 'categories'>('city');
     const [query, setQuery] = useState('');
     const [city, setCity] = useState<CityPoint | null>(current);
@@ -73,6 +76,7 @@ export default function StartCityPicker({ current, withCategories, initialCatego
     const pickCity = (c: CityPoint | null) => {
         setCity(c);
         track(c ? 'startstad_city' : 'startstad_here');
+        if (!c) onPickHere?.();
         if (withCategories) { setStep('categories'); cardRef.current?.scrollTo({ top: 0 }); }
         else onDone({ city: c });
     };

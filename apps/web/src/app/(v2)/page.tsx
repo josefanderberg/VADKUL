@@ -1011,6 +1011,10 @@ export default function HomePage() {
     // stod fortfarande uppe när väntetiden gick ut). Då är startstaden en
     // gissning — kommer positionen in senare flyttar vi dit på riktigt.
     const tourStartedBlindRef = useRef(false);
+    // Sant när man valt "där jag är" innan positionen var känd. Till skillnad
+    // från blindflaggan gäller den även om man hunnit röra kartan: det är ett
+    // eget val, så vi flyger hem när positionen landar (efterhämtningen).
+    const pendingHereRef = useRef(false);
     // Sant när vi väntat klart på platstjänsten — då startar vi ändå.
     const [tourGpsWaitOver, setTourGpsWaitOver] = useState(false);
     useEffect(() => {
@@ -3603,9 +3607,23 @@ export default function HomePage() {
     }, [eventsSettled, savedEventIds]);
 
     // Användarens GPS-position — rapporteras upp från kartan (den blå plats-
-    // pricken; tyst hämtning vid start + "Min plats"-knappen). EventCard visar
-    // avståndet från den till det valda eventet. null tills positionen är känd.
+    // pricken). EventCard visar avståndet från den till det valda eventet.
+    // null tills positionen är känd.
     const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+
+    // PLATSFRÅGAN (Josef 10/10): kartan frågar ALDRIG vid sidladdning - bara
+    // tyst om platsen redan är tillåten. Frågan kommer när onboardingen slutar
+    // i "där jag är": "Där jag är" i stadsväljaren (explicit, frågar alltid),
+    // och Hoppa över / krysset / klick bredvid välkomstrutan när ingen stad är
+    // vald (högst en gång per sidladdning). Vald stad = ingen fråga alls, och
+    // djuplänkar frågar aldrig.
+    const [locationAskNonce, setLocationAskNonce] = useState(0);
+    const locationAskedRef = useRef(false);
+    const askLocation = useCallback((explicit = false) => {
+        if (!explicit && locationAskedRef.current) return;
+        locationAskedRef.current = true;
+        setLocationAskNonce(n => n + 1);
+    }, []);
 
     // Spegla närmaste stad till users/{uid} (max 1 gång/dygn) — underlag för
     // stadssegmenterade medlemsutskick. Manuellt vald stad i profilen vinner.
@@ -3670,6 +3688,7 @@ export default function HomePage() {
             const city = nearestCityPoint(userPos.lat, userPos.lng);
             tourCityIndexRef.current = nearestTourCityIndex(city.lat, city.lng);
             flyToPoint(city.lat, city.lng, city.name);
+            pendingHereRef.current = false;  // "där jag är" är nu uppfyllt
             // Kom ihåg staden: NÄSTA besök öppnar kartan här direkt, utan att
             // vänta in platstjänsten (V2Map läser den vid map-init).
             writeStartCity({ lat: city.lat, lng: city.lng, zoom: TOUR_ZOOM, name: city.name });
@@ -3697,11 +3716,16 @@ export default function HomePage() {
     // startat blint ska man flyttas hem direkt (Josef 9/8 — man blev kvar i
     // gissningsstaden). Bara om bildspelet fortfarande rullar orört: har man
     // själv rört kartan, valt en vägskylt eller tryckt play är staden ett eget
-    // val och ska inte ryckas undan (de nollar flaggan).
+    // val och ska inte ryckas undan (de nollar flaggan). Undantag: har man
+    // själv valt "där jag är" (pendingHereRef) flyger vi hem ändå.
     useEffect(() => {
-        if (!userPos || !tourStartedBlindRef.current) return;
-        if (!tourPlaying) { tourStartedBlindRef.current = false; return; }
+        if (!userPos) return;
+        const wantedHere = pendingHereRef.current;
+        if (!tourStartedBlindRef.current && !wantedHere) return;
+        pendingHereRef.current = false;
+        if (!tourPlaying && !wantedHere) { tourStartedBlindRef.current = false; return; }
         tourStartedBlindRef.current = false;
+        tourAutoStartedRef.current = true;
         // Samma orts-uppslag som auto-starten: hem = närmsta ORT, inte storstad.
         const city = nearestCityPoint(userPos.lat, userPos.lng);
         tourCityIndexRef.current = nearestTourCityIndex(city.lat, city.lng);
@@ -3713,15 +3737,16 @@ export default function HomePage() {
     // ── Startstaden (8/10) ───────────────────────────────────────────────────
     // Flyg till ett nytt startval: vald ort, eller (null) "där jag är" = orten
     // närmast GPS:en. Utan GPS-svar än väntar vi in det via efterhämtningen
-    // ovan (blindflaggan), precis som en vanlig blindstart.
+    // ovan (pendingHereRef) - positionen efterfrågas först i och med valet.
     const flyToStartChoice = useCallback((city: CityPoint | null) => {
         const target = city ?? (userPos ? nearestCityPoint(userPos.lat, userPos.lng) : null);
         if (!target) {
-            if (tourAutoStartedRef.current) tourStartedBlindRef.current = true;
+            pendingHereRef.current = true;
             return;
         }
         tourAutoStartedRef.current = true;
         tourStartedBlindRef.current = false;
+        pendingHereRef.current = false;
         tourCityIndexRef.current = nearestTourCityIndex(target.lat, target.lng);
         flyToPoint(target.lat, target.lng, target.name);
         if (!city) writeStartCity({ lat: target.lat, lng: target.lng, zoom: TOUR_ZOOM, name: target.name });
@@ -3751,9 +3776,10 @@ export default function HomePage() {
         }
         setStartPicker(null);
         setWelcomeDone(true);
-        // "Där jag är" vid första frågan = där vi redan står: inget hopp.
-        if (changed || city) flyToStartChoice(city);
-    }, [saveAccountStartChoice, flyToStartChoice]);
+        // "Där jag är" vid första frågan = där vi redan står: inget hopp. Utan
+        // känd position (frågan ställdes först nu, 10/10) väntar vi in den.
+        if (changed || city || !userPos) flyToStartChoice(city);
+    }, [saveAccountStartChoice, flyToStartChoice, userPos]);
 
     const handleStartPickerSkip = useCallback(() => {
         // Hoppa över i onboardingen = dagens beteende, och frågan kommer inte
@@ -3766,7 +3792,9 @@ export default function HomePage() {
         }
         setStartPicker(null);
         setWelcomeDone(true);
-    }, [startPicker, saveAccountStartChoice]);
+        // Hoppa över = "där man är" → nu (först nu) frågar vi om platsen.
+        if (startPicker?.withCategories && !readChosenCity()) askLocation();
+    }, [startPicker, saveAccountStartChoice, askLocation]);
 
     // Kontots startstad (users.startstad), läst i kategorihydreringen nedan.
     // Kontot vinner över enheten; saknas fältet tar kontot enhetens svar, och
@@ -5310,6 +5338,7 @@ export default function HomePage() {
                     if (showZoomInRef.current) setZoomInDismissed(true);
                 }}
                 onUserPosChange={setUserPos}
+                locationAskNonce={locationAskNonce}
                 starredEventIds={starredEventIds}
                 wishes={wishes}
                 onSelectWish={handleSelectWish}
@@ -6193,7 +6222,12 @@ export default function HomePage() {
                         if (!toMap && !user && !readStartPickerDone() && !startPickerAskedRef.current) {
                             startPickerAskedRef.current = true;
                             setStartPicker({ withCategories: true });
-                        } else setWelcomeDone(true);
+                        } else {
+                            setWelcomeDone(true);
+                            // Rakt till kartan "där man är" (ingen vald stad):
+                            // nu, inte vid sidladdningen, kommer platsfrågan.
+                            if (!readChosenCity()) askLocation();
+                        }
                     }}
                     underCard={!!selectedEvent}
                     startCity={startPickerDone ? { name: chosenStart?.name ?? null, onChange: () => setStartPicker({ withCategories: false }) } : undefined}
@@ -6209,7 +6243,13 @@ export default function HomePage() {
                     initialSource={mapSource}
                     onDone={handleStartPickerDone}
                     onSkip={handleStartPickerSkip}
-                    onDismiss={() => { setStartPicker(null); setWelcomeDone(true); }}
+                    onPickHere={() => askLocation(true)}
+                    onDismiss={() => {
+                        setStartPicker(null);
+                        setWelcomeDone(true);
+                        // Krysset i onboardingen = till kartan där man är.
+                        if (startPicker.withCategories && !readChosenCity()) askLocation();
+                    }}
                 />
             )}
 

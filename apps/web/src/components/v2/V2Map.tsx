@@ -584,9 +584,13 @@ interface V2MapProps {
      *  den sorten ligger. null = ingen framhävning, allt ritas normalt. */
     highlightEmoji?: string | null;
     /** Fyrar när användarens GPS-position blir känd/uppdateras (samma position
-     *  som den blå plats-pricken — hämtas tyst vid start + "Min plats"-knappen).
-     *  Sidan skickar den vidare till EventCard som visar avstånd till valt event. */
+     *  som den blå plats-pricken). Sidan skickar den vidare till EventCard som
+     *  visar avstånd till valt event. */
     onUserPosChange?: (pos: { lat: number; lng: number } | null) => void;
+    /** Varje ökning = be webbläsaren om positionen (kan visa platsfrågan).
+     *  Kartan frågar ALDRIG själv vid start (Josef 10/10) - sidan bumpar den
+     *  när onboardingen slutar i "där jag är". 0 = aldrig bett. */
+    locationAskNonce?: number;
     /** Aktiva event-ÖNSKNINGAR (eventWishes) — renderas som egna drömska,
      *  ALLTID synliga brickor (sticky force-reveal, samma mönster som
      *  userCreated-event). Blandas ALDRIG in i events/"Nästa"-poolen. */
@@ -674,6 +678,7 @@ export default function V2Map({
     signpostsHidden = false,
     highlightEmoji = null,
     onUserPosChange,
+    locationAskNonce = 0,
     wishes = [],
     onSelectWish,
     wishCardOpen = false,
@@ -811,6 +816,22 @@ export default function V2Map({
     const onUserPosChangeRef = useRef(onUserPosChange);
     onUserPosChangeRef.current = onUserPosChange;
     useEffect(() => { onUserPosChangeRef.current?.(userPos); }, [userPos]);
+    // Hämta positionen till userPos (ingen kamerarörelse - kameran styrs av
+    // sidan). Visar webbläsarens platsfråga om tillståndet inte redan är givet.
+    // TIMEOUT 30 s, inte 8: klockan börjar ticka medan "tillåt plats?"-rutan
+    // fortfarande står uppe, och hinner man inte trycka ja i tid får vi
+    // TIMEOUT trots att man sagt ja (Josef 9/8). Nekad/timeout → ingen prick.
+    const askPosition = useCallback(() => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => { /* nekad/timeout → ingen plats-prick, behåll vyn */ },
+            { enableHighAccuracy: true, timeout: 30_000, maximumAge: 60_000 },
+        );
+    }, []);
+    useEffect(() => {
+        if (locationAskNonce > 0) askPosition();
+    }, [locationAskNonce, askPosition]);
     const [locating, setLocating] = useState(false);
     const userPosMarkerRef = useRef<maplibregl.Marker | null>(null);
     const handleLocateMe = () => {
@@ -3486,37 +3507,28 @@ export default function V2Map({
                     west: b0.getWest(), south: b0.getSouth(), east: b0.getEast(), north: b0.getNorth(),
                 });
             }
-            // Startvy: hämta användarens plats (platstjänst) men ZOOMA INTE in dit —
-            // kameran styrs av sidan (bildspelet). Vi sätter bara userPos; den blå
-            // plats-pricken visar var man är och bildspelet hoppar dit när svaret
-            // kommer. Nekad → ingen prick, vyn står kvar.
+            // Startvy: INGEN platsfråga vid sidladdning (Josef 10/10 - "den
+            // begär tillträde till gps" var första intrycket i en FB-grupp,
+            // innan man ens läst vad VADKUL är). Har man redan tillåtit platsen
+            // hämtas den tyst (ingen ruta); annars frågar sidan först när
+            // onboardingen slutar i "där jag är" (locationAskNonce).
+            // ZOOMA INTE in dit - kameran styrs av sidan. Vi sätter bara
+            // userPos; pricken visar var man är och stadshoppet hoppar dit.
             //
-            // TIMEOUT 30 s, inte 8: klockan börjar ticka medan webbläsarens
-            // "tillåt plats?"-ruta fortfarande står uppe, och hinner man inte
-            // trycka ja i tid får vi TIMEOUT trots att man sagt ja (Josef 9/8 —
-            // man blev kvar i bildspelets startstad i stället för att flyttas hem).
-            if (typeof navigator !== 'undefined' && navigator.geolocation) {
-                const askPosition = () => navigator.geolocation.getCurrentPosition(
-                    (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                    () => { /* nekad/timeout → ingen plats-prick, behåll vyn */ },
-                    { enableHighAccuracy: true, timeout: 30_000, maximumAge: 60_000 },
-                );
-                askPosition();
-                // Livrem: svarar man JA långt efter att frågan dök upp (eller
-                // släpper på plats i webbläsarens inställningar) frågar vi igen
-                // så positionen ändå landar — utan en ny prompt, tillståndet är
-                // ju redan givet. Permissions-API:t saknas i äldre Safari; då
-                // får den enda långa timeouten ovan räcka.
-                navigator.permissions?.query({ name: 'geolocation' as PermissionName })
-                    .then(status => {
-                        status.onchange = () => {
-                            // mapRef nollas i effektens städning — då är kartan
-                            // avmonterad och det finns ingen att flytta.
-                            if (status.state === 'granted' && mapRef.current) askPosition();
-                        };
-                    })
-                    .catch(() => { /* API:t finns inte — strunt samma */ });
-            }
+            // Livrem: svarar man JA långt efter att frågan dök upp (eller
+            // släpper på plats i webbläsarens inställningar) hämtar vi igen så
+            // positionen ändå landar. Permissions-API:t saknas i äldre Safari;
+            // där blir det ingen tyst hämtning, bara sidans fråga.
+            navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+                .then(status => {
+                    // mapRef nollas i effektens städning - då är kartan
+                    // avmonterad och det finns ingen att flytta.
+                    if (status.state === 'granted' && mapRef.current) askPosition();
+                    status.onchange = () => {
+                        if (status.state === 'granted' && mapRef.current) askPosition();
+                    };
+                })
+                .catch(() => { /* API:t finns inte - strunt samma */ });
             // Initialt seed: de N närmast SKÄRMENS MITT (Josef 26/8 — mitt-
             // följningen ovan tar sedan över: panorering räknar om kring nya
             // mitten, tap/områdes-drag sätter ankare som vinner tills nästa
