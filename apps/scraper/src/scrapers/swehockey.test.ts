@@ -252,6 +252,22 @@ describe('arenatabellen', () => {
         expect(HOCKEY_ARENAS['Torvalla Ishall'].city).toBe('Handen');
     });
 
+    it('verifierade koordinater ligger i Sverige och går före geokodningen', () => {
+        for (const [arena, a] of Object.entries(HOCKEY_ARENAS)) {
+            if (!a.coords) continue;
+            const [lat, lng] = a.coords;
+            expect(lat > 55 && lat < 69.1 && lng > 10.9 && lng < 24.2, arena).toBe(true);
+        }
+        const g = { ...parseSchedule(YOUTH_HTML)[0], arena: 'Railone Arena', home: 'Orsa IK' };
+        const e = gameToRawEvent({ leagueName: 'U18/U20' }, g, { id: '21550', name: 'U18 Division 1 B Västra Herr' });
+        expect(e.coords).toEqual([61.11223, 14.64558]);
+        expect(e.city).toBe('Orsa');
+    });
+
+    it('KFK Mekan Arena är gamla Borohallen i Landsbro', () => {
+        expect(HOCKEY_ARENAS['KFK Mekan Arena'].city).toBe('Landsbro');
+    });
+
     it('utländska arenor hoppas över', () => {
         expect(isForeignArena('Rödovre Centrum Arena')).toBe(true);
         expect(isForeignArena('LF Arena')).toBe(false);

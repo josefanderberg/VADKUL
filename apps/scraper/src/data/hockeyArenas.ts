@@ -14,7 +14,8 @@
  *           osäker). Varje rad kollad 2026-10-10: Nominatim-träff på arenan i
  *           orten, eller hemmalagets ort + serie/motståndare när OSM saknar
  *           arenan. Orten slås upp som "<ort>, Sverige" (geocodeCityCentroid) —
- *           alla 171 orter gav rätt ort där.
+ *           alla 170 svenska orter gav rätt ort — men
+ *           ~55 av dem kommunens mittpunkt, därav `coords` nedan.
  * `osm`   — byggnadens namn i OpenStreetMap när sponsornamnet inte finns där;
  *           provas först.
  * `foreign` — arenan ligger utomlands (danska lag spelar i södra serierna);
@@ -42,7 +43,7 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Allhallen': { city: 'Ekerö' },
     'Arena Grosvad': { city: 'Finspång' },
     'Askims Ishall': { city: 'Göteborg' },
-    'Avestahallen': { city: 'Avesta' },
+    'Avestahallen': { city: 'Avesta', coords: [60.13776, 16.17252] },        // Avesta ishall, Vallgatan (OSM; hitta 30 m)
     'Axelent Arena': { city: 'Värnamo' },
     'Bahcohallen': { city: 'Enköping' },
     'Be-Ge Hockey Center': { city: 'Oskarshamn' },
@@ -89,8 +90,8 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Hedesunda Ishall': { city: 'Hedesunda' },
     'Helmia Arena': { city: 'Sunne' },
     'Himmelstalundshallen': { city: 'Norrköping' },
-    'Hitachi Arena': { city: 'Ludvika' },                   // fritext gav en plan i Västerås
-    'Hofors Ishall': { city: 'Hofors' },
+    'Hitachi Arena': { city: 'Ludvika', coords: [60.15061, 15.20974] },      // Hitachi Energy Arena, ex ABB Arena (OSM "ABB Arena"; hitta 120 m) — namnen i Västerås är en fotbollsplan
+    'Hofors Ishall': { city: 'Hofors', coords: [60.54613, 16.26911] },       // Göklundsvägen 21 (hitta)
     'Holmen Center': { city: 'Hudiksvall' },
     'Hovet, Johanneshov': { city: 'Stockholm' },
     'Husqvarna Garden': { city: 'Jönköping' },
@@ -111,8 +112,8 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Järna Ishall': { city: 'Järna' },
     'Jössarinken A-hall': { city: 'Mörrum', osm: 'Jössarinken' },
     'Jössarinken B-hall': { city: 'Mörrum', osm: 'Jössarinken' },
-    'KFK Mekan Arena': { city: 'Vetlanda' },
-    'Kaj Johansson Arena': { city: 'Vännäs' },
+    'KFK Mekan Arena': { city: 'Landsbro', coords: [57.37244, 14.89074] },   // ex Borohallen, Sävsjövägen 27 (vetlanda.se; OSM) — INTE Vetlanda tätort
+    'Kaj Johansson Arena': { city: 'Vännäs', coords: [63.91606, 19.76237] }, // = Vännäs Ishall, Fritidsvägen 11 (OSM; namnet från 2026)
     'Kastbergshallen': { city: 'Ånge' },
     'Kasthallen': { city: 'Gävle' },
     'Klanghallen': { city: 'Brunflo' },
@@ -143,13 +144,13 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Lödöseborg': { city: 'Lödöse' },
     'Löfbergs Arena': { city: 'Karlstad' },
     'Löfbergs Ice Arena': { city: 'Karlstad' },
-    'MP Bolagen Arena': { city: 'Vetlanda' },
+    'MP Bolagen Arena': { city: 'Vetlanda', coords: [57.44004, 15.06486] },  // ex Hydro Arena, Storgatan 101 (OSM; Llentab 55 m)
     'Malmhallen': { city: 'Boliden' },
     'Malmö Isstadion': { city: 'Malmö' },
     'Malungs Ishall': { city: 'Malung' },
     'Marconihallen': { city: 'Göteborg' },
     'Mariehus Arena': { city: 'Mariestad' },
-    'MerElArena': { city: 'Hällefors' },
+    'MerElArena': { city: 'Hällefors', coords: [59.78657, 14.51837] },       // ex Hällevi ishall, Idrottsvägen 5 (hitta; gatan i OSM 110 m)
     'Mimerhallen (Rocklunda B)': { city: 'Västerås' },
     'Modin & Zetterberg Hallen': { city: 'Sundsvall' },     // Njurunda
     'Monitor ERP Arena': { city: 'Gävle' },
@@ -175,7 +176,7 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Norsjö Arena': { city: 'Norsjö' },
     'Norvalla Ishall': { city: 'Vålberg' },
     'Nynäshallen': { city: 'Gävle' },
-    'Näskotthallen': { city: 'Krokom' },                    // Näldens IF, Krokoms kommun
+    'Näskotthallen': { city: 'Nälden', coords: [63.34724, 14.25154] },       // Karelsvägen 7, Nälden (krokom.se; gatupunkt i OSM)
     'Oasen': { city: 'Kungälv', osm: 'Oasen sim- och ishall' },
     'Odenrinken': { city: 'Falköping' },
     'Olympiarinken A-Hall': { city: 'Helsingborg' },
@@ -188,7 +189,7 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Pinbackshallen': { city: 'Märsta' },
     'ProTrain Arena': { city: 'Mjölby', osm: 'Mjölby ishall' },
     'Profilgruppen Ishall': { city: 'Åseda' },
-    'Railone Arena': { city: 'Orsa' },
+    'Railone Arena': { city: 'Orsa', coords: [61.11223, 14.64558] },         // Orsa ishall, Slättbergsvägen 25 (hitta; OSM 50 m)
     'Reliable Arena': { city: 'Stockholm' },
     'Rosenbergs ishall': { city: 'Tibro', osm: 'Tibro Ishall' },   // Rosenbergsgatan, Tibro
     'Rosengårds Ishall': { city: 'Malmö' },
@@ -197,7 +198,7 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Rödovre Centrum Arena': { city: 'Rødovre', foreign: true },
     'SCA Arena': { city: 'Timrå' },
     'SP Arena': { city: 'Ljungby' },
-    'SSM AB Arena': { city: 'Nordmaling' },
+    'SSM AB Arena': { city: 'Nordmaling', coords: [63.57359, 19.46154] },    // isen i Norrskenshallen (OSM = hitta)
     'Saab Arena': { city: 'Linköping' },
     'Salems Ishall': { city: 'Salem' },
     'Saltsjöbadens Ishall': { city: 'Saltsjöbaden' },
@@ -242,7 +243,7 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Tuve Ishall': { city: 'Göteborg' },
     'Tyresö Ishall': { city: 'Tyresö' },
     'Tyrs Hov Sportcentra': { city: 'Tyringe', osm: 'Tyrs hov' },
-    'Töreshov': { city: 'Töreboda' },
+    'Töreshov': { city: 'Töreboda', coords: [58.70805, 14.15144] },          // Töreboda ishall, Idrottsvägen 29 (toreboda.se; OSM)
     'Ulriksdals IP Hall 3': { city: 'Solna' },
     'Ungdomshallen': { city: 'Sundsvall' },
     'Upplandsbilforum Arena': { city: 'Uppsala' },
@@ -259,7 +260,7 @@ export const HOCKEY_ARENAS: Record<string, HockeyArena> = {
     'Visionite Arena': { city: 'Umeå' },
     'Visionite Arena B-hall': { city: 'Umeå' },
     'Visättra Ishall': { city: 'Flemingsberg' },
-    'Vännäs Ishall': { city: 'Vännäs' },
+    'Vännäs Ishall': { city: 'Vännäs', coords: [63.91606, 19.76237] },       // Fritidsvägen 11 (OSM) = Kaj Johansson Arena
     'Vättlehallen': { city: 'Lerum' },
     'Växjö Ishall': { city: 'Växjö' },
     'Wibe Arena': { city: 'Mora' },
