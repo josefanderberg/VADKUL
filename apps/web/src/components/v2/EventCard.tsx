@@ -1282,11 +1282,6 @@ interface EventCardProps {
      *  onRemoveFilter. */
     activeFilters?: ActiveFilter[];
     onRemoveFilter?: (key: string) => void;
-    /** NÄSTA ZOOMAR UT (ägarbeslut 7/10 sent): eventen i bild är genomgångna
-     *  men perioden har obesökta event utanför bild → sidan zoomar ut kartan
-     *  kring samma mitt tills målet syns (utils/viewportTour) och blinkar
-     *  dagplattan. Utelämnad = rakt till nästa dag som förut. */
-    onZoomOutTo?: (target: LinkEvent) => void;
     /** LISTAN ZOOMAR UT (ägarbeslut 8/10): listans botten zoomar ut kartan
      *  kring samma mitt (sidan väljer hur långt) och listan fortsätter med
      *  de nya eventen under en avdelare (utils/listZoomRings). Utelämnad =
@@ -1297,7 +1292,7 @@ interface EventCardProps {
     onOpenSearchSheet?: () => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onZoomOutTo, onListZoomOut, onOpenSearchSheet }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -2738,8 +2733,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
      * Plocka nästa event utifrån ankaret (spiral utåt i avstånd) BLAND DEM I
      * BILD. Lägger nuvarande plats i visited och letar närmaste-till-ankaret
      * som inte är besökt. null = alla i bild är genomgångna — då är det
-     * zoom-ut-stegets tur (zoomOutStep, 7/10 sent) och sist dagbytets
-     * (handleNextOnly/handleSwipeOut), inte ett nytt varv:
+     * dagbytets tur (handleNextOnly/handleSwipeOut), inte ett nytt varv:
      * omstarten från ankaret är RIVEN 2/9 (Josef: "har man gått igenom alla
      * ska vi automatiskt gå till nästa dag").
      */
@@ -2770,54 +2764,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         return out;
     };
 
-    /** ZOOM-UT-MÅLET (ägarbeslut 7/10 sent, Josef: "när vi har gått genom
-     *  alla de som vi inom det området där vi är. då ska ju kartan automatiskt
-     *  zooma ut, men börja om på vilken dag man är på"): närmaste OBESÖKTA
-     *  event i perioden UTANFÖR bild - samma tids-/ankarregel som Nästa-
-     *  poolen, bara med koordinater (det ska gå att zooma ut till det).
-     *  null = perioden är genomgången även utanför bild → nästa dag som förut. */
-    const zoomOutTargetFrom = (anchor: LinkEvent, visited: Set<string>): LinkEvent | null => {
-        if (!inView || !onZoomOutTo) return null;
-        const pool = nextCandidatePool(anchor).filter(e => hasValidCoords(e) && !inView(e));
-        return findNearestEvent(anchor, pool, discardedEventIds, visited);
-    };
-
-    // Bannern "ZOOMAR UT · IDAG IGEN" över kartan (7/10 sent, Josef: "gör
-    // det tydligt att vi zoomas ut på kartan. som en streck horisontellt och
-    // man ser att det är idag igen, fast de man inte gått genom än"):
-    // remaining = obesökta event kvar i perioden, målet inräknat.
-    const [zoomOutBanner, setZoomOutBanner] = useState<{ nonce: number; remaining: number } | null>(null);
-    useEffect(() => {
-        if (!zoomOutBanner) return;
-        const t = setTimeout(() => setZoomOutBanner(null), 2800);
-        return () => clearTimeout(t);
-    }, [zoomOutBanner]);
-
-    /** Eventen i bild är genomgångna → ZOOMA UT till närmaste obesökta i
-     *  perioden (samma dag - "börja om på vilken dag man är på"), välj det
-     *  och visa bannern. Kartan zoomar kring SAMMA mitt (sidan,
-     *  onZoomOutTo) - den panorerar fortfarande aldrig. Sant om steget togs;
-     *  falskt när inget obesökt finns kvar ens utanför bild. */
-    const zoomOutStep = (): boolean => {
-        if (!selectedEvent || !onZoomOutTo) return false;
-        const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
-        const visited = withSpotVisited(selectedEvent);
-        const target = zoomOutTargetFrom(anchor, visited);
-        if (!target) return false;
-        const remaining = nextCandidatePool(anchor)
-            .filter(e => !visited.has(e.id) && !discardedEventIds.has(e.id)).length;
-        pushHistory({ evt: selectedEvent, dayOffset });
-        setForwardStack([]);
-        expectedNextIdRef.current = target.id; // intern navigering — behåll ankaret
-        // Ny nonce = ny key = animationen och timern börjar om.
-        setZoomOutBanner(prev => ({ nonce: (prev?.nonce ?? 0) + 1, remaining }));
-        onNavigate?.(); // kameran panorerar inte - zoomen sköts av sidan
-        onZoomOutTo(target);
-        selectNextTarget(target); // multiplats → kortets väljarlista
-        setExitX(null);
-        updateDragX(0);
-        return true;
-    };
+    // NÄSTA-ZOOMSTEGET ÄR RIVET (ägarbeslut 10/10, Josef: "knappen nästa
+    // ovanför ska inte ha zooma ut" - river 7/10-beslutet "Nästa zoomar ut
+    // först"): utzoomningen bor BARA i listans botten (handleListZoomOut,
+    // 8/10). Nästa stegar dag direkt när eventen i bild är genomgångna
+    // (2/9-beteendet) - bygg inte tillbaka ZOOMA UT-läget på knappen.
 
     /** Alla event på samma koordinat som evt (4 decimaler — samma hopning som
      *  kartans multibrickor och räknarna nedan). */
@@ -3265,11 +3216,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // Tom framåt-stack (eller eventet finns inte längre) → vanligt pickNext.
         if (!next) next = pickNext(selectedEvent);
         if (!next) {
-            // Alla i bild genomgångna → ZOOMA UT till fler obesökta samma
-            // dag (7/10 sent); först när perioden är slut även utanför bild
-            // går Nästa till nästa dag (Josef 2/9). Knappen är släckt när
-            // ingen dag finns kvar, så grenen är då oåtkomlig.
-            if (zoomOutStep()) return;
+            // Alla i bild genomgångna → nästa dag (Josef 2/9; zoomsteget som
+            // låg före 7-10/10 är rivet - utzoomningen bor i listans botten).
+            // Knappen är släckt när ingen dag finns kvar, så grenen är då
+            // oåtkomlig.
             advanceToNextDay();
             return;
         }
@@ -3383,25 +3333,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const forwardTop: NavEntry | undefined = forwardStack[forwardStack.length - 1];
     const forwardCrossDay = !!forwardTop && forwardTop.dayOffset !== dayOffset;
     const nextStepDayOffset = forwardCrossDay ? forwardTop!.dayOffset : nextDayOffset;
-    // FJÄRDE LÄGET (7/10 sent): eventen i bild slut men perioden har
-    // obesökta utanför bild → "ZOOMA UT" med målets emoji; trycket zoomar ut
-    // och väljer det (zoomOutStep). Vinner över nästa dag - utom när man
-    // backat över ett dagbyte (framåtstacken spelar upp samma väg).
-    const zoomOutPreview = useMemo<LinkEvent | null>(() => {
-        if (!selectedEvent || nextEvent || forwardCrossDay) return null;
-        const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
-        return zoomOutTargetFrom(anchor, withSpotVisited(selectedEvent));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEvent, nextEvent, forwardCrossDay, events, anchorId, visitedEventIds, discardedEventIds, now, inView, onZoomOutTo]);
-    const nextDayLabel = !nextEvent && !zoomOutPreview && nextStepDayOffset != null ? getDayLabel(nextStepDayOffset, dayRangeDays) : null;
-    const nextDisabled = !nextEvent && !zoomOutPreview && nextStepDayOffset == null;
+    const nextDayLabel = !nextEvent && nextStepDayOffset != null ? getDayLabel(nextStepDayOffset, dayRangeDays) : null;
+    const nextDisabled = !nextEvent && nextStepDayOffset == null;
     const nextTitle = nextEvent
         ? `Närmaste i bild: ${nextEvent.title}`
-        : zoomOutPreview
-            ? `Alla event i bild är genomgångna - zooma ut till fler ${getDayLabel(dayOffset, dayRangeDays).toLowerCase()} (${zoomOutPreview.title})`
-            : nextDayLabel
-                ? `Alla event i bild är genomgångna — gå vidare till ${nextDayLabel.toLowerCase()}`
-                : 'Inga fler event i bild';
+        : nextDayLabel
+            ? `Alla event i bild är genomgångna — gå vidare till ${nextDayLabel.toLowerCase()}`
+            : 'Inga fler event i bild';
 
     // LISTVAL = SOM ETT KARTKLICK (7/10 kväll, Josef: "om jag väljer ett
     // event som är som alternativ i sök eventkortet. Då ska ju den jag
@@ -3563,31 +3501,6 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
     return (
         <>
-        {/* ZOOM-UT-BANNERN (7/10 sent): vågräta streck som växer ut från
-            mitten + "ZOOMAR UT / {DAG} IGEN · N KVAR" - kartan zoomar ut
-            samtidigt och dagplattan blinkar. Tonar ut av sig själv
-            (zoomout-banner i globals.css); i sidopanelsläget över kartytan
-            till höger om panelen. */}
-        {zoomOutBanner && (
-            <div
-                key={zoomOutBanner.nonce}
-                role="status"
-                aria-live="polite"
-                className={`zoomout-banner pointer-events-none fixed top-[34%] z-[1250] flex items-center gap-3 ${sideMode && selectedEvent ? 'left-[432px] right-6' : 'inset-x-4'}`}
-            >
-                <span aria-hidden className="zoomout-line zoomout-line-l flex-1 h-[3px] rounded-full bg-white shadow-[0_0_10px_rgba(0,0,0,0.45)]" />
-                <span className="shrink-0 flex flex-col items-center gap-1 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-white/15 text-white px-4 py-2 shadow-2xl">
-                    <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest leading-none">
-                        <ZoomOut size={14} strokeWidth={2.5} aria-hidden />
-                        Zoomar ut
-                    </span>
-                    <span className="text-[13px] font-black uppercase tracking-wider leading-none text-[#FECC02] whitespace-nowrap">
-                        {getDayLabel(dayOffset, dayRangeDays)} igen · {zoomOutBanner.remaining} kvar
-                    </span>
-                </span>
-                <span aria-hidden className="zoomout-line zoomout-line-r flex-1 h-[3px] rounded-full bg-white shadow-[0_0_10px_rgba(0,0,0,0.45)]" />
-            </div>
-        )}
         {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
         {/* z-[1250]: kortet ligger över ALLT kartkrom — kategorikolumnen (1150),
             stadsrutan (1090), navbaren (1160). Bara modaler (1300) går över. */}
@@ -3803,21 +3716,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     Ägarbeslut — den vita omfärgningen byggdes och revs
                                     samma kväll. */}
                                 <span className={`flex items-center gap-2 h-[38px] pl-4 pr-1.5 rounded-full bg-gradient-to-r from-[#0077BC] to-[#005590] text-white shadow-md shadow-sky-900/30 ring-inset transition-all group-hover/nasta:from-[#0083CE] group-hover/nasta:to-[#00619F] group-hover/nasta:shadow-lg group-active/nasta:scale-[0.97] ${
-                                    nextDayLabel ? 'ring-2 ring-[#FECC02]' : zoomOutPreview ? 'ring-2 ring-white/80' : 'ring-1 ring-white/25'
+                                    nextDayLabel ? 'ring-2 ring-[#FECC02]' : 'ring-1 ring-white/25'
                                 }`}>
-                                    {/* Eventen i bild slut → ZOOMA UT (fler samma dag
-                                        utanför bild, 7/10 sent) eller nästa dags namn,
-                                        så man ser vad trycket gör (se nextDayLabel). */}
-                                    <span className="text-[12px] font-black uppercase tracking-widest leading-none">{zoomOutPreview ? 'ZOOMA UT' : nextDayLabel ?? 'NÄSTA'}</span>
+                                    {/* Eventen i bild slut → nästa dags namn, så man
+                                        ser vad trycket gör (se nextDayLabel). */}
+                                    <span className="text-[12px] font-black uppercase tracking-widest leading-none">{nextDayLabel ?? 'NÄSTA'}</span>
                                     {/* Emoji för nästa event + liten framåt-pil. */}
-                                    {zoomOutPreview ? (
-                                        <span aria-hidden className="relative flex items-center justify-center w-8 h-8 text-lg leading-none">
-                                            {eventEmoji(zoomOutPreview)}
-                                            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#006AA7] text-white border border-white flex items-center justify-center">
-                                                <ZoomOut size={10} />
-                                            </span>
-                                        </span>
-                                    ) : nextEvent ? (
+                                    {nextEvent ? (
                                         <span aria-hidden className="relative flex items-center justify-center w-8 h-8 text-lg leading-none">
                                             {eventEmoji(nextEvent)}
                                             {/* Liten framåt-pil så det syns att brickan tar en vidare. */}

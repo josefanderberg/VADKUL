@@ -1676,17 +1676,11 @@ export default function HomePage() {
         if (delta !== 0) dayFlashArmedRef.current = true;
         handleTourDayStep(delta, selectEventId);
     }, [handleTourDayStep]);
-    // NÄSTA ZOOMAR UT (7/10 sent): kortet har gått igenom eventen i bild och
-    // valt nästa obesökta utanför bild samma dag - kartan zoomar ut till det
-    // (V2Map zoomRevealTarget) och dagplattan BLINKAR så man ser att det är
-    // samma dag igen. Kortets eget steg, så 4/9-regeln (blinken bara vid
-    // kortets egna steg, aldrig på dag-nyckeln rakt av) håller.
+    // LISTAN ZOOMAR UT (8/10): målet kartan ska zooma ut kring samma mitt
+    // tills det syns (V2Map zoomRevealTarget, utils/viewportTour). Matas av
+    // handleListZoomOut (listans botten). Nästa-knappens zoomsteg (7/10) som
+    // också matade den är RIVET 10/10 - Nästa stegar dag direkt igen.
     const [zoomRevealTarget, setZoomRevealTarget] = useState<{ lat: number; lng: number; nonce: number; minSteps?: number } | null>(null);
-    const handleCardZoomOut = useCallback((target: LinkEvent) => {
-        if (!hasValidCoords(target)) return;
-        setZoomRevealTarget(prev => ({ lat: target.lat!, lng: target.lng!, nonce: (prev?.nonce ?? 0) + 1 }));
-        setDayFlashNonce(n => n + 1);
-    }, []);
     const weekAreaKey = effectiveRangeDays >= WEEK_RANGE_MIN_DAYS && weekAreaCenter
         ? `${Math.round(weekAreaCenter.lat * 20) / 20}:${Math.round(weekAreaCenter.lng * 20) / 20}:${
             Math.max(WEEK_AREA_MIN_RADIUS_KM, Math.ceil(viewRadiusKm / 5) * 5)
@@ -6339,7 +6333,6 @@ export default function HomePage() {
                 popularFilterOn={popularOnly}
                 activeFilters={cardActiveFilters}
                 onRemoveFilter={handleRemoveCardFilter}
-                onZoomOutTo={handleCardZoomOut}
                 // Listans botten zoomar ut kartan (8/10) - inte under
                 // golvet där "runtomkring" blir halva landet.
                 onListZoomOut={listCanZoomOut ? handleListZoomOut : undefined}
