@@ -10,8 +10,11 @@
  *   GET /ScheduleAndResults/Schedule/<ligaId>   → hela säsongen i en HTML-tabell
  *
  * Ligorna med publik: SHL 20961, HockeyAllsvenskan 20962, NDHL 20958 (damernas
- * högsta — hette SDHL, och omdöpningen är varför den gamla `sdhl`-källan dog).
- * Resten av registrets 86 ligor är ungdom, preseason och cuper.
+ * högsta — hette SDHL, och omdöpningen är varför den gamla `sdhl`-källan dog),
+ * Hockeyettan Norra 21043 och Södra 21044 (tredjenivån — Västerviks IK m.fl.;
+ * saknades till 10/10). Hockeyettans sammanslagna vy 21041 har en extra
+ * seriekolumn — använd delserierna. Resten av listan är ungdom, preseason,
+ * distriktsserier och cuper.
  *
  * TABELLEN ÄR GRUPPERAD PER DATUM: första matchen ett visst datum har en rad
  * med 6 celler där cell 0 är datumet; efterföljande matcher samma dag har 5
@@ -23,7 +26,8 @@
  * hela säsongen dedupats till en enda match.
  *
  * Ingen koordinat i datan; arenanamnet geokodas av runnern (known_venues
- * täcker de flesta hockeyarenor).
+ * täcker SHL/HA-arenorna). Hockeyettans arenor bär sponsornamn som sällan
+ * finns i OSM och ibland krockar mellan orter — se ARENA_PLACES.
  */
 
 import { Engine, RawEvent } from '../sources/types';
@@ -113,6 +117,94 @@ export function gameUrl(leagueId: string, gameNo: string): string {
     return `https://stats.swehockey.se/ScheduleAndResults/Schedule/${leagueId}?game=${gameNo}`;
 }
 
+/**
+ * Arena → ort för Hockeyettan (schemat har bara arenanamnet). Orten ger
+ * runnern nearCity-skyddet och stadscentroiden som golv — utan den:
+ *   - "LF Arena" finns i BÅDE Västervik och Piteå (Piteås event ligger redan
+ *     i datan) → utan ort kan Västerviks hemmamatcher hamna i Norrbotten;
+ *   - "Stora Hallen, Nyköping" träffar en gård i Missmyra i Nominatim;
+ *   - sponsornamnen ("KFK Mekan Arena", "Tranås Åkeri Arena" …) saknas i OSM,
+ *     och en miss utan ort blir 0,0 (HA-arenorna 28/9, se venueFixes).
+ * `osm` = byggnadens namn i OpenStreetMap när sponsornamnet inte finns där —
+ * provas först (ishallen/idrottsplatsen Nominatim gav i hemmalagets ort,
+ * 2026-10-10).
+ * Säsong 2026/27; nya lag/arenor faller tillbaka på enbart arenanamnet.
+ */
+export const ARENA_PLACES: Record<string, { city: string; osm?: string }> = {
+    // Hockeyettan Norra (21043)
+    'Bahcohallen': { city: 'Enköping' },
+    'Borlänge Ishall': { city: 'Borlänge' },
+    'Brandcode Center': { city: 'Sundsvall' },
+    'CYLOQ Arena': { city: 'Sollentuna' },
+    'HIVE Arena': { city: 'Boden' },
+    'Holmen Center': { city: 'Hudiksvall' },
+    'Isstadion LF Arena': { city: 'Piteå', osm: 'LF Arena' },
+    'Järfälla Ishall': { city: 'Järfälla' },
+    'Lindehov': { city: 'Lindesberg' },
+    'Lombiahallen': { city: 'Kiruna', osm: 'Lombia ishall' },
+    'Norra Finans Arena': { city: 'Haparanda' },
+    'PART Arena': { city: 'Kalix' },
+    'Pinbackshallen': { city: 'Märsta' },
+    'Roslagens Sparbank Arena': { city: 'Norrtälje' },
+    'Skyttishallen': { city: 'Örnsköldsvik' },
+    'Testebo Arena': { city: 'Gävle' },
+    'Vallentuna Ishall': { city: 'Vallentuna' },
+    'Vilundaparkens Ishall A': { city: 'Upplands Väsby' },
+    'XLNT AKUSTIK Arena': { city: 'Surahammar', osm: 'Surahallen' },
+    // Hockeyettan Södra (21044)
+    'Billerudhallen': { city: 'Grums' },
+    'Björkängshallen': { city: 'Huddinge' },
+    'Borås Ishall': { city: 'Borås' },
+    'Dackehallen': { city: 'Tingsryd' },
+    'Halmstad Arena': { city: 'Halmstad' },
+    'Himmelstalundshallen': { city: 'Norrköping' },
+    'Husqvarna Garden': { city: 'Jönköping' },
+    'Jössarinken A-hall': { city: 'Mörrum', osm: 'Jössarinken' },
+    'KFK Mekan Arena': { city: 'Landsbro', osm: 'Borohallen' },   // ex Borohallen, Sävsjövägen 27 — INTE Vetlanda tätort
+    'LF Arena': { city: 'Västervik' },
+    'Mariehus Arena': { city: 'Mariestad' },
+    'NKT Arena Karlskrona A-Hall': { city: 'Karlskrona', osm: 'NKT Arena Karlskrona' },
+    'Oasen': { city: 'Kungälv', osm: 'Oasen sim- och ishall' },
+    'ProTrain Arena': { city: 'Mjölby', osm: 'Mjölby ishall' },
+    'SP Arena': { city: 'Ljungby' },
+    'Smedjehov': { city: 'Norrahammar' },   // HC Dalens hemmahall, Jönköpings kommun
+    'Stora Hallen': { city: 'Nyköping', osm: 'Rosvalla' },
+    'Tranås Åkeri Arena': { city: 'Tranås' },
+    'Tyresö Ishall': { city: 'Tyresö' },
+    'Tyrs Hov Sportcentra': { city: 'Tyringe', osm: 'Tyrs hov' },
+    'Åse & Viste Arena': { city: 'Grästorp' },
+};
+
+/** Geokodningsled för en känd arena: OSM-namnet, sponsornamnet, sist orten. */
+export function arenaGeo(arena: string): Pick<RawEvent, 'city' | 'geocodeCandidates'> {
+    const place = ARENA_PLACES[arena];
+    if (!place) return {};
+    return {
+        city: place.city,
+        geocodeCandidates: [
+            ...(place.osm ? [`${place.osm}, ${place.city}`] : []),
+            `${arena}, ${place.city}`,
+            place.city,
+        ],
+    };
+}
+
+/** En schemarad → RawEvent. Ren funktion — exporterad för test. */
+export function gameToRawEvent(config: SweHockeyConfig, g: SweHockeyGame): RawEvent {
+    return {
+        externalId: g.gameNo,
+        title: `${g.home} – ${g.away}`,
+        startDate: g.startsAt,
+        url: gameUrl(config.leagueId, g.gameNo),
+        venueName: g.arena || undefined,
+        ...arenaGeo(g.arena),
+        category: 'sport',
+        hasSpecificTime: true,
+        description: `${config.leagueName}: ${g.home} möter ${g.away}`
+            + (g.arena ? ` i ${g.arena}.` : '.'),
+    };
+}
+
 export const sweHockeyEngine: Engine = async (config: SweHockeyConfig, ctx) => {
     const url = `https://stats.swehockey.se/ScheduleAndResults/Schedule/${config.leagueId}`;
     let html: string;
@@ -128,15 +220,5 @@ export const sweHockeyEngine: Engine = async (config: SweHockeyConfig, ctx) => {
     const games = parseSchedule(html);
     ctx.log(`${config.leagueName}: ${games.length} matcher i säsongsschemat`);
 
-    return games.map((g): RawEvent => ({
-        externalId: g.gameNo,
-        title: `${g.home} – ${g.away}`,
-        startDate: g.startsAt,
-        url: gameUrl(config.leagueId, g.gameNo),
-        venueName: g.arena || undefined,
-        category: 'sport',
-        hasSpecificTime: true,
-        description: `${config.leagueName}: ${g.home} möter ${g.away}`
-            + (g.arena ? ` i ${g.arena}.` : '.'),
-    }));
+    return games.map(g => gameToRawEvent(config, g));
 };
