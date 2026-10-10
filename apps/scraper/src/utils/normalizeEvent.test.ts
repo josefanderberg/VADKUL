@@ -16,6 +16,12 @@ describe('normalizeTitle', () => {
         // Okänt suffix lämnas — kan vara del av titeln
         expect(normalizeTitle('Babybokprat | 0–10 månader', { city: 'Malmö' })).toBe('Babybokprat | 0–10 månader');
     });
+    it('klipper inte bortalaget när lagnamnet bara innehåller staden', () => {
+        expect(normalizeTitle('Sunderby SK – Luleå HF (U18)', { venueName: 'Sunderby Ishall', city: 'Luleå' }))
+            .toBe('Sunderby SK – Luleå HF (U18)');
+        expect(normalizeTitle('IK Huge – Gävle GIK', { city: 'Gävle' })).toBe('IK Huge – Gävle GIK');
+        expect(normalizeTitle('Atomic Swing x Popsicle | Lund, Skåne', { city: 'Lund' })).toBe('Atomic Swing x Popsicle');
+    });
     it('rör inte vanliga titlar', () => {
         expect(normalizeTitle('Söndagsateljé: Skapa med Mika Liffner')).toBe('Söndagsateljé: Skapa med Mika Liffner');
         expect(normalizeTitle('2:an från Grupp 2 - 2:an från Grupp 1')).toBe('2:an från Grupp 2 - 2:an från Grupp 1');

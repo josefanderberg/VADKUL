@@ -48,10 +48,15 @@ export function normalizeTitle(title: string, ctx: { venueName?: string; city?: 
     const tail = t.match(/^(.*\S)\s+[|–-]\s+([^|–-]{2,60})$/);
     if (tail) {
         const suffix = tail[2].trim().toLowerCase();
-        const known = [ctx.venueName, ctx.city, ctx.hostName]
+        const known = [ctx.venueName, ctx.hostName]
             .filter((x): x is string => !!x && x.length >= 3)
             .map((x) => x.toLowerCase());
-        if (known.some((k) => suffix === k || suffix.includes(k) || k.includes(suffix))) t = tail[1].trim();
+        // Staden bara när suffixet ÄR staden ("… | Lund", "… | Lund, Skåne").
+        // "Sunderby SK – Luleå HF" med city Luleå är en match, inte en
+        // ortsangivelse — includes klippte bort bortalaget (swehockey 10/10).
+        const city = (ctx.city ?? '').trim().toLowerCase();
+        const isCity = city.length >= 3 && (suffix === city || suffix.startsWith(`${city},`));
+        if (isCity || known.some((k) => suffix === k || suffix.includes(k) || k.includes(suffix))) t = tail[1].trim();
     }
     return t;
 }
