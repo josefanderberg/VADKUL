@@ -345,8 +345,11 @@ navraden, filterunionen och interaktionerna är i paritet - se vadkul-app-commit
 - [x] Gilla synkat (räknaGilla + likes-siffran vid hjärtat 11/10) - STJÄRNOR återstår
 - [x] Push: FCM-token (data/push.ts, TestFlight 1.0.0) - notisinställningar i profilen återstår att verifiera
 - [x] RSVP synkat: räknare, avatarer, &fran=, inbjudningsbannern (8/10)
-- [ ] Vänner, eventchatt, privat chatt
+- [x] Vänner, eventchatt, privat chatt (11/10, vadkul-app eb7e9b8; webbens 32 testfall portade, utloggat simulatorverifierat - Josefs INLOGGADE varv återstår, samma klausul som skapa event)
 - [ ] VADKUL-spotlight och önskningar på stadssidan
+
+*Byggpunkter (kräver nästa native-bygge, ingen JS-OTA):*
+- [ ] expo-clipboard: appens "Kopiera länk" kör RN-kärnans deprecated Clipboard (noterat 11/10)
 
 *Aldrig i appen:* boost/priser/köp (Apple-reglerna, §1), PWA-installprompten,
 sådant webben själv rivit (livebilder, sidsvep, funktionsväskan).
