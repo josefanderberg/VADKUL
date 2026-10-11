@@ -325,23 +325,26 @@ för OTA, bildväljare, associatedDomains/intentFilters) -> TestFlight -> resten
 
 **Gaplistan (bocka av här):**
 
+*Avbockat 11/10 2026 efter eventkortsparitetens två vågor (10-11/10): kortdesignen,
+navraden, filterunionen och interaktionerna är i paritet - se vadkul-app-commit 2f4b429.*
+
 *Bara appkod / flödet*
 - [ ] Stadssidorna: hero-karta, periodval, sökfält, Fler-källor, stadstopplistan
-- [ ] Arrangörsskärm + arrangörsfilter på kartan (kräver `hostName` i appflödet)
-- [ ] Kartbanners: Veckans populära, Zooma in, Nytt sedan sist
+- [x] Arrangörsskärm (8/10, /arrangor/<slug> + vägen från kortet) - arrangörsfiltret på kartan ÅTERSTÅR (kräver `hostName` i appflödet)
+- [x] Kartbanners: Veckans populära + Zooma in (9/10) - Nytt sedan sist ÅTERSTÅR
 - [ ] Datumväljaren i dagväljaren
-- [ ] Familjefiltret + "Visa även på kartan" (opt-in-källor) i profilen
+- [x] "Visa även på kartan" (opt-in-källor) i profilen - FAMILJEFILTRET återstår (🧸 syns alltid)
 - [ ] Listan under kortet: Har varit-sektionen, Visa/Dölj bilder
 - [ ] Kort öppnat från sök/profil/stadssida får Nästa + lista
-- [ ] Djuplänkar /e/<slug> och ?event= (AASA/assetlinks på vadkul.se + app.json)
+- [x] Djuplänkar /e/<slug> och ?event= (TestFlight 1.0.0, associatedDomains i app.json)
 
 *Konto + Firestore*
-- [ ] Konton på (profil i users/{uid} direkt, radera konto)
+- [x] Konton på (KONTON_PÅ=true sedan TestFlight 1.0.0; profil + radera konto)
 - [ ] Skapa event (arrangera/tipsa, serier, bild), redigera, ta bort, Mina event
 - [ ] Önska event + önskningar på kartan/stadssidan
-- [ ] Gilla synkat (users.savedEventIds + eventStats.likes), stjärnor
-- [ ] Push: FCM-token i fcmTokens, påminnelse 1 h före, helgtips, notisinställningar
-- [ ] RSVP synkat: räknare, avatarer, &fran=, inbjudningsbannern
+- [x] Gilla synkat (räknaGilla + likes-siffran vid hjärtat 11/10) - STJÄRNOR återstår
+- [x] Push: FCM-token (data/push.ts, TestFlight 1.0.0) - notisinställningar i profilen återstår att verifiera
+- [x] RSVP synkat: räknare, avatarer, &fran=, inbjudningsbannern (8/10)
 - [ ] Vänner, eventchatt, privat chatt
 - [ ] VADKUL-spotlight och önskningar på stadssidan
 
