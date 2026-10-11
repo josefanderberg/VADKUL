@@ -1263,6 +1263,9 @@ interface EventCardProps {
     /** Kartfiltret är på (kategorier/🔥/källa) — sök/filter-ikonen i kortets
      *  knapprad lyser blått även med blocket stängt (7/10). */
     cardFilterOn?: boolean;
+    /** Kartfiltret har valt bort det ÖPPNA eventet (11/10): kortet växlar
+     *  till listvyn så man ser det man faktiskt filtrerat fram. */
+    selectedFilteredOut?: boolean;
     /** Stadssidelänken under arrangörsraden — samma mål som topplattan. */
     cityLink?: { href: string; label: string };
     /** SÖKARKET (7/10 kväll, Josef: "ha en vanlig filtersymbol där. om man
@@ -1292,7 +1295,7 @@ interface EventCardProps {
     onOpenSearchSheet?: () => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -2417,6 +2420,30 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             }
         }
     };
+
+    // KATEGORIVAL SOM VALT BORT DET ÖPPNA EVENTET → LISTVYN (ägarbeslut
+    // 11/10, Josef: "om jag väljer en kategori som inte är något som eventet
+    // har, då ska vi ju komma till listan ... som faktiskt har det man söker
+    // på"): samma växt som sökarkets kategorival (full höjd, scroll i topp).
+    // Släpps filtret - utan aktiv kortsökning - går kortet tillbaka till
+    // infovyn; eventets bricka är då tillbaka på kartan igen.
+    useEffect(() => {
+        if (!selectedEvent) return;
+        if (selectedFilteredOut) {
+            setCardView(prev => {
+                if (prev !== 'info') return prev;
+                setIsAnimating(true);
+                updateHeightVh(MAX_HEIGHT_VH);
+                if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+                return 'nearby';
+            });
+        } else if (!cardSearchQ.trim()) {
+            setCardView(prev => (prev === 'nearby' ? 'info' : prev));
+        }
+        // Medvetet bara filterflankerna/eventbytet - sökfältet äger sin egen
+        // växling (handleCardSearch).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedFilteredOut, selectedEvent?.id]);
 
     // Sortera övriga event efter avstånd från valt event (närmst först).
     const nearbyEvents = useMemo(() => {

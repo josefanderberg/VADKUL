@@ -2335,17 +2335,23 @@ export default function HomePage() {
         // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
         // hela filtret, även ett aktivt kategorival.
         if (evt.userCreated) return true;
-        // 🔥 Populära: smalnar ALLT när det är på — regeln före källgrinden så
-        // även en ikryssad opt-in-källa filtreras (deras event är aldrig pop,
-        // pipelinen vetar dem). Bypass-mängden bor i utils/popularFilter.
-        if (!passesPopularFilter(evt, popularOnly)) return false;
+        const cat = categoryKeyOf(evt);
+        const hasCats = !!cats && cats.size > 0;
+        // 🔥 Populära: ENSAMT smalnar det allt som förut - regeln före
+        // källgrinden så även en ikryssad opt-in-källa filtreras (deras event
+        // är aldrig pop, pipelinen vetar dem). IHOP MED KATEGORIER är 🔥 en
+        // UNION (ägarbeslut 11/10, Josef: "om jag väljer populära och scen,
+        // så ska det vara både scen och populära, inte bara de populära inom
+        // scen"): populära event visas UTÖVER de valda kategorierna.
+        // Bypass-mängden bor i utils/popularFilter.
+        const passesPop = passesPopularFilter(evt, popularOnly);
+        const unionPop = popularOnly && hasCats && passesPop;
+        if (!passesPop && !(hasCats && cats.has(cat))) return false;
         const src = classifySource(evt.url || evt.id);
         // Fler-källan (16/9): BARA den källans event — och de visas även om
         // källan inte är ikryssad i profilen; valet är ju just att se den.
         if (source) return src === source;
-        const cat = categoryKeyOf(evt);
-        const hasCats = !!cats && cats.size > 0;
-        if (hasCats && !cats.has(cat)) return false;
+        if (hasCats && !cats.has(cat) && !unionPop) return false;
         // Special-källa: syns bara om den är ikryssad (ingår inte i "visa alla").
         if (src) return selectedCategories.has(src);
         // Familj & barn: bara exakt kategori 'family' berörs — breda event som
@@ -6325,6 +6331,10 @@ export default function HomePage() {
                 // Sök/filter-ikonen i knappraden lyser när kartfiltret är på
                 // (7/10) — arrangörsfiltret räknas inte (egen banner).
                 cardFilterOn={popularOnly || mapCategories.size > 0 || mapSource !== null}
+                // Kategorival som valt bort det ÖPPNA eventet → kortet växlar
+                // till listvyn (11/10, Josef: "då ska vi ju komma till listan
+                // ... som faktiskt har det man söker på").
+                selectedFilteredOut={!!selectedEvent && !matchesFilter(selectedEvent)}
                 // Sökarket (7/10 kväll): filterknappen uppe till höger öppnar
                 // kortet med bara sök + chips; stängs när ett event väljs.
                 searchSheet={searchSheetOpen}
