@@ -80,9 +80,11 @@ export default function CardMoreRows({ organizerRow, onSelect, cityLink, searchQ
                     )}
                     {/* -mx/px: raden rullar ända ut till kortets kanter, som
                         tid/plats-raden. data-hscroll (inuti HScrollRow) låter
-                        kortets gestlogik släppa vågräta svep hit. */}
+                        kortets gestlogik släppa vågräta svep hit; panY låter
+                        ett lodrätt svep som börjar på en bricka scrolla
+                        kortet (11/10). */}
                     {organizerRow.rows.length > 0 && (
-                    <HScrollRow className="-mx-4 md:-mx-6 px-4 md:px-6 gap-2">
+                    <HScrollRow panY className="-mx-4 md:-mx-6 px-4 md:px-6 gap-2">
                         {organizerRow.rows.map(evt => {
                             // Bild i brickan (Josef 6/10: "det ska ju vara
                             // bilder i dem också om det finns, fast i en

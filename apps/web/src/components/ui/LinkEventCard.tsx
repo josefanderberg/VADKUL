@@ -618,7 +618,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     slida och se all text"). Inget trunkeras längre: texten
                     glider under kortets kant (-mx/px = ända ut till kanten)
                     och hela raden går att dra fram, med finger eller mus. */}
-                <HScrollRow className={`-mx-4 md:-mx-6 px-4 md:px-6 gap-x-4 text-xs font-bold text-slate-600 dark:text-zinc-300 ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
+                <HScrollRow panY className={`-mx-4 md:-mx-6 px-4 md:px-6 gap-x-4 text-xs font-bold text-slate-600 dark:text-zinc-300 ${vadkulHosted ? 'mb-1.5' : 'mb-4'}`}>
                     <div className="flex items-center gap-2 shrink-0">
                         <Clock size={14} className="text-primary" />
                         <span className="whitespace-nowrap">{formatEventDateSpan(linkEvent.time, linkEvent.endDate, linkEvent.hasSpecificTime !== false)}</span>
@@ -685,7 +685,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             </div>
                             {/* Långa värdnamn rullar i sidled i stället för
                                 att kapas — samma rad-mekanik som tid/plats. */}
-                            <HScrollRow className="min-w-0 flex-1">
+                            <HScrollRow panY className="min-w-0 flex-1">
                                 {hostSlug && onSelectOrganizer ? (
                                     // På kartan: filtrera PÅ PLATS till arrangörens
                                     // event (brickan under dagplattan släpper).

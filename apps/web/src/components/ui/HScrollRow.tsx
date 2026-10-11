@@ -13,9 +13,14 @@ interface HScrollRowProps {
      *  standard: inne i eventkortet äger kortet hjulet (det växer kortet), och
      *  en enradig remsa som kapar hjulet vore en fälla. */
     wheel?: boolean;
-    /** Sant = ett lodrätt svep som börjar i raden scrollar SIDAN (touch-action
-     *  pan-x pan-y). För rader som klistrar på en vanlig sida (stadssidornas
-     *  kategorirad, 8/10) - i eventkortet äger kortet det lodräta draget. */
+    /** Sant = ett lodrätt svep som börjar i raden scrollar det som ligger
+     *  runt den (touch-action pan-x pan-y). För rader i en lodrätt scrollande
+     *  yta: stadssidornas kategorirad (8/10) och raderna i eventkortets
+     *  innehåll (11/10). Kortet tar ändå det lodräta draget under taket -
+     *  dess touch-lyssnare gör preventDefault - men PÅ taket ska innehållet
+     *  scrolla, och med bara pan-x blev ett svep från raden en död gest
+     *  (Josef 11/10: "då rör man sig inte någonstans"). Utan panY: rader som
+     *  inte ligger i något lodrätt scrollande (sökarkets fasta huvud). */
     panY?: boolean;
     ref?: Ref<HTMLDivElement>;
 }
