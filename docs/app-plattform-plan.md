@@ -332,10 +332,10 @@ navraden, filterunionen och interaktionerna är i paritet - se vadkul-app-commit
 - [ ] Stadssidorna: hero-karta, periodval, sökfält, Fler-källor, stadstopplistan
 - [x] Arrangörsskärm (8/10, /arrangor/<slug> + vägen från kortet) - arrangörsfiltret på kartan ÅTERSTÅR (`hostName` finns i appflödet sedan 11/10, huvudrepot 61f676a1 - bara på arrangörer med sida, samma mängd som webbens ?arrangor=)
 - [x] Kartbanners: Veckans populära + Zooma in (9/10) - Nytt sedan sist ÅTERSTÅR
-- [ ] Datumväljaren i dagväljaren
+- [x] Datumväljaren i dagväljaren (11/10, vadkul-app c89cd1f: kalenderknappen på Idag där bakåtpilen annars står, iOS månadsvy/Android-dialog, 14 dagars horisont; ↺ bara när man bytt dag)
 - [x] "Visa även på kartan" (opt-in-källor) i profilen - FAMILJEFILTRET återstår (🧸 syns alltid)
-- [ ] Listan under kortet: Har varit-sektionen, Visa/Dölj bilder
-- [ ] Kort öppnat från sök/profil/stadssida får Nästa + lista
+- [x] Listan under kortet: Har varit-sektionen, Visa/Dölj bilder (11/10, vadkul-app c89cd1f: bildflödet i infovyn/väljarlistan, alla rader + Visa/Dölj bilder i listvyn; "har varit" = väljarlistans hopfällda historik som webbens EventCardGroupList - webbens fliklista visar inga passerade sedan 23/9, gamla "Har varit · N"-utfällningen nås inte från kartan)
+- [x] Kort öppnat från sök/profil/stadssida får Nästa + lista (11/10, vadkul-app c89cd1f: öppnas PÅ KARTAN som webbens jumpToEvent, lib/kartHopp; ← ☰ tillbaka till sökningen/stadssidan) - arrangörsskärmen öppnar fortfarande eget kort
 - [x] Djuplänkar /e/<slug> och ?event= (TestFlight 1.0.0, associatedDomains i app.json)
 
 *Konto + Firestore*
