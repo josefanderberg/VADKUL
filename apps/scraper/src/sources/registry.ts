@@ -7612,8 +7612,10 @@ export const SOURCES: Source[] = [
     // sportality-motorn ovan ser bara ett rullande ~5-dagarsfönster (ligans
     // eget säsongs-API är bevisat stängt, se scrapers/sportality.ts). Förbundet
     // publicerar samma scheman öppet och server-renderat, hela säsongen på en
-    // sida. Dessa tre är åskådarserierna; registrets övriga 83 ligor är
-    // ungdom, preseason och cuper.
+    // sida. Dessa fem är åskådarserierna; övriga ligor där är ungdom,
+    // preseason, distriktsserier och cuper. Hockeyettan (Västerviks IK m.fl.)
+    // saknades till 10/10 — dess arenor behöver ort, se data/hockeyArenas.ts.
+    // Liga-id:na byts varje säsong. U18/U20 upptäcks i stället (källan nedan).
     //
     // Dubbletter mot sportality faller på url-dedupen? NEJ — olika domäner ger
     // olika url. Cross-source-dedupen (npm run dedupe-cross) matchar på titel +
@@ -7623,7 +7625,9 @@ export const SOURCES: Source[] = [
         { id: 'swehockey-shl', league: '20961', name: 'SHL' },
         { id: 'swehockey-hockeyallsvenskan', league: '20962', name: 'HockeyAllsvenskan' },
         { id: 'swehockey-ndhl', league: '20958', name: 'NDHL' },
-    ].map(({ id, league, name }): Source => ({
+        { id: 'swehockey-hockeyettan-norra', league: '21043', name: 'Hockeyettan Norra', verified: '2026-10-10' },
+        { id: 'swehockey-hockeyettan-sodra', league: '21044', name: 'Hockeyettan Södra', verified: '2026-10-10' },
+    ].map(({ id, league, name, verified = '2026-09-09' }: { id: string; league: string; name: string; verified?: string }): Source => ({
         id,
         hostName: name,
         region: 'national',
@@ -7636,9 +7640,37 @@ export const SOURCES: Source[] = [
             + 'Tabellen är grupperad per datum — första matchen en speldag bär datumet, '
             + 'resten ärver det (306 av 364 matcher saknar eget datum). Veckokadens räcker: '
             + 'ett säsongsschema ändras sällan.',
-        lastVerified: '2026-09-09',
-        discovery: { method: 'manual', probeUrl: `https://stats.swehockey.se/ScheduleAndResults/Schedule/${league}`, date: '2026-09-09', notes: 'Hittad efter att ligans eget API visat sig ha ett rullande 5-dagarsfönster.' },
+        lastVerified: verified,
+        discovery: { method: 'manual', probeUrl: `https://stats.swehockey.se/ScheduleAndResults/Schedule/${league}`, date: verified, notes: 'Hittad efter att ligans eget API visat sig ha ett rullande 5-dagarsfönster.' },
     }))),
+    {
+        // U18/U20 — publikmatcher i lokala hallar (tips från Västervik 10/10).
+        // ~40 serier från Nationell till Div 2, vars id:n byts varje säsong och
+        // där vårserier tillkommer mitt i säsongen → motorn UPPTÄCKER serierna
+        // via swehockeys navigering i stället för fasta id:n. U16 och yngre
+        // ingår inte (barnmatcher, få åskådare, mångdubbel volym).
+        id: 'swehockey-u18-u20',
+        hostName: 'U18/U20',
+        region: 'national',
+        engine: 'swehockey',
+        config: {
+            leagueName: 'U18/U20',
+            sport: 'ishockey',
+            discover: { series: '^U ?(18|20)', exclude: 'dam|women|preseason|cup|challenge|nations|iihf' },
+        },
+        // Daglig: ungdomsscheman får klockslag i efterhand (00:00 = ej satt)
+        // och matcher flyttas oftare än i seniorligorna; var 4:e körning
+        // uppdaterar tiden på kända matcher.
+        updateFrequency: 'daily',
+        status: 'experimental',
+        windowDays: 240,
+        notes: 'Alla U18/U20-serier från stats.swehockey.se (~2 150 kommande matcher 10/10). '
+            + 'Titeln bär åldersklassen ("Västerviks IK – Tranås AIF (U20)"), värden serien. '
+            + 'Uppskjutna matcher hoppas över; matcher på utländska arenor (danska lag i södra serierna) likaså. '
+            + 'Okända arenor loggas — lägg till dem i data/hockeyArenas.ts.',
+        lastVerified: '2026-10-10',
+        discovery: { method: 'manual', probeUrl: 'https://stats.swehockey.se/', date: '2026-10-10', notes: 'Serierna hittas via rotsidans navigering och syskonlänkarna på varje seriesida.' },
+    },
     {
         id: 'hockeyallsvenskan',
         hostName: 'HockeyAllsvenskan',
