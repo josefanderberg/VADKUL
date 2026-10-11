@@ -341,8 +341,8 @@ navraden, filterunionen och interaktionerna är i paritet - se vadkul-app-commit
 *Konto + Firestore*
 - [x] Konton på (KONTON_PÅ=true sedan TestFlight 1.0.0; profil + radera konto)
 - [x] Skapa event (arrangera/tipsa, serier, bild), redigera, ta bort, Mina event (11/10, vadkul-app 41b6fe4; anonymt tips verifierat hela vägen - Josefs INLOGGADE varv återstår: arrangera, Mina event, redigera, radera)
-- [ ] Önska event + önskningar på kartan/stadssidan
-- [x] Gilla synkat (räknaGilla + likes-siffran vid hjärtat 11/10) - STJÄRNOR återstår
+- [x] Önska event + önskningar på kartan/stadssidan (11/10, vadkul-app 7bad323: drömskt kartlager, "Jag önskar"-flik i skapa-arket, Arrangera-ur-önskan, stadsskärmens pitch - inloggat varv-klausulen gäller)
+- [x] Gilla synkat (räknaGilla + likes-siffran vid hjärtat 11/10) - stjärnor klara samma dag (7bad323: eventStars-prenumeration, stjärnknapp + guldindikator, guldbricka på kartan, placeStar mot callablen)
 - [x] Push: FCM-token (data/push.ts, TestFlight 1.0.0) - notisinställningar i profilen återstår att verifiera
 - [x] RSVP synkat: räknare, avatarer, &fran=, inbjudningsbannern (8/10)
 - [x] Vänner, eventchatt, privat chatt (11/10, vadkul-app eb7e9b8; webbens 32 testfall portade, utloggat simulatorverifierat - Josefs INLOGGADE varv återstår, samma klausul som skapa event)
