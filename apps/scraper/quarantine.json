@@ -12,8 +12,8 @@
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-02",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-11",
+      "emptyRetries": 6
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
@@ -33,9 +33,15 @@
       "lastRetry": "2026-10-08",
       "emptyRetries": 7
     },
+    "jonkoping": {
+      "since": "2026-10-11",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "karlskoga": {
       "since": "2026-09-28",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-11",
+      "emptyRetries": 1
     },
     "naturskyddsforeningen": {
       "since": "2026-09-30",
@@ -73,13 +79,15 @@
     },
     "sb-visitbastad-se": {
       "since": "2026-10-02",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-11",
+      "emptyRetries": 1
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-09-28",
-      "emptyRetries": 3
+      "lastRetry": "2026-10-11",
+      "emptyRetries": 4
     },
     "staffanstorp": {
       "since": "2026-08-19",

@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-10T07:05:13.871Z",
+  "generatedAt": "2026-10-11T05:37:11.857Z",
   "counts": {
     "fel": 0,
-    "varning": 41,
-    "nollkoordinatTotalt": 601
+    "varning": 40,
+    "nollkoordinatTotalt": 506
   },
   "alerts": [
     {
@@ -15,29 +15,15 @@
     },
     {
       "level": "varning",
-      "kind": "tyst",
-      "source": "jonkoping",
-      "since": "2026-10-01",
-      "message": "gav 97 event 2026-09-28, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "svedala-kommun",
-      "since": "2026-10-01",
-      "message": "gav 120 event 2026-09-28, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
-    {
-      "level": "varning",
       "kind": "datumkluster",
       "source": "Artipelag",
-      "message": "20 av 21 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
+      "message": "20 av 20 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Askims församling",
-      "message": "7 av 10 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+      "message": "7 av 11 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -48,14 +34,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Friluftsfrämjandet Järfälla",
-      "message": "7 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Limhamns församling",
-      "message": "8 av 10 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+      "message": "8 av 11 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -72,20 +52,38 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Mora Kommun",
+      "message": "8 av 13 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Mötesplatser Nordost",
       "message": "9 av 15 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Nyköpings församling",
+      "message": "6 av 10 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Nässjö pastorat",
-      "message": "12 av 12 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
+      "message": "12 av 14 kommande event ligger 2026-10-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Stiftelsen Läckö Slott",
       "message": "7 av 10 kommande event ligger 2026-10-29 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Stora Teatern",
+      "message": "70 av 106 kommande event ligger 2026-10-15 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -97,13 +95,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Söderköpingsguiden",
-      "message": "38 av 58 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Visit Vemdalen",
-      "message": "86 av 123 kommande event ligger 2026-10-10 — sajtvitt datum i stället för eventets?"
+      "message": "38 av 55 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -114,38 +106,32 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "601 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Visit Vemdalen 76, NBV 57, Billetto 32, Gotlands Museum 24, Medleymalmo 21"
+      "source": "506 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 53, Visit Vemdalen 28, Gotlands Museum 24, Medleymalmo 20, Equmenia 18"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Mora Kommun",
-      "message": "invariant-vakten larmar (8 av 14 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 13 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 306 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 299 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 37 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 34 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Söderköpingsguiden",
-      "message": "invariant-vakten larmar (17 av 57 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Visit Vemdalen",
-      "message": "invariant-vakten larmar (86 av 123 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (17 av 55 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -188,6 +174,13 @@
       "source": "gotska-sandons-hembygdsforening",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "jonkoping",
+      "since": "2026-10-11",
+      "message": "i karantän sedan 2026-10-11: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
