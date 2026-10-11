@@ -43,4 +43,4 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 - `eventShareSlug.test.ts` (i `packages/kontrakt`, kör `npm test` där) är ett GULDTEST — går det rött har du brutit alla delade /e/-länkar; backa ändringen i stället för att uppdatera testvärdena.
 - Skrapproblem: `npm run alerts` (i roten) visar nattens samlade larmlista — samma lista skrivs ut överst vid `npm run dev`. Fixad källa i karantän? Ta bort dess post i `apps/scraper/quarantine.json`.
 - CI (`.github/workflows/typecheck.yml`) kör tsc + tester för scraper, web, kontrakt-paketet och functions (inkl. esbuild-bygget) på varje push till main.
-- Kod som rör kartan granskas hellre statiskt än via preview (WebGL degraderar vid reload).
+- **Starta aldrig simulator, emulator eller preview för att verifiera** (ägarbeslut 11/10 2026, Josef: "det tar så mycket på min dator. kontrollera koden istället"). Verifiera genom att granska koden + tester och typecheck. iOS-simulatorn, Android-emulatorn, `expo run:*` och webbpreview bara när Josef uttryckligen ber om det. Josef testar appen själv via TestFlight. (Kartkoden granskades redan statiskt förut: WebGL degraderar vid reload.)
