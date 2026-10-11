@@ -27,6 +27,16 @@ export interface SearchableEvent {
     category?: string;
 }
 
+/**
+ * Hur nära orten ett event måste ligga för att räknas till en stadssökning
+ * ("Hudiksvall", "jazz göteborg"). 2,5 mil ≈ orten plus dess byar (Hudiksvall
+ * + Forsa/Hög/Iggesund). Siffran är en CIRKEL kring centrum, medan stadsrutan
+ * man möts av efter hoppet räknar kartans rektangel: de landar nära varandra
+ * men behöver inte bli exakt lika. Delas av sidans sökfilter/stadsträffar och
+ * kortsökets matchning (11/10) - bodde i page.tsx t.o.m. dess.
+ */
+export const CITY_SEARCH_RADIUS_KM = 25;
+
 /** Rankningsnivåer, lägst först. -1 = ingen träff. */
 export const SEARCH_TIER = {
     TITLE_START: 0,  // titeln BÖRJAR på söktexten ("Jazz…" på "jazz")

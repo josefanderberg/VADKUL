@@ -22,7 +22,10 @@ import { eventDays, isPopularListed, LIST_HORIZON_DAYS, takeRows } from '@/utils
 import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease } from '@/utils/sheetSnap';
-import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List, ZoomOut } from 'lucide-react';
+import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM } from '@/utils/eventSearch';
+import type { CityPoint } from '@/utils/cityPoints';
+import type { CityHit } from './SearchResults';
+import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List, ZoomOut, SearchX } from 'lucide-react';
 
 // Listflikarnas horisont (LIST_HORIZON_DAYS, utils/popularList). Kartan laddar
 // bara tidsfönstret (14 dagar, utils/timelineWindow); resten hämtas när man
@@ -1110,6 +1113,54 @@ type ListSpot = {
     heightVh?: number;
 };
 
+/** STADSTRÄFFAR I KORTSÖKET (11/10, Josef: "sen kan vi inte söka efter städer
+ *  som vi gjorde innan ... annars förlorar vi hela sökfunktionerna"): samma
+ *  stadsrader som gamla sökpanelen (10/8) - överst i träfflistan, för söker
+ *  man "Hudiksvall" vill man DIT, inte läsa enskilda event. Klick flyger
+ *  kartan dit (sidan äger hoppet, sökningen töms). Ljust kort-utförande i
+ *  stället för panelens mörka platta. */
+function CitySearchHits({ hits, onPick }: { hits: CityHit[]; onPick: (city: CityPoint) => void }) {
+    return (
+        <div className="border-b border-border">
+            <div className="px-4 md:px-6 pt-3 pb-1.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+                    {hits.length === 1 ? 'Stad' : 'Städer'} · hoppa dit
+                </span>
+            </div>
+            <ul className="divide-y divide-border">
+                {hits.map(({ city, weekCount, matchText }) => (
+                    <li key={city.name}>
+                        <button
+                            type="button"
+                            onClick={() => onPick(city)}
+                            className="w-full flex items-center gap-3 px-4 md:px-6 py-3 text-left hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors group"
+                        >
+                            <span className="w-9 h-9 rounded-full bg-[#006AA7]/10 dark:bg-sky-400/15 flex items-center justify-center shrink-0">
+                                <MapPin size={17} className="text-[#006AA7] dark:text-sky-400" />
+                            </span>
+                            <span className="flex-1 min-w-0">
+                                <span className="block font-bold text-foreground truncate">{city.name}</span>
+                                <span className="block text-xs text-slate-500 dark:text-zinc-400 truncate">
+                                    {weekCount === null
+                                        ? 'Räknar event…'
+                                        : matchText
+                                            ? (weekCount === 0
+                                                ? `Inget med ”${matchText}” den närmaste veckan`
+                                                : `${weekCount} med ”${matchText}” den närmaste veckan`)
+                                            : weekCount === 0
+                                                ? 'Inget inbokat den närmaste veckan'
+                                                : `${weekCount} event den närmaste veckan`}
+                                </span>
+                            </span>
+                            <ArrowRight size={16} className="text-slate-300 dark:text-zinc-500 group-hover:text-[#006AA7] dark:group-hover:text-sky-400 transition-colors shrink-0" />
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
 interface EventCardProps {
     events: LinkEvent[];
     /** Antal event för dagen i dag-väljarens badge — räknas FÖRE källfiltret så
@@ -1293,9 +1344,18 @@ interface EventCardProps {
     /** Öppnar sökarket igen (sidans openSearchSheet) - ← ☰ på en träff man
      *  valt ur arket tar en tillbaka till sökningen (8/10). */
     onOpenSearchSheet?: () => void;
+    /** GAMLA SÖKET I KORTSÖKET (11/10, Josef: "det blir som den sök vi hade
+     *  innan ... annars förlorar vi hela sökfunktionerna"): termen speglas
+     *  till sidan vid varje ändring, så kartan filtreras medan man skriver
+     *  (sidans searchQuery-maskineri: alla dagar, hela landet). */
+    onSearchChange?: (q: string) => void;
+    /** Stadsträffar för söktermen (sidans cityHits) - visas överst i
+     *  träfflistan, klick flyger kartan dit (handlern tömmer sökningen). */
+    cityHits?: CityHit[];
+    onPickCity?: (city: CityPoint) => void;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet, onSearchChange, cityHits, onPickCity }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -1386,6 +1446,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const SEARCH_SHEET_PX = 190;
     const searchSheetVh = () =>
         Math.max(PEEK_HEIGHT_VH, Math.min(60, Math.round((SEARCH_SHEET_PX / window.innerHeight) * 100)));
+    // Sökarkets LISTHÖJD (ägarbeslut 11/10, Josef: "då ska inte hela
+    // sökkortet täcka hela skärmen. man vill ju kanske se lite av kartan
+    // fortfarande" - ersätter 7/10-regeln "fullhöjt med listan framme"):
+    // träfflistan växer arket HIT, inte till taket, så kartan syns ovanför
+    // och man ser sökningen/filtren slå igenom på markörerna. Samtidigt
+    // arkets mellanstopp för drag/hjul - man kan själv dra upp till taket.
+    // (Sidopanelsläget klampar ändå upp till SIDE_HEIGHT_VH - där ligger
+    // kartan fri till höger.)
+    const SEARCH_LIST_VH = 55;
+    const searchListVh = () => Math.min(SEARCH_LIST_VH, maxVhRef.current);
 
     // Reveal-steg från LinkEventCard: 0 = header+remsa, 1 = bild+trunkad, 2 = allt
     const [cardRevealStep, setCardRevealStep] = useState(0);
@@ -1786,8 +1856,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const sheetStopsNow = (): number[] => sheetStops([
         measureCompactHeight() ?? NaN,
         measureDefaultHeight(),
-        // Väljarlistan och sökarket har ingen tapp-höjd (ingen beskrivning).
-        ...(chooserActiveRef.current || searchOnlyRef.current ? [] : [measureOpenHeight()]),
+        // Väljarlistan har ingen tapp-höjd (ingen beskrivning); sökarket har
+        // i stället LISTHÖJDEN som mellanstopp (11/10) - samma höjd som
+        // träfflistan öppnar på, så drag/hjul stannar där kartan ännu syns.
+        ...(chooserActiveRef.current ? []
+            : searchOnlyRef.current ? [searchListVh()]
+            : [measureOpenHeight()]),
         maxVhRef.current,
     ], SNAP_TOLERANCE_VH);
     // Live-ref så drag-handlern (onPointerMove) alltid läser senaste mätta
@@ -1885,8 +1959,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         let dragsSheet = false;
         // Gesten började i en sidledsrullande rad (HScrollRow, 16/9) som
         // faktiskt rullar över. Då avgörs vid första rörelsen: vågrätt →
-        // webbläsaren panorerar raden (ingen preventDefault, touch-action
-        // pan-x), lodrätt → kortet dras som vanligt.
+        // webbläsaren panorerar raden (ingen preventDefault), lodrätt →
+        // kortet dras som vanligt, eller PÅ taket scrollar innehållet. Det
+        // sista kräver att raderna i kortet bär touch-action pan-x PAN-Y
+        // (HScrollRow panY, 11/10) - med bara pan-x var svepet dött där.
         let inHScroll = false;
         let hscrollDecided = false;
         let hscrollOwns = false;
@@ -2357,8 +2433,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     };
     useEffect(() => {
         // Rensa först när HELA arket är stängt — sökarket (filterknappen uppe
-        // till höger) lever utan valt event och ska behålla termen.
-        if (!selectedEvent && !searchSheet) { setCardSearchQ(''); setCardSearchOpen(false); setSearchReturn(null); }
+        // till höger) lever utan valt event och ska behålla termen. Sidans
+        // spegel töms också (11/10) så kartan släpper sökfiltret.
+        if (!selectedEvent && !searchSheet) {
+            setCardSearchQ('');
+            setCardSearchOpen(false);
+            setSearchReturn(null);
+            onSearchChange?.('');
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedEvent, searchSheet]);
     // SÖKARKETS ÖPPNING (7/10 kväll): fast höjd (sökrad + chips), chipsen
@@ -2375,8 +2457,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         setIsAnimating(true);
         const raf = requestAnimationFrame(() => {
             // Är kartfiltret redan på visas träfflistan direkt (7/10 kväll)
-            // — då öppnar arket fullhöjt så listan faktiskt syns.
-            updateHeightVh(back?.heightVh ?? (cardFilterOn ? maxVhRef.current : searchSheetVh()));
+            // - då öppnar arket på LISTHÖJDEN (11/10, inte fullhöjt som
+            // 7/10-9/10: "man vill ju kanske se lite av kartan fortfarande").
+            updateHeightVh(back?.heightVh ?? (cardFilterOn ? searchListVh() : searchSheetVh()));
             if (!back && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
         });
         return () => cancelAnimationFrame(raf);
@@ -2385,38 +2468,68 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // KATEGORIVAL I SÖKARKET (7/10 kväll, Josef: "om jag klickar på filter
     // knappen och sedan en kategori. då ska ju listan med de eventen visas
     // under. nu ändras det ju bara på kartan"): ett chipval växer arket till
-    // full höjd så träfflistan syns; släpps sista filtret (och ingen
-    // sökterm står kvar) krymper arket tillbaka.
+    // LISTHÖJDEN (11/10 - inte taket, kartan ska synas ovanför) så träff-
+    // listan syns; har man själv dragit högre står arket kvar. Släpps sista
+    // filtret (och ingen sökterm står kvar) krymper arket tillbaka.
     useEffect(() => {
         if (!searchOnlyRef.current) return;
         setIsAnimating(true);
-        if (cardFilterOn) updateHeightVh(maxVhRef.current);
+        if (cardFilterOn) updateHeightVh(Math.max(heightVhRef.current, searchListVh()));
         else if (!cardSearchQ.trim()) updateHeightVh(searchSheetVh());
         // Bara filterväxlingen ska styra här — söktermen har sin egen väg
         // (handleCardSearch/handleToggleView).
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cardFilterOn]);
     const cardQNorm = cardSearchQ.trim().toLowerCase();
+    // GAMLA SÖKETS MATCHNING (11/10, Josef: "det blir som den sök vi hade
+    // innan i den sök uppe åt höger. alltså samma i eventkortet"): samma
+    // regler som sidans kartfiltrering (utils/eventSearch) - titel/plats/
+    // arrangör/kategori/url, och 16/9-tolkningen "jazz göteborg" där ett
+    // ortnamn begränsar till cirkeln runt orten. Ersätter den rena
+    // substringmatchen på titel+plats+värd.
+    const cardSearchParsed = useMemo(
+        () => splitCityFromQuery(normalizeSearchQuery(cardSearchQ)),
+        [cardSearchQ],
+    );
+    // Eventdelen av termen ("jazz" i "jazz göteborg") - highlight och ?q=
+    // till stadssidan ska inte bära ortnamnet.
+    const cardSearchText = cardQNorm ? cardSearchParsed.text : '';
     const matchesCardSearch = useMemo(() => {
         if (!cardQNorm) return null;
+        const { city, text } = cardSearchParsed;
         return (e: LinkEvent) =>
-            e.title.toLowerCase().includes(cardQNorm)
-            || (e.locationName ?? '').toLowerCase().includes(cardQNorm)
-            || (e.hostName ?? '').toLowerCase().includes(cardQNorm);
-    }, [cardQNorm]);
+            (!text || eventSearchTier(e, text) >= 0)
+            && (!city || (hasValidCoords(e)
+                && haversineKm(city.lat, city.lng, e.lat, e.lng) <= CITY_SEARCH_RADIUS_KM));
+    }, [cardQNorm, cardSearchParsed]);
     const handleCardSearch = (value: string) => {
         setCardSearchQ(value);
-        // Första tecknet: öppna listvyn (full höjd) så träffarna syns direkt.
-        if (value.trim() && !cardSearchQ.trim() && cardView !== 'nearby') handleToggleView('nearby');
+        // Spegla termen till sidan (11/10): kartan filtreras medan man
+        // skriver, och stadsträffarna (cityHits) räknas fram där.
+        onSearchChange?.(value);
+        // Första tecknet: öppna listvyn så träffarna syns direkt - i kortet
+        // full höjd som förut, i SÖKARKET bara till listhöjden (11/10,
+        // "man vill ju kanske se lite av kartan fortfarande").
+        if (value.trim() && !cardSearchQ.trim() && cardView !== 'nearby') {
+            if (searchOnlyRef.current) {
+                setCardView('nearby');
+                setIsAnimating(true);
+                updateHeightVh(Math.max(heightVhRef.current, searchListVh()));
+                if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+            } else {
+                handleToggleView('nearby');
+            }
+        }
         // Tömd sökning lämnar listvyn (höjden behålls) — Lista-ikonen i
         // knappraden är BORTTAGEN (6/10), så rensningen är vägen tillbaka.
         if (!value.trim() && cardSearchQ.trim()) {
             if (cardView === 'nearby') setCardView('info');
-            // Sökarket: tillbaka till arkets egen höjd — utan event finns
+            // Sökarket: tillbaka till arkets egen höjd (listhöjden om ett
+            // filter fortfarande visar träfflistan) — utan event finns
             // inget kort att stå kvar fullhöjt på.
             if (searchOnlyRef.current) {
                 setIsAnimating(true);
-                updateHeightVh(searchSheetVh());
+                updateHeightVh(cardFilterOn ? searchListVh() : searchSheetVh());
             }
         }
     };
@@ -2918,7 +3031,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // radens pointermove aldrig nått fram. Bara rader som faktiskt
         // rullar över släpps; en kort rad är vanlig kortyta. Touch går
         // som vanligt hit (webbläsaren panorerar raden via touch-action
-        // pan-x, och touch-lyssnaren låter bli preventDefault för ett
+        // pan-x pan-y, och touch-lyssnaren låter bli preventDefault för ett
         // vågrätt svep i raden — se onTouchMove).
         if (e.pointerType === 'mouse') {
             const row = target.closest('[data-hscroll]') as HTMLElement | null;
@@ -3417,6 +3530,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // ingen ankar-effekt som kan förbruka flaggan.
         if (picked !== selectedEvent) listPickIdRef.current = picked.id;
     };
+    // Stadsträff vald (11/10): töm sökningen FÖRST (gamla sökpanelens regel
+    // 16/9 - inget osynligt sökfilter blir kvar; i arket krymper den också
+    // arket så kartan syns under flygningen) och låt sidan flyga dit.
+    const handlePickCity = (city: CityPoint) => {
+        handleCardSearch('');
+        onPickCity?.(city);
+    };
     const handleListPick = (evt: LinkEvent) => {
         rememberListSpot(evt);
         if (evt.time && onDayStep) {
@@ -3450,8 +3570,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     value={cardSearchQ}
                     onChange={e => handleCardSearch(e.target.value)}
                     onFocus={() => setCardSearchOpen(true)}
-                    placeholder="Sök event i listan…"
-                    aria-label="Sök event i listan under kortet"
+                    placeholder="Sök event eller stad…"
+                    aria-label="Sök event eller stad"
                     className="flex-1 min-w-0 bg-transparent outline-none text-sm text-slate-800 dark:text-zinc-100 placeholder:text-slate-400"
                 />
                 {cardSearchQ && (
@@ -3916,7 +4036,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                                     onSelect={handleListPick}
                                     cityLink={cityLink}
                                     cityCount={tabDays.all.count}
-                                    searchQ={cardSearchQ}
+                                    searchQ={cardSearchText}
                                 />
                             ) : null}
                         />
@@ -4086,7 +4206,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onSelect={handleListPick}
                             cityLink={cityLink}
                             cityCount={tabDays.all.count}
-                            searchQ={cardSearchQ}
+                            searchQ={cardSearchText}
                         />
                     )}
                     {/* (Svarsraden låg här, precis före listan, 7/10 kväll -
@@ -4108,6 +4228,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         när det definitiva beskedet säger att inget finns nära.
                         Samma rad står också tills kortlagret landat (cardsReady),
                         så listan ritas EN gång med rätt innehåll. */}
+                    {/* STADSTRÄFFAR överst i sökningen (11/10) - gamla
+                        sökpanelens stadsrader, nu i kortets/arkets lista. */}
+                    {listVisible && !!cardQNorm && !!onPickCity && (cityHits?.length ?? 0) > 0 && (
+                        <CitySearchHits hits={cityHits!} onPick={handlePickCity} />
+                    )}
                     {listVisible && ((nearbyEvents.length === 0 && !eventsSettled) || !cardsReady) && (
                         <div className="w-full bg-slate-50 dark:bg-zinc-900/40 border-t border-border">
                             <div className="px-4 md:px-6 py-3 flex items-center gap-2.5">
@@ -4156,6 +4281,30 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             onRemoveFilter={onRemoveFilter}
                             filterChips={searchOnly ? undefined : filterChips}
                         />
+                    )}
+                    {/* INGET MATCHAR (11/10): med sökterm och noll träffar
+                        stod arket annars helt tomt under huvudet - säg det,
+                        som gamla sökpanelen gjorde. Finns en stadsrad ovanför
+                        är DEN svaret. */}
+                    {listVisible && cardsReady && eventsSettled && !!cardQNorm
+                        && nearbyEvents.length === 0 && tabDays.all.count === 0 && (
+                        (cityHits?.length ?? 0) > 0 ? (
+                            <div className="px-6 py-4 text-center">
+                                <p className="text-xs text-slate-500 dark:text-zinc-400">
+                                    Välj staden ovan så flyger kartan dit.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="px-6 py-8 flex flex-col items-center gap-2 text-center">
+                                <SearchX size={22} className="text-slate-300 dark:text-zinc-600" />
+                                <p className="text-sm font-bold text-foreground">
+                                    Inget matchar ”{cardSearchQ.trim()}”
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-zinc-400">
+                                    Sök på stad, titel, plats, arrangör eller kategori - eller båda, t.ex. ”jazz göteborg”.
+                                </p>
+                            </div>
+                        )
                     )}
                 </div>
 

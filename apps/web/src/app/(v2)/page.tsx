@@ -37,7 +37,7 @@ import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
 import { readMapFilter, writeMapFilter } from '@/utils/mapFilter';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
-import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFromQuery } from '@/utils/eventSearch';
+import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFromQuery, CITY_SEARCH_RADIUS_KM } from '@/utils/eventSearch';
 import { LABEL_TITLE_MIN_ZOOM, WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
 import { readStartCity, writeStartCity, parsePlatsParam } from '@/utils/startCity';
@@ -336,13 +336,9 @@ const REPEAT_TIMES_CHOICES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 20, 26, 52
 /** Dagsseriens val: 2 till MAX_REPEAT_DAYS dagar, alla tal (en festival på 4
  *  dagar är lika vanlig som en på 3). */
 const REPEAT_DAYS_CHOICES = Array.from({ length: MAX_REPEAT_DAYS - 1 }, (_, i) => i + 2);
-// Radie kring en SÖKT stads centrum när träfflistan räknar "X event den
-// närmaste veckan". 2,5 mil ≈ orten plus dess byar (Hudiksvall + Forsa/Hög/
-// Iggesund). Siffran är alltså en CIRKEL kring centrum, medan stadsrutan man
-// möts av efter hoppet räknar kartans rektangel: de landar nära varandra men
-// behöver inte bli exakt lika. (Tom-läget hade tidigare samma 2,5 mil som
-// tyst-golv — borttaget 24/8, se nearbyIsEmpty.)
-const CITY_SEARCH_RADIUS_KM = 25;
+// (CITY_SEARCH_RADIUS_KM bor i utils/eventSearch sedan 11/10 - kortsökets
+// matchning i EventCard delar samma cirkel. Tom-läget hade tidigare samma
+// 2,5 mil som tyst-golv - borttaget 24/8, se nearbyIsEmpty.)
 
 /** Eventets kategorinyckel — okänd/utebliven kategori räknas som Övrigt. */
 const categoryKeyOf = (evt: LinkEvent): EventCategoryType =>
@@ -429,6 +425,12 @@ export default function HomePage() {
         linkEventService.ensureTimelineCovers(end);
     }, [dayOffset, dayRangeDays, timelineHorizonMs]);
     const [cardExpanded, setCardExpanded] = useState(false);
+    // Söktermen som filtrerar KARTAN (alla dagar, hela landet). Matades från
+    // FloatingNavbars sökfält t.o.m. 7/10; sedan 11/10 speglas den från
+    // KORTSÖKET (EventCards fält i sökarket/knappraden, onSearchChange) -
+    // Josef: "det blir som den sök vi hade innan ... annars förlorar vi hela
+    // sökfunktionerna". Så ser man träffarna tändas på kartan medan man
+    // skriver, precis som i gamla sökpanelen.
     const [searchQuery, setSearchQuery] = useState('');
     // Sökfältet utfällt — speglas från FloatingNavbar så sökpanelen kan visa
     // kategoriraden även innan man skrivit något (16/9).
@@ -1372,8 +1374,15 @@ export default function HomePage() {
      * Landar precis som ett skylt-hopp: samma kamerahopp, stadsrutan med
      * namn + antal idag/i veckan, landningspulsen som visar vad veckan har,
      * och vägskyltar mot grannstäderna. Skillnaden är bara hur man kom dit.
-     * Sökrutan fälls ihop (annars täcker den kartan man just bad om) och
-     * söktexten nollas så träfflistan stänger.
+     * Söktexten nollas så inget osynligt sökfilter blir kvar (16/9-regeln).
+     *
+     * SEDAN 11/10 bor söket i KORTSÖKET/SÖKARKET (Josef: "kan vi inte söka
+     * efter städer som vi gjorde innan ... annars förlorar vi hela
+     * sökfunktionerna"): stadsraderna ligger överst i kortets träfflista.
+     * Ett öppet kort släpps (man har valt att åka någon annanstans) och
+     * arket står kvar på sin lilla höjd med chipsen, så man ser landningen
+     * och kan filtrera vidare. (Kortsöket tömmer sitt eget fält innan det
+     * ropar hit - se handlePickCity i EventCard.)
      *
      * Orten behöver inte ligga i bildspelets rutt — rundan fortsätter från
      * den TOUR_CITIES-stad som ligger närmast, så play/skyltar pekar rätt.
@@ -1384,6 +1393,11 @@ export default function HomePage() {
         tourCityIndexRef.current = nearestTourCityIndex(city.lat, city.lng);
         setSearchQuery('');
         setCloseSearchNonce(n => n + 1);
+        startTransition(() => {
+            setGroupChoice(null);
+            setSelectedEvent(null);
+            setSearchSheetOpen(true);
+        });
         flyToPoint(city.lat, city.lng, city.name);
         startCityPulse();
         setTourPlaying(true);
@@ -3203,13 +3217,19 @@ export default function HomePage() {
         () => {
             const b = settledMapBounds;
             if (!b) return [];
+            // SÖKNING GÅR ÖVER HELA LANDET (11/10, som gamla sökpanelen):
+            // med en sökterm släpper listan kartrutan - "Håkan Hellström om
+            // tre veckor" i en annan stad ska synas i listan också, inte bara
+            // som markör. Själva textmatchningen gör kortet (matchesCardSearch
+            // speglar eventSearchTier + ortcirkeln).
             return events.filter(e =>
                 hasValidCoords(e)
-                && e.lat! >= b.south && e.lat! <= b.north
-                && e.lng! >= b.west && e.lng! <= b.east
+                && (!!searchQ
+                    || (e.lat! >= b.south && e.lat! <= b.north
+                        && e.lng! >= b.west && e.lng! <= b.east))
                 && matchesFilter(e));
         },
-        [events, settledMapBounds, matchesFilter],
+        [events, settledMapBounds, matchesFilter, searchQ],
     );
     // LISTAN ZOOMAR UT (ägarbeslut 8/10, Josef: "när man scrollat ner i
     // listan för man redan sett allt denna månaden på eventkorten. Då ska ju
@@ -3474,6 +3494,9 @@ export default function HomePage() {
     useEffect(() => {
         if (selectedEvent) setSearchSheetOpen(false);
     }, [selectedEvent]);
+    // (Stadsträffarnas klick-handler, handlePickSearchCity, bor uppe vid
+    // skylt-hoppen - den landar som ett skylt-hopp med stadspuls, precis som
+    // när sökrutan satt i navbaren.)
 
     /**
      * Kartklick UNDER (eller precis efter) bildspelet. Klicket stoppar blinket
@@ -3571,7 +3594,10 @@ export default function HomePage() {
     }, [searchQuery]);
     const handleToggleProfile = useCallback(() => {
         setProfilePanelOpen(o => !o);
-        setSearchQuery('');
+        // (setSearchQuery('') låg här när termen bodde i navbarens sökfält -
+        // sedan 11/10 ägs den av kortsöket, och en ensidig nollning hade bara
+        // osynkat kartan mot fältet. Effekten ovan stänger fortfarande
+        // panelen när man börjar söka.)
     }, []);
 
     // Formulärets "sista gången"-rad: vilket datum serien tar slut med valt
@@ -5244,10 +5270,10 @@ export default function HomePage() {
 
             {/* (1c. SÖKPANELEN/SearchResults är BORTTAGEN 7/10 med sök-
                 knappen — kortets sök/filter-ikon äger sök + chips numera.
-                Stadssöket försvann med den (medvetet, Josefs beslut efter
-                påpekande); stadshopp sker via kartan/topplattan. Sökmaskineriet
-                (searchQuery/searchResults/cityHits) står kvar orört för en
-                framtida väg in.) */}
+                SEDAN 11/10 går kortsöket/sökarket genom samma maskineri
+                (searchQuery/cityHits, onSearchChange + onPickCity på
+                EventCard): kartan filtreras medan man skriver och stads-
+                träffarna är tillbaka, överst i kortets träfflista.) */}
 
             {/* (1d. Sparat-panelen är BORTTAGEN 7/10 - Sparade event fälls ut
                 som en mapp i profilpanelen i stället för att öppna ett eget
@@ -6339,6 +6365,13 @@ export default function HomePage() {
                 // kortet med bara sök + chips; stängs när ett event väljs.
                 searchSheet={searchSheetOpen}
                 onCloseSearchSheet={() => setSearchSheetOpen(false)}
+                // GAMLA SÖKET I KORTSÖKET (11/10): termen speglas hit så
+                // kartan filtreras medan man skriver (searchFilteredEvents,
+                // alla dagar + hela landet), och stadsträffarna visas överst
+                // i listan - klick flyger dit som i gamla sökpanelen.
+                onSearchChange={setSearchQuery}
+                cityHits={cityHits}
+                onPickCity={handlePickSearchCity}
                 // 🔥-chippet kopplar listan till Populärt-fliken (7/10 kväll).
                 popularFilterOn={popularOnly}
                 activeFilters={cardActiveFilters}
