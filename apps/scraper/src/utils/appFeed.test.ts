@@ -73,6 +73,37 @@ describe('buildAppFeeds', () => {
         expect(regions.get('vastra-gotaland')?.map(e => e.id)).toEqual(['gbg']);
     });
 
+    it('hostName joinas BARA för arrangörer med sida (organizerPageSlug-regeln)', () => {
+        const riktig = 'https://ex.se/kulturhuset';
+        const plattform = 'https://www.tickster.com/sv/events/abc';
+        const optIn = 'https://www.svenskakyrkan.se/vaxjo/konsert';
+        const generisk = 'https://facebook.com/events/123';
+        const regions = buildAppFeeds([
+            dest({ id: riktig }),
+            dest({ id: plattform }),
+            dest({ id: optIn }),
+            dest({ id: generisk }),
+        ], [
+            { h: eventKey(riktig), hostName: 'Kulturhuset Sävsjö' },
+            { h: eventKey(plattform), hostName: 'Någon arrangör' },   // biljettplattform — ingen sida
+            { h: eventKey(optIn), hostName: 'Växjö församling' },     // opt-in-källa — ingen sida
+            { h: eventKey(generisk), hostName: 'Facebook' },          // källnamn — ingen sida
+        ], CITIES, now);
+        const byId = new Map(regions.get('stockholm')!.map(e => [e.id, e]));
+        expect(byId.get(riktig)?.hostName).toBe('Kulturhuset Sävsjö');
+        expect(byId.get(plattform)?.hostName).toBeUndefined();
+        expect(byId.get(optIn)?.hostName).toBeUndefined();
+        expect(byId.get(generisk)?.hostName).toBeUndefined();
+        // Utelämnat, inte null/tomt — fältet ska inte kosta bytes där det inte gör nytta.
+        expect(JSON.stringify(byId.get(plattform))).not.toContain('hostName');
+    });
+
+    it('hostName utelämnas när cards saknar det', () => {
+        const id = 'https://ex.se/utan-vard';
+        const regions = buildAppFeeds([dest({ id })], [{ h: eventKey(id) }], CITIES, now);
+        expect(JSON.stringify(regions.get('stockholm')![0])).not.toContain('hostName');
+    });
+
     it('tomma valfria fält utelämnas (bytes × tusentals event)', () => {
         const regions = buildAppFeeds([dest({ id: 'ren', emoji: '', endDate: '', locationName: '' })], [], CITIES, now);
         const ev = regions.get('stockholm')![0];

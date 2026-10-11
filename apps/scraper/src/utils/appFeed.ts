@@ -22,6 +22,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { eventKey } from './eventKey';
+import { organizerPageSlug } from './organizerPage';
 
 export interface AppFeedCity {
     slug: string;
@@ -48,6 +49,13 @@ export interface AppFeedEvent {
     img?: string;
     /** Bara när cards skrivit om länken (~2 % av eventen) — annars ÄR id länken. */
     url?: string;
+    /**
+     * Arrangörsnamnet från cards — BARA på event vars arrangör har en
+     * arrangörssida (organizerPageSlug ≠ null): det är den enda mängd appens
+     * arrangörsfilter kan matcha, och att utelämna resten (källnamn,
+     * biljettplattformar, opt-in-källorna) håller flödena små.
+     */
+    hostName?: string;
 }
 
 /** 14 dagar — samma fönster som kartans tidsfönster-laddning. */
@@ -127,6 +135,7 @@ export interface AppFeedCardInput {
     h: string;
     coverImage?: string;
     url?: string;
+    hostName?: string;
 }
 
 /**
@@ -147,9 +156,11 @@ export function buildAppFeeds(
 
     const imgByKey = new Map<string, string>();
     const urlByKey = new Map<string, string>();
+    const hostByKey = new Map<string, string>();
     for (const c of cards) {
         if (c.coverImage) imgByKey.set(c.h, c.coverImage);
         if (c.url) urlByKey.set(c.h, c.url);
+        if (c.hostName) hostByKey.set(c.h, c.hostName);
     }
 
     const regions = new Map<string, AppFeedEvent[]>();
@@ -160,6 +171,7 @@ export function buildAppFeeds(
         const region = nearestRegion(d.lat, d.lng, cities);
         if (!region) continue;
         const h = eventKey(d.id);
+        const host = hostByKey.get(h);
         const ev: AppFeedEvent = {
             id: d.id,
             title: d.title,
@@ -174,6 +186,7 @@ export function buildAppFeeds(
             pop: d.pop || undefined,
             img: imgByKey.get(h),
             url: urlByKey.get(h),
+            hostName: host && organizerPageSlug(host, d.id) ? host : undefined,
         };
         const list = regions.get(region);
         if (list) list.push(ev); else regions.set(region, [ev]);

@@ -385,6 +385,11 @@ export interface AppFeedEvent {
     img?: string;
     /** Bara när länken skrivits om (~2 % av eventen) — annars ÄR id länken. */
     url?: string;
+    /**
+     * Arrangörsnamnet — BARA på event vars arrangör har en arrangörssida
+     * (organizerPageSlug ≠ null); grunden för appens arrangörsfilter.
+     */
+    hostName?: string;
 }
 
 /** Svarskroppen från /api/events/app-<region>. */
