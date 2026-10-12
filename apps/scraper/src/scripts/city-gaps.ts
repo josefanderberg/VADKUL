@@ -31,6 +31,7 @@
 import path from 'path';
 import Database from 'better-sqlite3';
 import { SOURCES } from '../sources/registry';
+import { arrangorTyp } from '../utils/arrangorTyp';
 
 /**
  * Folkmängd = kommunen (SCB 2024, avrundat), koordinat = centralorten.
@@ -91,10 +92,6 @@ export const CITIES: City[] = [
     { name: 'Härnösand', lat: 62.6323, lng: 17.9379, pop: 25000 },
 ];
 
-/** Riksomfattande paraply-källor — samma grundbrus i varje kommun. */
-const RX_PARAPLY = /församling|pastorat|svenska kyrkan|domkyrko|\bkyrkan\b|\bPRO\b|Korpen|\bABF\b|Studieförbundet Vuxenskolan|Medborgarskolan|Bilda|\bNBV\b|Folkuniversitetet|Studiefrämjandet|Naturskyddsförening|Friluftsfrämjandet|Röda Korset|Rotary|Hembygdsförening|bibliotek|Riksteatern|Sensus|equmenia/i;
-/** Biljett-/plattformsaggregatorer — riktiga event, men ingen arrangörsrelation. */
-const RX_AGG = /^(Tickster|TicketMaster|Ticketmaster|Billetto|Eventbrite|Nortic|Kulturbiljetter|RaceID|Facebook|Meetup|Eventim)$/i;
 
 const EARTH_KM = 6371;
 const rad = (x: number) => (x * Math.PI) / 180;
@@ -154,9 +151,9 @@ function main() {
             const t = new Date(e.time);
             if (t <= dayEnd) today++;
             if (t <= weekEnd) week++;
-            const host = (e.hostName ?? '').trim();
-            if (RX_AGG.test(host)) agg++;
-            else if (RX_PARAPLY.test(host)) paraply++;
+            const typ = arrangorTyp(e.hostName);
+            if (typ === 'plattform') agg++;
+            else if (typ === 'riks') paraply++;
             else local++;
         }
         const pct = (n: number) => (future ? Math.round((n / future) * 100) : 0);

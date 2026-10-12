@@ -90,9 +90,24 @@ Det vi ger kommunerna gratis. Inga personuppgifter, bara sammanställda siffror:
 Exempel, Jönköping 12/10: drygt 600 evenemang de kommande 30 dagarna inom 15 km, från ett
 80-tal arrangörer, och ungefär en fjärdedel från kommunens egna sidor.
 
-Inte byggd än. `npm run city-gaps` i apps/scraper räknar redan sammansättning, tomma dagar
-och per 10 000 invånare. Det som saknas är ett urval per kommun, jämförelsen med grannarna och
-en sida eller PDF att skicka. Faktabladet är inte heller skrivet.
+**Byggd 13/10 som underlag på två A4-sidor med loggan**, ortsrapporten och faktabladet i samma
+PDF. Bifoga den i mejlet till kultur- och fritidsförvaltningen. Kör i apps/scraper, helst på
+minin där spegeln är färsk:
+
+    npm run ortsrapport -- Eskilstuna --kalender=visiteskilstuna.se \
+        --till="Kultur- och fritidsförvaltningen, Eskilstuna kommun"
+
+Filerna hamnar i `docs/outreach/underlag/` (ej i git). Sidan 1: gissningsfrågan (vilken
+veckodag händer minst?), antal evenemang, arrangörer, per 10 000 invånare, andelen från
+kommunens kalender, vem som arrangerar, de största lokala arrangörerna (bara de med minst tre
+evenemang, så att ingen privatperson namnges), kategorierna och grannorterna. Sidan 2: veckan
+med svaret, faktabladet och tre förslag med kryssrutor (kontaktperson, tips i
+föreningsinformationen, kalendern som öppna data) som de kan ta med till ett möte. Det är
+"omröstningen": tjänstepersoner röstar inte om leverantörer, men de kan kryssa i vad de vill
+göra. Kalla det underlag, inte motion; en motion lämnas bara av förtroendevalda.
+
+Kolla listan över största arrangörer före utskick: står kommunens egen guide överst (som
+Visit Eskilstuna före rättelsen 12/10) är det samma fel som i Eskilstunas svar.
 
 ## Mätetal
 
