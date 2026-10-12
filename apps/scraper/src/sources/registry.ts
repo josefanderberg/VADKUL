@@ -1094,8 +1094,15 @@ export const SOURCES: Source[] = [
             urls: ['https://visiteskilstuna.se/evenemangsguiden/evenemangsguiden'],
             defaultCity: 'Eskilstuna',
             restApi: { url: 'https://visiteskilstuna.se/rest-api/Evenemang' },
+            // Arrangörerna registrerar själva sina event — guiden är källan,
+            // inte arrangören (Visit Eskilstuna mejlade 12/10: "missvisande
+            // att Visit Eskilstuna står som arrangör"). hostName ovan är bara
+            // reserv när detaljsidan saknar arrangör.
+            detailOrganizer: true,
         },
         updateFrequency: 'every-3d',
+        // Engångssvep: kända event byter guidens namn mot arrangören.
+        contentSweep: '2026-10-12',
         status: 'experimental',
         notes: 'Eskilstuna kommuns/Visit Eskilstunas gemensamma eventguide (SiteVision RESTApp "Evenemang"). ETT anrop bär hela kalendern: 556 event vid upptäckt, alla framtida, 98,6 % med klockslag, 100 % bild, venue-namn (geocodas mot Eskilstuna). Beskrivningar är API-trunkerade (~200 tecken). type=other (~26) = utställningar, ej hämtade.',
         lastVerified: '2026-07-22',
@@ -6695,6 +6702,9 @@ export const SOURCES: Source[] = [
             // API:ts content="" och meta-desc är tom — brödtexten är enda
             // beskrivningskällan (Arboga-klagomålet 11/9: 275 event utan text).
             detailBodyDesc: true,
+            // Arrangören per event ur detaljsidan (samma guide-produkt som
+            // visiteskilstuna — se där).
+            detailOrganizer: true,
             cities: ['Köping', 'Arboga', 'Kungsör'],
             // ~24 % av korten saknar venue helt — de ankras på regionens största
             // ort hellre än att bli koordinatlösa (och därmed osynliga på kartan).
@@ -6705,6 +6715,7 @@ export const SOURCES: Source[] = [
         // beskrivnings-refreshen 13/9 läkte 1 av 152 tomma tills fönstret
         // vidgades (146 av dem låg bortom 30 dagar).
         windowDays: 120,
+        contentSweep: '2026-10-12',
         status: 'experimental',
         notes: 'Gemensam eventguide för Köping, Arboga och Kungsör (två av tre saknade egen källa). Samma SiteVision-RESTApp som visiteskilstuna — 204 event i ETT anrop, 198 framtida, venue-namn med ortsuffix (därför cities-listan). Pagineringen är KUMULATIV: page=2 returnerar alla 204.',
         lastVerified: '2026-08-26',

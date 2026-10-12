@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem, mapEventServiceItem, isMunicipalMeeting,
-    parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail, bodyDescFromHtml,
+    parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail, bodyDescFromHtml, organizerFromRestAppHtml,
 } from './sitevision';
 
 describe('parseSoleilDate', () => {
@@ -167,6 +167,30 @@ describe('mapRestAppHit', () => {
     it('titel- eller startlösa hits → null', () => {
         expect(mapRestAppHit({ ...hit, title: '' }, BASE_URL, 'Eskilstuna')).toBeNull();
         expect(mapRestAppHit({ ...hit, info: {} }, BASE_URL, 'Eskilstuna')).toBeNull();
+    });
+});
+
+describe('organizerFromRestAppHtml', () => {
+    // Utdrag ur visiteskilstuna.se:s registerInitialState-blob (12/10).
+    const page = (organizer: string) =>
+        `<script>AppRegistry.registerInitialState('12.48cb',{"title":"Språkcafé","info":{"ticket":"",` +
+        `"organizer":${organizer},"facebook":"","start":"2026-10-12 15:00",` +
+        `"location":{"name":"Stadsbiblioteket","id":"4.70a8"}}});</script>`;
+
+    it('läser arrangörens namn, trimmat', () => {
+        const html = page('{"name":" Röda Korset och Eskilstuna bibliotek ","link":"https://bibliotek.eskilstuna.se/","mail":"","phone":""}');
+        expect(organizerFromRestAppHtml(html)).toBe('Röda Korset och Eskilstuna bibliotek');
+    });
+
+    it('avkodar JSON-escapes och HTML-entiteter', () => {
+        expect(organizerFromRestAppHtml(page('{"name":"Kultur \\u0026 Fritid \\"Scen\\"","link":""}')))
+            .toBe('Kultur & Fritid "Scen"');
+        expect(organizerFromRestAppHtml(page('{"name":"Bild &amp; Form","link":""}'))).toBe('Bild & Form');
+    });
+
+    it('tomt namn eller saknat fält → null', () => {
+        expect(organizerFromRestAppHtml(page('{"name":" ","link":""}'))).toBeNull();
+        expect(organizerFromRestAppHtml('<html><body>Inget här</body></html>')).toBeNull();
     });
 });
 

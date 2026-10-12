@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickBetterDescription, pickBetterPrice, looksStripped, isPlaceholderDescription } from './contentRefresh';
+import { pickBetterDescription, pickBetterHost, pickBetterPrice, looksStripped, isPlaceholderDescription } from './contentRefresh';
 
 describe('pickBetterDescription', () => {
     const full = 'Vi firar en enkel mässa tillsammans. Efteråt serveras frukost i församlingshemmet, och alla är välkomna att stanna kvar en stund.';
@@ -90,5 +90,23 @@ describe('pickBetterDescription - kapade utdrag (Billetto 1/10)', () => {
     });
     it('inte när den färska bara är lite längre', () => {
         expect(pickBetterDescription(utdrag, `${utdrag.slice(0, -3)}tt och dans.`)).toBeNull();
+    });
+});
+
+describe('pickBetterHost (evenemangsguiderna, Visit Eskilstuna 12/10)', () => {
+    const GUIDE = 'Visit Eskilstuna — Evenemangsguiden';
+    it('källans eget namn eller tomt → arrangören', () => {
+        expect(pickBetterHost(GUIDE, 'Eskilstuna bibliotek', GUIDE)).toBe('Eskilstuna bibliotek');
+        expect(pickBetterHost('', 'Eskilstuna bibliotek', GUIDE)).toBe('Eskilstuna bibliotek');
+        expect(pickBetterHost(null, ' Eskilstuna  bibliotek ', GUIDE)).toBe('Eskilstuna bibliotek');
+    });
+    it('en sparad arrangör (eller handrättad värd) rörs aldrig', () => {
+        expect(pickBetterHost('Parken Zoo i Eskilstuna', 'Parken Zoo', GUIDE)).toBeNull();
+    });
+    it('ingen arrangör från källan, eller bara källans namn igen → inget byte', () => {
+        expect(pickBetterHost(GUIDE, undefined, GUIDE)).toBeNull();
+        expect(pickBetterHost(GUIDE, '  ', GUIDE)).toBeNull();
+        expect(pickBetterHost(GUIDE, GUIDE, GUIDE)).toBeNull();
+        expect(pickBetterHost('Eskilstuna bibliotek', 'Eskilstuna bibliotek', GUIDE)).toBeNull();
     });
 });

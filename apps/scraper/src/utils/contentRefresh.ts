@@ -122,3 +122,22 @@ export function pickBetterPrice(
     if ((stored ?? '').trim()) return null;
     return f;
 }
+
+/**
+ * Värd: byt BARA när det sparade är källans eget namn (eller tomt) och källan
+ * nu ger en riktig arrangör per event. Evenemangsguiderna (Visit Eskilstuna
+ * 12/10: "missvisande att Visit Eskilstuna står som arrangör") sparade
+ * guidens namn på alla event innan detailOrganizer fanns. En värd som redan
+ * är en arrangör — eller rättad för hand — rörs aldrig.
+ */
+export function pickBetterHost(
+    stored: string | null | undefined,
+    fresh: string | null | undefined,
+    sourceHostName: string,
+): string | null {
+    const f = (fresh ?? '').replace(/\s+/g, ' ').trim();
+    if (!f || f === sourceHostName) return null;
+    const s = (stored ?? '').replace(/\s+/g, ' ').trim();
+    if (s && s !== sourceHostName) return null;
+    return f;
+}
