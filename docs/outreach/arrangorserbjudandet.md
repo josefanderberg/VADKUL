@@ -38,6 +38,8 @@ Studion väljer mall själv och visar den ovanför texten ("Mall: …"). Antalen
 
 Siffrorna nämns bara när de är värda att visa: minst 50 visningar, och klicken bara från 10.
 
+Länkfrågan fungerar inte på kommunernas förvaltningar. Se [Kommuner](#kommuner-lärdomar-från-svaren-1210) nedan.
+
 ### Varianterna (7/10): stegvis, inte erbjudandet direkt
 
 Studion har fyra varianter att välja mellan ovanför mejltexten: **Start**, **Erbjudande**,
@@ -83,6 +85,48 @@ som steg två när någon har nappat, eller direkt när det känns rätt.
 
 I studions textruta skrivs paketen som en **fetstilad** rad följd av rader som börjar med
 "- ". **Förhandsvisa** visar hur det ser ut hos mottagaren.
+
+## Kommuner: lärdomar från svaren (12/10)
+
+Två kommuner svarade samma dag. Båda svaren gäller fler än dem.
+
+**Förvaltningarna länkar inte till oss.** Jönköpings kommun (kommunikationsenheten) svarade
+att de inte länkar till enskilda företags webbplatser i marknadsföringssyfte. Kommunen ska
+vara opartisk enligt regeringsformen och får inte gynna enskilda företag utan sakliga skäl.
+Räkna med samma svar från de flesta förvaltningar. Argumentera inte emot: det är en princip,
+inte en bedömning av vadkul.se.
+
+**En evenemangsguide är källan, inte arrangören.** Visit Eskilstuna påpekade att arrangörerna
+själva registrerar sina event i Eskilstunas evenemangsguide, som drivs av Kultur- och
+fritidsförvaltningen. Det var alltså missvisande att Visit Eskilstuna stod som arrangör.
+Rättat i pipelinen 12/10 (`detailOrganizer` i sitevision-motorn, PR #128): eventen visar nu
+arrangören från guiden. Fler kommunala kalendrar fungerar så. Kolla det innan ett mejl kallar
+kommunen arrangör.
+
+### Vad vi frågar kommuner om i stället
+
+- **Rättelser och en kontaktperson för kalendern:** vem ska vi höra av oss till om datat
+  ändras? Frågan är ofarlig och ger en kontakt.
+- **Neutral listning, på samma villkor som andra.** Sakliga skäl och likabehandling är vägen
+  in. Det kan vara en sida om var invånarna hittar evenemang som listar flera kalendrar, eller
+  en sida om hur kommunens öppna data används. Argumentet är att vadkul.se visar alla
+  evenemang i kommunen, oavsett arrangör och utan kostnad. Fråga en gång och tryck inte på.
+- **Länkfrågan** behåller vi för destinationsbolag som drivs som aktiebolag och för övriga
+  arrangörer. De har oftast friare händer än en förvaltning, men vissa svarar som Jönköping.
+
+### Så dokumenteras ett kommunsvar
+
+- **I studion**, som är källan för varje kontakt: status **Svarat** och inte Nej tack, så länge
+  de inte bett oss sluta höra av oss. Skriv under Anteckning vad de sa, deras skäl och ett
+  eventuellt ärendenummer.
+- **Här i tabellen**: bara svar som säger något om hur kommuner resonerar i allmänhet, till
+  exempel en princip, en rättelse eller ett ja. Nästa mall kan bygga på dem. Inga namn på
+  tjänstepersoner, bara roll.
+
+| Datum | Kommun | Vem | Vad de sa | Vad vi gjorde |
+|---|---|---|---|---|
+| 12/10 2026 | Eskilstuna | Visit Eskilstuna, info@ | Evenemangsguiden är inte arrangör. Arrangörerna registrerar själva, och guiden drivs av Kultur- och fritidsförvaltningen. | Arrangören visas per event (PR #128). Svarar när arrangörssidorna är uppdaterade. |
+| 12/10 2026 | Jönköping | Webbansvarig kommunikatör, kommunikationsenheten | Länkar inte till företag i marknadsföringssyfte, med hänvisning till opartiskheten i regeringsformen. Ärende 2026KC159200. | Ingen länk. Tackar och frågar om neutral listning. |
 
 ## Så jobbar du i Marknad
 
@@ -146,6 +190,8 @@ Det här är ingen juridisk rådgivning, men det är utgångspunkten för mallar
 
 ## Öppet
 
+- Studions kommunmall ber förvaltningar om en länk. Byt mot frågan om kontaktperson och neutral
+  listning (se Kommuner ovan). Mallen bor i vadkulyt.
 - Skicka de första 15-20 mejlen, störst först, och se vad som händer.
 - Länkar med `?ref=mejl` för att se om mottagarna klickar (inte byggt).
 - Studsade mejl (mailer-daemon) hanteras inte än.
