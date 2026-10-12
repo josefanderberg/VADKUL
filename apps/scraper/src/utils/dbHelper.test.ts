@@ -11,6 +11,7 @@ const h = vi.hoisted(() => {
     const committedBatches: any[][] = [];
     const upsertCalls: any[] = [];
     const addedDocs: any[] = [];
+    const updatedDocs: { id: string; data: any }[] = [];
     const state = {
         autoId: 0,
         queryCount: 0,                                   // antal where-queries mot Firestore
@@ -25,7 +26,10 @@ const h = vi.hoisted(() => {
             };
         },
         collection: () => ({
-            doc: () => ({ id: `auto-${++state.autoId}` }),
+            doc: (id?: string) => {
+                const docId = id ?? `auto-${++state.autoId}`;
+                return { id: docId, update: async (data: any) => { updatedDocs.push({ id: docId, data }); } };
+            },
             where: () => ({
                 limit: () => ({
                     get: async () => { state.queryCount++; return state.queryResult; },
@@ -37,7 +41,7 @@ const h = vi.hoisted(() => {
             },
         }),
     };
-    return { committedBatches, upsertCalls, addedDocs, state, fakeDb };
+    return { committedBatches, upsertCalls, addedDocs, updatedDocs, state, fakeDb };
 });
 
 vi.mock('../config/firebase', () => ({ db: h.fakeDb }));
@@ -53,11 +57,12 @@ vi.mock('./sqliteHelper', () => ({
     getSyncMeta: vi.fn(() => null),
 }));
 
-import { addEventsBatch, addEventToDb, getEventFromDb, eventExistsInDb, chunkArray } from './dbHelper';
-import { getSqliteEvent, sqliteEventExists } from './sqliteHelper';
+import { addEventsBatch, addEventToDb, getEventFromDb, eventExistsInDb, chunkArray, refreshEventTime } from './dbHelper';
+import { getSqliteEvent, sqliteEventExists, setEventTime } from './sqliteHelper';
 
 const mockedGetSqliteEvent = vi.mocked(getSqliteEvent);
 const mockedSqliteEventExists = vi.mocked(sqliteEventExists);
+const mockedSetEventTime = vi.mocked(setEventTime);
 
 const committedBatches = h.committedBatches;
 const upsertCalls = h.upsertCalls;
@@ -66,6 +71,7 @@ beforeEach(() => {
     committedBatches.length = 0;
     upsertCalls.length = 0;
     h.addedDocs.length = 0;
+    h.updatedDocs.length = 0;
     h.state.autoId = 0;
     h.state.queryCount = 0;
     h.state.queryResult = { empty: true, docs: [] };
@@ -191,5 +197,39 @@ describe('eventExistsInDb', () => {
     it('miss i spegeln → Firestore-fallback', async () => {
         expect(await eventExistsInDb('https://t.se/saknas')).toBe(false);
         expect(h.state.queryCount).toBe(1);
+    });
+});
+
+describe('refreshEventTime', () => {
+    const row = (time: string, hasSpecificTime: number | null) =>
+        ({ url: 'https://t.se/e', time, hasSpecificTime, firestoreId: 'fs-1' } as any);
+
+    it('riktigt klockslag nedgraderas inte till bara datum samma dag', async () => {
+        mockedGetSqliteEvent.mockReturnValue(row('2026-10-14T17:00:00.000Z', 1));
+        // 2026-10-13T22:00Z = lokal midnatt 14/10 (källan visade bara datumet)
+        expect(await refreshEventTime('https://t.se/e', new Date('2026-10-13T22:00:00.000Z'), false)).toBe(false);
+        expect(mockedSetEventTime).not.toHaveBeenCalled();
+    });
+
+    // Korpen Gävle / HockeyAllsvenskan / Höganäs bibliotek 12/10: datum-only
+    // lagrade som tid (flagga 1 på midnatt) satt fast på "kl 02"/"kl 00".
+    it('lagrad midnatt med flaggan satt rättas till bara datum (UTC- och lokal midnatt)', async () => {
+        mockedGetSqliteEvent.mockReturnValue(row('2026-10-19T00:00:00.000Z', 1));   // Zoezi: 02:00 lokal
+        expect(await refreshEventTime('https://t.se/e', new Date('2026-10-19T00:00:00.000Z'), false)).toBe(true);
+        expect(mockedSetEventTime).toHaveBeenLastCalledWith('https://t.se/e', '2026-10-19T12:00:00.000Z', false);
+
+        mockedGetSqliteEvent.mockReturnValue(row('2027-01-28T23:00:00.000Z', 1));   // swehockey: 00:00 lokal
+        expect(await refreshEventTime('https://t.se/e', new Date('2027-01-28T23:00:00.000Z'), false)).toBe(true);
+        expect(mockedSetEventTime).toHaveBeenLastCalledWith('https://t.se/e', '2027-01-29T12:00:00.000Z', false);
+    });
+
+    it('Firestore får flaggan tillsammans med tiden (annars återställer syncen den)', async () => {
+        mockedGetSqliteEvent.mockReturnValue(row('2026-10-13T23:13:00.000Z', 1));   // Uu: 01:13 lokal
+        expect(await refreshEventTime('https://t.se/e', new Date('2026-10-14T11:15:00.000Z'), true)).toBe(true);
+        expect(h.updatedDocs).toHaveLength(1);
+        expect(h.updatedDocs[0].id).toBe('fs-1');
+        expect(h.updatedDocs[0].data.time.toISOString()).toBe('2026-10-14T11:15:00.000Z');
+        expect(h.updatedDocs[0].data.hasSpecificTime).toBe(true);
+        expect(h.updatedDocs[0].data.updatedAt).toBeInstanceOf(Date);
     });
 });
