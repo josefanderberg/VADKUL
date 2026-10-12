@@ -44,6 +44,15 @@ interface DestinationLayer {
     likes?: number;
 }
 
+/** Värdnamnet (inte en delsträng) avgör — facebook.com och dess subdomäner. */
+function isFacebookUrl(url: string): boolean {
+    try {
+        return /(?:^|\.)facebook\.com$/i.test(new URL(url).hostname);
+    } catch {
+        return false;
+    }
+}
+
 /**
  * SLANKT kortlager (2026-09-11). Bar tidigare hela url:en två gånger (`id` +
  * `url`) plus sju fält som destinations redan levererar — webbens
@@ -244,7 +253,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             // FB-värdar från före tvätten i hostFallback bär datumsvans ("X den
             // onsdag, oktober 14 2026 med 167 intresserade.") — tvättas här tills
             // raderna åldrats ut, annars blir svansen en egen arrangörssida.
-            hostName: (row.hostName && row.url.includes('facebook.com/') ? cleanHostName(row.hostName) : row.hostName) || undefined,
+            hostName: (row.hostName && isFacebookUrl(row.url) ? cleanHostName(row.hostName) : row.hostName) || undefined,
             attendees: Number(row.attendees) || undefined,
             price: row.price || undefined,
             isLocationVerified: row.isLocationVerified === 1 ? true : undefined,
