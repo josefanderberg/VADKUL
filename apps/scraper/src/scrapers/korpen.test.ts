@@ -93,4 +93,21 @@ describe('mapWorkout', () => {
         expect(e?.city).toBe('Bjärred');
         expect(e?.coords).toBeUndefined();
     });
+
+    // Korpen Gävle 12/10: pass utan klockslag = UTC-midnatt utskriven som
+    // lokal väggtid (02:00 sommartid, 01:00 vintertid) — datum, inte tid.
+    it('Zoezis "utan klockslag" (UTC-midnatt) blir bara datum, båda tidszonerna', () => {
+        const summer = mapWorkout({ ...workout, startTime: '2026-10-19 02:00:00', endTime: '2026-10-19 02:00:00' } as any, assoc);
+        expect(summer?.hasSpecificTime).toBe(false);
+        expect(summer?.startDate.toISOString()).toBe('2026-10-19T00:00:00.000Z');
+        const winter = mapWorkout({ ...workout, startTime: '2026-10-26 01:00:00', endTime: '2026-10-26 13:58:00' } as any, assoc);
+        expect(winter?.hasSpecificTime).toBe(false);
+        expect(winter?.startDate.toISOString()).toBe('2026-10-26T00:00:00.000Z');
+    });
+
+    it('riktiga klockslag kring platshållaren behålls som tid', () => {
+        expect(mapWorkout({ ...workout, startTime: '2026-10-17 10:00:00' } as any, assoc)?.hasSpecificTime).toBe(true);
+        // 02:00 lokal VINTERTID är 01:00Z — inte platshållaren
+        expect(mapWorkout({ ...workout, startTime: '2026-11-02 02:00:00' } as any, assoc)?.hasSpecificTime).toBe(true);
+    });
 });

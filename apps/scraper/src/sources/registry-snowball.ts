@@ -910,7 +910,20 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Uu',
         region: 'national',
         engine: 'sitemap' as const,
-        config: { sitemapUrl: 'https://www.uu.se/sitemaps/articles-1.xml', urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: '', maxUrls: 200 },
+        config: {
+            sitemapUrl: 'https://www.uu.se/sitemaps/articles-1.xml', urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: '', maxUrls: 200,
+            // Sidans eget Datum-fält ("14 oktober 2026, kl. 13.15–15.00") — 12/10:
+            // fritexten tog ISO-datumet ur sidans skript (dagen utan tid) och
+            // klocksökningen sedan SiteVision-webappens version "1.13.0" → alla
+            // bibliotekskurser kl 01:13. Fältet bär året, så arkivsidor faller
+            // på fönstret i stället för att årsgissas fram ett år.
+            // Engelska sidor har etiketten "Date".
+            detailDateSelector: 'dl[class^="event-information"] dt:contains("Datum") + dd, dl[class^="event-information"] dt:contains("Date") + dd',
+            // Slugen börjar med STARTdatumet (/2026-10-14-lar-dig-…). Arkivsidor
+            // för passerade perioder ("17 maj – 30 aug 2025") årsgissades annars
+            // fram som spök-event; nu hämtas bara sidor nära fönstret.
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-[a-z0-9]/,
+        },
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {

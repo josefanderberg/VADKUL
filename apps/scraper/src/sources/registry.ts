@@ -1624,6 +1624,14 @@ export const SOURCES: Source[] = [
             // räcker och ingen årsgissning behövs.
             sitemapUrl: 'https://www.gummifabriken.se/sitemap.xml',
             urlPatterns: [/\/evenemang\/[a-z0-9-]+$/i],
+            // Samma /evenemang/<slug> bär kalenderns KATEGORIFILTER (h1
+            // "Evenemang", datumet från första kortet i listan — 12/10 låg 5
+            // sådana "Evenemang" på kartan) och CMS-mallar ("Här ska titeln
+            // in"). Inga event — hoppa över dem före fetch.
+            urlBlacklist: [
+                /\/evenemang\/(?:barn-och-ungdom|festival-och-fest|film|forelasning-och-samtal|humor-och-show|konst|litteratur|marknad-och-massa|mat-och-socialt|musik|nycirkus|spel-och-sport|teater-och-dans|workshop-och-skapande)$/i,
+                /\/evenemang\/(?:pausochmeny|pausservering|forestallningsmeny|mall-[a-z0-9-]+)$/i,
+            ],
             defaultCity: 'Värnamo',
             maxUrls: 250,
         },
