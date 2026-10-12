@@ -1,3 +1,6 @@
+> **Historik.** Skrivet under Vite/Leaflet-tiden och inaktuellt (webben kör Next.js och MapLibre).
+> Aktuell översikt: [../PM.md](../PM.md) och [../README.md](../README.md).
+
 # VADKUL
 
 VADKUL is a spontaneous social event application built with modern web technologies. It allows users to create, view, and join events on a map or list, fostering real-time social interactions.
