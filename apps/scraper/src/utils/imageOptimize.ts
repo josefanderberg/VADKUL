@@ -12,7 +12,9 @@
  *   - png UTAN alfa → konvertera till jpeg q75 (foto-PNG:er är värstingarna,
  *     1,7 MB styck; contentType följer BYTES, sökvägen/ext får ljuga —
  *     webbläsare går på content-type)
- *   - png MED alfa → bara resampling (behåll transparensen)
+ *   - png MED alfa → bara resampling (behåll transparensen) — MEN en alfakanal
+ *     där varje pixel ändå är ogenomskinlig (pngAlphaIsOpaque, 5/10: 11 av 15
+ *     PNG:er i bucketen, 2/3 av PNG-bytena) räknas som ingen alfa → jpeg
  *   - resultatet används BARA om det är ≥15 % mindre och avkodbart —
  *     sips FÖRSTORAR gärna redan välpackade småbilder.
  */
@@ -22,6 +24,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
+import { pngAlphaIsOpaque } from './pngAlpha';
 
 export const MAX_WIDTH = 900;
 export const JPEG_QUALITY = 75;
@@ -71,7 +74,10 @@ export function optimizeImageBuffer(buf: Buffer, contentType: string): OptimizeR
         const props = readProps(tmp);
         if (!props) return orig;
 
-        const wantJpeg = props.format === 'jpeg' || (props.format === 'png' && !props.hasAlpha);
+        // Alfakanalen räknas bara om någon pixel faktiskt är genomskinlig
+        // (null = vet inte → räkna som använd, behåll transparensen).
+        const alphaUsed = props.hasAlpha && !(props.format === 'png' && pngAlphaIsOpaque(buf) === true);
+        const wantJpeg = props.format === 'jpeg' || (props.format === 'png' && !alphaUsed);
         const wantResize = props.width > MAX_WIDTH;
         if (!wantResize && !wantJpeg) return orig;               // alfa-png i rätt storlek
         if (!wantResize && props.format === 'jpeg' && buf.length < 60_000) return orig; // liten färdig jpeg — omkodning brukar förstora
