@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Send, MessageCircle, ChevronDown, Lock, UserPlus, Users, Link2, Check } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Send, MessageCircle, ChevronDown, Lock, UserPlus, Users, Link2, Check, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { linkEventChatService } from '@/services/eventChatService';
 import {
@@ -13,6 +13,9 @@ import {
 } from '@/services/privateChatService';
 import { isThreadMember, pickPrivateThread, privateInviteThreadId, threadOthersLabel, type PrivateThreadLite } from '@/utils/privateChat';
 import { inviteUrl } from '@/utils/rsvpTransition';
+import { canModerate, visibleMessages } from '@/utils/chatModeration';
+import { useModeration } from '@/services/moderationService';
+import ChatModerationMenu, { type ChatModerationTarget } from './ChatModerationMenu';
 import type { ChatMessage } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -43,12 +46,14 @@ function formatTime(msg: ChatMessage): string {
 }
 
 /** Meddelandelistan + skrivfältet - samma för publik och privat chatt. */
-function ChatThread({ messages, myUid, emptyText, placeholder, onSend }: {
+function ChatThread({ messages, myUid, emptyText, placeholder, onSend, onModerate }: {
     messages: ChatMessage[];
     myUid: string;
     emptyText: string;
     placeholder: string;
     onSend: (text: string) => Promise<void>;
+    /** ⋯ på någon annans bubbla - öppnar anmäl/blockera-menyn. */
+    onModerate: (msg: ChatMessage) => void;
 }) {
     const [text, setText] = useState('');
     const [sending, setSending] = useState(false);
@@ -85,7 +90,7 @@ function ChatThread({ messages, myUid, emptyText, placeholder, onSend }: {
                 {messages.map((msg) => {
                     const isMe = msg.senderId === myUid;
                     return (
-                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div key={msg.id} className={`flex items-end gap-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-sm shadow-sm ${
                                 isMe
                                     ? 'bg-[#006AA7] text-white rounded-br-sm'
@@ -101,6 +106,20 @@ function ChatThread({ messages, myUid, emptyText, placeholder, onSend }: {
                                     {formatTime(msg)}
                                 </span>
                             </div>
+                            {/* Andras bubblor: anmäl/blockera (App Store-regel 1.2
+                                i appen, samma skydd här). Diskret men alltid
+                                synlig - hover finns inte på mobilen. */}
+                            {canModerate(msg, myUid) && (
+                                <button
+                                    type="button"
+                                    onClick={() => onModerate(msg)}
+                                    aria-label={`Anmäl eller blockera ${msg.senderName || 'avsändaren'}`}
+                                    title="Anmäl eller blockera"
+                                    className="shrink-0 mb-1 p-1 rounded-full text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:text-zinc-600 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                    <MoreHorizontal size={14} aria-hidden />
+                                </button>
+                            )}
                         </div>
                     );
                 })}
@@ -151,6 +170,12 @@ function ChatThread({ messages, myUid, emptyText, placeholder, onSend }: {
  * (utils/privateChat + privateChatService). Tills reglerna är deployade
  * svarar Firestore permission-denied och blocket visar en lugn "inte
  * aktiverad än"-rad (privUnavailable) i stället för inbjudningsknapparna.
+ *
+ * MODERERING (12/10, port av appens chattmoderering): ⋯ på någon annans
+ * bubbla - i båda blocken - öppnar ChatModerationMenu (anmäl meddelandet /
+ * blockera avsändaren). Blockerade avsändares meddelanden och de man själv
+ * anmält göms ur båda trådarna (utils/chatModeration visibleMessages,
+ * listan i services/moderationService - samma dokument som appen).
  */
 export default function EventChatPanel({ eventId, eventTitle, userCreated, invite = null, onRequireLogin }: Props) {
     const { user } = useAuth();
@@ -164,6 +189,8 @@ export default function EventChatPanel({ eventId, eventTitle, userCreated, invit
     const [joining, setJoining] = useState(false);
     // "Kopierad ✓" på knappen en stund efter kopieringen.
     const [copied, setCopied] = useState(false);
+    // Meddelandet vars anmäl/blockera-meny är öppen (null = stängd).
+    const [moderationTarget, setModerationTarget] = useState<ChatModerationTarget | null>(null);
 
     // uid (inte user-objektet) som effekt-nyckel: AuthContext byter referens
     // vid token-refresh och skulle annars riva upp lyssnaren i onödan.
@@ -177,6 +204,7 @@ export default function EventChatPanel({ eventId, eventTitle, userCreated, invit
         setPrivMessages([]);
         setPrivUnavailable(false);
         setCopied(false);
+        setModerationTarget(null);
         // Utloggad = ingen lyssnare alls. Chatten är låst (se de låsta raderna
         // nedan), och en prenumeration hade bara bränt läsningar på innehåll
         // som ändå inte visas. Loggar man in monteras lyssnaren direkt (uid
@@ -213,6 +241,18 @@ export default function EventChatPanel({ eventId, eventTitle, userCreated, invit
         const t = setTimeout(() => setCopied(false), 2500);
         return () => clearTimeout(t);
     }, [copied]);
+
+    // Blockerade avsändare och meddelanden man själv anmält göms ur båda
+    // trådarna. Listan hämtas en gång per konto och besök (moderationService).
+    const { blocked, hidden } = useModeration(uid);
+    const visiblePublic = useMemo(
+        () => visibleMessages(messages, uid, blocked, hidden),
+        [messages, uid, blocked, hidden],
+    );
+    const visiblePrivate = useMemo(
+        () => visibleMessages(privMessages, uid, blocked, hidden),
+        [privMessages, uid, blocked, hidden],
+    );
 
     const handleJoin = async () => {
         if (!user || !fran || joining) return;
@@ -316,10 +356,16 @@ export default function EventChatPanel({ eventId, eventTitle, userCreated, invit
         );
     }
 
+    const moderatePublic = (msg: ChatMessage) => setModerationTarget({ message: msg, chat: 'public', threadId: null });
+    const moderatePrivate = (msg: ChatMessage) => {
+        if (activeThreadId) setModerationTarget({ message: msg, chat: 'private', threadId: activeThreadId });
+    };
+
     // ── PUBLIK ─────────────────────────────────────────────────────────────
-    // Hopfällt läge: inga meddelanden och inte manuellt uppfälld - bara en
-    // rad som visar att chatten finns. Klick fäller upp hela panelen.
-    const publicBlock = messages.length === 0 && !expanded ? (
+    // Hopfällt läge: inga (synliga) meddelanden och inte manuellt uppfälld -
+    // bara en rad som visar att chatten finns. Klick fäller upp hela panelen.
+    // Räknaren och hopfällningen går på det man faktiskt ser.
+    const publicBlock = visiblePublic.length === 0 && !expanded ? (
         <button
             type="button"
             onClick={() => setExpanded(true)}
@@ -338,15 +384,16 @@ export default function EventChatPanel({ eventId, eventTitle, userCreated, invit
             <div className="px-3 py-2 flex items-center gap-2 border-b border-border bg-white/60 dark:bg-zinc-900/60">
                 <MessageCircle size={14} className="text-[#006AA7]" />
                 <span className={LABEL}>
-                    Chatt {messages.length > 0 && `· ${messages.length}`}
+                    Chatt {visiblePublic.length > 0 && `· ${visiblePublic.length}`}
                 </span>
             </div>
             <ChatThread
-                messages={messages}
+                messages={visiblePublic}
                 myUid={user.uid}
                 emptyText="Inga meddelanden än - bli först att säga hej! 👋"
                 placeholder="Skriv något…"
                 onSend={sendPublic}
+                onModerate={moderatePublic}
             />
         </div>
     );
@@ -416,11 +463,12 @@ export default function EventChatPanel({ eventId, eventTitle, userCreated, invit
                 {inviteButtons('icon')}
             </div>
             <ChatThread
-                messages={privMessages}
+                messages={visiblePrivate}
                 myUid={user.uid}
                 emptyText="Inga meddelanden än - säg hej till ditt sällskap! 👋"
                 placeholder="Skriv till ditt sällskap…"
                 onSend={sendPrivate}
+                onModerate={moderatePrivate}
             />
         </div>
     ) : (
@@ -464,6 +512,15 @@ export default function EventChatPanel({ eventId, eventTitle, userCreated, invit
         <div className="flex flex-col gap-2">
             {publicBlock}
             {privateBlock}
+            {moderationTarget && (
+                <ChatModerationMenu
+                    target={moderationTarget}
+                    eventId={eventId}
+                    eventTitle={eventTitle ?? ''}
+                    myUid={user.uid}
+                    onClose={() => setModerationTarget(null)}
+                />
+            )}
         </div>
     );
 }

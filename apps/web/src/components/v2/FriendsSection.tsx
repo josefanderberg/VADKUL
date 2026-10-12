@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, Users, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, UserX, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -11,6 +11,8 @@ import { acceptFriendRequest, fetchFriendProfile, fetchMyFriends, removeFriend }
 import { bucketFriendRows, type FriendRow } from '@/utils/friendStatus';
 import { friendRsvpVisible, upcomingFriendEvents, type FriendUpcomingEvent } from '@/utils/friendEvents';
 import { fetchDeepLinkEvent } from '@/utils/eventSeed';
+import { genitive, sortBlocked, type BlockRow } from '@/utils/chatModeration';
+import { blockUser, unblockUser, useModeration } from '@/services/moderationService';
 
 /**
  * VÄNNER i profilpanelen (spår 3, 7/10 kväll - "man kan gå in på sina
@@ -26,6 +28,12 @@ import { fetchDeepLinkEvent } from '@/utils/eventSeed';
  * via /api/event?id= (samma ~1 kB-uppslag som djuplänken) - ALDRIG
  * Firestore per event. Finns eventet i datan hoppar klicket dit
  * (onPickEvent); annars blir raden en vanlig ?event=-djuplänk.
+ *
+ * BLOCKERING (12/10, port av appens VannerSektion, services/
+ * moderationService): "Blockera" i den utfällda vänprofilen och på en
+ * förfrågan, med en bekräftelseruta i raden. Att blockera tar bort
+ * vänskapen/förfrågan och döljer personens chattmeddelanden; de blockerade
+ * listas sist med "Häv". Blockeringslistan hämtas först när mappen fälls ut.
  */
 
 interface FriendsSectionProps {
@@ -46,7 +54,7 @@ function eventTimeLabel(evt: LinkEvent): string {
     return `${day} kl ${evt.time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
-function FriendAvatar({ row }: { row: FriendRow }) {
+function FriendAvatar({ row }: { row: { name: string | null; photoURL?: string | null } }) {
     return row.photoURL ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={row.photoURL} alt="" className="w-8 h-8 rounded-full object-cover bg-slate-200 shrink-0" />
@@ -66,6 +74,9 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
     const [openFriendUid, setOpenFriendUid] = useState<string | null>(null);
     const [details, setDetails] = useState<Record<string, FriendDetail>>({});
     const [confirmRemoveUid, setConfirmRemoveUid] = useState<string | null>(null);
+    // Bekräftelserutan för Blockera (under raden) och tvåtrycket för Häv.
+    const [confirmBlockUid, setConfirmBlockUid] = useState<string | null>(null);
+    const [confirmUnblockUid, setConfirmUnblockUid] = useState<string | null>(null);
     // Integritetsgrinden - null tills users-dokumentet lästs.
     const [rsvpVisible, setRsvpVisible] = useState<boolean | null>(null);
     const [visibleBusy, setVisibleBusy] = useState(false);
@@ -79,6 +90,8 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
             setExpanded(false);
             setOpenFriendUid(null);
             setConfirmRemoveUid(null);
+            setConfirmBlockUid(null);
+            setConfirmUnblockUid(null);
         }
     }, [panelOpen]);
 
@@ -104,7 +117,15 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
         return () => { alive = false; };
     }, [expanded, uid, loadFriends]);
 
-    const buckets = useMemo(() => bucketFriendRows(rows ?? []), [rows]);
+    // Blockeringslistan - hämtas först när mappen fälls ut (reads-budgeten).
+    const { rows: blockRows, blocked } = useModeration(expanded ? uid : null);
+    const blockList = useMemo(() => sortBlocked(blockRows), [blockRows]);
+
+    // Blockerade försvinner ur vänlistan även om en gammal rad skulle finnas kvar.
+    const buckets = useMemo(
+        () => bucketFriendRows((rows ?? []).filter(r => !blocked.has(r.uid))),
+        [rows, blocked],
+    );
 
     const handleAccept = async (row: FriendRow) => {
         if (!uid) return;
@@ -135,11 +156,76 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
         }
     };
 
+    /** Blockera - vänskapen/förfrågan rivs i samma batch (moderationService). */
+    const handleBlock = async (row: FriendRow) => {
+        if (!uid) return;
+        setBusyUid(row.uid);
+        try {
+            await blockUser(uid, { uid: row.uid, name: row.name });
+            setRows(prev => prev?.filter(r => r.uid !== row.uid) ?? prev);
+            setOpenFriendUid(cur => cur === row.uid ? null : cur);
+            toast.success(`${row.name ?? 'Personen'} är blockerad.`);
+        } catch {
+            toast.error('Kunde inte blockera just nu. Försök igen.');
+        } finally {
+            setBusyUid(null);
+            setConfirmBlockUid(null);
+        }
+    };
+
+    const handleUnblock = async (row: BlockRow) => {
+        if (!uid) return;
+        setBusyUid(row.uid);
+        try {
+            await unblockUser(uid, row.uid);
+        } catch {
+            toast.error('Kunde inte häva blockeringen just nu. Försök igen.');
+        } finally {
+            setBusyUid(null);
+            setConfirmUnblockUid(null);
+        }
+    };
+
+    /** Bekräftelserutan under en rad - blockeringen är för allvarlig för ett
+     *  ensamt klick, men ingen window.confirm (kortets stil). */
+    const blockConfirm = (row: FriendRow) => {
+        if (confirmBlockUid !== row.uid) return null;
+        const name = row.name ?? 'personen';
+        const relation = row.status === 'accepted' ? 'Ni är inte vänner längre' : 'Förfrågan tas bort';
+        return (
+            <div className="mx-4 mb-2 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/60 dark:bg-red-950/20 px-3 py-2.5">
+                <p className="text-[11px] font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
+                    <span className="font-black text-slate-800 dark:text-slate-100">Blockera {name}?</span>{' '}
+                    {relation} och du ser inte {genitive(name)} meddelanden i chattarna. {name} får inget besked om det.
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => void handleBlock(row)}
+                        disabled={busyUid === row.uid}
+                        className="rounded-full bg-red-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-red-700 disabled:opacity-50 transition"
+                    >
+                        {busyUid === row.uid ? 'Blockerar…' : 'Blockera'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setConfirmBlockUid(null)}
+                        disabled={busyUid === row.uid}
+                        className="rounded-full px-3 py-1.5 text-[11px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                    >
+                        Avbryt
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     // Vännens "profil": users-läsning (namn + listorna) och eventuppslag.
     const openFriend = async (row: FriendRow) => {
         if (openFriendUid === row.uid) { setOpenFriendUid(null); return; }
         setOpenFriendUid(row.uid);
         setConfirmRemoveUid(null);
+        setConfirmBlockUid(null);
         if (details[row.uid]?.state === 'ready' || details[row.uid]?.state === 'hidden') return;
         setDetails(prev => ({ ...prev, [row.uid]: { state: 'loading', events: [] } }));
         const profile = await fetchFriendProfile(row.uid);
@@ -207,31 +293,44 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
                         <>
                             {/* Förfrågningar TILL mig - överst, de kräver svar. */}
                             {buckets.incoming.map(row => (
-                                <div key={row.uid} className="flex items-center gap-2.5 px-4 py-2">
-                                    <FriendAvatar row={row} />
-                                    <span className="flex-1 min-w-0 text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                                        {row.name ?? 'En VADKUL-användare'}
-                                        <span className="block text-[10px] font-semibold text-slate-400">vill bli din vän</span>
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => void handleAccept(row)}
-                                        disabled={busyUid === row.uid}
-                                        className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#006AA7] text-white px-2.5 py-1.5 text-[11px] font-black hover:bg-[#005590] disabled:opacity-50 transition"
-                                    >
-                                        <Check size={12} strokeWidth={3} aria-hidden />
-                                        Acceptera
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => void handleRemove(row)}
-                                        disabled={busyUid === row.uid}
-                                        aria-label="Avböj vänförfrågan"
-                                        title="Avböj"
-                                        className="shrink-0 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                                    >
-                                        <X size={14} aria-hidden />
-                                    </button>
+                                <div key={row.uid}>
+                                    <div className="flex items-center gap-2.5 px-4 py-2">
+                                        <FriendAvatar row={row} />
+                                        <span className="flex-1 min-w-0 text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                                            {row.name ?? 'En VADKUL-användare'}
+                                            <span className="block text-[10px] font-semibold text-slate-400">vill bli din vän</span>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleAccept(row)}
+                                            disabled={busyUid === row.uid}
+                                            className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#006AA7] text-white px-2.5 py-1.5 text-[11px] font-black hover:bg-[#005590] disabled:opacity-50 transition"
+                                        >
+                                            <Check size={12} strokeWidth={3} aria-hidden />
+                                            Acceptera
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleRemove(row)}
+                                            disabled={busyUid === row.uid}
+                                            aria-label="Avböj vänförfrågan"
+                                            title="Avböj"
+                                            className="shrink-0 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                        >
+                                            <X size={14} aria-hidden />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmBlockUid(cur => cur === row.uid ? null : row.uid)}
+                                            disabled={busyUid === row.uid}
+                                            aria-label={`Blockera ${row.name ?? 'personen'}`}
+                                            title="Blockera"
+                                            className="shrink-0 p-1.5 -ml-1.5 rounded-full text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 transition-colors"
+                                        >
+                                            <UserX size={14} aria-hidden />
+                                        </button>
+                                    </div>
+                                    {blockConfirm(row)}
                                 </div>
                             ))}
 
@@ -300,16 +399,27 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
                                                         })}
                                                     </ul>
                                                 )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => confirmRemoveUid === row.uid ? void handleRemove(row) : setConfirmRemoveUid(row.uid)}
-                                                    disabled={busyUid === row.uid}
-                                                    className={`mt-1.5 text-[10px] font-bold transition-colors ${confirmRemoveUid === row.uid ? 'text-red-600' : 'text-slate-400 hover:text-red-500'}`}
-                                                >
-                                                    {confirmRemoveUid === row.uid ? 'Säkert? Tryck igen för att ta bort' : 'Ta bort vän'}
-                                                </button>
+                                                <div className="mt-1.5 flex items-center gap-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => confirmRemoveUid === row.uid ? void handleRemove(row) : setConfirmRemoveUid(row.uid)}
+                                                        disabled={busyUid === row.uid}
+                                                        className={`text-[10px] font-bold transition-colors ${confirmRemoveUid === row.uid ? 'text-red-600' : 'text-slate-400 hover:text-red-500'}`}
+                                                    >
+                                                        {confirmRemoveUid === row.uid ? 'Säkert? Tryck igen för att ta bort' : 'Ta bort vän'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setConfirmBlockUid(cur => cur === row.uid ? null : row.uid)}
+                                                        disabled={busyUid === row.uid}
+                                                        className="text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors"
+                                                    >
+                                                        Blockera
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
+                                        {open && blockConfirm(row)}
                                     </div>
                                 );
                             })}
@@ -331,6 +441,31 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
                                         className="shrink-0 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                                     >
                                         <X size={14} aria-hidden />
+                                    </button>
+                                </div>
+                            ))}
+
+                            {/* Blockerade - dämpade, med häv (tvåtryck som Ta bort vän). */}
+                            {blockList.length > 0 && (
+                                <p className="px-4 pt-2 pb-0.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    Blockerade
+                                </p>
+                            )}
+                            {blockList.map(row => (
+                                <div key={row.uid} className="flex items-center gap-2.5 px-4 py-1.5 opacity-70">
+                                    <FriendAvatar row={row} />
+                                    <span className="flex-1 min-w-0 text-xs font-semibold text-slate-500 truncate">
+                                        {row.name ?? 'En VADKUL-användare'}
+                                        <span className="block text-[10px] text-slate-400">Blockerad</span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => confirmUnblockUid === row.uid ? void handleUnblock(row) : setConfirmUnblockUid(row.uid)}
+                                        disabled={busyUid === row.uid}
+                                        aria-label={`Häv blockeringen av ${row.name ?? 'användaren'}`}
+                                        className={`shrink-0 text-[11px] font-black transition-colors ${confirmUnblockUid === row.uid ? 'text-red-600' : 'text-[#006AA7] hover:text-[#005590]'}`}
+                                    >
+                                        {confirmUnblockUid === row.uid ? 'Säkert? Tryck igen' : 'Häv'}
                                     </button>
                                 </div>
                             ))}
