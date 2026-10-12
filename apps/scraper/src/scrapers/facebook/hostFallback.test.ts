@@ -43,4 +43,11 @@ describe('cleanHostName', () => {
         expect(cleanHostName('Bio Roy · Sida · Biograf')).toBe('Bio Roy');
         expect(cleanHostName('Gretas G\\u00f6teborgMeddelande')).toBe('Gretas Göteborg');
     });
+    it('släpper datum- och intresse-svansen ur og:description (12/10)', () => {
+        expect(cleanHostName('Folkuniversitetet Syd den onsdag, oktober 14 2026 med 167 intresserade.')).toBe('Folkuniversitetet Syd');
+        expect(cleanHostName('Eyragården, Kävlinge Kommun den onsdag, oktober 14 2026')).toBe('Eyragården, Kävlinge Kommun');
+        expect(cleanHostName('Malmö Opera on Friday, October 16 2026 with 12 people interested')).toBe('Malmö Opera');
+        expect(cleanHostName('Klubb Lördag')).toBe('Klubb Lördag');
+        expect(cleanHostName('Jazz on Sunday')).toBe('Jazz on Sunday');
+    });
 });

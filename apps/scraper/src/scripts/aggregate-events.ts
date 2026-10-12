@@ -7,6 +7,7 @@ import { firstSeenExport } from '../utils/firstSeenExport';
 import { eventKey } from '../utils/eventKey';
 import { publishableImageUrl } from '../utils/imageFilter';
 import { sanitizeEndDate } from '../utils/eventEnd';
+import { cleanHostName } from '../scrapers/facebook/hostFallback';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
 import { buildAppFeeds, loadCities, APP_FEED_DAYS } from '../utils/appFeed';
 import * as path from 'path';
@@ -240,7 +241,10 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             // Sitevision-sökvägar, data:-pixlar). Lagas här så webben OCH
             // app-flödet (bilder joinas ur cards) får en laddbar länk.
             coverImage: publishableImageUrl(row.coverImage, row.url),
-            hostName: row.hostName || undefined,
+            // FB-värdar från före tvätten i hostFallback bär datumsvans ("X den
+            // onsdag, oktober 14 2026 med 167 intresserade.") — tvättas här tills
+            // raderna åldrats ut, annars blir svansen en egen arrangörssida.
+            hostName: (row.hostName && row.url.includes('facebook.com/') ? cleanHostName(row.hostName) : row.hostName) || undefined,
             attendees: Number(row.attendees) || undefined,
             price: row.price || undefined,
             isLocationVerified: row.isLocationVerified === 1 ? true : undefined,
