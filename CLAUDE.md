@@ -28,6 +28,13 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 - Kart-/UI-ändringar: läs `.claude/skills/kart-ui/` först — där ligger fastslagna ägarbeslut (borttagna features ska inte tillbaka).
 - Pipelineändringar: läs `.claude/skills/pipeline/` först.
 
+## Outreach och kontakter
+
+- **Studion är källan för varje kontakt** med arrangörer och kommuner (vadkul.se/admin -> Marknad, körs på minin). Zoho-mejlen synkas dit var tionde minut med hela texten, kopiorna och anteckningar per arrangör. Fråga inte Josef om en mejlväxling som redan finns där - läs den:
+  `ssh mini 'cd ~/Repos/vadkulyt && /opt/homebrew/bin/python3 mejl.py konversation <namn eller id>'` (utan namn: alla arrangörer med mejl).
+- Strategin: `docs/outreach/arrangorserbjudandet.md` (trappan, svarsloggen, reglerna) och `docs/outreach/kommunstrategi.md` (kommuner).
+- Svar och nya mejl läggs som **utkast i Zoho** via studion (`mejl.skicka` med `utkast`). Josef skickar själv.
+
 ## Miljö-gotchas
 
 - Icke-interaktiv shell får gammal node — prefixa: `PATH="$HOME/.nvm/versions/node/v22.22.0/bin:$PATH"`.
