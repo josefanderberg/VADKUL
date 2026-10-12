@@ -179,6 +179,13 @@ export interface Source {
      * i run-historiken istället för att dränka databasen (SvK-floden 2026-06-11).
      */
     maxSavedPerRun?: number;
+    /**
+     * Per-källa-innehålls-svep (YYYY-MM-DD): ett datum NYARE än runnerns
+     * CONTENT_SWEEP_VERSION ger BARA den här källan en engångs full-refresh
+     * vid nästa körning — när en motorändring ska läka källans kända event
+     * utan att alla källor sveps om. Lämnas kvar; svepet stämplas per källa.
+     */
+    contentSweep?: string;
     /** ISO-datum (YYYY-MM-DD) när källan senast bevisat fungerade i prod */
     lastVerified?: string;
     /** Kända fallgropar — pagination, login, rate limits, malformed JSON etc. */

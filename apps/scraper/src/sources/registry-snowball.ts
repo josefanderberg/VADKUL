@@ -538,8 +538,10 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Visit Arboga',
         region: 'arboga',
         engine: 'sitevision' as const,
-        config: { urls: ["https://visitarboga.se/download/18.e8970c418b6ab9102db98b"], defaultCity: 'Arboga', restApi: {"url":"https://visitarboga.se/rest-api/Evenemang"} },
+        // detailOrganizer: arrangören per event, inte guiden (se visiteskilstuna).
+        config: { urls: ["https://visitarboga.se/download/18.e8970c418b6ab9102db98b"], defaultCity: 'Arboga', restApi: {"url":"https://visitarboga.se/rest-api/Evenemang"}, detailOrganizer: true },
         updateFrequency: 'every-3d' as const,
+        contentSweep: '2026-10-12',
         // Fönstret vidgat 3/9 2026: dry-run visade +157 event mellan 30 och 180
         // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
         windowDays: 180 as const,

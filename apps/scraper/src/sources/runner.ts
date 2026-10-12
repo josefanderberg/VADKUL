@@ -12,7 +12,7 @@
 
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
 import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate, refreshEventContent } from '../utils/dbHelper';
-import { pickBetterDescription, pickBetterPrice } from '../utils/contentRefresh';
+import { pickBetterDescription, pickBetterHost, pickBetterPrice } from '../utils/contentRefresh';
 import { venueBuildingOf } from '../utils/venueFromText';
 import { looksLikeCinema } from '../utils/cinema';
 import { ruleEmojiFor } from '../utils/emojiRules';
@@ -39,10 +39,17 @@ const AUDIT_ENABLED = process.env.AUDIT_ENABLED === 'true';
  * direkt — inte först vid var 4:e körning (upp till fyra veckor för
  * veckokällor). Stämplas per källa i sync_meta när motorn gått igenom;
  * dry-run och motorkrasch stämplar inte. Bumpa datumet när nästa sådan
- * ändring landar, så går svepet igen.
+ * ändring landar, så går svepet igen. Gäller ändringen bara några källor:
+ * sätt `contentSweep` på dem i stället (sweepVersionFor).
  */
 export const CONTENT_SWEEP_VERSION = '2026-09-03';
 const sweepKey = (sourceId: string): string => `contentSweep.${sourceId}`;
+
+/** Svep-versionen som gäller för källan: den globala eller källans egen, den nyaste. */
+export function sweepVersionFor(source: Pick<Source, 'contentSweep'>): string {
+    const own = source.contentSweep;
+    return own && own > CONTENT_SWEEP_VERSION ? own : CONTENT_SWEEP_VERSION;
+}
 
 // 30 dagar. Håller databasen lean — events längre fram fångas ändå senare när
 // de glider in i fönstret (och med färskare info då). Detalj-sidorna hämtas
@@ -164,7 +171,8 @@ export async function runSource(
     // Var 4:e körning per källa är en full-refresh: skip-känt-optimeringen
     // stängs av så ändrade/flyttade event på kända URL:er fångas upp.
     // SCRAPE_FORCE_REFRESH=1 tvingar refresh (reparationer efter motorfixar).
-    const sweepDue = !opts.dryRun && getSyncMeta(sweepKey(source.id)) !== CONTENT_SWEEP_VERSION;
+    const sweepVersion = sweepVersionFor(source);
+    const sweepDue = !opts.dryRun && getSyncMeta(sweepKey(source.id)) !== sweepVersion;
     const refreshKnown = !opts.dryRun && (isRefreshRun(source) || process.env.SCRAPE_FORCE_REFRESH === '1' || sweepDue);
     // URL:er motorn hoppade över FÖRE fetch för att de redan finns i DB.
     // De måste synas i run-historiken — annars ser en frisk källa utan NYA
@@ -184,7 +192,7 @@ export async function runSource(
         },
         refreshKnown,
     };
-    if (refreshKnown) ctx.log(sweepDue ? `full-refresh-körning (innehålls-svep ${CONTENT_SWEEP_VERSION}): kända URL:er re-fetchas` : 'full-refresh-körning: kända URL:er re-fetchas');
+    if (refreshKnown) ctx.log(sweepDue ? `full-refresh-körning (innehålls-svep ${sweepVersion}): kända URL:er re-fetchas` : 'full-refresh-körning: kända URL:er re-fetchas');
 
     // Geocode-cache per källkörning — paraplyn återanvänder samma församling/
     // klubb/ort många gånger; spara Nominatim-anropen.
@@ -315,14 +323,18 @@ export async function runSource(
                     // normalizeRawEvent har redan plockat pris ur texten om källan
                     // inte gav något. Utan detta låg 1 509 kapade och 159 å/ä/ö-
                     // lösa beskrivningar kvar för alltid (kända URL:er hoppas över).
+                    // Värd: källans eget namn → arrangören per event, när källan
+                    // nu ger en (evenemangsguiderna, detailOrganizer 12/10).
                     const betterDesc = pickBetterDescription(storedRow?.description, e.description);
                     const betterPrice = pickBetterPrice(storedRow?.price, e.price);
-                    if ((betterDesc || betterPrice) && await refreshEventContent(e.url, {
+                    const betterHost = pickBetterHost(storedRow?.hostName, e.hostName, source.hostName);
+                    if ((betterDesc || betterPrice || betterHost) && await refreshEventContent(e.url, {
                         ...(betterDesc ? { description: betterDesc } : {}),
                         ...(betterPrice ? { price: betterPrice } : {}),
+                        ...(betterHost ? { hostName: betterHost } : {}),
                     })) {
                         result.updated++;
-                        const what = [betterDesc ? 'beskrivning' : '', betterPrice ? `pris ${betterPrice}` : ''].filter(Boolean).join(' + ');
+                        const what = [betterDesc ? 'beskrivning' : '', betterPrice ? `pris ${betterPrice}` : '', betterHost ? `värd ${betterHost}` : ''].filter(Boolean).join(' + ');
                         ctx.log(`  📝 ${what} uppdaterad: ${e.title.slice(0, 50)}`);
                     }
                 }
@@ -506,7 +518,7 @@ export async function runSource(
     if (!opts.dryRun) persistRun(source, startedAt, result);
     // Motorn gick igenom → svepet är gjort för den här källan (per-event-fel
     // hindrar inte; en motorkrasch returnerar tidigare och stämplar inte).
-    if (sweepDue) setSyncMeta(sweepKey(source.id), CONTENT_SWEEP_VERSION);
+    if (sweepDue) setSyncMeta(sweepKey(source.id), sweepVersion);
     return result;
 }
 

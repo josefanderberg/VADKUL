@@ -46,9 +46,9 @@ vi.mock('../utils/llmAudit', () => ({
     ollamaIsAvailable: vi.fn(async () => false),
 }));
 
-import { runSource, deriveHasSpecificTime, geocodeQueriesFor, countKnownDropped, CONTENT_SWEEP_VERSION } from './runner';
+import { runSource, deriveHasSpecificTime, geocodeQueriesFor, countKnownDropped, sweepVersionFor, CONTENT_SWEEP_VERSION } from './runner';
 import { Source, RawEvent, Engine } from './types';
-import { addEventsBatch, eventExistsInDb, refreshEventPlace } from '../utils/dbHelper';
+import { addEventsBatch, eventExistsInDb, refreshEventContent, refreshEventPlace } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
 import { recordScrapeRun, getSyncMeta, setSyncMeta, getSqliteEvent } from '../utils/sqliteHelper';
 
@@ -151,6 +151,53 @@ describe('runSource — innehålls-svep (engångs full-refresh per källa)', () 
         const result = await run(async () => { throw new Error('boom'); });
         expect(result.errors[0]).toContain('boom');
         expect(syncMetaSetMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('runSource — per-källa-svep (contentSweep)', () => {
+    it('källans datum gäller bara när det är nyare än det globala', () => {
+        expect(sweepVersionFor({})).toBe(CONTENT_SWEEP_VERSION);
+        expect(sweepVersionFor({ contentSweep: '2026-01-01' })).toBe(CONTENT_SWEEP_VERSION);
+        expect(sweepVersionFor({ contentSweep: '2099-01-01' })).toBe('2099-01-01');
+    });
+
+    it('nyare contentSweep än stämpeln → full-refresh, stämplas med källans datum', async () => {
+        let seen: boolean | undefined;
+        await run(async (_cfg, ctx) => { seen = ctx.refreshKnown; return []; }, {}, { contentSweep: '2099-01-01' });
+        expect(seen).toBe(true);
+        expect(syncMetaSetMock).toHaveBeenCalledWith('contentSweep.test-source', '2099-01-01');
+    });
+
+    it('redan svept med källans datum → ingen ny refresh', async () => {
+        syncMetaGetMock.mockReturnValue('2099-01-01');
+        let seen: boolean | undefined;
+        await run(async (_cfg, ctx) => { seen = ctx.refreshKnown; return []; }, {}, { contentSweep: '2099-01-01' });
+        expect(seen).toBe(false);
+        expect(syncMetaSetMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('runSource — refresh byter källans namn mot arrangören', () => {
+    const contentMock = vi.mocked(refreshEventContent);
+    const sqliteMock = vi.mocked(getSqliteEvent);
+
+    beforeEach(() => {
+        existsMock.mockResolvedValue(true);
+        syncMetaGetMock.mockReturnValue(null);   // svep förfallet → refresh-läge
+        contentMock.mockResolvedValue(true);
+    });
+
+    it('sparad källvärd + arrangör från källan → värden byts', async () => {
+        sqliteMock.mockReturnValue({ hostName: 'Testvärd', locationName: 'Stadsbiblioteket', lat: 59.37, lng: 16.51 } as any);
+        const result = await run([makeEvent({ hostName: 'Eskilstuna bibliotek' })]);
+        expect(contentMock).toHaveBeenCalledWith(expect.any(String), { hostName: 'Eskilstuna bibliotek' });
+        expect(result.updated).toBe(1);
+    });
+
+    it('sparad arrangör rörs inte', async () => {
+        sqliteMock.mockReturnValue({ hostName: 'Parken Zoo i Eskilstuna', locationName: 'Parken Zoo', lat: 59.36, lng: 16.48 } as any);
+        await run([makeEvent({ hostName: 'Parken Zoo' })]);
+        expect(contentMock).not.toHaveBeenCalled();
     });
 });
 

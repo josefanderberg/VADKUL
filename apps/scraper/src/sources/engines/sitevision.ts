@@ -81,9 +81,19 @@ export interface SiteVisionConfig {
      * (sv-text-portlet-content-blocken) i stället för meta-taggen. För
      * RESTApp-källorna vars API har content="" och vars meta-description är
      * tom eller falsk (arrangörsnamn/eventtitel) — se varningen vid
-     * backfillDescriptions. Tar över helt när båda flaggorna är satta.
+     * backfillDetails. Tar över helt när båda flaggorna är satta.
      */
     detailBodyDesc?: boolean;
+    /**
+     * Läs eventets ARRANGÖR ur detaljsidan (RESTApp-guidernas inbäddade
+     * `"info":{"organizer":{"name":…}}`) och sätt den som hostName per event.
+     * För kommunernas evenemangsguider där arrangörerna själva registrerar
+     * sina event — guiden är källan, inte arrangören (Visit Eskilstuna
+     * 12/10: "Det blir missvisande att Visit Eskilstuna står som arrangör").
+     * API:t saknar fältet, så det kostar ett throttlat fetch per NYTT event
+     * (alla event på refresh-körningar, så kända event får sin arrangör).
+     */
+    detailOrganizer?: boolean;
     /**
      * Soleil eventListingLocal:s JSON-API (upptäckt på malmo.se 2026-07-09):
      *   GET <origin>/appresource/<pageId>/<portletId>/items?start=0&num=100
@@ -369,6 +379,22 @@ export function mapRestAppHit(
         imageUrl: makeAbsoluteUrl(hit.image?.src || hit.image?.mediumSrc, baseUrl),
         hasSpecificTime: parsed.hasClock ? true : undefined,
     };
+}
+
+/**
+ * Arrangören ur en RESTApp-detaljsida: registerInitialState-blobben bär
+ * `"info":{…,"organizer":{"name":"Eskilstuna bibliotek",…}}` (en gång per
+ * sida). Namnen kommer som arrangören skrev dem (" Eskilstuna bibliotek ")
+ * → trimmas. null när fältet saknas eller inte ser ut som ett namn.
+ * Exporterad för test.
+ */
+export function organizerFromRestAppHtml(html: string): string | null {
+    const m = html.match(/"organizer"\s*:\s*\{\s*"name"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (!m) return null;
+    let name: string;
+    try { name = JSON.parse(`"${m[1]}"`); } catch { return null; }
+    name = decodeHtmlEntities(name).replace(/\s+/g, ' ').trim();
+    return name.length >= 2 && name.length <= 150 ? name : null;
 }
 
 /** Paginera igenom RESTApp-API:t. num=200/sida; servern klarar allt-i-ett. */
@@ -1164,7 +1190,10 @@ export function bodyDescFromHtml(html: string, title: string): string {
 }
 
 /**
- * Detaljside-fallback för beskrivning: list-korten på vissa kommunsajter
+ * Detaljsidorna: beskrivning, kapade titlar och arrangör (en hämtning per
+ * event, oavsett hur många av dem som behövs).
+ *
+ * Beskrivning: list-korten på vissa kommunsajter
  * (Strömsund 106/111 utan desc, Svenljunga 30/30) är text-tomma medan
  * detaljsidan har meta/og-description. Throttlat via domainLimiter; bara
  * event som SAKNAR desc hämtas → självbegränsande när korten räcker.
@@ -1183,21 +1212,37 @@ export function bodyDescFromHtml(html: string, title: string): string {
  * För dem finns i stället `detailBodyDesc` (Arboga-klagomålet 11/9: 320
  * event utan beskrivning): läser brödtexten ur sv-text-portlet-content via
  * bodyDescFromHtml i stället för meta-taggen.
+ *
+ * Arrangör (`detailOrganizer`, Visit Eskilstuna 12/10): bara nya event —
+ * kända hoppas över utom på refresh-körningar, där runnern byter en sparad
+ * guide-värd mot arrangören (contentRefresh.pickBetterHost).
  */
-async function backfillDescriptions(
+async function backfillDetails(
     events: RawEvent[],
     config: SiteVisionConfig,
     ctx: EngineContext,
 ): Promise<void> {
-    if (!config.fetchDetailDesc && !config.detailBodyDesc) return;
+    const wantDesc = !!(config.fetchDetailDesc || config.detailBodyDesc);
+    const wantOrganizer = !!config.detailOrganizer;
+    if (!wantDesc && !wantOrganizer) return;
     let filled = 0;
     let retitled = 0;
+    let organized = 0;
+    let noOrganizer = 0;
     for (const ev of events) {
-        const needsDesc = !ev.description;
-        const needsTitle = isTruncatedTitle(ev.title);
-        if ((!needsDesc && !needsTitle) || !ev.url) continue;
+        if (!ev.url) continue;
+        const needsDesc = wantDesc && !ev.description;
+        const needsTitle = wantDesc && isTruncatedTitle(ev.title);
+        const needsOrganizer = wantOrganizer && !ev.hostName
+            && (!!ctx.refreshKnown || !ctx.isKnownUrl || !(await ctx.isKnownUrl(ev.url)));
+        if (!needsDesc && !needsTitle && !needsOrganizer) continue;
         const html = await fetchHtml(ev.url, config);
         if (!html) continue;
+
+        if (needsOrganizer) {
+            const organizer = organizerFromRestAppHtml(html);
+            if (organizer) { ev.hostName = organizer; organized++; } else noOrganizer++;
+        }
 
         if (needsDesc) {
             let desc: string | undefined;
@@ -1223,6 +1268,9 @@ async function backfillDescriptions(
     }
     if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur ${config.detailBodyDesc ? 'brödtexten' : 'meta-taggar'}`);
     if (retitled) ctx.log(`  detalj-titel: ${retitled} kapade titlar lagade ur og:title`);
+    if (organized || noOrganizer) {
+        ctx.log(`  detalj-arrangör: ${organized} arrangörer ur detaljsidan${noOrganizer ? `, ${noOrganizer} utan (källans namn används)` : ''}`);
+    }
 }
 
 export const sitevisionEngine = async (
@@ -1230,7 +1278,7 @@ export const sitevisionEngine = async (
     ctx: EngineContext,
 ): Promise<RawEvent[]> => {
     // API-vägarna kortsluter HTML-extraktionen. De går via samma
-    // backfillDescriptions() som list-vägen — utan den kunde en API-källa
+    // backfillDetails() som list-vägen — utan den kunde en API-källa
     // aldrig få fetchDetailDesc att göra något (se helpern ovan).
     const apiScraper =
         config.restApi ? scrapeRestAppApi
@@ -1243,7 +1291,7 @@ export const sitevisionEngine = async (
                                     : null;
     if (apiScraper) {
         const apiEvents = await apiScraper(config, ctx);
-        await backfillDescriptions(apiEvents, config, ctx);
+        await backfillDetails(apiEvents, config, ctx);
         return apiEvents;
     }
 
@@ -1424,7 +1472,7 @@ export const sitevisionEngine = async (
         }
     }
 
-    await backfillDescriptions(events, config, ctx);
+    await backfillDetails(events, config, ctx);
 
     return events;
 };
