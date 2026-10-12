@@ -88,7 +88,8 @@ I studions textruta skrivs paketen som en **fetstilad** rad följd av rader som 
 
 ## Kommuner: lärdomar från svaren (12/10)
 
-Två kommuner svarade samma dag. Båda svaren gäller fler än dem.
+Två kommuner svarade samma dag. Båda svaren gäller fler än dem. Hela arbetssättet mot
+kommuner står i [kommunstrategi.md](kommunstrategi.md).
 
 **Förvaltningarna länkar inte till oss.** Jönköpings kommun (kommunikationsenheten) svarade
 att de inte länkar till enskilda företags webbplatser i marknadsföringssyfte. Kommunen ska
