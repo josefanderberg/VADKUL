@@ -56,18 +56,25 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 ## Checklista - det bara Josef kan göra i konsolerna
 
 ### App Store Connect (iOS)
-- [ ] **App Privacy-formuläret**: kolla om det fylldes i 9/10, annars: Data som samlas in = E-postadress (kontofunktion, frivillig), Ungefärlig/Exakt plats (appfunktion, lagras EJ på server, kopplas ej till användaren), Identifierare (push-token för notiser). Ingen spårning, inga annonser.
+- [ ] **App Privacy-formuläret**: uppdatera innan appen skickas till granskning. Svaren står i `app-store-butik.md` under "App Privacy" (utkast 12/10). Nytt mot 9/10: Diagnostik → Kraschdata och Annan diagnostikdata (Crashlytics, från build 7), plus konto- och användarinnehållet som 9/10-utkastet saknade (namn, foton, chatt, vänner, profilfält). Plats tas bort - koordinaterna lämnar aldrig telefonen. Ingen spårning, inga annonser.
 - [ ] Ladda upp skärmbilderna (6,9-tum, 1320x2868) och den nya marknadsikonen om Connect ber om en separat (`app-store-ikon-1024.png`).
 
 ### Google Play Console (Android)
 - [ ] **Finns Play-kontot?** Okänt om ett Google Play Console-utvecklarkonto ens är registrerat (25 USD engångsavgift + identitetsverifiering, kan ta några dagar). Kolla FÖRST - allt annat nedan väntar på det.
-- [ ] **Datasäkerhetsformuläret** (utkast till svar):
-  - Samlas data in? Ja, men bara med frivilligt konto.
-  - E-postadress: samlas in vid kontoskapande (frivilligt), används för kontofunktioner, delas ej, kan raderas.
-  - Plats (ungefärlig/exakt): används i appen för att visa event nära dig, skickas EJ till servern, lagras EJ.
-  - Push: FCM-token lagras för notiser (app-funktionalitet).
-  - Annonser: inga. Ingen tredjepartsdelning. Ingen spårning.
-  - Dataradering: användaren raderar kontot inifrån appen (Profil → Radera konto), då försvinner all kontodata.
+- [ ] **Datasäkerhetsformuläret** (utkast till svar, uppdaterat 12/10 inför build 7 - samma underlag som App Privacy i `app-store-butik.md`):
+  - Samlas data in? Ja. Kraschdata från alla installationer (Crashlytics, från build 7); kontodata och användarinnehåll bara med frivilligt konto.
+  - Krypteras under överföring? Ja (HTTPS). Delas med tredje part? Nej - Firebase är tjänsteleverantör, vilket inte räknas som delning.
+  - Personlig info → Namn, E-postadress, Användar-ID: kontot (frivilligt). Syfte: Appfunktioner och Kontohantering; e-posten även Utvecklarkommunikation (medlemsmejlen). Kan raderas.
+  - Personlig info → Annan info: profilens frivilliga ålder, kön, hemort och har barn. Syfte: Appfunktioner och Anpassning.
+  - Foton och videor → Foton: omslagsbild på event man skapar. Appfunktioner.
+  - Meddelanden → Andra meddelanden i appen: eventchatten (publik och privat). Appfunktioner.
+  - Kontakter: vänlistan i appen. Appfunktioner.
+  - Appaktivitet → Annat användargenererat innehåll: event man skapar eller tipsar om, önskningar, svar, rapporter. Appfunktioner.
+  - **Appinformation och prestanda → Kraschloggar + Diagnostik** (NYTT i build 7): Crashlytics-rapporter med stackspår, enhetsmodell och Android-version. Obligatoriskt (går inte att stänga av i appen). Syfte: Analys och Appfunktioner. Kopplas till uid när man är inloggad, annars till ett installations-ID.
+  - Enhets-ID eller andra ID: FCM-token för push och Crashlytics installations-ID (Google räknar Firebase-installations-ID hit). Syfte: Appfunktioner och Analys.
+  - Plats: deklareras INTE - positionen används bara på enheten och skickas aldrig till servern, så den räknas inte som insamlad (förra utkastet listade den).
+  - Annonser: inga. Ingen spårning.
+  - Dataradering: användaren raderar kontot inifrån appen (Profil → Radera konto), då försvinner kontodatan. Kraschrapporter rensas automatiskt efter 90 dagar.
 - [ ] **Innehållsklassningen** (IARC-enkäten): inga våldsamma/sexuella inslag, inget köp, ingen användargenererad kommunikation utan konto - men ange att appen visar användarskapat innehåll (event + eventchatt för inloggade) och har rapporteringsväg. Väntat utfall: 3+/E for Everyone.
 - [ ] **Play-skärmbilderna**: använd `play/`-varianterna (1320x2640, exakt 2:1 - Plays tak för telefonskärmbilder). Bilderna är tagna på iPhone; vill Google se Android-UI någon gång går de att ta om på en Android-enhet, men kravlistan (320-3840 px, max 2:1, PNG utan alfa, under 8 MB) är uppfylld som de är.
 - [ ] **Produktions-aab:en** från 9/10 finns byggd, men inget Play-butiksbeslut är taget - det här dokumentet gör materialet redo, inte beslutet.
