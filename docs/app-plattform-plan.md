@@ -349,7 +349,7 @@ navraden, filterunionen och interaktionerna är i paritet - se vadkul-app-commit
 - [ ] VADKUL-spotlight och önskningar på stadssidan
 
 *Byggpunkter (kräver nästa native-bygge, ingen JS-OTA):*
-- [ ] expo-clipboard: appens "Kopiera länk" kör RN-kärnans deprecated Clipboard (noterat 11/10)
+- [x] expo-clipboard: appens "Kopiera länk" kör RN-kärnans deprecated Clipboard (noterat 11/10) - bytt i vadkul-app bdd2bc2, ute i iOS build 8 (12/10) tillsammans med Crashlytics (bdd2bc2 + plistfixen 9e1416a) och chattmodereringen (ece2eed, webben b8a504ed, rules 20e18e2e deployade 12/10)
 
 *Aldrig i appen:* boost/priser/köp (Apple-reglerna, §1), PWA-installprompten,
 sådant webben själv rivit (livebilder, sidsvep, funktionsväskan).
