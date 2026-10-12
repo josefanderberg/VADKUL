@@ -5,7 +5,8 @@ import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildTitleFreq, popularRank, normTitlePop } from '../utils/popularEvent';
 import { firstSeenExport } from '../utils/firstSeenExport';
 import { eventKey } from '../utils/eventKey';
-import { normalizeImagePort } from '../utils/imageFilter';
+import { publishableImageUrl } from '../utils/imageFilter';
+import { sanitizeEndDate } from '../utils/eventEnd';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
 import { buildAppFeeds, loadCities, APP_FEED_DAYS } from '../utils/appFeed';
 import * as path from 'path';
@@ -213,8 +214,10 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             title: row.title || '',
             time: row.time,
             // Utelämnas när okänt — bara flerdagars-/sluttids-event bär fältet
-            // (bytes × 30k event i aggregatet).
-            endDate: row.endDate || undefined,
+            // (bytes × 30k event i aggregatet). Samma giltighetsregel som vid
+            // skrivning (slut efter start, max 30 dygn): legacy-rader bär
+            // slut FÖRE start (PRO-"Oktoberfest" 12:00 → 23:01 dagen innan).
+            endDate: row.endDate && sanitizeEndDate(row.time, row.endDate) ? row.endDate : undefined,
             hasSpecificTime,
             lat: safeLat,
             lng: safeLng,
@@ -232,11 +235,11 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         const publicHref = publicUrl(row.url);
         cards.push({
             h: eventKey(id),
-            // Runnern lagar porten för NYA event, men ~2 200 äldre rader bär
-            // fortfarande "https://host:80/…" (Axiell-biblioteken) och laddar
-            // aldrig — lagas här så webben OCH app-flödet (bilder joinas ur
-            // cards) får en fungerande länk.
-            coverImage: row.coverImage ? normalizeImagePort(row.coverImage) : undefined,
+            // Runnern lagar bara NYA event — äldre rader bär källans råa värde
+            // ("https://host:80/…" från Axiell-biblioteken, rotrelativa
+            // Sitevision-sökvägar, data:-pixlar). Lagas här så webben OCH
+            // app-flödet (bilder joinas ur cards) får en laddbar länk.
+            coverImage: publishableImageUrl(row.coverImage, row.url),
             hostName: row.hostName || undefined,
             attendees: Number(row.attendees) || undefined,
             price: row.price || undefined,
