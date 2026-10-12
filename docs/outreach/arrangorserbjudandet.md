@@ -109,8 +109,16 @@ kommunen arrangör.
   ändras? Frågan är ofarlig och ger en kontakt.
 - **Neutral listning, på samma villkor som andra.** Sakliga skäl och likabehandling är vägen
   in. Det kan vara en sida om var invånarna hittar evenemang som listar flera kalendrar, eller
-  en sida om hur kommunens öppna data används. Argumentet är att vadkul.se visar alla
-  evenemang i kommunen, oavsett arrangör och utan kostnad. Fråga en gång och tryck inte på.
+  en sida om hur kommunens öppna data används. Fråga en gång och tryck inte på.
+- **Argumentet är invånarnyttan, inte vår.** Kommunens kalender visar kommunens evenemang.
+  Vi visar dessutom föreningarnas, församlingarnas och scenernas, gratis för alla. Fler
+  invånare hittar då det som händer, vilket ligger i kommunens uppdrag. Ge en siffra för orten
+  (Jönköping 12/10: drygt 600 evenemang de kommande 30 dagarna inom 15 km, från ett 80-tal
+  arrangörer, och ungefär en fjärdedel från kommunens egna sidor). Två gränser: argumentet
+  löser inte likabehandlingen, så be om en plats där flera kalendrar kan stå, inte om en länk
+  bara till oss. Påstå inte heller att vi är ideella, för boost och affiliate syns på sajten.
+- **Rätt mottagare:** argumentet passar kultur- och fritidsförvaltningen, som ska stödja
+  förenings- och kulturlivet, bättre än kommunikationsenheten, som förvaltar webben.
 - **Länkfrågan** behåller vi för destinationsbolag som drivs som aktiebolag och för övriga
   arrangörer. De har oftast friare händer än en förvaltning, men vissa svarar som Jönköping.
 
