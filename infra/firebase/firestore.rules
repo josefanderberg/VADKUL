@@ -110,12 +110,15 @@ service cloud.firestore {
         // Skapa: ägaren sin EGEN 'outgoing'-rad, motparten 'incoming'-raden
         // hos en (det ÄR förfrågan). Ingen kan skapa 'accepted' direkt.
         // Kräver riktigt konto — en anonym session har inget namn att visa.
+        // Den man BLOCKERAT (users/{ägare}/blocked/{motpart}, nedan) kan inte
+        // lägga en förfrågan hos en - hela förfrågningsbatchen nekas.
         allow create: if isAuthenticated() && !isAnonymous()
           && userId != friendId
           && validFriendDoc(request.resource.data)
           && (
             (request.auth.uid == userId && request.resource.data.status == 'outgoing')
-            || (request.auth.uid == friendId && request.resource.data.status == 'incoming')
+            || (request.auth.uid == friendId && request.resource.data.status == 'incoming'
+                && !exists(/databases/$(database)/documents/users/$(userId)/blocked/$(request.auth.uid)))
           );
 
         // Uppdatera = acceptera, inget annat. Ägaren: sin 'incoming' →
@@ -132,6 +135,29 @@ service cloud.firestore {
         // Radera: båda parter — avböj/ångra/ta bort vän tar båda raderna.
         allow delete: if isAuthenticated()
           && (request.auth.uid == userId || request.auth.uid == friendId);
+      }
+
+      // UNDERSAMLING: Blocked (blockerade användare, App Store-regel 1.2 -
+      // appen 12/10, vadkul-app lib/moderering + data/moderering).
+      // users/A/blocked/B = A har blockerat B. EGEN lista i stället för en
+      // 'blocked'-status i friends: vänraderna läses och raderas av BÅDA
+      // parter, så B hade kunnat se och häva blockeringen. Här läser och
+      // skriver bara ägaren - B får aldrig veta. Klienten döljer B:s
+      // chattmeddelanden för A; reglerna stänger dessutom A:s egen privata
+      // tråd (8e) och vänförfrågningar från B (friends ovan). Att blockera
+      // river vänskapen i samma batch (friends-delete ovan).
+      match /blocked/{blockedId} {
+        allow read: if isOwner(userId);
+        // create + update (att blockera igen skriver över raden): namnet är
+        // denormaliserat för listan i profilen, samma tak som friends.
+        allow create, update: if isOwner(userId) && !isAnonymous()
+          && blockedId != userId
+          && request.resource.data.keys().hasOnly(['name', 'createdAt'])
+          && (!request.resource.data.keys().hasAny(['name'])
+              || (request.resource.data.name is string && request.resource.data.name.size() <= 80))
+          && (!request.resource.data.keys().hasAny(['createdAt'])
+              || request.resource.data.createdAt is timestamp);
+        allow delete: if isOwner(userId);
       }
     }
 
@@ -197,9 +223,50 @@ service cloud.firestore {
         allow read: if isAdmin();
     }
 
-    // 6. REPORTS (Rapportering av events)
+    // 6. REPORTS - anmälda chattmeddelanden (App Store-regel 1.2). Skrivs av
+    // appen (vadkul-app lib/moderering chattAnmälanDoc - samma nycklar och
+    // tak, testade där). FORMLÅST 12/10: create var öppen för godtyckligt
+    // innehåll från alla inloggade, utan att någon klient skrev hit (event-
+    // rapporterna går via feedback). Dokumentet bär en ögonblicksbild av
+    // meddelandet så granskningen inte hänger på originalet. Anmälaren måste
+    // vara den inloggade och kan inte anmäla sig själv. Bara admin läser.
     match /reports/{reportId} {
-        allow create: if isAuthenticated();
+        function optStr(d, k, max) {
+          return !d.keys().hasAny([k]) || (d[k] is string && d[k].size() <= max);
+        }
+        allow create: if isAuthenticated() && !isAnonymous()
+          && request.resource.data.keys().hasOnly([
+              'type', 'chat', 'eventId', 'eventTitle', 'threadId', 'messageId',
+              'senderId', 'senderName', 'text', 'reason', 'reporterUid', 'createdAt'
+          ])
+          && request.resource.data.keys().hasAll([
+              'type', 'chat', 'eventId', 'messageId', 'senderId', 'text',
+              'reason', 'reporterUid', 'createdAt'
+          ])
+          && request.resource.data.type == 'chatMessage'
+          && request.resource.data.chat in ['public', 'private']
+          && request.resource.data.reporterUid == request.auth.uid
+          && request.resource.data.eventId is string
+          && request.resource.data.eventId.size() >= 1
+          && request.resource.data.eventId.size() <= 1400
+          && optStr(request.resource.data, 'eventTitle', 200)
+          && optStr(request.resource.data, 'threadId', 128)
+          && (request.resource.data.chat == 'public'
+              || request.resource.data.keys().hasAny(['threadId']))
+          && request.resource.data.messageId is string
+          && request.resource.data.messageId.size() >= 1
+          && request.resource.data.messageId.size() <= 128
+          && request.resource.data.senderId is string
+          && request.resource.data.senderId.size() >= 1
+          && request.resource.data.senderId.size() <= 128
+          && request.resource.data.senderId != request.auth.uid
+          && optStr(request.resource.data, 'senderName', 80)
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.reason is string
+          && request.resource.data.reason.size() >= 1
+          && request.resource.data.reason.size() <= 80
+          && request.resource.data.createdAt == request.time;
         allow read, update, delete: if isAdmin();
     }
 
@@ -501,22 +568,29 @@ service cloud.firestore {
         ]);
       // Gå med (eller lämna): bara sin egen members-nyckel, värdet true
       // eller borttagen. Taket håller tråden som ETT litet dokument.
+      // Den trådens ägare blockerat (users/{threadId}/blocked/{uid}) får
+      // lämna men inte gå med, även med inbjudningslänken.
       allow update: if isAuthenticated() && !isAnonymous()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
         && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid])
         && (!(request.auth.uid in request.resource.data.members)
             || request.resource.data.members[request.auth.uid] == true)
+        && (!(request.auth.uid in request.resource.data.members)
+            || !exists(/databases/$(database)/documents/users/$(threadId)/blocked/$(request.auth.uid)))
         && request.resource.data.members.size() <= 50;
       allow delete: if isAuthenticated() && request.auth.uid == threadId;
 
       // Meddelandena: bara medlemmar läser/skriver (get mot tråd-dokumentet —
       // en extra läsning per regelkoll, acceptabelt för en liten privat tråd).
       // Samma form som publika chatten, senderId måste vara ens eget uid.
+      // Blockerad av trådens ägare = kan inte skriva i hens tråd längre
+      // (en exists() till per meddelande).
       match /messages/{messageId} {
         allow read: if isAuthenticated()
           && get(/databases/$(database)/documents/eventChats/$(chatId)/privat/$(threadId)).data.members[request.auth.uid] == true;
         allow create: if isAuthenticated()
           && get(/databases/$(database)/documents/eventChats/$(chatId)/privat/$(threadId)).data.members[request.auth.uid] == true
+          && !exists(/databases/$(database)/documents/users/$(threadId)/blocked/$(request.auth.uid))
           && request.resource.data.senderId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() >= 1
