@@ -329,7 +329,7 @@ för OTA, bildväljare, associatedDomains/intentFilters) -> TestFlight -> resten
 navraden, filterunionen och interaktionerna är i paritet - se vadkul-app-commit 2f4b429.*
 
 *Bara appkod / flödet*
-- [ ] Stadssidorna: hero-karta, periodval, sökfält, Fler-källor, stadstopplistan
+- [x] Stadssidorna: hero-karta, periodval, sökfält, Fler-källor, stadstopplistan (12/10, vadkul-app fcf03d4: webbens förrenderade kartbild + kartans brickor, passiv men klickbar; periodchipsen i heron styr brickor och lista; sökfältet filtrerar listan och heron, ?q= följer med; FLER-källorna i den klistrade kategoriraden; topplistan i Städer räknas ur länsflödena, "totalt" = 14 dagar) - medvetet ute: FAQ, ForFun-raden, toppnavens Sverige-siffra
 - [x] Arrangörsskärm (8/10, /arrangor/<slug> + vägen från kortet) - arrangörsfiltret på kartan ÅTERSTÅR (`hostName` finns i appflödet sedan 11/10, huvudrepot 61f676a1 - bara på arrangörer med sida, samma mängd som webbens ?arrangor=)
 - [x] Kartbanners: Veckans populära + Zooma in (9/10) - Nytt sedan sist ÅTERSTÅR
 - [x] Datumväljaren i dagväljaren (11/10, vadkul-app c89cd1f: kalenderknappen på Idag där bakåtpilen annars står, iOS månadsvy/Android-dialog, 14 dagars horisont; ↺ bara när man bytt dag)
@@ -346,7 +346,7 @@ navraden, filterunionen och interaktionerna är i paritet - se vadkul-app-commit
 - [x] Push: FCM-token (data/push.ts, TestFlight 1.0.0) - notisinställningar i profilen återstår att verifiera
 - [x] RSVP synkat: räknare, avatarer, &fran=, inbjudningsbannern (8/10)
 - [x] Vänner, eventchatt, privat chatt (11/10, vadkul-app eb7e9b8; webbens 32 testfall portade, utloggat simulatorverifierat - Josefs INLOGGADE varv återstår, samma klausul som skapa event)
-- [ ] VADKUL-spotlight och önskningar på stadssidan
+- [x] VADKUL-spotlight och önskningar på stadssidan (12/10, vadkul-app fcf03d4: Skapade på VADKUL ur appens userCreated-poll utan boost-nivån, pitch + snabbönskan, Önskas i X ur kartans önskningsquery)
 
 *Byggpunkter (kräver nästa native-bygge, ingen JS-OTA):*
 - [x] expo-clipboard: appens "Kopiera länk" kör RN-kärnans deprecated Clipboard (noterat 11/10) - bytt i vadkul-app bdd2bc2, ute i iOS build 8 (12/10) tillsammans med Crashlytics (bdd2bc2 + plistfixen 9e1416a) och chattmodereringen (ece2eed, webben b8a504ed, rules 20e18e2e deployade 12/10)
