@@ -170,24 +170,27 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect, mo
 
     return (
         // Vanligt blockinnehåll i kortets scrollcontainer — kortets sheet äger
-        // höjd/drag/scroll. pt-1: scrollcontainern bär redan pt-6 för den
-        // solida grip-zonen, så rubriken står 28 px ned - samma luft som
-        // vanliga kortets knapprad (Josef 30/9; pt-8 ovanpå pt-6 gav 56 px
-        // tomrum). data-group-list: EventCard känner igen väljarläget i DOM:en
-        // och mäter listans höjd (measureDefaultHeight).
-        <div className="pt-1" data-group-list>
+        // höjd/drag/scroll. data-group-list: EventCard känner igen väljarläget
+        // i DOM:en och mäter listans höjd (measureDefaultHeight).
+        <div data-group-list>
             {/* PLATSRUBRIKEN ÄR KLISTRAD (7/10 kväll, Josef: "den platsen som
                 visas längst upp på eventkortet, den ska ju vara sticky längst
                 upp tills dess att man scrollat förbi fler av samma arrangör
                 eller kommit till den vanliga listan under"). Containern
                 (data-group-list, inkl. moreRows) är det som håller den kvar —
                 när vanliga listan tar vid knuffas den ut av sig själv.
-                pt-6 -mt-6 = netto noll i flödet (28 px-luften står kvar) men
-                fastklistrad bär rubriken sin egen solida yta under grip-zonen
-                i stället för att texten glider in bakom den. z-30 över
-                dagrubrikerna (z-20), som pinnas med överlapp IN UNDER den
-                (top-[60px]) så fontmetrik-skillnader aldrig öppnar en glipa. */}
-            <div className="sticky top-0 z-30 bg-card pt-6 -mt-6 flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-zinc-700/70">
+                sticky top-0 fäster vid scrollcontainerns PADDING-kant, alltså
+                precis under grip-zonens pt-6 (samma som listans flikrad i
+                EventCard) - och där står rubriken redan i viloläget, så den
+                flyttar sig aldrig. pt-1 ger 28 px luft ovanför texten, samma
+                som vanliga kortets knapprad (Josef 30/9). Det gamla pt-6
+                -mt-6-tricket räknade med att top-0 var kortets överkant: då
+                trycktes rubriken ner 20 px redan vid scrolltoppen och täckte
+                översta raden (Josef 12/10: "1/4 av toppen av listan är dold").
+                z-30 över dagrubrikerna (z-20), som pinnas med överlapp IN
+                UNDER den (top-[40px]) så fontmetrik-skillnader aldrig öppnar
+                en glipa. */}
+            <div className="sticky top-0 z-30 bg-card pt-1 flex items-center gap-2 px-4 pb-2.5 border-b border-slate-200/70 dark:border-zinc-700/70">
                 <div className="min-w-0 flex-1">
                     <span className="block text-base font-black text-slate-800 dark:text-zinc-100 truncate leading-tight">{placeName}</span>
                     {/* Räknarraden + uppmaningen på SAMMA rad (Josef 2/9: "Välj
@@ -221,11 +224,11 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect, mo
                     {showDays && (
                         // Samma rubrik som listan under eventkortet (EventCard:
                         // blått streck i vänstermarginalen, dagtexten i linje med
-                        // radernas innehåll). top-[60px]: pinnas under den
-                        // klistrade PLATSRUBRIKEN (7/10) — medvetet några px in
-                        // under dess botten (z-20 < 30) så fontmetrik-skillnader
-                        // aldrig öppnar en glipa mellan dem.
-                        <li className="sticky top-[60px] z-20 bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 pt-3 pb-2 border-b border-border flex items-center gap-2">
+                        // radernas innehåll). top-[40px]: pinnas under den
+                        // klistrade PLATSRUBRIKEN (7/10, ~49 px hög) — medvetet
+                        // några px in under dess botten (z-20 < 30) så
+                        // fontmetrik-skillnader aldrig öppnar en glipa mellan dem.
+                        <li className="sticky top-[40px] z-20 bg-slate-50/95 dark:bg-zinc-900/90 backdrop-blur-sm px-4 pt-3 pb-2 border-b border-border flex items-center gap-2">
                             <span aria-hidden className="shrink-0 -ml-3 h-4 w-1 rounded-full bg-[#006AA7] dark:bg-sky-400" />
                             <span className="text-sm font-black text-slate-900 dark:text-zinc-100">{day.label}</span>
                         </li>
