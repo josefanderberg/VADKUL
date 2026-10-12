@@ -117,8 +117,14 @@ kommunen arrangör.
   arrangörer, och ungefär en fjärdedel från kommunens egna sidor). Två gränser: argumentet
   löser inte likabehandlingen, så be om en plats där flera kalendrar kan stå, inte om en länk
   bara till oss. Påstå inte heller att vi är ideella, för boost och affiliate syns på sajten.
+- **Över kommungränsen:** kartan visar hela regionen. Invånarna ser vad som händer i
+  grannkommunerna, och kommunerna ser varandras utbud och kan inspireras av det. Argumentet
+  passar regionen och kultur- och fritidsnämnderna bättre än den som förvaltar webben.
 - **Rätt mottagare:** argumentet passar kultur- och fritidsförvaltningen, som ska stödja
   förenings- och kulturlivet, bättre än kommunikationsenheten, som förvaltar webben.
+- **Skriv för diariet.** Allt till en kommun blir allmän handling och kan läsas av politiker
+  och journalister. Det är en fördel för medborgarargumentet, men bara om texten håller: en
+  saklig ton, siffror som stämmer och inga överdrifter.
 - **Länkfrågan** behåller vi för destinationsbolag som drivs som aktiebolag och för övriga
   arrangörer. De har oftast friare händer än en förvaltning, men vissa svarar som Jönköping.
 
