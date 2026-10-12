@@ -5,6 +5,7 @@ import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildTitleFreq, popularRank, normTitlePop } from '../utils/popularEvent';
 import { firstSeenExport } from '../utils/firstSeenExport';
 import { eventKey } from '../utils/eventKey';
+import { normalizeImagePort } from '../utils/imageFilter';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
 import { buildAppFeeds, loadCities, APP_FEED_DAYS } from '../utils/appFeed';
 import * as path from 'path';
@@ -231,7 +232,11 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         const publicHref = publicUrl(row.url);
         cards.push({
             h: eventKey(id),
-            coverImage: row.coverImage || undefined,
+            // Runnern lagar porten för NYA event, men ~2 200 äldre rader bär
+            // fortfarande "https://host:80/…" (Axiell-biblioteken) och laddar
+            // aldrig — lagas här så webben OCH app-flödet (bilder joinas ur
+            // cards) får en fungerande länk.
+            coverImage: row.coverImage ? normalizeImagePort(row.coverImage) : undefined,
             hostName: row.hostName || undefined,
             attendees: Number(row.attendees) || undefined,
             price: row.price || undefined,
