@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, UserX, Users, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, UserPlus, UserX, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -13,6 +13,7 @@ import { friendRsvpVisible, upcomingFriendEvents, type FriendUpcomingEvent } fro
 import { fetchDeepLinkEvent } from '@/utils/eventSeed';
 import { genitive, sortBlocked, type BlockRow } from '@/utils/chatModeration';
 import { blockUser, unblockUser, useModeration } from '@/services/moderationService';
+import { FRIEND_INVITE_TEXT, friendInviteUrl } from '@/utils/friendInvite';
 
 /**
  * VÄNNER i profilpanelen (spår 3, 7/10 kväll - "man kan gå in på sina
@@ -261,6 +262,23 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
         }
     };
 
+    // BJUD IN EN VÄN (Josef 13/10): länken vadkul.se/?van=<uid> - den som
+    // går med via den blir din vän direkt, och nya konton ger en stjärna var
+    // (du högst 5 gånger; acceptFriendInvite i functions). Delningsarket
+    // när det finns, annars urklipp (samma mönster som chattens Bjud in).
+    const handleInvite = async () => {
+        if (!uid) return;
+        const url = friendInviteUrl(window.location.origin, uid);
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: 'VADKUL', text: FRIEND_INVITE_TEXT, url });
+                return;
+            }
+            await navigator.clipboard.writeText(`${FRIEND_INVITE_TEXT} ${url}`);
+            toast.success('Inbjudningslänken är kopierad - skicka den till en vän!');
+        } catch { /* avbruten delning är inget fel */ }
+    };
+
     if (!user) return null;
 
     const incomingBadge = rows !== null && buckets.incoming.length > 0;
@@ -287,6 +305,19 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
 
             {expanded && (
                 <div className="pb-2">
+                    <div className="px-4 pb-2">
+                        <button
+                            type="button"
+                            onClick={() => void handleInvite()}
+                            className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#006AA7] text-white px-3 py-2 text-xs font-black hover:bg-[#005590] active:scale-[0.99] transition"
+                        >
+                            <UserPlus size={14} aria-hidden />
+                            Bjud in en vän
+                        </button>
+                        <p className="mt-1.5 text-[10px] font-semibold text-slate-400 text-center">
+                            Ni får en stjärna var ⭐ när en vän skapar konto via länken (upp till 5).
+                        </p>
+                    </div>
                     {rows === null ? (
                         <p className="px-4 pb-2 text-xs font-semibold text-slate-400">Hämtar…</p>
                     ) : (
@@ -337,7 +368,7 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
                             {/* Vännerna - varje rad fälls ut till vännens kommande svar. */}
                             {buckets.accepted.length === 0 && buckets.incoming.length === 0 && (
                                 <p className="px-4 pb-1 text-xs font-semibold text-slate-400">
-                                    Inga vänner än - bjud med någon på ett event, så kan ni lägga till varandra där.
+                                    Inga vänner än - bjud in någon med knappen ovan, eller bjud med någon på ett event.
                                 </p>
                             )}
                             {buckets.accepted.map(row => {

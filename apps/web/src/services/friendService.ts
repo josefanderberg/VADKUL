@@ -87,6 +87,35 @@ export async function acceptFriendRequest(
     await commitWrites(friendAcceptWrites(myUid, otherUid, myCurrent));
 }
 
+/** Svaret från acceptFriendInvite (apps/functions/src/friendInvites.ts). */
+export interface FriendInviteResult {
+    success: boolean;
+    /** Vännen fick en stjärna (nytt konto, inte värvat förut). */
+    vanStjarna?: boolean;
+    /** Inbjudaren fick en stjärna (under taket på 5). */
+    inbjudarStjarna?: boolean;
+    /** Mina oplacerade stjärnor EFTER anropet. */
+    starsAvailable?: number;
+    message: string;
+}
+
+/** Tacka ja till en vän-inbjudan från profilen (?van=<uid>): vänner direkt
+ *  och en stjärna var för nya konton. Servern skriver båda vänraderna och
+ *  stjärnorna - reglerna släpper aldrig en klient att skriva 'accepted'
+ *  direkt eller röra starsAvailable. Kastar aldrig: fel blir ett besked. */
+export async function acceptFriendInvite(fran: string): Promise<FriendInviteResult> {
+    try {
+        const { httpsCallable } = await import('firebase/functions');
+        const { functions } = await import('../lib/firebase');
+        const fn = httpsCallable<{ fran: string }, FriendInviteResult>(functions, 'acceptFriendInvite');
+        const result = await fn({ fran });
+        return result.data;
+    } catch (e: unknown) {
+        console.error('Kunde inte ta emot vän-inbjudan:', e);
+        return { success: false, message: e instanceof Error ? e.message : 'Kunde inte bli vänner. Försök igen.' };
+    }
+}
+
 /** Avböj förfrågan, ångra skickad eller ta bort vän - raderar båda raderna. */
 export async function removeFriend(myUid: string, otherUid: string): Promise<void> {
     await commitWrites(friendRemoveWrites(myUid, otherUid));

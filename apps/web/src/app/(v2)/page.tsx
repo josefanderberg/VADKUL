@@ -17,6 +17,7 @@ import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import StartCityPicker from '@/components/v2/StartCityPicker';
 import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
+import { acceptFriendInvite, fetchUserLite } from '@/services/friendService';
 import { storageService } from '@/services/storageService';
 import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
 import { setRsvpStatus } from '@/services/rsvpService';
@@ -52,6 +53,8 @@ import { shouldAutoBumpDay } from '@/utils/autoDayBump';
 import { normalizeTipUrl } from '@/utils/tipUrl';
 import { isNewSince, readAndStampVisit, NEW_SINCE_MIN_COUNT } from '@/utils/newSinceLastVisit';
 import PostCreateNudge from '@/components/v2/PostCreateNudge';
+import FriendInviteCard from '@/components/v2/FriendInviteCard';
+import { FRIEND_INVITE_KEY, FRIEND_INVITE_PARAM, parseParkedInvite, pickFriendInvite, serializeInvite } from '@/utils/friendInvite';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -4066,6 +4069,79 @@ export default function HomePage() {
         })();
     }, [user, authLoading, openLogin]);
 
+    // ── Vän-inbjudan från profilen: /?van=<uid> ──────────────────────────────
+    // (Josef 13/10: "lägga till en vän direkt i profilen så man delar en länk
+    // och bjuder in någon ... 1 var".) Kortet "{Namn} bjuder in dig" med Bli
+    // vänner; acceptFriendInvite (functions) gör er till vänner direkt och
+    // ger nya konton en stjärna var (inbjudaren högst 5 gånger). Inbjudan
+    // parkeras i localStorage så den överlever inloggningen och ett nytt
+    // konto (utils/friendInvite). Utloggad: Bli vänner öppnar inloggningen
+    // och anropet görs när rutan stängts - då har ett nytt konto hunnit
+    // spara sitt namn, som hamnar i inbjudarens vänlista.
+    const [vanInbjudan, setVanInbjudan] = useState<{ fran: string; name: string | null; photoURL: string | null } | null>(null);
+    const [vanBusy, setVanBusy] = useState(false);
+    // Bli vänner trycktes medan man var utloggad - körs efter inloggningen.
+    const vanAcceptPendingRef = useRef(false);
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const param = params.get(FRIEND_INVITE_PARAM);
+        if (param !== null) {
+            params.delete(FRIEND_INVITE_PARAM);
+            const qs = params.toString();
+            window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+        }
+        let raw: string | null = null;
+        try { raw = localStorage.getItem(FRIEND_INVITE_KEY); } catch { /* privat läge */ }
+        const nowMs = Date.now();
+        const fran = pickFriendInvite(param, parseParkedInvite(raw, nowMs), null);
+        if (!fran) {
+            if (raw) try { localStorage.removeItem(FRIEND_INVITE_KEY); } catch { /* privat läge */ }
+            return;
+        }
+        if (fran === param) {
+            try { localStorage.setItem(FRIEND_INVITE_KEY, serializeInvite(fran, nowMs)); } catch { /* privat läge */ }
+        }
+        let cancelled = false;
+        fetchUserLite(fran).then(p => {
+            if (!cancelled) setVanInbjudan({ fran, name: p.name, photoURL: p.photoURL });
+        });
+        return () => { cancelled = true; };
+    }, []);
+    const clearVanInbjudan = useCallback(() => {
+        vanAcceptPendingRef.current = false;
+        setVanInbjudan(null);
+        try { localStorage.removeItem(FRIEND_INVITE_KEY); } catch { /* privat läge */ }
+    }, []);
+    const runVanAccept = useCallback(async (fran: string) => {
+        setVanBusy(true);
+        const res = await acceptFriendInvite(fran);
+        setVanBusy(false);
+        if (typeof res.starsAvailable === 'number') setStarsAvailable(Math.max(0, res.starsAvailable));
+        if (res.success) {
+            toast.success(res.message, { icon: res.vanStjarna ? '⭐' : '🤝', duration: 8000 });
+        } else {
+            toast(res.message, { duration: 6000 });
+        }
+        clearVanInbjudan();
+    }, [clearVanInbjudan]);
+    const handleVanAccept = useCallback(() => {
+        if (!vanInbjudan) return;
+        if (!user) {
+            vanAcceptPendingRef.current = true;
+            openLogin('Logga in eller skapa ett konto, så blir ni vänner och får en stjärna var ⭐');
+            return;
+        }
+        void runVanAccept(vanInbjudan.fran);
+    }, [vanInbjudan, user, openLogin, runVanAccept]);
+    useEffect(() => {
+        if (!vanInbjudan || authLoading || !user) return;
+        // Ens egen länk (man testar att öppna den själv) - ingen inbjudan.
+        if (user.uid === vanInbjudan.fran) { clearVanInbjudan(); return; }
+        if (!vanAcceptPendingRef.current || authModal.open || vanBusy) return;
+        vanAcceptPendingRef.current = false;
+        void runVanAccept(vanInbjudan.fran);
+    }, [vanInbjudan, user, authLoading, authModal.open, vanBusy, clearVanInbjudan, runVanAccept]);
+
     // Sätt stjärnan (bekräftelsedialogen bor i LinkEventCard). Optimistisk
     // uppdatering av båda staten — eventStars-lyssnaren bekräftar strax efter.
     const handlePlaceStar = useCallback(async (eventId: string) => {
@@ -6204,6 +6280,18 @@ export default function HomePage() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Vän-inbjudan (?van=) - efter välkomstrutan, och undan medan
+                inloggningen är öppen (den hör till samma flöde). */}
+            {vanInbjudan && !welcomeOpen && !authModal.open && (
+                <FriendInviteCard
+                    name={vanInbjudan.name}
+                    photoURL={vanInbjudan.photoURL}
+                    busy={vanBusy}
+                    onAccept={handleVanAccept}
+                    onDismiss={clearVanInbjudan}
+                />
             )}
 
             {/* Inloggning/registrering — utan att lämna kartan */}
