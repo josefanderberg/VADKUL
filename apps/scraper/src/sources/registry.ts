@@ -676,6 +676,8 @@ export const SOURCES: Source[] = [
         engine: 'wp-rest',
         config: { baseUrl: 'https://gotlandsmuseum.se', variant: 'tribe', defaultCity: 'Visby' },
         updateFrequency: 'every-3d',
+        // Engångssvep: tribe-varianten ignorerade defaultCity — kända event på null-ön flyttas till Visby.
+        contentSweep: '2026-10-13',
         status: 'experimental',
         discovery: { method: 'probe-wp', probeUrl: 'https://gotlandsmuseum.se/wp-json/tribe/events/v1/events', date: '2026-07-03' },
         notes: 'Agent-probe 2026-07-03: tribe-REST, 133 event i juli-aug (stadsvandringar/visningar). venue ofta null → defaultCity Visby.',
@@ -1174,9 +1176,15 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://nbv.se/event-sitemap.xml',
             urlPatterns: [/\/arrangemang\/[^/]+\/?$/i],
+            // "Om arrangemanget"-kortet (bg-blue-100): "Venue, Gata" + "123 45 ORT".
+            // "Fler arrangemang"-korten längre ned har samma <p> men med SIN ort — därav scopningen.
+            detailPlaceSelector: 'section.bg-blue-100[aria-labelledby^="eventcard-title"] p.flex-col',
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06-08: event-sitemap.xml, /arrangemang/ (studieförbund, rikstäckande).',
+        // Engångssvep: kända event på null-ön får eventkortets plats.
+        contentSweep: '2026-10-13',
+        notes: 'Probe 2026-06-08: event-sitemap.xml, /arrangemang/ (studieförbund, rikstäckande). '
+            + '12/10: ingen JSON-LD Event → 50 event på null-ön som "Sverige"; platsen ur eventkortet via detailPlaceSelector.',
         lastVerified: '2026-06-08',
     },
 
@@ -6176,6 +6184,9 @@ export const SOURCES: Source[] = [
         config: {},
         // 30d-fönster (default) — API:t levererar ~1500+ event/30d, längre fram glider in senare.
         updateFrequency: 'daily',
+        // Engångssvep 13/10: ~520 kända event låg på null-ön (Nominatim-fel vid
+        // sparandet) — refresh geokodar om dem, med tätortsgolvet som reserv.
+        contentSweep: '2026-10-13',
         status: 'active',
         expectedMinEvents: 500,
         // Första importen efter filtret är ~9 250 — taket släpper igenom den men
@@ -6330,6 +6341,8 @@ export const SOURCES: Source[] = [
         engine: 'bibliotek',
         config: {},   // config.tenantIds=['uppsala'] för smoke-test
         updateFrequency: 'every-3d',
+        // Engångssvep: event utan location i API:t får filialen ur titel/"Plats:"-rad.
+        contentSweep: '2026-10-13',
         status: 'active',
         expectedMinEvents: 300,
         maxSavedPerRun: 3000,
@@ -7678,6 +7691,8 @@ export const SOURCES: Source[] = [
         engine: 'swehockey',
         config: { leagueId: league, leagueName: name, sport: 'ishockey' },
         updateFrequency: 'weekly',
+        // Engångssvep 13/10: matcher sparade på null-ön (Nominatim-fel) geokodas om.
+        contentSweep: '2026-10-13',
         status: 'experimental',
         windowDays: 240,
         notes: `${name}:s hela säsongsschema från stats.swehockey.se. `
@@ -7706,6 +7721,10 @@ export const SOURCES: Source[] = [
         // och matcher flyttas oftare än i seniorligorna; var 4:e körning
         // uppdaterar tiden på kända matcher.
         updateFrequency: 'daily',
+        // Engångssvep 13/10: 245 matcher från första importen låg på null-ön
+        // fast arenornas orter var kända ("NickBack Arena, Valbo" geokodar fint
+        // när Nominatim svarar) — refresh geokodar om dem, tätortsgolvet som reserv.
+        contentSweep: '2026-10-13',
         status: 'experimental',
         windowDays: 240,
         notes: 'Alla U18/U20-serier från stats.swehockey.se (~2 150 kommande matcher 10/10). '

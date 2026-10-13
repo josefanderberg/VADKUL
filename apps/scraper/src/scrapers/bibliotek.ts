@@ -26,6 +26,7 @@
 import { RawEvent, Engine } from '../sources/types';
 import { mapPool } from '../utils/mapPool';
 import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../utils/text';
+import { extractVenueFromText } from '../utils/venueFromText';
 
 const API_BASE = 'https://api.axiell.com/event/api';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -215,7 +216,8 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
     const startDate = new Date(e.startDate);
     if (isNaN(startDate.getTime())) return null;
 
-    const branch = e.location?.value?.trim() || '';
+    const apiBranch = e.location?.value?.trim() || '';
+    const branch = apiBranch || branchFromText(title, e.description) || '';
     const image = (e.images || []).find((i) => i.primaryImage)?.imageUrl || e.images?.[0]?.imageUrl;
     const audiences = (e.targetAudiences || []).map((a) => a.value).filter(Boolean).join(', ');
 
@@ -232,7 +234,7 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         imageUrl: image ? image.replace(/^http:\/\//, 'https://') : undefined,
         description: [truncateAtBoundary(stripHtml(e.description), DEFAULT_DESCRIPTION_MAX), audiences ? `Målgrupp: ${audiences}.` : '']
             .filter(Boolean).join(' '),
-        hostName: branch || tenant.name,
+        hostName: apiBranch || tenant.name,
         // API:t levererar riktiga klockslag (UTC) — UTOM för heldagsevent
         // (utställningar, lovaktiviteter, bokförsäljning), som saknar allDay-
         // flagga och i stället startar 00:00 eller 00:01 lokal tid och slutar
@@ -249,6 +251,30 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
             tenant.cityHint ?? branchCity(branch, tenant.cities) ?? '',
         ].filter(Boolean) as string[],
     };
+}
+
+/**
+ * Filialen när API:ts location är tom ({ value: null }) — titeln eller
+ * texten bär den ofta. Götabiblioteken 12/10: 25 event utan location låg på
+ * null-ön som "Sverige" ("Digitalhjälpen på Linghems bibliotek", "Plats: Ung
+ * Zon i Linghem (Gällstadsvägen 22)"). Hellre ingen plats än fel: bara en
+ * i/på/vid-fras i TITELN som slutar på ett platsord och har minst två ord
+ * ("Stadsbiblioteket" ensamt finns i varje medlemskommun), eller
+ * beskrivningens egen "Plats:"-rad (parentesen — gatuadressen — kapas).
+ * Exporterad för test.
+ */
+export function branchFromText(title: string, descriptionHtml: string | undefined): string | undefined {
+    const fromTitle = extractVenueFromText(title);
+    if (fromTitle && /\s/.test(fromTitle)) return fromTitle;
+    const lines = decodeHtmlEntities((descriptionHtml || '')
+        .replace(/<br\s*\/?>|<\/(?:p|div|li|h[1-6])>/gi, '\n')
+        .replace(/<[^>]+>/g, ' '))
+        .split('\n');
+    for (const line of lines) {
+        const m = line.replace(/\s+/g, ' ').trim().match(/^Plats\s*:\s*([^(]{3,80})/i);
+        if (m) return m[1].trim();
+    }
+    return undefined;
 }
 
 /**

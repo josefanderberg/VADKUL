@@ -28,6 +28,7 @@ Hoppar man över syncen aggregerar man gammal data och undrar var de nya eventen
 - **Sajter byter URL-struktur tyst** (Visit Isabergsregionen, Spritmuseum 28/9): sitemapen har hundratals URL:er men `urlPatterns` matchar 0. Symptom: "N totalt → 0 matchande" i torrkörningen. Redirectar gamla adresser med samma slug → `canonicalUrl` i SitemapConfig så `url`-nyckeln består (inga dubbletter).
 - **WAF/bot-spärrar på Mozilla-UA från node** (Waldemarsudde, KB 28/9): 403 eller JS-utmaning trots att curl fungerar → `userAgent: 'VadKul/1.0 (+https://vadkul.se)'`.
 - **Plats bara i titeln/sidans fält** (regionsajter): `titlePlaces` (ort ur titel/venue) och `detailVenueSelector` i SitemapConfig — annars hamnar allt på `defaultCity`:s centroid.
+- **Null-ön (0,0, locationName "Sverige")** = källan gav varken venue, ort eller kandidater. Platsblock rad för rad ("Venue, Gata" + "123 45 Ort"): `detailPlaceSelector` (sitemap, NBV) / `detailPlace` (wp-rest wp-v2, Vemdalen — även kartans koordinater). Tribe utan venue använder `defaultCity`. Läk kända event med `contentSweep: '<datum>'` på källan (eller `SCRAPE_FORCE_REFRESH=1`) — `backfill-geocode` hoppar över "Sverige".
 
 ## Verktyg för felsökning
 

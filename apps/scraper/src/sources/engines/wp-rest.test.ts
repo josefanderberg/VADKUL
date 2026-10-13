@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { dateFromContentRegex, findVenueInHtml, findVenueInText, htmlToLines, dateFromDetailRegex, wpRestEngine, type WpRestConfig } from './wp-rest';
+import { dateFromContentRegex, findVenueInHtml, findVenueInText, htmlToLines, dateFromDetailRegex, wpRestEngine, placeFromDetailHtml, tribeToRawEvent, type WpRestConfig } from './wp-rest';
 import { SOURCES } from '../registry';
 import { findFirstDateInText } from '../../utils/swedishDate';
 import type { EngineContext } from '../types';
@@ -184,5 +184,48 @@ describe('wpRestEngine — defaultVenue (en-venue-sajt)', () => {
         }]);
         const evs = await wpRestEngine({ baseUrl: 'https://bio-b.test', variant: 'wp-v2', embed: false, defaultVenue: 'Panora' }, ctx);
         expect(evs[0].venueName).toBe('Stora salongen');
+    });
+});
+
+describe('tribeToRawEvent — defaultCity', () => {
+    const base = { id: 1, title: 'Lunchvisning', start_date: '2026-10-22 11:30:00', url: 'https://www.gotlandsmuseum.se/event/x/' };
+
+    it('ingen venue (Tribe: venue: []) → källans defaultCity (Gotlands Museum 12/10)', () => {
+        expect(tribeToRawEvent({ ...base, venue: [] }, 'Visby')?.city).toBe('Visby');
+        expect(tribeToRawEvent({ ...base, venue: [] })?.city).toBeUndefined();
+    });
+
+    it('venue utan ort rörs inte — platsen kommer ur venue-objektet som förut', () => {
+        const ev = tribeToRawEvent({ ...base, venue: { venue: 'Fornsalen', address: 'Strandgatan 14' } }, 'Visby');
+        expect(ev?.city).toBeUndefined();
+        expect(ev?.venueName).toBe('Fornsalen');
+        expect(tribeToRawEvent({ ...base, venue: { venue: 'Fornsalen', city: 'Visby' } }, 'Slite')?.city).toBe('Visby');
+    });
+});
+
+describe('placeFromDetailHtml (vemdalen.se:s event-location-block)', () => {
+    const rx = {
+        venue: /class="event-location-title">([^<]+)</,
+        address: /class="event-location-address">([^<]+)</,
+        coords: /class="event-location-map"[^>]*?[?;&]q=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,
+    };
+    const html = `<div class="event-organizer"><p>Hovde Kök &#038; Bar<br><span>Telefon:</span> 0684-151 30</p></div>
+<div class="event-location-block wp-block-adeprimo-event-location"><h4 class="event-location-title">Hovde Kök &#038; Bar</h4><iframe
+      class="event-location-map"
+      width="100%"
+      src="https://maps.google.com/maps?width=100%&#038;height=250&#038;hl=en&#038;q=62.48181421736433,13.974702797848225&#038;t=m&#038;z=15&#038;output=embed">
+    </iframe><p class="event-location-address">Vemdalsskalet Nya landsvägen 50, 846 94 Vemdalen</p></div>`;
+
+    it('venue, adress, postort och kartans koordinater', () => {
+        expect(placeFromDetailHtml(html, rx)).toEqual({
+            venueName: 'Hovde Kök & Bar',
+            address: 'Vemdalsskalet Nya landsvägen 50, 846 94 Vemdalen',
+            city: 'Vemdalen',
+            coords: [62.48181421736433, 13.974702797848225],
+        });
+    });
+
+    it('sida utan block → inget', () => {
+        expect(placeFromDetailHtml('<p>Ingen plats här</p>', rx)).toEqual({});
     });
 });

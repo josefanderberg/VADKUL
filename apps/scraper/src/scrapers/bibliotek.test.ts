@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapAxiellEvent, branchCity, AxiellTenant } from './bibliotek';
+import { mapAxiellEvent, branchCity, branchFromText, AxiellTenant, AXIELL_TENANTS } from './bibliotek';
 
 // TZ=Europe/Stockholm via vitest.config — samma som nattkedjan på minin.
 const tenant: AxiellTenant = {
@@ -44,5 +44,58 @@ describe('branchCity', () => {
         expect(branchCity('Höganäs bibliotek', ['Höganäs'])).toBe('Höganäs');
         expect(branchCity('Åstorps bibliotek', ['Åstorp'])).toBe('Åstorp');
         expect(branchCity('Sylte bibliotek', ['Trollhättan'])).toBeUndefined();
+    });
+});
+
+const gota = AXIELL_TENANTS.find((t) => t.id === 'gota')!;
+
+/** Axiell-träff med location { value: null } — så som Götabiblioteken levererar dem (12/10). */
+function nullLocHit(title: string, description = '', location: string | null = null) {
+    return {
+        id: '6cfa85b7-8d41-49bc-8c28-978cb197edab',
+        event: {
+            title, description, status: 'PUBLISHED', deleted: false,
+            startDate: '2026-10-14T12:00:00.000Z',
+            location: { value: location },
+        },
+    };
+}
+
+describe('branchFromText', () => {
+    it('filial i titeln ("på Linghems bibliotek")', () => {
+        expect(branchFromText('Digitalhjälpen på Linghems bibliotek', '')).toBe('Linghems bibliotek');
+    });
+
+    it('beskrivningens "Plats:"-rad, gatuadressen i parentes kapas', () => {
+        const desc = '<p>Välkommen på seriebokcirkel i Linghem!</p><p>Plats: Ung Zon i Linghem (Gällstadsvägen 22)</p>';
+        expect(branchFromText('Seriebokcirkel på Ung Zon i Linghem', desc)).toBe('Ung Zon i Linghem');
+    });
+
+    it('ingen gissning utan tydlig plats — och inget generiskt enordsnamn', () => {
+        expect(branchFromText('Handarbetsträff med Annika', '<p>Välkommen till biblioteket med ditt handarbete!</p>')).toBeUndefined();
+        expect(branchFromText('Babymålning på Konstmuseet', '')).toBeUndefined();
+        expect(branchFromText('Sagostund på Biblioteket', '')).toBeUndefined();
+    });
+});
+
+describe('mapAxiellEvent — location null', () => {
+    it('filialen ur titeln blir venue + geokodningskandidater; värden förblir portalen', () => {
+        const ev = mapAxiellEvent(nullLocHit('Digitalhjälpen på Linghems bibliotek'), gota)!;
+        expect(ev.venueName).toBe('Linghems bibliotek');
+        expect(ev.geocodeCandidates?.[0]).toBe('Linghems bibliotek, Linköping');
+        expect(ev.hostName).toBe('Götabiblioteken');
+    });
+
+    it('API:ts egen filial vinner som förut', () => {
+        const ev = mapAxiellEvent(nullLocHit('Digitalhjälpen på Linghems bibliotek', '', 'Tjällmo bibliotek'), gota)!;
+        expect(ev.venueName).toBe('Tjällmo bibliotek');
+        expect(ev.hostName).toBe('Tjällmo bibliotek');
+    });
+
+    it('utan ledtråd: ingen plats alls (inte en gissad medlemsort)', () => {
+        const ev = mapAxiellEvent(nullLocHit('Handarbetsträff med Annika'), gota)!;
+        expect(ev.venueName).toBeUndefined();
+        expect(ev.city).toBeUndefined();
+        expect(ev.geocodeCandidates).toEqual([]);
     });
 });

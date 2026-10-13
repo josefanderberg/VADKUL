@@ -628,8 +628,22 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Visit Vemdalen',
         region: 'harjedalen',
         engine: 'wp-rest' as const,
-        config: { baseUrl: 'https://www.vemdalen.se', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5 },
+        config: {
+            baseUrl: 'https://www.vemdalen.se', variant: 'wp-v2', defaultCity: 'Vemdalen', fetchDetailPage: true, maxPages: 5,
+            // "Kommande tillfällen" (Adeprimo-blocket) — första framtida datumet i listan. Helsides-
+            // skanningen tog annars "Fler aktuella evenemang"-kortens datum: passerade event
+            // (midsommar, sommarbufféer) återuppstod på nästa kommande dag (14/10 i torrkörningen 13/10).
+            detailDateRegex: /wp-block-adeprimo-event-dates">([\s\S]*?)<\/div>/,
+            // Detaljsidans platsblock (Adeprimo): venue, adress med postort och kartans koordinater.
+            detailPlace: {
+                venue: /class="event-location-title">([^<]+)</,
+                address: /class="event-location-address">([^<]+)</,
+                coords: /class="event-location-map"[^>]*?[?;&]q=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,
+            },
+        },
         updateFrequency: 'every-3d' as const,
+        // Engångssvep: kända event på null-ön får platsblockets koordinater.
+        contentSweep: '2026-10-13',
         status: 'experimental' as const,
         discovery: {
             method: 'hint' as const,
@@ -637,7 +651,9 @@ export const SNOWBALL_SOURCES: Source[] = [
             date: '2026-08-23',
             rawEventCount: 46,
         },
-        notes: 'web-snöboll 2026-08-23: wp-v2, smoke 46 event ok. Manuell kandidatlista (stads-svep).',
+        notes: 'web-snöboll 2026-08-23: wp-v2, smoke 46 event ok. Manuell kandidatlista (stads-svep). '
+            + '12/10: platsen fanns bara i detaljsidans event-location-block (REST-texten saknar den) → '
+            + 'detailPlace + defaultCity Vemdalen; 28 event låg på null-ön som "Sverige".',
         lastVerified: '2026-08-23',
     },
 
@@ -788,8 +804,11 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Medleymalmo',
         region: 'national',
         engine: 'wp-rest' as const,
-        config: { baseUrl: 'https://medleymalmo.se', variant: 'tribe', defaultCity: '', fetchDetailPage: false, maxPages: 4 },
+        // Medley är EN scen (Södra Promenaden 51, Malmö) och tribe-API:t har ingen venue → defaultCity (12/10: 20 event på null-ön).
+        config: { baseUrl: 'https://medleymalmo.se', variant: 'tribe', defaultCity: 'Malmö', fetchDetailPage: false, maxPages: 4 },
         updateFrequency: 'every-3d' as const,
+        // Engångssvep: kända event på null-ön flyttas till Malmö.
+        contentSweep: '2026-10-13',
         status: 'experimental' as const,
         discovery: {
             method: 'hint' as const,

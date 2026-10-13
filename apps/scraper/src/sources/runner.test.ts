@@ -35,6 +35,7 @@ vi.mock('../utils/sqliteHelper', () => ({
     getSqliteEvent: vi.fn(() => undefined),
     getSyncMeta: vi.fn(() => null),
     setSyncMeta: vi.fn(),
+    lookupTatortNear: vi.fn(() => null),
 }));
 // Var 4:e-körning-logiken är datum/hash-styrd — pinna av så testerna inte
 // blir beroende av vilken dag de körs.
@@ -50,7 +51,7 @@ import { runSource, deriveHasSpecificTime, geocodeQueriesFor, countKnownDropped,
 import { Source, RawEvent, Engine } from './types';
 import { addEventsBatch, eventExistsInDb, refreshEventContent, refreshEventPlace } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
-import { recordScrapeRun, getSyncMeta, setSyncMeta, getSqliteEvent } from '../utils/sqliteHelper';
+import { recordScrapeRun, getSyncMeta, setSyncMeta, getSqliteEvent, lookupTatortNear } from '../utils/sqliteHelper';
 
 const batchMock = vi.mocked(addEventsBatch);
 // Runnern batchar skrivningar: alla event från en körning kommer i ETT
@@ -548,5 +549,95 @@ describe('runSource — refresh flyttar event från defaultCity-fallbacken', () 
         sqliteMock.mockReturnValue(stored({ locationName: 'Kulturhuset', geoPrecision: 'stad-centroid' }));
         await run([makeEvent({ city: 'Växjö', venueName: 'Kulturhuset' })], {}, { config: {} } as Partial<Source>);
         expect(geocodeMock).not.toHaveBeenCalled();
+    });
+});
+
+// 12/10: 1 298 kommande event låg på null-ön (0,0), de flesta med fallback-
+// namnet "Sverige". När källan nu ger ort/koordinater ska refresh läka dem.
+describe('runSource — refresh läker event på null-ön', () => {
+    const placeMock = vi.mocked(refreshEventPlace);
+    const sqliteMock = vi.mocked(getSqliteEvent);
+    const tatortMock = vi.mocked(lookupTatortNear);
+    const nullIsland = (over: Record<string, unknown> = {}) =>
+        ({ locationName: 'Sverige', lat: 0, lng: 0, geoPrecision: null, ...over }) as any;
+
+    beforeEach(() => {
+        existsMock.mockResolvedValue(true);
+        syncMetaGetMock.mockReturnValue(null);   // svep förfallet → refresh-läge
+        placeMock.mockResolvedValue(true);
+    });
+
+    it('"Sverige" + källan ger nu bara ort → overifierad centroid, platsnamnet blir orten', async () => {
+        sqliteMock.mockReturnValue(nullIsland());
+        geocodeMock.mockResolvedValue([57.64, 18.29, 'stad-centroid'] as any);
+        const result = await run([makeEvent({ city: 'Visby' })], {}, { config: { defaultCity: 'Visby' } } as Partial<Source>);
+        expect(geocodeMock).toHaveBeenCalledWith('Visby');
+        const call = placeMock.mock.calls[0];
+        expect(call.slice(1, 4)).toEqual(['Visby', 57.64, 18.29]);
+        expect(call[5]).toBe(false);
+        expect(call[6]).toBe('stad-centroid');
+        expect(result.updated).toBe(1);
+    });
+
+    it('Nominatim svarar inte → ortens centroid ur tätortsregistret', async () => {
+        sqliteMock.mockReturnValue(nullIsland({ locationName: 'Saltsjöbadens Ishall' }));
+        tatortMock.mockReturnValueOnce([59.28, 18.30]);
+        await run([makeEvent({ city: 'Saltsjöbaden', venueName: 'Saltsjöbadens Ishall' })]);
+        expect(tatortMock).toHaveBeenCalledWith('Saltsjöbaden');
+        expect(placeMock.mock.calls[0].slice(1, 4)).toEqual(['Saltsjöbadens Ishall, Saltsjöbaden', 59.28, 18.30]);
+    });
+
+    it('källans koordinater ersätter "Sverige" med källans venue', async () => {
+        sqliteMock.mockReturnValue(nullIsland());
+        await run([makeEvent({ venueName: 'Hovde Kök & Bar', city: 'Vemdalen', coords: [62.48, 13.97] })]);
+        expect(placeMock.mock.calls[0].slice(1, 4)).toEqual(['Hovde Kök & Bar', 62.48, 13.97]);
+    });
+
+    it('ett riktigt sparat platsnamn behålls när koordinaterna kommer', async () => {
+        sqliteMock.mockReturnValue(nullIsland({ locationName: 'Fornsalen' }));
+        await run([makeEvent({ venueName: 'Annat namn', coords: [57.64, 18.29] })]);
+        expect(placeMock.mock.calls[0][1]).toBe('Fornsalen');
+    });
+
+    it('venue men ingen ort (konsortiefilial ur titeln) → kandidatkedjan som för nya event', async () => {
+        sqliteMock.mockReturnValue(nullIsland());
+        geocodeMock.mockImplementation(async (q: string) => (q === 'Linghems bibliotek, Linköping' ? [58.43, 15.79, 'poi'] : null) as any);
+        await run([makeEvent({ venueName: 'Linghems bibliotek', geocodeCandidates: ['Linghems bibliotek, Linköping', 'Linghems bibliotek'] })]);
+        const call = placeMock.mock.calls[0];
+        expect(call.slice(1, 5)).toEqual(['Linghems bibliotek', 58.43, 15.79, 'Linghems bibliotek, Linköping']);
+        expect(call[6]).toBe('poi');
+    });
+
+    it('utan någon ledtråd (ingen ort, venue eller kandidat) → rörs inte', async () => {
+        sqliteMock.mockReturnValue(nullIsland());
+        await run([makeEvent()]);
+        expect(geocodeMock).not.toHaveBeenCalled();
+        expect(placeMock).not.toHaveBeenCalled();
+    });
+
+    it('geokodat event utan ort-ändring rörs inte', async () => {
+        sqliteMock.mockReturnValue(nullIsland({ lat: 57.64, lng: 18.29 }));
+        await run([makeEvent({ city: 'Visby' })]);
+        expect(geocodeMock).not.toHaveBeenCalled();
+        expect(placeMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('runSource — tätortsgolvet för nya event', () => {
+    const tatortMock = vi.mocked(lookupTatortNear);
+
+    it('ingen kandidat träffar men källan har ort → tätortens centroid, märkt stad-centroid', async () => {
+        tatortMock.mockReturnValueOnce([60.64, 17.01]);
+        await run([makeEvent({ venueName: 'NickBack Arena', city: 'Valbo' })]);
+        const w = writtenEvents()[0];
+        expect([w.lat, w.lng]).toEqual([60.64, 17.01]);
+        expect(w.geoPrecision).toBe('stad-centroid');
+        expect(w.geocodedQuery).toBe('tätort: Valbo');
+        expect(w.isLocationVerified).toBe(true);
+    });
+
+    it('utan ort, eller okänd tätort → null-ön som förut', async () => {
+        await run([makeEvent({ venueName: 'Okänd plats' }), makeEvent({ city: 'Förlösa-Kläckeberga' })]);
+        expect(writtenEvents().map((w) => [w.lat, w.lng])).toEqual([[0, 0], [0, 0]]);
     });
 });
