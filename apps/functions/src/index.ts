@@ -6,6 +6,7 @@
  */
 export { dailyScraper } from './dailyScraperJob';
 export { redeemCode, redeemStarGift, placeStar } from './stars';
+export { acceptFriendInvite } from './friendInvites';
 export { sendPushNotification } from './pushNotifications';
 export { eventReminders } from './reminders';
 export { weeklyWeekendDigest } from './digest';

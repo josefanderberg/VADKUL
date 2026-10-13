@@ -136,8 +136,9 @@ function redeemedCodes(data: Record<string, any>): string[] {
 }
 
 /** Oplacerade stjärnor. Saknas räknaren är dokumentet från före 22/8 → läs
- *  legacy-flaggan (en enda stjärna, hämtad = 1, placerad = 0). */
-function availableStars(data: Record<string, any>): number {
+ *  legacy-flaggan (en enda stjärna, hämtad = 1, placerad = 0). Delas med
+ *  vän-inbjudan (friendInvites.ts). */
+export function availableStars(data: Record<string, any>): number {
     if (typeof data.starsAvailable === 'number' && Number.isFinite(data.starsAvailable)) {
         return Math.max(0, Math.floor(data.starsAvailable));
     }
