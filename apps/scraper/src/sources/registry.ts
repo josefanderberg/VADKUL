@@ -753,10 +753,17 @@ export const SOURCES: Source[] = [
             variant: 'wp-v2',
             endpoint: '/wp-json/wp/v2/kalenderhandelse',
             fetchDetailPage: true,
+            // 12/10: API:ts content renderar hela sidan inkl. tre "puffar" med
+            // ANDRA events datum. Passerade event ("Datum: fredag 7 augusti"
+            // föll på veckodagskontrollen) fick puffens "26 oktober" — 14 av
+            // 19 på 2026-10-26. Datumet BARA ur "Bra att veta"-rutan.
+            contentDateRegex: /class="custom-info"[^>]*>([\s\S]*?)<\/div>/,
             defaultCity: 'Örebro',
             maxPages: 3,
         },
         updateFrequency: 'every-3d',
+        // Engångssvep 12/10: kända kommande event får rätt dag + klockslag.
+        contentSweep: '2026-10-12',
         status: 'active',
         discovery: { method: 'probe-wp', probeUrl: 'https://olm.se/wp-json/wp/v2/kalenderhandelse', date: '2026-07-03' },
         notes: 'Agent-probe 2026-07-03: ~15 unika juli/aug-datum via detaljsidor. Venues i hela länet (Bofors/Kopparberg) — geokodas per event.',
@@ -1012,12 +1019,19 @@ export const SOURCES: Source[] = [
             variant: 'wp-v2',
             defaultCity: 'Göteborg',
             fetchDetailPage: true,
+            // 12/10: helsides-skanningen tog "På gång"-hjulets första kort
+            // ("15 okt 2026") på passerade föreställningar — 70 av 106 på
+            // 2026-10-15 utan klockslag. Datumet BARA ur sidans egen
+            // "Speltillfällen"-lista (första kommande, med klockslag).
+            detailDateRegex: /event__sidebar__dates"[^>]*>([\s\S]*?)event__sidebar__prices/,
             // 1345 event-poster totalt (mest arkiv). API:t sorterar på publicerings-
             // datum desc → nyast publicerat = aktuell/kommande säsong. Cap 5 sidor
             // (250) räcker för det kommande programmet; resten är passerade.
             maxPages: 5,
         },
         updateFrequency: 'every-3d',
+        // Engångssvep 12/10: kända kommande event får rätt dag + klockslag.
+        contentSweep: '2026-10-12',
         status: 'experimental',
         notes: 'Probe 2026-06-30: /wp-json/wp/v2/event (1345 poster, mest arkiv). Ingen användbar XML-sitemap (sitemap.xml=HTML). API-date=publiceringsdatum → fetchDetailPage extraherar riktigt event-datum ur detaljsidans text ("22 aug 2026"). maxPages=5 (nyast publicerat = kommande säsong). Spelhus i Göteborg.',
         lastVerified: '2026-06-30',
@@ -4150,8 +4164,16 @@ export const SOURCES: Source[] = [
             sitemapUrl: 'https://www.artipelag.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?utstallning(?:ar)?\/[^/]+\/?$/i],
             defaultCity: 'Värmdö',
+            // 12/10: fritext-fallbacken tog "Mer på gång"-kortets "27 mar 2026
+            // – 31 okt 2026" (MUCHA) → 20 av 20 på 2026-10-31, mest
+            // utställningar från 2013–2025. Datumet BARA ur rubrikblockets
+            // period, och STARTdagen av den ("Permanent" → hoppas över).
+            detailDateSelector: '[id^="standalone-block-header-calendar-"] .is-style-preamble-large',
+            detailDateRangeStart: true,
         },
         updateFrequency: 'every-3d',
+        // Engångssvep 12/10: kända URL:er re-fetchas med det nya datumfältet.
+        contentSweep: '2026-10-12',
         notes: 'Probe-venues 2026-06-09: 38 event-URLs (utstallning-mönster) — museum.',
         lastVerified: '2026-06-09',
     },

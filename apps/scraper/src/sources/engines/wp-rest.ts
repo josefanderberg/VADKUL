@@ -23,7 +23,7 @@
 
 import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
-import { findFirstDateInText } from '../../utils/swedishDate';
+import { findFirstDateInText, rangeToStartText } from '../../utils/swedishDate';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { cleanDescription, decodeHtmlEntities } from '../../utils/text';
 
@@ -58,6 +58,40 @@ export interface WpRestConfig {
      * Ingen träff ⇒ eventet får inget datum (hellre bortfall än fel dag).
      */
     detailDateRegex?: RegExp;
+    /**
+     * Riktad datum-extraktion ur API:ts content.rendered (CAPTURE-GRUPP 1 =
+     * sidans egen datumruta) — för sajter där content renderar HELA sidan,
+     * inklusive "Mer i kalendern"-puffar med ANDRA events datum. Örebro läns
+     * museum 12/10: fritext-skanningen hoppade över passerade "fredag 7
+     * augusti" och tog puffens "26 oktober" (14 av 19 event samma dag).
+     * När satt är träffen ENDA datumkällan: varken fritext-skanningen eller
+     * detaljsidans helsides-skanning körs (hellre bortfall än fel dag).
+     * Se dateFromContentRegex för intervall och "Tid:"-etiketten.
+     */
+    contentDateRegex?: RegExp;
+}
+
+/**
+ * Eventdatumet ur den utpekade datumrutan (WpRestConfig.contentDateRegex).
+ * Intervall ("26–27 oktober") → startdagen, och etiketten "Tid:"/"Tider:"
+ * mellan datum och klockslag tas bort så "Datum: onsdag 28 oktober Tid: kl.
+ * 16.00" ger 16:00 i stället för ett heldagsevent. null utan träff.
+ *
+ * Årsvakt: rutan skriver oftast datum UTAN år, som gissas framåt från idag.
+ * "22 augusti" i en post publicerad i maj 2026 blev då 2027-08-22 — ett
+ * spök-event som dyker upp på kartan nästa sommar. Mer än ett år efter
+ * publiceringen (`published`, WP:s post-datum) ⇒ gissningen slog fel ⇒ null.
+ */
+export function dateFromContentRegex(html: string, re: RegExp, now: Date, published?: Date): Date | null {
+    const m = html.match(re);
+    if (!m?.[1]) return null;
+    const text = rangeToStartText(decodeHtmlEntities(m[1].replace(/<[^>]+>/g, ' ')))
+        .replace(/\btid(?:er)?\s*:\s*/gi, ' ')
+        .replace(/,/g, ' ');
+    const date = findFirstDateInText(text, now);
+    if (!date) return null;
+    if (published && !isNaN(published.getTime()) && date.getTime() - published.getTime() > 365 * 86_400_000) return null;
+    return date;
 }
 
 function endpointFor(cfg: WpRestConfig): string {
@@ -308,20 +342,28 @@ async function wpV2ToRawEvent(
     let start: Date | null = dateRaw ? new Date(dateRaw) : null;
 
     // 2. Om de saknas eller är publication date: scanna title + content + excerpt
+    //    — eller BARA den utpekade datumrutan när contentDateRegex är satt.
     if (!start || isNaN(start.getTime()) || looksLikePublishDate(e.date, now)) {
-        const haystack = [
-            String(e.title?.rendered || ''),
-            String(e.excerpt?.rendered || ''),
-            String(e.content?.rendered || ''),
-        ].join(' ');
-        const scanned = findFirstDateInText(haystack, now);
-        if (scanned) start = scanned;
+        if (cfg.contentDateRegex) {
+            const published = e.date ? new Date(e.date) : undefined;
+            const own = dateFromContentRegex(String(e.content?.rendered || ''), cfg.contentDateRegex, now, published);
+            if (own) start = own;
+        } else {
+            const haystack = [
+                String(e.title?.rendered || ''),
+                String(e.excerpt?.rendered || ''),
+                String(e.content?.rendered || ''),
+            ].join(' ');
+            const scanned = findFirstDateInText(haystack, now);
+            if (scanned) start = scanned;
+        }
     }
 
     // 3. Sista utvägen: hämta event-permalänken som HTML och leta där
+    //    (inte med contentDateRegex — rutan var enda datumkällan).
     let detailHtml: string | null = null;
     let detailVenue: string | undefined;
-    if ((!start || isNaN(start.getTime())) && cfg.fetchDetailPage && e.link) {
+    if ((!start || isNaN(start.getTime())) && cfg.fetchDetailPage && e.link && !cfg.contentDateRegex) {
         detailHtml = await fetchDetailHtml(e.link, cfg, signal);
         if (detailHtml) {
             if (cfg.detailDateRegex) {

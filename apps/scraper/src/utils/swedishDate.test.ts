@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findFirstDateInText, normalizeDateOnlyTime, parseSwedishDate } from './swedishDate';
+import { findFirstDateInText, normalizeDateOnlyTime, parseSwedishDate, rangeToStartText } from './swedishDate';
 
 describe('normalizeDateOnlyTime', () => {
     it('sommar: lokal midnatt (22:00Z föreg. dag) → 12:00Z rätt kalenderdag', () => {
@@ -64,5 +64,41 @@ describe('findFirstDateInText — år med komma + spök-datum', () => {
         const d = parseSwedishDate('8 juni, 2026', NOW)!;
         expect(d.getFullYear()).toBe(2026);
         expect(d.getMonth()).toBe(5);
+    });
+});
+
+// Artipelag 12/10: rubrikens period "27 mar 2026 – 31 okt 2026" gav SLUTdagen
+// (första framtida datum) — 20 av 20 utställningar på 2026-10-31.
+describe('rangeToStartText — intervall → startdagen', () => {
+    it('båda sidor med månad och år', () => {
+        expect(rangeToStartText('27 mar 2026 – 31 okt 2026')).toBe('27 mar 2026');
+        expect(rangeToStartText('10 okt 2026 – 11 apr 2027')).toBe('10 okt 2026');
+    });
+
+    it('startdag utan månad lånar månad och år från slutet', () => {
+        expect(rangeToStartText('26–27 oktober')).toBe('26 oktober');
+        expect(rangeToStartText('15-16 augusti 2026')).toBe('15 augusti 2026');
+        expect(rangeToStartText('lördag 26 – söndag 27 september 2026')).toBe('lördag 26 september 2026');
+    });
+
+    it('startmånad efter slutmånad ⇒ året innan slutåret', () => {
+        expect(rangeToStartText('26 dec – 2 jan 2027')).toBe('26 dec 2026');
+    });
+
+    it('utan år förblir startdagen årlös (gissas framåt som vanligt)', () => {
+        expect(rangeToStartText('23 sep - 9 okt')).toBe('23 sep');
+    });
+
+    it('klockslagsintervall och text runt omkring lämnas orörda', () => {
+        expect(rangeToStartText('Datum: 26–27 oktober Tider: 9.00–16.00')).toBe('Datum: 26 oktober Tider: 9.00–16.00');
+        expect(rangeToStartText('fre 25 september kl 14:00–16:00')).toBe('fre 25 september kl 14:00–16:00');
+        expect(rangeToStartText('Permanent')).toBe('Permanent');
+    });
+
+    it('pågående utställning: startdagen (passerad) i stället för slutdagen', () => {
+        const NOW = new Date(2026, 9, 12, 10, 0);   // mån 12 okt 2026
+        expect(findFirstDateInText('27 mar 2026 – 31 okt 2026', NOW)!.getMonth()).toBe(9);   // utan: slutdagen
+        const d = findFirstDateInText(rangeToStartText('27 mar 2026 – 31 okt 2026'), NOW)!;
+        expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 2, 27]);
     });
 });

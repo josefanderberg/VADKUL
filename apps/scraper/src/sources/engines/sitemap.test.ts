@@ -457,6 +457,54 @@ describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
     });
 });
 
+// Artipelag 12/10: fritext-fallbacken tog "Mer på gång"-kortets "27 mar 2026 –
+// 31 okt 2026" (en ANNAN utställning) → 20 av 20 på 2026-10-31.
+describe('dateFromDetailSelector med rangeStart — utställningsperiod (Artipelag)', () => {
+    const NOW = new Date(2026, 9, 12, 10, 0);   // mån 12 okt 2026
+    const SEL = '[id^="standalone-block-header-calendar-"] .is-style-preamble-large';
+    const page = (period: string) => `<html><body><main><article class="calendar-article">
+<section id="standalone-block-header-calendar-4691" class="block standalone-block-header"><div class="block-header__content">
+<p class="wp-block-paragraph is-style-pre-heading">Utställning</p>
+<h1 class="wp-block-heading">Roy Andersson</h1>
+<p class="wp-block-paragraph is-style-preamble-large uppercase">${period}</p></div></section>
+<section class="block standalone-block-header"><p class="is-style-preamble-large wp-block-paragraph">Roy Andersson (f. 1943) är en svensk filmskapare.</p></section>
+<section class="block calendar-list"><h2>Mer på gång</h2><article class="calendar-listing__item">
+<h3>MUCHA – Beyond Art Nouveau</h3><p class="is-style-pre-heading mb-6!">27 mar 2026 – 31 okt 2026</p></article></section>
+</article></main></body></html>`;
+    const ymd = (d: Date) => [d.getFullYear(), d.getMonth() + 1, d.getDate()];
+    // cheerioFallback räknar "framtida" mot systemklockan — lås den till
+    // fixturens dag, annars tidsbomb när kortets 31 okt glidit förbi.
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
+    afterAll(() => { vi.useRealTimers(); });
+
+    it('passerad utställning → sitt eget (passerade) startdatum, inte kortets 31 okt', () => {
+        const r = dateFromDetailSelector(page('13 jan 2023 – 30 apr 2023'), SEL, NOW, { rangeStart: true })!;
+        expect(ymd(r.date)).toEqual([2023, 1, 13]);
+        expect(r.hasTime).toBe(false);
+    });
+
+    it('fritext-fallbacken hade tagit kortets datum — det är därför fältet behövs', () => {
+        const ev = cheerioFallback(page('13 jan 2023 – 30 apr 2023'), 'https://artipelag.se/pa-gang/utstallning/roy-andersson/', 'Värmdö');
+        expect(ymd(ev!.startDate)).toEqual([2026, 10, 31]);
+    });
+
+    it('pågående utställning → STARTdagen (klipps av fönstret), inte slutdagen', () => {
+        const period = '10 okt 2026 – 11 apr 2027';
+        expect(ymd(dateFromDetailSelector(page(period), SEL, NOW, { rangeStart: true })!.date)).toEqual([2026, 10, 10]);
+        // Utan flaggan: första framtida datum = slutdagen (oförändrat för andra källor).
+        expect(ymd(dateFromDetailSelector(page(period), SEL, NOW)!.date)).toEqual([2027, 4, 11]);
+    });
+
+    it('kommande utställning → startdagen', () => {
+        expect(ymd(dateFromDetailSelector(page('24 okt 2026 – 7 mar 2027'), SEL, NOW, { rangeStart: true })!.date)).toEqual([2026, 10, 24]);
+    });
+
+    it('"Permanent" och sidor utan rubrikblocket → null (hoppas över)', () => {
+        expect(dateFromDetailSelector(page('Permanent'), SEL, NOW, { rangeStart: true })).toBeNull();
+        expect(dateFromDetailSelector('<html><body><h1>Konstmuseum på Värmdö</h1><p>9 okt 2026 – 15 nov 2026</p></body></html>', SEL, NOW, { rangeStart: true })).toBeNull();
+    });
+});
+
 describe('Växjö-sluttiden: SiteVision-props skriver endDate före startDate', () => {
     // Nedskalat ur upplev.vaxjo.se (Tengstrandfestivalen 5/10, 19.00-20.00).
     // Sidans ld+json är inte schema.org → cheerioFallback, vars textskanning

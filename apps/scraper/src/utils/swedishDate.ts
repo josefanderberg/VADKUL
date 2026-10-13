@@ -308,6 +308,44 @@ export function findFirstDateInText(text: string, now: Date = new Date()): Date 
 }
 
 /**
+ * Datumintervall → bara STARTdagen, för text ur ett utpekat datumfält.
+ *
+ * findFirstDateInText föredrar första FRAMTIDA datum, så ett pågående
+ * intervall ("27 mar 2026 – 31 okt 2026") gav SLUTdagen: Artipelag 12/10
+ * fick 20 av 20 utställningar på 2026-10-31. Konventionen är att en
+ * utställning är sin startdag (pågående klipps av fönstret, längre spann än
+ * 30 dygn blir inget endDate — se utils/eventEnd).
+ *
+ *   "27 mar 2026 – 31 okt 2026"  → "27 mar 2026"
+ *   "26–27 oktober"              → "26 oktober"       (månad/år lånas från slutet)
+ *   "lördag 26 – söndag 27 september 2026" → "lördag 26 september 2026"
+ *   "26 dec – 2 jan 2027"        → "26 dec 2026"      (startmånad efter slutmånad ⇒ året innan)
+ *
+ * Klockslagsintervall ("11.00–12.30") rörs inte. Medvetet INTE inbyggd i
+ * findFirstDateInText — i fritext kan bindestrecket stå mellan två olika
+ * saker; anroparen väljer det för fält som bevisligen är sidans eget datum.
+ */
+const RANGE_RE = new RegExp(
+    `(?<![\\d.:])(\\d{1,2})(?:\\s+(${MONTH_PATTERN})\\.?(?![a-zåäö])(?:\\s+(\\d{4}))?)?`
+    + `\\s*[-–—]\\s*(?:(?:${WEEKDAY_PATTERN})(?:en)?\\s+)?`
+    + `\\d{1,2}\\s+(${MONTH_PATTERN})\\.?(?![a-zåäö])(?:\\s+(\\d{4}))?`,
+    'gi',
+);
+
+export function rangeToStartText(text: string): string {
+    return text.replace(RANGE_RE, (_m, day: string, startMonth: string | undefined, startYear: string | undefined, endMonth: string, endYear: string | undefined) => {
+        const month = startMonth ?? endMonth;
+        let year = startYear;
+        if (!year && endYear) {
+            year = MONTH_MAP[month.toLowerCase()] > MONTH_MAP[endMonth.toLowerCase()]
+                ? String(Number(endYear) - 1)
+                : endYear;
+        }
+        return `${day} ${month}${year ? ` ${year}` : ''}`;
+    });
+}
+
+/**
  * Normalisera ett "bara datum"-event (hasSpecificTime=false) till en neutral
  * eftermiddagstid i stället för lokal midnatt.
  *
