@@ -1,5 +1,6 @@
 /**
- * Svensk gatuadress-extraktion ur fritext.
+ * Svensk gatuadress-extraktion ur fritext — plus postort (postalTown) och
+ * platsblock rad för rad (placeFromLines).
  *
  * Två mönster:
  *   1. Sammansatt gatunamn — ETT versal-inlett ord som slutar på gatusuffix:
@@ -35,4 +36,57 @@ export function extractStreetAddress(text: string | null | undefined): string | 
     if (street.includes(' ') && STOP_FIRST_WORD.test(street)) return null;
     const nr = m[2].trim();
     return `${street} ${nr}`;
+}
+
+/** Postnummer (med valfritt "SE-") i början av en rad eller efter mellanslag/komma. */
+const POSTAL_RE = /(?:^|[\s,]|SE-)\d{3}\s?\d{2}\s+([^\d,.;:()]{2,40})/;
+const POSTAL_LINE_RE = /^(?:SE-)?\d{3}\s?\d{2}\s/;
+
+/** "UMEÅ" → "Umeå", "DALS-ED" → "Dals-Ed"; text i blandat skiftläge lämnas orörd. */
+function unshout(s: string): string {
+    if (s !== s.toUpperCase() || s === s.toLowerCase()) return s;
+    return s.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
+}
+
+/**
+ * Postorten ur en svensk adressrad: "…, 846 94 Vemdalen" → "Vemdalen",
+ * "906 27  UMEÅ" → "Umeå" (postens versaler normaliseras), "55322 Jönköping."
+ * → "Jönköping". null när raden saknar postnummer.
+ */
+export function postalTown(text: string | null | undefined): string | null {
+    if (!text) return null;
+    const m = text.match(POSTAL_RE);
+    if (!m) return null;
+    const town = m[1].replace(/\s+/g, ' ').trim();
+    return /^\p{Lu}/u.test(town) ? unshout(town) : null;
+}
+
+/** Platshållare/online — ingen plats att kartlägga. */
+const NO_PLACE_RE = /\b(?:online|digital\w*|distans|zoom|webben|meddelas|uppdateras|senare|nedan|tba)\b/i;
+
+/**
+ * Ett platsblock rad för rad (NBV:s "Om arrangemanget"-kort):
+ *   ["Ersboda Folkets Hus, Byttgränd 13", "906 27  UMEÅ"]
+ *   → venue "Ersboda Folkets Hus", adress "Ersboda Folkets Hus, Byttgränd 13", ort "Umeå".
+ * Första segmentet är venue (ibland gatan själv: "Källgatan 11"), hela raden
+ * adressen när den har flera segment — samma tolkning som splitIcsLocation.
+ * Online-event och platshållare ("exakt plats uppdateras senare") ger ingen
+ * plats. Utan postort lämnas adressen bort och en venue med husnummer också:
+ * en gatuadress utan ort är tvetydig i en rikstäckande källa (Skolgatan 48
+ * finns i många städer).
+ */
+export function placeFromLines(lines: string[]): { venueName?: string; address?: string; city?: string } {
+    const clean = lines.map(l => (l || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const city = clean.map(l => postalTown(l)).find((t): t is string => !!t);
+    const placeLine = clean.find(l => !POSTAL_LINE_RE.test(l));
+    if (!placeLine || NO_PLACE_RE.test(placeLine)) return city ? { city } : {};
+    // "Adolf Mörners plan 2, 702 28 Örebro" — postnummer-segmentet är orten, inte adressen.
+    const parts = placeLine.split(',').map(p => p.trim()).filter(p => p && !POSTAL_LINE_RE.test(p));
+    const venueName = parts[0];
+    if (!venueName || venueName.length > 80 || (!city && /\d/.test(venueName))) return city ? { city } : {};
+    return {
+        venueName,
+        ...(city && parts.length > 1 ? { address: parts.join(', ') } : {}),
+        ...(city ? { city } : {}),
+    };
 }

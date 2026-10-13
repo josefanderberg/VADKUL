@@ -17,7 +17,7 @@ import { venueBuildingOf } from '../utils/venueFromText';
 import { looksLikeCinema } from '../utils/cinema';
 import { ruleEmojiFor } from '../utils/emojiRules';
 import { validEventEnd } from '../utils/eventEnd';
-import { getSqliteEvent } from '../utils/sqliteHelper';
+import { getSqliteEvent, lookupTatortNear } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isInNordic, type GeoHit } from '../utils/venueCoordinates';
 import { firstPreciseHit } from '../utils/geocodeChain';
@@ -108,6 +108,21 @@ export function geocodeQueriesFor(e: RawEvent): string[] {
         ];
     // Dedupa (address kan vara identisk med venueName) och släng korta/tomma.
     return [...new Set(candidates)].filter((q) => q && q.trim().length > 2);
+}
+
+/**
+ * Offline-golv när INGEN geokodningskandidat gav något men källan angav ort:
+ * ortens centroid ur SCB:s tätortsregister (lokal SQLite, ingen Nominatim,
+ * bara entydiga namn). Fångar Nominatim-fel vid sparandet — 12/10 låg 255
+ * swehockey-matcher på null-ön fast arenornas orter (Valbo, Älta, Kållered …)
+ * var kända, och "NickBack Arena, Valbo" geokodar fint när Nominatim svarar.
+ * Märks 'stad-centroid' så att geo-refine tar vid.
+ */
+export function tatortFloor(city: string | undefined): GeoHit | null {
+    const name = (city ?? '').trim();
+    if (name.length < 2) return null;
+    const t = lookupTatortNear(name);
+    return t ? [t[0], t[1], 'stad-centroid'] : null;
 }
 
 
@@ -266,6 +281,11 @@ export async function runSource(
                     const storedRow = getSqliteEvent(e.url);
                     const storedLoc = (storedRow?.locationName ?? '').trim().toLowerCase();
                     const storedUngeocoded = !(storedRow?.lat) || !(storedRow?.lng);
+                    // Sparad helt utan plats: null-ön med fallbacknamnet "Sverige" (eller
+                    // tomt). Då räcker det att källan NU ger en ort — Gotlands Museum/
+                    // Medley/NBV-eventen (12/10) läks annars aldrig, eftersom backfill-
+                    // geocode hoppar över "Sverige" (ingen ledtråd att geokoda).
+                    const storedPlaceless = !!storedRow && storedUngeocoded && (storedLoc === '' || storedLoc === 'sverige');
                     const cityLower = (e.city ?? '').trim().toLowerCase();
                     // Sparad på källans defaultCity-fallback medan titeln/sidan nu
                     // pekar ut en ANNAN ort (Visit Isabergsregionen 28/9: Torghuset
@@ -277,12 +297,13 @@ export async function runSource(
                     // fastnar event som sparades innan källans koordinat-join
                     // började täcka dem på centroiden för alltid (oland.se 2026-08-31).
                     if (e.coords && (storedUngeocoded || storedRow?.geoPrecision === 'stad-centroid')) {
-                        const loc = storedRow?.locationName || e.venueName || e.city || '';
+                        // "Sverige" är bara fallbacken — källans venue/ort ersätter den.
+                        const loc = (storedPlaceless ? '' : storedRow?.locationName) || e.venueName || e.city || storedRow?.locationName || '';
                         if (await refreshEventPlace(e.url, loc, e.coords[0], e.coords[1], 'källans egna koordinater', true, 'kallkoordinat')) {
                             result.updated++;
                             ctx.log(`  📍 koordinater från källan: ${e.title.slice(0, 50)}`);
                         }
-                    } else if ((e.venueName || movedFromDefault) && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded || movedFromDefault)) {
+                    } else if ((e.venueName || movedFromDefault || storedPlaceless) && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded || movedFromDefault)) {
                         const q = e.venueName ? `${e.venueName}, ${e.city}` : e.city!;
                         // Kandidatkedjan (t.ex. bibliotekskonsortiers medlemsorter) först, annars venue+stad.
                         let hit: GeoHit | null = e.coords ? [e.coords[0], e.coords[1], 'kallkoordinat'] : null;
@@ -298,13 +319,22 @@ export async function runSource(
                         // geo-refine-klustren tar det vidare) — men märk som overifierat.
                         let verified = true;
                         if (!hit && (storedUngeocoded || movedFromDefault)) {
-                            hit = await geocodeVenueSweden(e.city!);
+                            hit = (await geocodeVenueSweden(e.city!)) ?? tatortFloor(e.city);
                             verified = false;
                             if (hit) hit = [hit[0], hit[1], 'stad-centroid'];
                         }
                         if (hit && await refreshEventPlace(e.url, q, hit[0], hit[1], e.coords ? 'källans egna koordinater' : (verified ? q : `stad: ${e.city}`), verified, hit[2])) {
                             result.updated++;
                             ctx.log(`  📍 plats uppdaterad: ${e.title.slice(0, 50)} → ${q}`);
+                        }
+                    } else if (storedPlaceless && (e.venueName || e.geocodeCandidates?.length)) {
+                        // Plats men ingen ort (konsortiefilial ur titeln, NBV-venue utan
+                        // postort): samma kandidatkedja som för ett nytt event.
+                        const best = await firstPreciseHit(geocodeQueriesFor(e), (cand) => geocodeVenueSweden(cand));
+                        const loc = e.venueName || best?.query || '';
+                        if (best && await refreshEventPlace(e.url, loc, best.hit[0], best.hit[1], best.query, true, best.hit[2] ?? null)) {
+                            result.updated++;
+                            ctx.log(`  📍 plats uppdaterad: ${e.title.slice(0, 50)} → ${loc}`);
                         }
                     }
                     // Slutdatum: kända event fylls på när källan ger ett
@@ -372,6 +402,12 @@ export async function runSource(
                 if (best) {
                     lat = best.hit[0]; lng = best.hit[1];
                     geocodedQuery = best.query; geoPrecision = best.hit[2] ?? null;
+                } else {
+                    const floor = tatortFloor(e.city);
+                    if (floor) {
+                        lat = floor[0]; lng = floor[1];
+                        geocodedQuery = `tätort: ${e.city}`; geoPrecision = floor[2];
+                    }
                 }
             }
 

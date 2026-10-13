@@ -26,6 +26,7 @@ import { domainLimiter } from '../rateLimiter';
 import { findFirstDateInText, rangeToStartText } from '../../utils/swedishDate';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { cleanDescription, decodeHtmlEntities } from '../../utils/text';
+import { postalTown } from '../../utils/swedishAddress';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -76,6 +77,23 @@ export interface WpRestConfig {
      * Se dateFromContentRegex för intervall och "Tid:"-etiketten.
      */
     contentDateRegex?: RegExp;
+    /**
+     * Detaljsidans EGET platsblock (wp-v2): regexar vars CAPTURE-GRUPP 1 pekar
+     * ut platsnamnet resp. adressen, och för koordinater grupp 1+2 (lat, lng).
+     * Adeprimo-temat på vemdalen.se: <h4 class="event-location-title">,
+     * <p class="event-location-address"> och kartans "…&q=62.48,13.97".
+     * Satt → detaljsidan hämtas för nya URL:er även när brödtexten gav en
+     * fritextgissning, och blocket vinner över den. Postorten i adressen
+     * ("846 94 Vemdalen") slår defaultCity. Utan blocket låg 28 Vemdalen/
+     * Klövsjö-event på null-ön med locationName "Sverige" (12/10).
+     */
+    detailPlace?: WpDetailPlace;
+}
+
+export interface WpDetailPlace {
+    venue?: RegExp;
+    address?: RegExp;
+    coords?: RegExp;
 }
 
 /**
@@ -182,6 +200,32 @@ export function findVenueInHtml(html: string): string | undefined {
     return undefined;
 }
 
+/**
+ * Plats ur detaljsidans platsblock enligt WpRestConfig.detailPlace. Ren
+ * funktion. Koordinater bara när båda talen är giltiga — runnern validerar
+ * dessutom mot nordiska bounds. Ort ur adressens postnummer.
+ */
+export function placeFromDetailHtml(html: string, rx: WpDetailPlace):
+    { venueName?: string; address?: string; city?: string; coords?: [number, number] } {
+    const grab = (re?: RegExp): string | undefined => {
+        const m = re ? html.match(re) : null;
+        const v = m?.[1] ? decodeEntities(m[1]).replace(/\s+/g, ' ').trim() : '';
+        return v || undefined;
+    };
+    const venueName = grab(rx.venue);
+    const address = grab(rx.address);
+    const city = postalTown(address) ?? undefined;
+    const cm = rx.coords ? html.match(rx.coords) : null;
+    const lat = cm ? parseFloat(cm[1]) : NaN;
+    const lng = cm ? parseFloat(cm[2]) : NaN;
+    return {
+        ...(venueName ? { venueName } : {}),
+        ...(address ? { address } : {}),
+        ...(city ? { city } : {}),
+        ...(Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { coords: [lat, lng] as [number, number] } : {}),
+    };
+}
+
 /** Första matchande meta-tagg (property ELLER name) ur HTML, oavsett attribut-ordning. */
 function metaContent(html: string, keys: string[]): string | undefined {
     for (const k of keys) {
@@ -228,13 +272,18 @@ function parseTribeDate(s: string | undefined): Date | null {
     return isNaN(d.getTime()) ? null : d;
 }
 
-function tribeToRawEvent(e: any): RawEvent | null {
+export function tribeToRawEvent(e: any, defaultCity?: string): RawEvent | null {
     if (!e?.title || !e?.start_date) return null;
     const start = parseTribeDate(e.start_date);
     if (!start) return null;
     const end = parseTribeDate(e.end_date) || undefined;
 
     const venue = Array.isArray(e.venue) ? e.venue[0] : e.venue;
+    // Ingen venue alls (Tribe ger då `venue: []`) → källans defaultCity. Förr
+    // ignorerade tribe-varianten defaultCity helt: Gotlands Museum (Visby) och
+    // Medley (Malmö) hamnade på null-ön som "Sverige" (12/10). Event MED venue
+    // rörs inte — deras plats kommer som förut ur venue-objektet.
+    const city = venue ? venue.city : (defaultCity || undefined);
     const coords: [number, number] | undefined =
         venue?.geo_lat && venue?.geo_lng
             ? [parseFloat(venue.geo_lat), parseFloat(venue.geo_lng)]
@@ -247,7 +296,7 @@ function tribeToRawEvent(e: any): RawEvent | null {
         endDate: end || undefined,
         url: e.url || e.website || '',
         venueName: venue?.venue,
-        city: venue?.city,
+        city,
         address: venue?.address,
         coords,
         // cleanDescription strippar taggar OCH avkodar entities — den nakna
@@ -454,10 +503,13 @@ async function wpV2ToRawEvent(
     // Ingen plats i API-texten → hämta detaljsidan (bara nya URL:er) och läs
     // "Plats:"/<dt>Plats</dt>. Visit Piteå: 59 av 114 event låg på stadens
     // mittpunkt fast sidan anger t.ex. Framnäs folkhögskola i Öjebyn (2026-09-04).
-    if (!venueName && cfg.fetchDetailPage && e.link && opts.allowDetailFetch !== false) {
+    // Med detailPlace hämtas sidan även när fritexten gav en gissning — blocket vinner.
+    if ((!venueName || cfg.detailPlace) && cfg.fetchDetailPage && e.link && opts.allowDetailFetch !== false) {
         if (!detailHtml) detailHtml = await fetchDetailHtml(e.link, cfg, signal);
-        if (detailHtml) venueName = findVenueInHtml(detailHtml);
+        if (detailHtml && !venueName) venueName = findVenueInHtml(detailHtml);
     }
+    const place: ReturnType<typeof placeFromDetailHtml> =
+        cfg.detailPlace && detailHtml ? placeFromDetailHtml(detailHtml, cfg.detailPlace) : {};
 
     // WP-termer ("konsert", "musik & underhållning") går till klassificeraren
     // via classifyHints — INTE in i beskrivningen (läckte som taggsoppa på korten).
@@ -468,8 +520,10 @@ async function wpV2ToRawEvent(
         title,
         startDate: start,
         url: e.link || cfg.baseUrl,
-        venueName,
-        city: cfg.defaultCity,
+        venueName: place.venueName || venueName,
+        city: place.city || cfg.defaultCity,
+        ...(place.address ? { address: place.address } : {}),
+        ...(place.coords ? { coords: place.coords } : {}),
         description,
         imageUrl,
         classifyHints: termsHint,
@@ -524,7 +578,7 @@ export const wpRestEngine = async (
         // wp/v2 med fetchDetailPage gör många HTTP-anrop — gör dem parallellt
         // (domainLimiter throttles inom samma domän så detta är säkert)
         const evs = variant === 'tribe'
-            ? items.map((it) => tribeToRawEvent(it)).filter((x): x is RawEvent => !!x)
+            ? items.map((it) => tribeToRawEvent(it, config.defaultCity)).filter((x): x is RawEvent => !!x)
             : (await Promise.all(items.map(async (it) => {
                 // Detaljsida för plats bara för NYA URL:er (kända refreshas var 4:e körning).
                 const link = it?.link ? String(it.link) : '';

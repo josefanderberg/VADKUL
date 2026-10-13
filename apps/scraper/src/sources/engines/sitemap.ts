@@ -36,7 +36,7 @@ import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText, rangeToStartText } from '../../utils/swedishDate';
 import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
-import { extractStreetAddress } from '../../utils/swedishAddress';
+import { extractStreetAddress, placeFromLines } from '../../utils/swedishAddress';
 import { isInNordic } from '../../utils/venueCoordinates';
 
 const gunzip = promisify(zlib.gunzip);
@@ -168,6 +168,15 @@ export interface SitemapConfig {
      *  location-markup — t.ex. `.info-container p` ("Plats: Konsertsalen"). */
     detailVenueSelector?: string;
     /**
+     * CSS-selektor för detaljsidans PLATSBLOCK där varje barn-element är en
+     * rad: "Venue, Gata 1" + "123 45 Ort" (NBV:s "Om arrangemanget"-kort).
+     * Raderna tolkas av placeFromLines; blocket är sanningen och ersätter
+     * sidtextens gissningar (även när det säger "Online"), postorten slår
+     * defaultCity. Rikstäckande källor utan JSON-LD Event hamnade annars på
+     * null-ön — NBV hade 50 event med locationName "Sverige" (12/10).
+     */
+    detailPlaceSelector?: string;
+    /**
      * CSS-selektor för detaljsidans brödtext. Satt → beskrivningen tas
      * därifrån i stället för meta-description, som på vissa sajter är SAMMA
      * sajtvida text på varje sida (bastad.com 28/9: "Allt om Båstad -
@@ -271,6 +280,27 @@ export function dateFromDetailSelector(
     );
     const date = findFirstDateInText(opts.rangeStart ? rangeToStartText(numeric) : numeric, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
+}
+
+/**
+ * Platsblocket (SitemapConfig.detailPlaceSelector) → venue/adress/ort på
+ * eventet. Raderna är <br> och barn-elementen (NBV: två <span>) — även när
+ * markupen är hoplimmad. Muterar ev och returnerar true när blocket fanns.
+ * Exporterad för test.
+ */
+export function applyDetailPlace(html: string, selector: string, ev: RawEvent): boolean {
+    const $ = cheerio.load(html);
+    const el = $(selector).first();
+    if (el.length === 0) return false;
+    const lines = decodeHtmlEntities((el.html() ?? '')
+        .replace(/<br\s*\/?>|<\/(?:span|p|div|li|dd|dt)>/gi, '\n')
+        .replace(/<[^>]+>/g, ' '))
+        .split('\n');
+    const place = placeFromLines(lines);
+    ev.venueName = place.venueName;
+    ev.address = place.address;
+    if (place.city) ev.city = place.city;
+    return true;
 }
 
 /**
@@ -1487,6 +1517,7 @@ export const sitemapEngine = async (
                 const v = decodeHtmlEntities(cheerio.load(html)(config.detailVenueSelector).first().text()).replace(/\s+/g, ' ').trim();
                 if (v && v.length <= 80) ev.venueName = v;
             }
+            if (config.detailPlaceSelector) applyDetailPlace(html, config.detailPlaceSelector, ev);
             if (config.detailDescSelector) {
                 const d = descFromDetailSelector(html, config.detailDescSelector);
                 if (d) ev.description = d;

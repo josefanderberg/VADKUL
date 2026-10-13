@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -751,5 +751,55 @@ describe('Tickster-sidfotens kontorsadress (2/10)', () => {
         // Fat Daves på Magasinsgatan 8 i Malmö — egen sajt, riktig adress
         expect(isVendorFooterAddress('Magasinsgatan 8', 'https://fatdaves.se/event/x')).toBe(false);
         expect(isVendorFooterAddress('Magasinsgatan 8', 'inte en url')).toBe(false);
+    });
+});
+
+describe('applyDetailPlace (NBV:s eventkort, 12/10)', () => {
+    const SEL = 'section.bg-blue-100[aria-labelledby^="eventcard-title"] p.flex-col';
+    // Utsnitt ur nbv.se/arrangemang/tisdagstraffar-pa-ersboda/: huvudkortet med
+    // adressen + ett "Fler arrangemang"-kort med SIN ort i samma <p>-slot.
+    const card = (lines: string) => `
+<section aria-labelledby="eventcard-title-7534" class="flex flex-col w-full bg-blue-100 px-horizontal-blocks md:px-12">
+ <h2 id="eventcard-title-7534">Om arrangemanget</h2>
+ <div class="flex gap-2 items-center">${lines}</div>
+ <time datetime="2026-09-29">2026-09-29</time>
+</section>`;
+    const RELATED = `<h2>Fler arrangemang</h2>
+<section aria-labelledby="eventcard-title-6897" class="flex flex-col h-full w-full">
+ <p class="flex flex-col text-start text-base font-normal">Skellefteå</p>
+</section>`;
+
+    it('venue, adress och postort ur huvudkortet — inte "Fler arrangemang"-kortens ort', () => {
+        const html = card(`<p class="flex flex-col text-start text-base font-normal">
+  <span class="text-start">Ersboda Folkets Hus, Byttgr&auml;nd 13</span>
+   <span class="text-start">906 27  UME&Aring;</span>
+  </p>`) + RELATED;
+        const e = ev({ venueName: 'Gissning ur sidtexten', address: 'Byttgränd 13' });
+        expect(applyDetailPlace(html, SEL, e)).toBe(true);
+        expect(e.venueName).toBe('Ersboda Folkets Hus');
+        expect(e.address).toBe('Ersboda Folkets Hus, Byttgränd 13');
+        expect(e.city).toBe('Umeå');
+    });
+
+    it('huvudkort utan platsrad → orten lånas INTE från ett annat kort', () => {
+        const e = ev({ city: undefined });
+        expect(applyDetailPlace(card('') + RELATED, SEL, e)).toBe(false);
+        expect(e.city).toBeUndefined();
+    });
+
+    it('"Online" i blocket rensar sidtextens platsgissningar', () => {
+        const e = ev({ venueName: 'Gissning', address: 'Storgatan 1' });
+        applyDetailPlace(card('<p class="flex flex-col"><span>Online</span></p>'), SEL, e);
+        expect(e.venueName).toBeUndefined();
+        expect(e.address).toBeUndefined();
+    });
+
+    it('rader avskilda med <br>, och hoplimmade <span>-rader', () => {
+        const e = ev();
+        applyDetailPlace('<div class="plats">Jönköpings bibliotek, Dag Hammarskjölds plats 1<br>55322 Jönköping.</div>', '.plats', e);
+        expect(e).toMatchObject({ venueName: 'Jönköpings bibliotek', city: 'Jönköping' });
+        const g = ev();
+        applyDetailPlace('<p class="plats"><span>Källgatan 11</span><span>826 30 Söderhamn</span></p>', '.plats', g);
+        expect(g).toMatchObject({ venueName: 'Källgatan 11', city: 'Söderhamn' });
     });
 });
