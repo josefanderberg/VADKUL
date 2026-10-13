@@ -1,17 +1,24 @@
 {
-  "generatedAt": "2026-10-12T07:36:56.381Z",
+  "generatedAt": "2026-10-13T12:09:01.051Z",
   "counts": {
     "fel": 0,
-    "varning": 35,
-    "nollkoordinatTotalt": 1171
+    "varning": 39,
+    "nollkoordinatTotalt": 1047
   },
   "alerts": [
     {
       "level": "varning",
       "kind": "tyst",
-      "source": "elin-sundbergs-vanforening",
-      "since": "2026-09-22",
-      "message": "gav 1 event 2026-09-15, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+      "source": "uppsala",
+      "since": "2026-10-06",
+      "message": "gav 300 event 2026-10-03, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "vallentuna-kommun",
+      "since": "2026-10-06",
+      "message": "gav 45 event 2026-10-03, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -28,6 +35,12 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Friluftsfrämjandet Järfälla",
+      "message": "7 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Mora Kommun",
       "message": "8 av 12 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
     },
@@ -35,7 +48,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Panora",
-      "message": "68 av 79 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
+      "message": "68 av 78 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -59,7 +72,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Söderköpingsguiden",
-      "message": "38 av 54 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
+      "message": "38 av 56 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -70,8 +83,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "1171 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Panora 79, NBV 50, Visit Vemdalen 28, Gotlands Museum 24, Förlösa-Kläckeberga församling 23"
+      "source": "1047 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Panora 78, NBV 57, Visit Vemdalen 28, Gotlands Museum 24, Förlösa-Kläckeberga församling 22"
     },
     {
       "level": "varning",
@@ -83,13 +96,19 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Panora",
-      "message": "invariant-vakten larmar (8 av 79 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 78 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 299 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 297 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Stora Teatern",
+      "message": "invariant-vakten larmar (8 av 157 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -101,7 +120,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Söderköpingsguiden",
-      "message": "invariant-vakten larmar (17 av 54 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (19 av 56 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -123,6 +142,13 @@
       "source": "dalhalla",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "elin-sundbergs-vanforening",
+      "since": "2026-10-13",
+      "message": "i karantän sedan 2026-10-13: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
