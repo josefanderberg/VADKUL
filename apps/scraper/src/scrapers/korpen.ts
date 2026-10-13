@@ -114,6 +114,16 @@ export function parseZoeziTime(s: string | undefined): Date | null {
     return isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * Pass UTAN klockslag lagrar Zoezi som UTC-midnatt, och API:t skriver ut det
+ * som lokal väggtid: "2026-10-19 02:00:00" (sommartid) / "2026-10-26 01:00:00"
+ * (vintertid), oftast med endTime === startTime. Korpen Gävles bordtennis-
+ * serie 12/10: 21 matcher låg "kl 02" på kartan. Det är ett datum, inte en tid.
+ */
+export function isZoeziDateOnly(start: Date): boolean {
+    return start.getUTCHours() === 0 && start.getUTCMinutes() === 0;
+}
+
 /** Mappa ett Zoezi-pass → RawEvent. Exporterad för test. */
 export function mapWorkout(w: ZoeziWorkout, assoc: KorpenAssociation): RawEvent | null {
     if (w.status === 'Cancelled') return null;
@@ -156,7 +166,7 @@ export function mapWorkout(w: ZoeziWorkout, assoc: KorpenAssociation): RawEvent 
         description: descParts.join(' — '),
         category: 'sport',
         hostName: assoc.name,
-        hasSpecificTime: true,
+        hasSpecificTime: !isZoeziDateOnly(startDate),
     };
 }
 

@@ -24,6 +24,11 @@ export function cleanHostName(raw: string): string {
         .replace(/(\d+)\s*tidigare evenemang.*/i, '')
         .replace(/\s*·\s*(?:Sida|Page|Grupp|Group).*/i, '')
         .replace(/\s*(?:Meddelande|WhatsApp)$/i, '')
+        // og:description utan avskiljare: "Evenemang av Folkuniversitetet Syd
+        // den onsdag, oktober 14 2026 med 167 intresserade." — datum- och
+        // intresse-svansen följde med in i värdnamnet (25 event 12/10).
+        .replace(/\s+(?:den|on)\s+(?:måndag|tisdag|onsdag|torsdag|fredag|lördag|söndag|monday|tuesday|wednesday|thursday|friday|saturday|sunday),\s*[a-zåäö]+\s+\d.*$/i, '')
+        .replace(/\s+(?:med|with)\s+\d+\s+(?:intresserade|people interested)\b.*$/i, '')
         .replace(/\s+/g, ' ')
         .trim();
 }

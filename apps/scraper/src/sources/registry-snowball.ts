@@ -805,7 +805,20 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Panora',
         region: 'national',
         engine: 'wp-rest' as const,
-        config: { baseUrl: 'https://panora.se', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5 },
+        config: {
+            baseUrl: 'https://panora.se', variant: 'wp-v2', fetchDetailPage: true, maxPages: 5,
+            // En biograf: Friisgatan 19 — "Panora, Malmö" träffar biografens
+            // OSM-punkt. Tom defaultCity gav 78 av 79 event på 0,0 (12/10).
+            defaultCity: 'Malmö',
+            defaultVenue: 'Panora',
+            // wp/v2/event bär inget datum (inga meta/content). Detaljsidans
+            // EGNA fält: första "Tider & biljetter"-raden ("Tor 29 okt, 18:15"
+            // — en visning per event-sida), annars datumrutan ("Datum: Sön
+            // 19 apr", gratisevent utan biljettlänk). Helsides-skanningen tog
+            // sidofältets "Fjord … | 14 okt" för alla PASSERADE event (API:t
+            // listar hela arkivet) → 68 av 79 på 2026-10-14 (12/10).
+            detailDateRegex: /class="(?:tickets-row|two_pane_page_large_date(?:_mobile)?)">\s*(?:<a\b[^>]*>)?(?:\s*Datum:)?\s*([^<]+)</,
+        },
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {
@@ -814,8 +827,10 @@ export const SNOWBALL_SOURCES: Source[] = [
             date: '2026-09-15',
             rawEventCount: 43,
         },
-        notes: 'web-snöboll 2026-09-15: wp-v2, smoke 43 event ok. Hänvisad av 4 event i DB (t.ex. "The Weight | Förhandsvisning 16 sep på Panora").',
-        lastVerified: '2026-09-15',
+        notes: 'web-snöboll 2026-09-15: wp-v2, smoke 43 event ok. Hänvisad av 4 event i DB (t.ex. "The Weight | Förhandsvisning 16 sep på Panora"). '
+            + '12/10: datum ur detaljsidans biljettrad/datumruta (detailDateRegex) + defaultCity/defaultVenue — förut datumkluster 2026-10-14 och 0,0. '
+            + 'Kvar: beskrivningen är sajtvid meta ("Södra Sveriges största arthousebiograf!") och og:image filtreras bort (filnamnet "…-c-default.png").',
+        lastVerified: '2026-10-12',
     },
     {
         id: 'sb-folkmusik-nu',
@@ -910,7 +925,20 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Uu',
         region: 'national',
         engine: 'sitemap' as const,
-        config: { sitemapUrl: 'https://www.uu.se/sitemaps/articles-1.xml', urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: '', maxUrls: 200 },
+        config: {
+            sitemapUrl: 'https://www.uu.se/sitemaps/articles-1.xml', urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: '', maxUrls: 200,
+            // Sidans eget Datum-fält ("14 oktober 2026, kl. 13.15–15.00") — 12/10:
+            // fritexten tog ISO-datumet ur sidans skript (dagen utan tid) och
+            // klocksökningen sedan SiteVision-webappens version "1.13.0" → alla
+            // bibliotekskurser kl 01:13. Fältet bär året, så arkivsidor faller
+            // på fönstret i stället för att årsgissas fram ett år.
+            // Engelska sidor har etiketten "Date".
+            detailDateSelector: 'dl[class^="event-information"] dt:contains("Datum") + dd, dl[class^="event-information"] dt:contains("Date") + dd',
+            // Slugen börjar med STARTdatumet (/2026-10-14-lar-dig-…). Arkivsidor
+            // för passerade perioder ("17 maj – 30 aug 2025") årsgissades annars
+            // fram som spök-event; nu hämtas bara sidor nära fönstret.
+            urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-[a-z0-9]/,
+        },
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {

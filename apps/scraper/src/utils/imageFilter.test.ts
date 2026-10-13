@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLikelyLogoOrPlaceholderImage, normalizeImagePort } from './imageFilter';
+import { isLikelyLogoOrPlaceholderImage, normalizeImagePort, publishableImageUrl } from './imageFilter';
 
 describe('isLikelyLogoOrPlaceholderImage', () => {
     it('fäller kommunloggor och logotyper', () => {
@@ -77,5 +77,35 @@ describe('normalizeImagePort', () => {
     });
     it('lämnar ogiltiga strängar orörda', () => {
         expect(normalizeImagePort('/images/b.jpg')).toBe('/images/b.jpg');
+    });
+});
+
+describe('publishableImageUrl', () => {
+    const page = 'https://www.gislaved.se/uppleva-och-gora/evenemang/2026-09-18-traff';
+    it('lagar Axiell-portfelet (Växjö 12/10)', () => {
+        expect(publishableImageUrl('https://bibliotek.vaxjo.se:80/documents/1129127/3713191/a+b.png/1d37?t=1', page))
+            .toBe('https://bibliotek.vaxjo.se/documents/1129127/3713191/a+b.png/1d37?t=1');
+    });
+    it('löser rotrelativa Sitevision-sökvägar mot eventets sida', () => {
+        expect(publishableImageUrl('/images/18.7df5/1789/Codex-bild%2018%20sep.png', page))
+            .toBe('https://www.gislaved.se/images/18.7df5/1789/Codex-bild%2018%20sep.png');
+    });
+    it('uppgraderar http (även relativt mot en http-sida) till https', () => {
+        expect(publishableImageUrl('/contentassets/05d4/vandring.jpeg', 'http://www.norrtalje.se/evenemang/x/'))
+            .toBe('https://www.norrtalje.se/contentassets/05d4/vandring.jpeg');
+        expect(publishableImageUrl('http://a.se:80/b.jpg')).toBe('https://a.se/b.jpg');
+    });
+    it('släpper data:, icke-http och relativt utan sida', () => {
+        expect(publishableImageUrl('data:image/svg+xml;base64,PHN2Zz4=', page)).toBeUndefined();
+        expect(publishableImageUrl('ftp://a.se/b.jpg', page)).toBeUndefined();
+        expect(publishableImageUrl('/images/b.jpg')).toBeUndefined();
+        expect(publishableImageUrl('', page)).toBeUndefined();
+        expect(publishableImageUrl(null, page)).toBeUndefined();
+    });
+    it('lämnar giltiga https-URL:er exakt orörda', () => {
+        const ok = 'https://storage.googleapis.com/vadkul-f2cb2.firebasestorage.app/scraped-events/shared/ab.jpg';
+        expect(publishableImageUrl(ok, page)).toBe(ok);
+        const odd = 'https://s1.ticketm.net/dam/a/6db/x_TABLET 16_9.jpg';
+        expect(publishableImageUrl(odd, page)).toBe(odd);
     });
 });

@@ -98,6 +98,12 @@ export async function getEventFromDb(url: string): Promise<any | null> {
  *    datum-rad (midnatt) på samma lokala dag — det betyder bara att källan
  *    visade serie-/listvyn denna gång. Flyttas DAGEN uppdaterar vi dock,
  *    även om nya tiden saknar klockslag.
+ *  - Lagrad MIDNATT (lokal eller UTC) är aldrig ett riktigt klockslag, även
+ *    med flaggan satt: motorer som märkte datum-only som tid (swehockey före
+ *    10/10, Korpen/Zoezi och Axiell-heldagar före 12/10) lämnade sådana rader,
+ *    och utan detta låste skyddet ovan fast dem på "kl 00/02" för alltid.
+ *  - Flaggan skrivs till Firestore TILLSAMMANS med tiden — annars skriver
+ *    nästa sync tillbaka den gamla flaggan i SQLite.
  */
 export async function refreshEventTime(
     url: string,
@@ -115,10 +121,9 @@ export async function refreshEventTime(
     if (Math.abs(stored.getTime() - newTime.getTime()) < 60_000) return false;
 
     const sameLocalDay = stored.toLocaleDateString('sv-SE') === newTime.toLocaleDateString('sv-SE');
-    const storedHasTime = row.hasSpecificTime === 1
-        || (row.hasSpecificTime == null
-            && !(stored.getHours() === 0 && stored.getMinutes() === 0)
-            && !(stored.getUTCHours() === 0 && stored.getUTCMinutes() === 0));
+    const storedIsMidnight = (stored.getHours() === 0 && stored.getMinutes() === 0)
+        || (stored.getUTCHours() === 0 && stored.getUTCMinutes() === 0);
+    const storedHasTime = !storedIsMidnight && (row.hasSpecificTime === 1 || row.hasSpecificTime == null);
     if (sameLocalDay && storedHasTime && !newHasSpecificTime) return false;
 
     try {
@@ -129,7 +134,7 @@ export async function refreshEventTime(
     }
     if (db && row.firestoreId) {
         try {
-            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ time: newTime }));
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ time: newTime, hasSpecificTime: newHasSpecificTime }));
         } catch (err: any) {
             // NOT_FOUND (kod 5) = dokumentet rensat ur Firestore — SQLite räcker.
             if (err?.code !== 5) console.error('refreshEventTime: Firestore-uppdatering misslyckades:', err?.message);

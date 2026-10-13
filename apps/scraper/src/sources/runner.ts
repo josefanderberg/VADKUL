@@ -26,7 +26,7 @@ import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
 import { normalizeRawEvent } from '../utils/normalizeEvent';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
-import { isLikelyLogoOrPlaceholderImage, normalizeImagePort } from '../utils/imageFilter';
+import { isLikelyLogoOrPlaceholderImage, normalizeImagePort, publishableImageUrl } from '../utils/imageFilter';
 import { recordScrapeRun, setEventAudit, getSyncMeta, setSyncMeta } from '../utils/sqliteHelper';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 
@@ -412,6 +412,11 @@ export async function runSource(
             // logo-filtret och Storage-uppladdningen — fetch mot :80 över TLS
             // kan aldrig lyckas, så bilden blev annars kvar som död remote-URL.
             if (e.imageUrl) e.imageUrl = normalizeImagePort(e.imageUrl);
+            // Rotrelativa sökvägar (Sitevision-kommunerna Norrtälje, Borås,
+            // Gislaved: "/images/18.…", 12/10) löses mot eventets sida —
+            // annars kan varken Storage-uppladdningen eller webben ladda dem.
+            // data:-platshållare blir ingen bild alls.
+            if (e.imageUrl && !/^https?:\/\//i.test(e.imageUrl)) e.imageUrl = publishableImageUrl(e.imageUrl, e.url);
             // Loggor/platshållare (kommunsajters generiska og:image) blir
             // hellre bildlöst kort än en stadssida full av samma logga.
             if (isLikelyLogoOrPlaceholderImage(e.imageUrl)) e.imageUrl = undefined;

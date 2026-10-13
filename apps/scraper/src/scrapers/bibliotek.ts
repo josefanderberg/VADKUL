@@ -197,6 +197,15 @@ export function stripHtml(html: string | undefined): string {
         .trim();
 }
 
+/**
+ * Heldagsevent i Arena-kalendern: start i lokala midnattstimmen (00:00 eller
+ * 00:01 — redaktörerna använder båda). Inget biblioteksevent börjar på
+ * riktigt mellan 00 och 01. Lokal tid = processens (Europe/Stockholm).
+ */
+export function isAllDayStart(start: Date): boolean {
+    return start.getHours() === 0;
+}
+
 /** Mappa ett Axiell-event → RawEvent. Exporterad för test. */
 export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent | null {
     const e = hit.event;
@@ -224,7 +233,11 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         description: [truncateAtBoundary(stripHtml(e.description), DEFAULT_DESCRIPTION_MAX), audiences ? `Målgrupp: ${audiences}.` : '']
             .filter(Boolean).join(' '),
         hostName: branch || tenant.name,
-        hasSpecificTime: true,   // API:t levererar riktiga klockslag (UTC)
+        // API:t levererar riktiga klockslag (UTC) — UTOM för heldagsevent
+        // (utställningar, lovaktiviteter, bokförsäljning), som saknar allDay-
+        // flagga och i stället startar 00:00 eller 00:01 lokal tid och slutar
+        // 23:59. Höganäs bibliotek 12/10: 8 sådana låg "kl 00" på kartan.
+        hasSpecificTime: !isAllDayStart(startDate),
         geocodeCandidates: [
             branch && tenant.cityHint ? `${branch}, ${tenant.cityHint}` : '',
             // Konsortier: härledd ort först ("Åstorps bibliotek" → Åstorp),

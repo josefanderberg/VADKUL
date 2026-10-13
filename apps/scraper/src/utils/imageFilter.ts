@@ -78,3 +78,32 @@ export function normalizeImagePort(raw: string): string {
     } catch { /* ogiltig URL — lämna orörd, junk-/validitetsfiltren tar den */ }
     return raw;
 }
+
+/**
+ * Omslagsbild i PUBLICERBAR form för aggregatet (cards → webben och app-
+ * flödet), eller undefined. Lagar det runnern bara lagar för NYA event —
+ * äldre rader i spegeln bär fortfarande källans råa värde (12/10 2026):
+ *   • "https://host:80/…" (Axiell-biblioteken, ~2 200 kort) → porten släpps
+ *   • rotrelativa "/images/…" (Sitevision: Borås, Gislaved, Norrtälje …,
+ *     ~140 kort) → löses mot eventets egen sida, så bilden kommer tillbaka
+ *     i stället för att 404:a mot vadkul.se
+ *   • data:-platshållare (svg-pixlar) och annat icke-http(s) → undefined
+ * http uppgraderas till https (sajten serveras över https — en http-bild
+ * blockeras/uppgraderas ändå av webbläsaren), samma som Axiell-mappningen.
+ */
+export function publishableImageUrl(raw: string | null | undefined, pageUrl?: string): string | undefined {
+    if (!raw || raw.startsWith('data:')) return undefined;
+    let u: URL;
+    try {
+        u = new URL(raw, pageUrl);
+    } catch {
+        return undefined;
+    }
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return undefined;
+    // Redan absolut https: originalsträngen orörd (ingen omkodning) utom portfelet.
+    if (/^https:\/\//i.test(raw)) return normalizeImagePort(raw);
+    // http eller relativ: uppgradera till https; en explicit :80 hör till http.
+    if (u.port === '80') u.port = '';
+    u.protocol = 'https:';
+    return u.toString();
+}

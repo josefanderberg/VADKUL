@@ -34,7 +34,7 @@ import { RawEvent, EngineContext } from '../types';
 import { domainLimiter } from '../rateLimiter';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
-import { findFirstDateInText } from '../../utils/swedishDate';
+import { findFirstDateInText, rangeToStartText } from '../../utils/swedishDate';
 import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
 import { extractStreetAddress } from '../../utils/swedishAddress';
 import { isInNordic } from '../../utils/venueCoordinates';
@@ -214,6 +214,14 @@ export interface SitemapConfig {
      * "26 september") + sidans klocktid → 20 passerade event i framtida kluster.
      */
     detailDateSelector?: string;
+    /**
+     * detailDateSelector-fältet bär ett INTERVALL ("27 mar 2026 – 31 okt
+     * 2026") → ta STARTdagen (rangeToStartText). Utan flaggan vinner första
+     * framtida datum, dvs SLUTdagen för en pågående utställning — Artipelag
+     * 12/10: 20 av 20 på 2026-10-31. Pågående utställningar klipps då av
+     * fönstret, samma medvetna begränsning som för övriga museikällor.
+     */
+    detailDateRangeStart?: boolean;
 }
 
 /**
@@ -225,6 +233,7 @@ export interface SitemapConfig {
  */
 export function dateFromDetailSelector(
     html: string, selector: string, now: Date = new Date(),
+    opts: { rangeStart?: boolean } = {},
 ): { date: Date; hasTime: boolean } | null {
     const $ = cheerio.load(html);
     // Taggar → mellanslag i stället för cheerios .text(): den limmar ihop
@@ -260,7 +269,7 @@ export function dateFromDetailSelector(
                 ? `${Number(d)} ${month} ${y.length === 2 ? `20${y}` : y}` : m;
         },
     );
-    const date = findFirstDateInText(numeric, now);
+    const date = findFirstDateInText(opts.rangeStart ? rangeToStartText(numeric) : numeric, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
 }
 
@@ -772,7 +781,10 @@ const ICON_GLYPH_SELECTOR = '.material-icons, [class*="material-icons"], [class*
  */
 const RELATED_HEADING = new RegExp(
     '^(?:rekommenderade|relaterade|liknande|fler|andra|övriga|populära|utvalda|kommande)\\s+'
-    + '(?:evenemang|event|konserter|spelningar|föreställningar|aktiviteter|arrangemang|upplevelser|tips)'
+    // filmvisningar/filmer: Söderköpingsguiden 12/10 — "Fler filmvisningar"
+    // ("ons 14 okt · 13:00–14:47") gav passerade filmer den dagen när sidans
+    // JSON-LD saknades (38 av 54 event på 2026-10-14).
+    + '(?:evenemang|event|konserter|spelningar|föreställningar|aktiviteter|arrangemang|upplevelser|tips|filmvisningar|filmer)'
     + '|^(?:du kanske också|missa inte|se även|läs även|mer från|relaterat|rekommenderat|tips på)'
     // Norrköpings Konstmuseum 2026-09-11: "Mer i kalendariet".
     + '|^(?:mer|fler|mera) i (?:kalendariet|kalendern|programmet)',
@@ -1451,7 +1463,9 @@ export const sitemapEngine = async (
             fetched++;
             if (!html) { failed++; events.push(null); continue; }
             // Sidans eget datumfält är sanningen — ingen fritext-fallback.
-            const own = config.detailDateSelector ? dateFromDetailSelector(html, config.detailDateSelector) : null;
+            const own = config.detailDateSelector
+                ? dateFromDetailSelector(html, config.detailDateSelector, new Date(), { rangeStart: config.detailDateRangeStart })
+                : null;
             if (config.detailDateSelector && !own) { noEvent++; events.push(null); continue; }
             const ev = extractFromHtml(html, entry.url, config.defaultCity, own?.date);
             if (!ev) { noEvent++; events.push(null); continue; }

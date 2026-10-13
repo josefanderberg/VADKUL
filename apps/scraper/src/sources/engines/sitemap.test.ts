@@ -369,6 +369,40 @@ describe('cheerioFallback — "Mer i kalendariet"-korten förgiftar inte sidan',
     });
 });
 
+// Söderköpingsguiden (12/10): en PASSERAD filmvisning (Vaiana, 12 juli) vars
+// sida saknade Event-JSON-LD. Fritexten tog "Fler filmvisningar"-kortens
+// "ons 14 okt" → 38 av 54 event på 2026-10-14. Nedskalat utsnitt ur
+// soderkoping.guide/sv/evenemang/vaiana (probad 2026-10-12, JSON-LD bortplockad).
+const SODERKOPING_PAGE = `<html><head><title>Vaiana | 12 juli 2026 | Söderköpingsguiden</title></head><body>
+<main>
+ <div><h1>Vaiana</h1><p>Njut av Disneys drama med människor som skådespelare.</p></div>
+ <dl><div><dt>Tid<!-- -->:</dt><dd><span>14:00–15:55</span></dd></div><div><dt>När<!-- -->:</dt><dd><span>Söndag 12 juli 2026</span></dd></div><div><dt>Var<!-- -->:</dt><dd><span>Söderköpings Bio</span></dd></div></dl>
+ <p>Evenemanget har passerat</p>
+ <section><div><div><h2>Fler filmvisningar</h2><a href="/sv/evenemang/filmvisningar">Alla filmvisningar</a></div>
+  <div><div><p><span>ons 14 okt · 13:00–14:47, 18:30–20:17</span></p></div><h3>Arkipelag</h3><div><span>Söderköpings Bio</span></div></div><a href="/sv/evenemang/arkipelag"><span>Läs mer om Arkipelag</span></a>
+  <div><div><p><span>ons 14 okt · 15:30–17:56</span></p></div><h3>Fjord</h3><div><span>Söderköpings Bio</span></div></div><a href="/sv/evenemang/fjord"><span>Läs mer om Fjord</span></a>
+ </div></section>
+</main>
+</body></html>`;
+
+describe('cheerioFallback — "Fler filmvisningar"-korten förgiftar inte sidan', () => {
+    const URL = 'https://www.soderkoping.guide/sv/evenemang/vaiana';
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 9, 12, 10, 0)); });
+    afterAll(() => { vi.useRealTimers(); });
+
+    it('tar sidans egna (passerade) 12 juli, inte kortens "ons 14 okt"', () => {
+        const ev = cheerioFallback(SODERKOPING_PAGE, URL, 'Söderköping')!;
+        expect(ev.startDate.getFullYear()).toBe(2026);
+        expect(ev.startDate.getMonth()).toBe(6);    // juli → faller på fönsterfiltret
+        expect(ev.startDate.getDate()).toBe(12);
+    });
+
+    it('"Fler filmer" räknas också som främmande lista', () => {
+        const ev = cheerioFallback(SODERKOPING_PAGE.replace('Fler filmvisningar', 'Fler filmer'), URL, 'Söderköping')!;
+        expect(ev.startDate.getMonth()).toBe(6);
+    });
+});
+
 // Andra Konstmuseum-buggen (2026-09-11): gamla "Barnens Konstfredag"-sidor
 // ("fre 10 april kl 14:00–16:00" — passerad fredag) kastades rätt av
 // veckodagskontrollen, och fritexten tog då en utställningsperiod längre ner
@@ -454,6 +488,54 @@ describe('dateFromDetailSelector — bara sidans eget datumfält', () => {
 <div><div>oktober</div><div>31</div><div>Kl 15:00</div></div></div>`;
         const r = dateFromDetailSelector(html, '.dc', NOW)!;
         expect([r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([9, 30, 19]);
+    });
+});
+
+// Artipelag 12/10: fritext-fallbacken tog "Mer på gång"-kortets "27 mar 2026 –
+// 31 okt 2026" (en ANNAN utställning) → 20 av 20 på 2026-10-31.
+describe('dateFromDetailSelector med rangeStart — utställningsperiod (Artipelag)', () => {
+    const NOW = new Date(2026, 9, 12, 10, 0);   // mån 12 okt 2026
+    const SEL = '[id^="standalone-block-header-calendar-"] .is-style-preamble-large';
+    const page = (period: string) => `<html><body><main><article class="calendar-article">
+<section id="standalone-block-header-calendar-4691" class="block standalone-block-header"><div class="block-header__content">
+<p class="wp-block-paragraph is-style-pre-heading">Utställning</p>
+<h1 class="wp-block-heading">Roy Andersson</h1>
+<p class="wp-block-paragraph is-style-preamble-large uppercase">${period}</p></div></section>
+<section class="block standalone-block-header"><p class="is-style-preamble-large wp-block-paragraph">Roy Andersson (f. 1943) är en svensk filmskapare.</p></section>
+<section class="block calendar-list"><h2>Mer på gång</h2><article class="calendar-listing__item">
+<h3>MUCHA – Beyond Art Nouveau</h3><p class="is-style-pre-heading mb-6!">27 mar 2026 – 31 okt 2026</p></article></section>
+</article></main></body></html>`;
+    const ymd = (d: Date) => [d.getFullYear(), d.getMonth() + 1, d.getDate()];
+    // cheerioFallback räknar "framtida" mot systemklockan — lås den till
+    // fixturens dag, annars tidsbomb när kortets 31 okt glidit förbi.
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
+    afterAll(() => { vi.useRealTimers(); });
+
+    it('passerad utställning → sitt eget (passerade) startdatum, inte kortets 31 okt', () => {
+        const r = dateFromDetailSelector(page('13 jan 2023 – 30 apr 2023'), SEL, NOW, { rangeStart: true })!;
+        expect(ymd(r.date)).toEqual([2023, 1, 13]);
+        expect(r.hasTime).toBe(false);
+    });
+
+    it('fritext-fallbacken hade tagit kortets datum — det är därför fältet behövs', () => {
+        const ev = cheerioFallback(page('13 jan 2023 – 30 apr 2023'), 'https://artipelag.se/pa-gang/utstallning/roy-andersson/', 'Värmdö');
+        expect(ymd(ev!.startDate)).toEqual([2026, 10, 31]);
+    });
+
+    it('pågående utställning → STARTdagen (klipps av fönstret), inte slutdagen', () => {
+        const period = '10 okt 2026 – 11 apr 2027';
+        expect(ymd(dateFromDetailSelector(page(period), SEL, NOW, { rangeStart: true })!.date)).toEqual([2026, 10, 10]);
+        // Utan flaggan: första framtida datum = slutdagen (oförändrat för andra källor).
+        expect(ymd(dateFromDetailSelector(page(period), SEL, NOW)!.date)).toEqual([2027, 4, 11]);
+    });
+
+    it('kommande utställning → startdagen', () => {
+        expect(ymd(dateFromDetailSelector(page('24 okt 2026 – 7 mar 2027'), SEL, NOW, { rangeStart: true })!.date)).toEqual([2026, 10, 24]);
+    });
+
+    it('"Permanent" och sidor utan rubrikblocket → null (hoppas över)', () => {
+        expect(dateFromDetailSelector(page('Permanent'), SEL, NOW, { rangeStart: true })).toBeNull();
+        expect(dateFromDetailSelector('<html><body><h1>Konstmuseum på Värmdö</h1><p>9 okt 2026 – 15 nov 2026</p></body></html>', SEL, NOW, { rangeStart: true })).toBeNull();
     });
 });
 

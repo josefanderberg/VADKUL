@@ -5,6 +5,9 @@ import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildTitleFreq, popularRank, normTitlePop } from '../utils/popularEvent';
 import { firstSeenExport } from '../utils/firstSeenExport';
 import { eventKey } from '../utils/eventKey';
+import { publishableImageUrl } from '../utils/imageFilter';
+import { sanitizeEndDate } from '../utils/eventEnd';
+import { cleanHostName } from '../scrapers/facebook/hostFallback';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
 import { buildAppFeeds, loadCities, APP_FEED_DAYS } from '../utils/appFeed';
 import * as path from 'path';
@@ -39,6 +42,15 @@ interface DestinationLayer {
      *  utan en Firestore-läsning per rad; kartkortet läser live i stället.
      *  Upp till ett dygn gammal - webben justerar egna tryck optimistiskt. */
     likes?: number;
+}
+
+/** Värdnamnet (inte en delsträng) avgör — facebook.com och dess subdomäner. */
+function isFacebookUrl(url: string): boolean {
+    try {
+        return /(?:^|\.)facebook\.com$/i.test(new URL(url).hostname);
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -212,8 +224,10 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             title: row.title || '',
             time: row.time,
             // Utelämnas när okänt — bara flerdagars-/sluttids-event bär fältet
-            // (bytes × 30k event i aggregatet).
-            endDate: row.endDate || undefined,
+            // (bytes × 30k event i aggregatet). Samma giltighetsregel som vid
+            // skrivning (slut efter start, max 30 dygn): legacy-rader bär
+            // slut FÖRE start (PRO-"Oktoberfest" 12:00 → 23:01 dagen innan).
+            endDate: row.endDate && sanitizeEndDate(row.time, row.endDate) ? row.endDate : undefined,
             hasSpecificTime,
             lat: safeLat,
             lng: safeLng,
@@ -231,8 +245,15 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         const publicHref = publicUrl(row.url);
         cards.push({
             h: eventKey(id),
-            coverImage: row.coverImage || undefined,
-            hostName: row.hostName || undefined,
+            // Runnern lagar bara NYA event — äldre rader bär källans råa värde
+            // ("https://host:80/…" från Axiell-biblioteken, rotrelativa
+            // Sitevision-sökvägar, data:-pixlar). Lagas här så webben OCH
+            // app-flödet (bilder joinas ur cards) får en laddbar länk.
+            coverImage: publishableImageUrl(row.coverImage, row.url),
+            // FB-värdar från före tvätten i hostFallback bär datumsvans ("X den
+            // onsdag, oktober 14 2026 med 167 intresserade.") — tvättas här tills
+            // raderna åldrats ut, annars blir svansen en egen arrangörssida.
+            hostName: (row.hostName && isFacebookUrl(row.url) ? cleanHostName(row.hostName) : row.hostName) || undefined,
             attendees: Number(row.attendees) || undefined,
             price: row.price || undefined,
             isLocationVerified: row.isLocationVerified === 1 ? true : undefined,

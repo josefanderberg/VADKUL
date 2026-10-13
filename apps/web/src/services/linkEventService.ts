@@ -6,6 +6,7 @@ import { decideUserEventPoll } from '../utils/userEventPoll';
 import { getAuthHeaders } from '../lib/authHeaders';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildCardIndex } from '../utils/eventKey';
+import { usableImageUrl } from '../lib/deepLinkEventIndex';
 import { timelineWindowRange, type TimelineWindowRange } from '../utils/timelineWindow';
 import { tilesForBounds, boundsCoveredBy, composeAreaRows, descBucketFor, type Bounds } from '../utils/eventTiles';
 import { apiEventToLinkEvent } from '../utils/eventSeed';
@@ -545,7 +546,11 @@ function mergeCardsWithDestinations(destEvents: LinkEvent[], cards: any[]): Link
         if (!card) return evt;
         return {
             ...evt,
-            coverImage: card.coverImage ?? '',
+            // Samma bildvakt som stadssidorna/djuplänkarna: lagar Axiell-
+            // bibliotekens "https://host:80/…" (laddar aldrig) och släpper
+            // data:/rotrelativa skräp-URL:er. Utan den stod dagens biblioteks-
+            // event överst i kartlistan med tomma bildramar (Växjö 12/10).
+            coverImage: usableImageUrl(card.coverImage) ?? '',
             hostName: card.hostName ?? '',
             attendees: card.attendees ?? 0,
             price: card.price ?? '',

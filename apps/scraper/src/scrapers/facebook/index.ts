@@ -11,7 +11,7 @@ import { classifyEvent } from '../../utils/classify';
 import { normalizeDescription } from '../../utils/normalizeEvent';
 import { extractPriceFromText } from '../../utils/priceFromText';
 import { isResellerJunk, isForeignHost, cleanFacebookTitle } from './junk';
-import { isGenericHost, hostFromOgDescription, hostFromPageJson } from './hostFallback';
+import { isGenericHost, hostFromOgDescription, hostFromPageJson, cleanHostName } from './hostFallback';
 
 /**
  * Kända event med generisk värd ("Facebook") skrapas om — högst så här många
@@ -580,6 +580,9 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                         console.log(`    👤 Värd via ${fromOg ? 'og:description' : 'sid-JSON'}: ${found}`);
                     }
                 }
+                // Samma tvätt oavsett väg — DOM-instrumentet kapar bara vid första
+                // siffran när namnet är långt, så "X den onsdag, oktober …" slank igenom.
+                finalHostName = cleanHostName(finalHostName) || finalHostName;
                 // Omskrapat för värdens skull och namnet hittades: skriv direkt till
                 // SQLite + Firestore (addEventToDb rör inte kända Firestore-dokument).
                 if (hostRetry && !isGenericHost(finalHostName)) {
