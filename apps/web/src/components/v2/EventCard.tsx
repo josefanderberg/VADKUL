@@ -21,7 +21,7 @@ import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, LIST_HORIZON_DAYS, takeRows } from '@/utils/popularList';
 import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
-import { sheetStops, nextStopAbove, nextStopBelow, snapRelease } from '@/utils/sheetSnap';
+import { sheetStops, nextStopAbove, nextStopBelow, snapRelease, releaseVelocity } from '@/utils/sheetSnap';
 import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM } from '@/utils/eventSearch';
 import type { CityPoint } from '@/utils/cityPoints';
 import type { CityHit } from './SearchResults';
@@ -1642,6 +1642,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const startY = useRef(0);
     const startHeightVh = useRef(PEEK_HEIGHT_VH);
     const startDragX = useRef(0);
+    // Dragets senaste höjdprov (tid + vh) - släppets fart räknas ur dem så
+    // ett snabbt eller långt drag kan hoppa förbi ett stopp (utils/sheetSnap,
+    // Josef 11/10).
+    const dragSamplesRef = useRef<{ t: number; h: number }[]>([]);
     
     // Sätts till id:t vi själva ska byta till så useEffect kan särskilja
     // "användaren klickade på kartan" från "vi tryckte Nästa".
@@ -3066,6 +3070,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         startX.current = e.clientX;
         startY.current = e.clientY;
         startHeightVh.current = heightVhRef.current;
+        dragSamplesRef.current = [];
         startDragX.current = dragXRef.current;
         // Mät botten-gränsen (sträcket under tid/plats) färskt vid drag-start så
         // den är korrekt även efter att fönstret ändrat storlek.
@@ -3110,6 +3115,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // live: fingret äger höjden direkt, ingen React-render per pixel.
             // Ingen gain här — vid drag SKA kortet följa fingret 1:1.
             updateHeightVh(newHeight, true);
+            const samples = dragSamplesRef.current;
+            samples.push({ t: e.timeStamp, h: newHeight });
+            if (samples.length > 12) samples.shift();
         } else if (dragDirection.current === 'horizontal' && SIDE_SWIPE_ENABLED) {
             updateDragX(startDragX.current + deltaX);
         }
@@ -3129,9 +3137,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
         if (dragDirection.current === 'vertical') {
             const h = heightVhRef.current;
-            // Uppåt → närmaste STOPP ovanför startläget (Josef 2/9: default →
-            // tapp-höjden → taket): ett kort ryck tar ett steg, ett långt drag
-            // landar där fingret släppte. Släppet hamnar alltid PÅ ett stopp,
+            // Uppåt → STOPPEN ovanför startläget (Josef 2/9: default →
+            // tapp-höjden → taket): ett kort ryck tar ett steg, ett långt
+            // eller snabbt drag hoppar vidare. Släppet hamnar alltid PÅ ett stopp,
             // aldrig mitt emellan, så kortet inte blir kvar i touch-action:
             // none-zonen (< MAX-5) där svep på innehållet varken scrollar
             // eller växer. Först på taket scrollar innehållet (nästa svep).
@@ -3141,7 +3149,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // så det sträcket mellan arrangören och tiden försvinner över
             // kanten, så ska den försvinna"). Korta ryck studsar tillbaka dit
             // gesten började - ett darr på fingret ska inte stänga kortet.
-            const target = snapRelease(sheetStopsNow(), startHeightVh.current, h, measureCompactHeight(), SNAP_PULL_MIN_VH, SNAP_TOLERANCE_VH);
+            // Ett långt eller snabbt drag hoppar förbi stopp åt båda hållen,
+            // och ett långt neddrag uppifrån stänger direkt (Josef 11/10: "så att man inte
+            // måste slida flera gånger när det är ganska klart vad användaren
+            // vill göra") - farten ur dragets sista prov, se releaseVelocity.
+            const velocity = releaseVelocity(dragSamplesRef.current, e.timeStamp);
+            const target = snapRelease(sheetStopsNow(), startHeightVh.current, h, measureCompactHeight(), SNAP_PULL_MIN_VH, SNAP_TOLERANCE_VH, velocity);
             if (target !== null) updateHeightVh(target);
             else closeCard();
         } else if (dragDirection.current === 'horizontal') {
@@ -3207,6 +3220,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         startX.current = e.clientX;
         startY.current = e.clientY;
         startHeightVh.current = heightVhRef.current;
+        dragSamplesRef.current = [];
         startDragX.current = dragXRef.current;
         collapsedVhRef.current = measureCollapsedHeight();
         setExitX(null);

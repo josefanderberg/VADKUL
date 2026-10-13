@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown, snapRelease } from './sheetSnap';
+import { sheetStops, nextStopAbove, nextStopBelow, snapUp, snapDown, snapRelease, projectedHeight, releaseVelocity } from './sheetSnap';
 
 // Typisk telefon: default 35 vh, tapp-höjden 55 vh, taket 90 vh.
 const STOPS = [35, 55, 90];
@@ -43,13 +43,15 @@ describe('snapUp (släpp efter uppåtdrag)', () => {
         expect(snapUp(STOPS, 35, 37)).toBe(55);
     });
 
-    it('ett långt drag landar på stoppet närmast fingret', () => {
+    it('ett långt drag hoppar två steg', () => {
         expect(snapUp(STOPS, 35, 85)).toBe(90);
         expect(snapUp(STOPS, 35, 60)).toBe(55);
     });
 
-    it('vid lika avstånd vinner det högre', () => {
-        expect(snapUp(STOPS, 35, 72.5)).toBe(90);
+    it('hoppar vidare redan en fjärdedel förbi mellanstoppet (Josef 11/10)', () => {
+        // 55 + 0,25 * (90 - 55) = 63,75 - långt före mittpunkten 72,5.
+        expect(snapUp(STOPS, 35, 64)).toBe(90);
+        expect(snapUp(STOPS, 35, 63)).toBe(55);
     });
 
     it('från taket (inget ovanför) blir det taket', () => {
@@ -69,8 +71,38 @@ describe('snapDown (släpp efter nedåtdrag)', () => {
         expect(snapDown(STOPS, 35, 25)).toBeNull();
     });
 
-    it('vid lika avstånd vinner det lägre', () => {
-        expect(snapDown(STOPS, 90, 45)).toBe(35);
+    it('hoppar vidare redan en fjärdedel förbi tapp-höjden', () => {
+        // 55 - 0,25 * (55 - 35) = 50.
+        expect(snapDown(STOPS, 90, 50)).toBe(35);
+        expect(snapDown(STOPS, 90, 50.5)).toBe(55);
+    });
+
+    it('ett långt neddrag från taket stänger hela vägen (Josef 11/10)', () => {
+        // Förbi default med en fjärdedel av dess höjd: 35 - 8,75 = 26,25.
+        expect(snapDown(STOPS, 90, 26)).toBeNull();
+        expect(snapDown(STOPS, 90, 27)).toBe(35);
+        expect(snapDown(STOPS, 55, 20)).toBeNull();
+    });
+});
+
+describe('projectedHeight / releaseVelocity (släppets fart)', () => {
+    it('projicerar 100 ms framåt med tak på 15 vh', () => {
+        expect(projectedHeight(50, 0.1)).toBeCloseTo(60);
+        expect(projectedHeight(50, -0.1)).toBeCloseTo(40);
+        expect(projectedHeight(50, 2)).toBe(65);
+        expect(projectedHeight(50, -2)).toBe(35);
+        expect(projectedHeight(50, 0)).toBe(50);
+    });
+
+    it('farten räknas ur de senaste 80 ms', () => {
+        const prov = [{ t: 0, h: 30 }, { t: 100, h: 40 }, { t: 140, h: 44 }, { t: 180, h: 48 }];
+        expect(releaseVelocity(prov, 180)).toBeCloseTo(0.1);
+    });
+
+    it('ett finger som stått still före släppet ger ingen fart', () => {
+        expect(releaseVelocity([{ t: 0, h: 30 }, { t: 20, h: 40 }], 300)).toBe(0);
+        expect(releaseVelocity([], 10)).toBe(0);
+        expect(releaseVelocity([{ t: 5, h: 30 }], 10)).toBe(0);
     });
 });
 
@@ -112,5 +144,28 @@ describe('snapRelease (fingerdraget, med kompaktläget 30/9)', () => {
     it('utan sträck (väljarlistan) avgör bara stoppen', () => {
         expect(snapRelease(STOPS, 35, 25, null)).toBeNull();
         expect(snapRelease(STOPS, 90, 40, null)).toBe(35);
+    });
+
+    it('ett snabbt drag uppåt hoppar förbi tapp-höjden', () => {
+        // Släppt på 50 vh: stillastående → tapp-höjden, i fart → taket.
+        expect(snapRelease(WITH_COMPACT, 35, 50, EDGE)).toBe(55);
+        expect(snapRelease(WITH_COMPACT, 35, 50, EDGE, 6, 4, 0.2)).toBe(90);
+    });
+
+    it('ett snabbt drag nedåt från taket hoppar förbi tapp-höjden', () => {
+        expect(snapRelease(WITH_COMPACT, 90, 52, EDGE)).toBe(55);
+        expect(snapRelease(WITH_COMPACT, 90, 52, EDGE, 6, 4, -0.1)).toBe(35);
+    });
+
+    it('farten stänger aldrig ett kort ryck - darr-regeln står kvar', () => {
+        expect(snapRelease(WITH_COMPACT, 35, 31, EDGE, 6, 4, -2)).toBe(35);
+    });
+
+    it('ett snabbt ryck nedåt från default landar i kompaktläget, inte stängt', () => {
+        // Släppt på 28 vh med sträcket synligt: 28 - 10 = 18 → kompaktläget.
+        // I högre fart 28 - 15 (projektionens tak) = 13, förbi kompaktstoppet
+        // med en fjärdedel av dess höjd (20 - 5 = 15) → stäng.
+        expect(snapRelease(WITH_COMPACT, 35, 28, EDGE, 6, 4, -0.1)).toBe(20);
+        expect(snapRelease(WITH_COMPACT, 35, 28, EDGE, 6, 4, -0.2)).toBeNull();
     });
 });
