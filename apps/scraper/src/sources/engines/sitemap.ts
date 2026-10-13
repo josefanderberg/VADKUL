@@ -781,7 +781,10 @@ const ICON_GLYPH_SELECTOR = '.material-icons, [class*="material-icons"], [class*
  */
 const RELATED_HEADING = new RegExp(
     '^(?:rekommenderade|relaterade|liknande|fler|andra|övriga|populära|utvalda|kommande)\\s+'
-    + '(?:evenemang|event|konserter|spelningar|föreställningar|aktiviteter|arrangemang|upplevelser|tips)'
+    // filmvisningar/filmer: Söderköpingsguiden 12/10 — "Fler filmvisningar"
+    // ("ons 14 okt · 13:00–14:47") gav passerade filmer den dagen när sidans
+    // JSON-LD saknades (38 av 54 event på 2026-10-14).
+    + '(?:evenemang|event|konserter|spelningar|föreställningar|aktiviteter|arrangemang|upplevelser|tips|filmvisningar|filmer)'
     + '|^(?:du kanske också|missa inte|se även|läs även|mer från|relaterat|rekommenderat|tips på)'
     // Norrköpings Konstmuseum 2026-09-11: "Mer i kalendariet".
     + '|^(?:mer|fler|mera) i (?:kalendariet|kalendern|programmet)',

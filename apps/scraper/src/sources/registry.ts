@@ -5119,10 +5119,11 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
-        notes: 'Probe 2026-06-23: shows-sitemap, /teatern/forestallning/ TheaterEvent-JSON-LD. Datum ligger i eventSchedule[] (veckovisa Schedule-objekt, ingen direkt startDate) — json-ld-engine läser nu närmaste kommande schemadatum. Dry-run 120d: 22 distinkta föreställningar sparade (varje URL 3× i sitemap → dedupas i engine). Nöjespark/teater.',
+        notes: 'Probe 2026-06-23: shows-sitemap, /teatern/forestallning/ TheaterEvent-JSON-LD. Datum ligger i eventSchedule[] (veckovisa Schedule-objekt, ingen direkt startDate) — json-ld-engine läser nu närmaste kommande schemadatum. Dry-run 120d: 22 distinkta föreställningar sparade (varje URL 3× i sitemap → dedupas i engine). Nöjespark/teater. '
+            + '12/10: datumklustret 16/10 (18 av 18) är RÄTT — nästa spelperiod i alla scheman är helgen 16–18/10 (sedan 24/10–1/11), och parkens program (admin-ajax get_program_by_date) listar samtliga 16/10 men är tomt 14/10. Klockslaget läses nu ur Schedule.startTime — alla 18 stämmer mot programmet (10:30, 14:35 …).',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://astridlindgrensvarld.se/sitemap_index.xml', date: '2026-06-23' },
         sampleEventUrl: 'https://astridlindgrensvarld.se/teatern/forestallning/min-bror-jonatan-lejonhjarta/',
-        lastVerified: '2026-06-23',
+        lastVerified: '2026-10-12',
     },
     {
         id: 'skansen',
@@ -7097,8 +7098,10 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
-        notes: 'Söderköpings kommun har ingen egen kalender — turistguiden har 212 event-URL:er med JSON-LD Event (startDate + Place). Hittad som utgående länk från soderkoping.se/turism/evenemang. Next.js, server-renderad.',
-        lastVerified: '2026-08-26',
+        notes: 'Söderköpings kommun har ingen egen kalender — turistguiden har 212 event-URL:er med JSON-LD Event (startDate + Place). Hittad som utgående länk från soderkoping.se/turism/evenemang. Next.js, server-renderad. '
+            + '12/10: 38 av 54 på 2026-10-14 = passerade filmer som fått "Fler filmvisningar"-kortens "ons 14 okt" via cheerio-fallbacken (sidan saknade då Event-JSON-LD). '
+            + 'Rubriken stryks nu som främmande lista (RELATED_HEADING i sitemap.ts); med JSON-LD ger källan rätt datum (torrkörning 12/10: 28 event, inga passerade).',
+        lastVerified: '2026-10-12',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.soderkoping.guide/sitemap.xml', date: '2026-08-26', rawEventCount: 212, notes: 'Domänen skördad ur kommunsajtens externa länkar med apps/scraper/scout/deep-scout.cjs.' },
     },
     {

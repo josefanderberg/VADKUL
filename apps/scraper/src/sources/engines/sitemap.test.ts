@@ -369,6 +369,40 @@ describe('cheerioFallback — "Mer i kalendariet"-korten förgiftar inte sidan',
     });
 });
 
+// Söderköpingsguiden (12/10): en PASSERAD filmvisning (Vaiana, 12 juli) vars
+// sida saknade Event-JSON-LD. Fritexten tog "Fler filmvisningar"-kortens
+// "ons 14 okt" → 38 av 54 event på 2026-10-14. Nedskalat utsnitt ur
+// soderkoping.guide/sv/evenemang/vaiana (probad 2026-10-12, JSON-LD bortplockad).
+const SODERKOPING_PAGE = `<html><head><title>Vaiana | 12 juli 2026 | Söderköpingsguiden</title></head><body>
+<main>
+ <div><h1>Vaiana</h1><p>Njut av Disneys drama med människor som skådespelare.</p></div>
+ <dl><div><dt>Tid<!-- -->:</dt><dd><span>14:00–15:55</span></dd></div><div><dt>När<!-- -->:</dt><dd><span>Söndag 12 juli 2026</span></dd></div><div><dt>Var<!-- -->:</dt><dd><span>Söderköpings Bio</span></dd></div></dl>
+ <p>Evenemanget har passerat</p>
+ <section><div><div><h2>Fler filmvisningar</h2><a href="/sv/evenemang/filmvisningar">Alla filmvisningar</a></div>
+  <div><div><p><span>ons 14 okt · 13:00–14:47, 18:30–20:17</span></p></div><h3>Arkipelag</h3><div><span>Söderköpings Bio</span></div></div><a href="/sv/evenemang/arkipelag"><span>Läs mer om Arkipelag</span></a>
+  <div><div><p><span>ons 14 okt · 15:30–17:56</span></p></div><h3>Fjord</h3><div><span>Söderköpings Bio</span></div></div><a href="/sv/evenemang/fjord"><span>Läs mer om Fjord</span></a>
+ </div></section>
+</main>
+</body></html>`;
+
+describe('cheerioFallback — "Fler filmvisningar"-korten förgiftar inte sidan', () => {
+    const URL = 'https://www.soderkoping.guide/sv/evenemang/vaiana';
+    beforeAll(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 9, 12, 10, 0)); });
+    afterAll(() => { vi.useRealTimers(); });
+
+    it('tar sidans egna (passerade) 12 juli, inte kortens "ons 14 okt"', () => {
+        const ev = cheerioFallback(SODERKOPING_PAGE, URL, 'Söderköping')!;
+        expect(ev.startDate.getFullYear()).toBe(2026);
+        expect(ev.startDate.getMonth()).toBe(6);    // juli → faller på fönsterfiltret
+        expect(ev.startDate.getDate()).toBe(12);
+    });
+
+    it('"Fler filmer" räknas också som främmande lista', () => {
+        const ev = cheerioFallback(SODERKOPING_PAGE.replace('Fler filmvisningar', 'Fler filmer'), URL, 'Söderköping')!;
+        expect(ev.startDate.getMonth()).toBe(6);
+    });
+});
+
 // Andra Konstmuseum-buggen (2026-09-11): gamla "Barnens Konstfredag"-sidor
 // ("fre 10 april kl 14:00–16:00" — passerad fredag) kastades rätt av
 // veckodagskontrollen, och fritexten tog då en utställningsperiod längre ner

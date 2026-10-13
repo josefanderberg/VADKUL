@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { dateFromContentRegex, findVenueInHtml, findVenueInText, htmlToLines } from './wp-rest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { dateFromContentRegex, findVenueInHtml, findVenueInText, htmlToLines, dateFromDetailRegex, wpRestEngine, type WpRestConfig } from './wp-rest';
 import { SOURCES } from '../registry';
 import { findFirstDateInText } from '../../utils/swedishDate';
+import type { EngineContext } from '../types';
 
 describe('htmlToLines', () => {
     it('gör <br> och block-slut till radbrytningar', () => {
@@ -116,5 +117,72 @@ describe('Stora Teatern: detailDateRegex läser bara "Speltillfällen"-listan', 
     it('flera tillfällen → första kommande, med klockslag', () => {
         const html = page(slot('Lördag', '10 okt 2026', '19:00') + slot('Fredag', '16 okt 2026', '19:00') + slot('Lördag', '17 okt 2026', '15:00'));
         expect(ymdh(dateOf(html)!)).toEqual([2026, 10, 16, 19, 0]);
+    });
+});
+
+// Panora (12/10): wp/v2/event saknar datum, och API:t listar HELA arkivet.
+// Helsides-skanningen tog sidofältets "Fjord … | 14 okt" för varje passerat
+// event → 68 av 79 på 2026-10-14. Utsnitt ur panora.se/events/* (probade 12/10).
+describe('Panora — detailDateRegex på biljettraden/datumrutan', () => {
+    const re = (SOURCES.find((s) => s.id === 'sb-panora-se')!.config as WpRestConfig).detailDateRegex!;
+    const NOW = new Date(2026, 9, 12);   // mån 12 okt 2026
+    const SIDEBAR = `<div class="puff-title">Fjord</div>
+        <div class="puff-linktext">With English Subtitles | 14 okt</div>`;
+    const dateBox = (d: string) => `<div class="two_pane_page_large_date_mobile">
+Datum:
+${d}</div>
+<p><strong>Text om eventet.</strong></p>`;
+    const TICKETS = `<div id="tickets-dropdown-content">
+                                    <div class="tickets-row">
+                    <a href="https://bio.se/biografer/panora-folkets-bio-malmo/film/49643/x?cinemaId=2128&sessionId=1009" target="_blank">Tor 29 okt, 18:15</a>
+                </div>
+                                </div>`;
+
+    it('biljettraden ger dag OCH klockslag', () => {
+        const d = dateFromDetailRegex(TICKETS + dateBox('Tor 29 okt') + SIDEBAR, re, NOW)!;
+        expect([d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()]).toEqual([9, 29, 18, 15]);
+    });
+
+    it('utan biljettlänk (gratisevent) → datumrutan, utan klockslag', () => {
+        const d = dateFromDetailRegex(dateBox('Lör 17 okt') + SIDEBAR, re, NOW)!;
+        expect([d.getMonth(), d.getDate(), d.getHours()]).toEqual([9, 17, 0]);
+    });
+
+    it('passerat event ("Sön 19 apr") → null, INTE sidofältets 14 okt', () => {
+        expect(dateFromDetailRegex(dateBox('Sön 19 apr') + SIDEBAR, re, NOW)).toBeNull();
+    });
+
+    it('inget datumfält → null', () => {
+        expect(dateFromDetailRegex(SIDEBAR, re, NOW)).toBeNull();
+    });
+});
+
+describe('wpRestEngine — defaultVenue (en-venue-sajt)', () => {
+    afterEach(() => { vi.unstubAllGlobals(); });
+    const ctx: EngineContext = {
+        windowStart: new Date(2026, 9, 12),
+        windowEnd: new Date(2026, 11, 31),
+        log: () => {},
+    };
+    const stubApi = (items: unknown[]) => vi.stubGlobal('fetch', vi.fn(async () => new Response(
+        JSON.stringify(items), { status: 200, headers: { 'content-type': 'application/json' } },
+    )));
+
+    it('sätter platsen när varken API eller sida gav någon', async () => {
+        stubApi([{ id: 1, date: '2026-01-01T10:00:00', link: 'https://bio-a.test/events/x/', title: { rendered: 'Filmkväll 15 november 2026' } }]);
+        const evs = await wpRestEngine({ baseUrl: 'https://bio-a.test', variant: 'wp-v2', embed: false, defaultCity: 'Malmö', defaultVenue: 'Panora' }, ctx);
+        expect(evs).toHaveLength(1);
+        expect(evs[0].venueName).toBe('Panora');
+        expect(evs[0].city).toBe('Malmö');
+    });
+
+    it('källans egen plats vinner över defaultVenue', async () => {
+        stubApi([{
+            id: 2, date: '2026-01-01T10:00:00', link: 'https://bio-b.test/events/y/',
+            title: { rendered: 'Konsert 15 november 2026' },
+            content: { rendered: '<p>Plats: Stora salongen</p>' },
+        }]);
+        const evs = await wpRestEngine({ baseUrl: 'https://bio-b.test', variant: 'wp-v2', embed: false, defaultVenue: 'Panora' }, ctx);
+        expect(evs[0].venueName).toBe('Stora salongen');
     });
 });

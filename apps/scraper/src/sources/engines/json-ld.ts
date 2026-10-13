@@ -279,9 +279,21 @@ function resolveSchedule(node: any): { start?: string; end?: string } {
     const sched = node.eventSchedule;
     if (!sched) return {};
     const arr = Array.isArray(sched) ? sched : [sched];
+    // Schedule bär klockslaget SEPARAT (startTime "10:30:00") bredvid ett rent
+    // datum. Utan det blev alla 18 föreställningar i Astrid Lindgrens Värld
+    // "2026-10-16, ingen tid" fast parkens program säger 10:30, 14:35 … (12/10).
+    // Zonlös datum+tid tolkas som lokal tid — samma som Tribe-datumen.
+    const startOf = (s: any): string => {
+        const d = String(s.startDate);
+        const t = typeof s.startTime === 'string' ? s.startTime.trim() : '';
+        return /^\d{4}-\d{2}-\d{2}$/.test(d) && /^\d{1,2}:\d{2}(?::\d{2})?$/.test(t)
+            ? `${d}T${t.replace(/^(\d):/, '0$1:')}`   // "9:30" → "09:30" (ISO kräver två siffror)
+            : d;
+    };
     const dated = arr
         .filter((s: any) => s && s.startDate)
-        .map((s: any) => ({ start: String(s.startDate), end: s.endDate ? String(s.endDate) : undefined, t: new Date(s.startDate).getTime() }))
+        .map((s: any) => ({ start: startOf(s), end: s.endDate ? String(s.endDate) : undefined }))
+        .map((s) => ({ ...s, t: new Date(s.start).getTime() }))
         .filter((s) => !isNaN(s.t))
         .sort((a, b) => a.t - b.t);
     if (dated.length === 0) return {};
