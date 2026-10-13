@@ -48,8 +48,8 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 - Appikon 512x512: `play-ikon-512.png` (platt blå bakgrund, ingen alfa)
 - Funktionsbild 1024x500: `play-feature-grafik-1024x500.png`
 - Skärmbilder till Play: `play/skarmbild-*.png` (1320x2640 = exakt 2:1, Plays tak; komponerade presentationsbilder med rubrik på blå platta)
-- Skärmbilder till App Store: `skarmbild-*.png` (1320x2868, 6,9-tumsformatet) - samma kompositioner i iOS-måtten
-- Råa simulatordumpar som underlag: `ra/skarmbild-*.png` (laddas inte upp)
+- Skärmbilder till App Store: `skarmbild-*.png` (1320x2868, "iPhone med Dynamic Island (stor skärm)") och `app-store-mellan/skarmbild-*.png` (1206x2622, "iPhone med Dynamic Island (mellanstor skärm)" - den storleken KRÄVS av Connect sedan hösten 2026) - samma kompositioner i iOS-måtten
+- Råa simulatordumpar som underlag: `ra/skarmbild-*.png` (laddas inte upp). 03-05 är retuscherade: dev-buildens kugghjulsbubbla borttagen (finns inte i produktionsbygget); originalen ligger i c4cd8162
 
 ---
 
@@ -57,7 +57,7 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 
 ### App Store Connect (iOS)
 - [ ] **App Privacy-formuläret**: uppdatera innan appen skickas till granskning. Svaren står i `app-store-butik.md` under "App Privacy" (utkast 12/10). Nytt mot 9/10: Diagnostik → Kraschdata och Annan diagnostikdata (Crashlytics, från build 7), plus konto- och användarinnehållet som 9/10-utkastet saknade (namn, foton, chatt, vänner, profilfält). Plats tas bort - koordinaterna lämnar aldrig telefonen. Ingen spårning, inga annonser.
-- [ ] Ladda upp skärmbilderna (6,9-tum, 1320x2868) och den nya marknadsikonen om Connect ber om en separat (`app-store-ikon-1024.png`).
+- [ ] Ladda upp skärmbilderna under versionens "Förhandsvisningar och skärmbilder": mellanstor skärm = `app-store-mellan/` (1206x2622, krävs), stor skärm = `skarmbild-*.png` (1320x2868). Fel mått ger "File dimensions are invalid". Header-/sökrutan (creative assets, 21:9 / 3:2 / 16:9) är något annat och frivillig. Marknadsikonen om Connect ber om en separat (`app-store-ikon-1024.png`).
 
 ### Google Play Console (Android)
 - [ ] **Finns Play-kontot?** Okänt om ett Google Play Console-utvecklarkonto ens är registrerat (25 USD engångsavgift + identitetsverifiering, kan ta några dagar). Kolla FÖRST - allt annat nedan väntar på det.
