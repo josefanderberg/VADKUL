@@ -24,6 +24,8 @@ describe('arrangorTyp', () => {
         expect(arrangorTyp('Tickster')).toBe('plattform');
         expect(arrangorTyp('Växjö domkyrkoförsamling')).toBe('riks');
         expect(arrangorTyp('Aby stadsbibliotek')).toBe('riks');
+        expect(arrangorTyp('Aby stadsbibliotek', { bibliotekLokala: true })).toBe('lokal');
+        expect(arrangorTyp('Aby församling', { bibliotekLokala: true })).toBe('riks');
         expect(arrangorTyp('Kulturparken Småland')).toBe('lokal');
         expect(arrangorTyp(null)).toBe('lokal');
     });
@@ -47,6 +49,7 @@ describe('raknaOrt', () => {
         ...Array.from({ length: MIN_NAMNGIVEN }, () => ev()),                        // Aby Teater x3
         ev({ hostName: 'Anna Artist' }),                                              // en enda: namnges inte
         ev({ hostName: 'Aby församling', category: 'social' }),
+        ...Array.from({ length: MIN_NAMNGIVEN }, () => ev({ hostName: 'Aby stadsbibliotek', category: 'lecture' })),
         ev({ hostName: 'Tickster', category: 'music' }),
         ev({ hostName: 'Kommunen', url: 'https://kalender.aby.se/e/1', category: 'family' }),
         ev({ lat: B.lat, lng: B.lng - 0.01 }),                                        // hör till Broby
@@ -57,14 +60,14 @@ describe('raknaOrt', () => {
     const s = raknaOrt(events, A, ORTER, { fran: FRAN, dagar: 30, kalenderDoman: 'www.aby.se' });
 
     it('räknar bara ortens evenemang i perioden', () => {
-        expect(s.antal).toBe(8);
-        expect(s.per10k).toBe(1.6);
-        expect(s.typer).toEqual({ lokal: 6, riks: 1, plattform: 1 });
+        expect(s.antal).toBe(11);
+        expect(s.per10k).toBe(2.2);
+        expect(s.typer).toEqual({ lokal: 9, riks: 1, plattform: 1 });
     });
 
-    it('namnger bara arrangörer med flera evenemang', () => {
-        expect(s.storstaLokala).toEqual([{ namn: 'Aby Teater', antal: 4 }]);
-        expect(s.arrangorer).toBe(5);
+    it('namnger bara arrangörer med flera evenemang, kommunens bibliotek räknas som lokala', () => {
+        expect(s.storstaLokala).toEqual([{ namn: 'Aby Teater', antal: 4 }, { namn: 'Aby stadsbibliotek', antal: 3 }]);
+        expect(s.arrangorer).toBe(6);
     });
 
     it('kategorier med svenska namn, kalendern på domänen inklusive underdomäner', () => {
@@ -73,7 +76,7 @@ describe('raknaOrt', () => {
     });
 
     it('snitt per veckodag: alla på en måndag, och perioden har fem måndagar', () => {
-        expect(s.perVeckodag[0]).toBe(1.6);
+        expect(s.perVeckodag[0]).toBe(2.2);
         expect(s.perVeckodag.slice(1).every((v) => v === 0)).toBe(true);
     });
 });

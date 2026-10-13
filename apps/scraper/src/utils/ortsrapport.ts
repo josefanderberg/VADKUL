@@ -120,7 +120,7 @@ export function raknaOrt(events: RapportEvent[], ort: Ort, orter: TownPoint[], v
     const doman = val.kalenderDoman?.toLowerCase().replace(/^www\./, '');
 
     for (const e of egna) {
-        const typ = arrangorTyp(e.hostName);
+        const typ = arrangorTyp(e.hostName, { bibliotekLokala: true });
         typer[typ]++;
         const host = visningsnamn(e.hostName ?? '');
         if (host) arrangorer.add(host.toLowerCase());
@@ -221,8 +221,8 @@ function rutor(s: OrtStatistik): string {
 
 function sammansattning(s: OrtStatistik): string {
     const delar: [ArrangorTyp, string, string][] = [
-        ['lokal', 'Lokala arrangörer', 'scener, föreningar, museer, krogar och kommunens verksamheter'],
-        ['riks', 'Riksorganisationer', 'församlingar, studieförbund, bibliotek, PRO m.fl.'],
+        ['lokal', 'Lokala arrangörer', 'scener, föreningar, museer, bibliotek och kommunens övriga verksamheter'],
+        ['riks', 'Riksorganisationer', 'församlingar, studieförbund, PRO, Korpen m.fl.'],
         ['plattform', 'Biljettplattformar', 'Tickster, Ticketmaster m.fl., där arrangören inte syns'],
     ];
     const pct = (n: number) => (s.antal ? Math.round((n / s.antal) * 100) : 0);
