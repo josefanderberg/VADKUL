@@ -1,4 +1,21 @@
+# Kartans query-varianter (/?event=, /?plats=, /?dag= ...) har canonical /
+# och samma HTML. Stadssidorna länkar ~1 400 djuplänkar per stad, och
+# renderande crawlers (Baiduspider-render, Reflectionbot, OAI-SearchBot)
+# laddade hela kartan för varje - 1 000-8 000 gånger per dygn (14/10).
+# Stadssidorna, arrangörssidorna och / själv är öppna som förut.
 User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /?
+
+# Länkförhandsvisningar ska alltid få hämta en delad /?event=-länk
+# (användarskapade event delas så). /api/ och /admin är stängda även här.
+User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: Twitterbot
+User-agent: LinkedInBot
+User-agent: Slackbot
 Allow: /
 Disallow: /admin
 Disallow: /api/
