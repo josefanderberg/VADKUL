@@ -11,6 +11,7 @@ import { buildCardIndex } from '@/utils/eventKey';
 import { parseTileKey, parseDescBucket } from '@/utils/eventTiles';
 import { sliceDestinations, sliceCards, buildDescBuckets, type SliceSpec } from '@/lib/eventLayerSlices';
 import { countPerDay } from '@/utils/dayCounts';
+import { isApiBot } from '@/utils/apiBot';
 
 /**
  * CDN-cachad utlämning av event-aggregaten (destinations/cards/descriptions).
@@ -263,11 +264,27 @@ async function readPrepackedBlobs(
 
 type LayerEntry = { updatedAt: string; enc: Record<Enc, Uint8Array> };
 
+// Singleflight per (lager, version): kartan begär ~10 rutor på en gång, och på
+// en kall instans läste VARJE anrop blobbarna ur Firestore och packade upp dem
+// parallellt. Minnestoppen fällde 512 MiB-instanserna i en krasch-loop (14/10:
+// 49 av 53 instanser dog på 22 min, 41 % av anropen blev 503).
+const layerLoads = new Map<string, Promise<LayerEntry | null>>();
+
+function loadLayerEntry(db: Firestore, layer: string, indexData: any, updatedAt: string): Promise<LayerEntry | null> {
+    const key = `${layer}|${updatedAt}`;
+    let load = layerLoads.get(key);
+    if (!load) {
+        load = loadLayerEntryOnce(db, layer, indexData, updatedAt).finally(() => layerLoads.delete(key));
+        layerLoads.set(key, load);
+    }
+    return load;
+}
+
 /**
  * Hela lagret färdigpackat: memo → diskcache → scraperns blob → bygg ur
  * JSON-shards. null = app-lager utan blob (blob-only, se APP_LAYERS).
  */
-async function loadLayerEntry(db: Firestore, layer: string, indexData: any, updatedAt: string): Promise<LayerEntry | null> {
+async function loadLayerEntryOnce(db: Firestore, layer: string, indexData: any, updatedAt: string): Promise<LayerEntry | null> {
     let entry = updatedAt ? memo.get(layer) : undefined;
     if (entry && entry.updatedAt !== updatedAt) entry = undefined;
 
@@ -354,6 +371,11 @@ export async function GET(
     request: Request,
     { params }: { params: Promise<{ layer: string }> },
 ) {
+    // Botar (utils/apiBot) får inga lager. no-store: CDN:en nycklar bara på
+    // URL:en, så ett cachat 403 hade slagit ut rutan för riktiga besökare.
+    if (isApiBot(request.headers.get('user-agent'))) {
+        return new NextResponse(null, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+    }
     const { layer } = await params;
     if (!LAYERS.has(layer) && !APP_LAYERS.has(layer)) {
         return NextResponse.json({ error: 'Okänt lager' }, { status: 404 });

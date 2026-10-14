@@ -21,7 +21,7 @@
     ],
     "frameworksBackend": {
       "region": "europe-north1",
-      "memory": "512MiB"
+      "memory": "2GiB"
     },
     "headers": [
       {
