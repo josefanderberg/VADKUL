@@ -1,11 +1,19 @@
 import type { EventWish } from '../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../utils/categories';
 import { db } from '../lib/firebase';
-import { addDoc, collection, deleteDoc, doc, getDocs, Timestamp, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, limit, query, Timestamp, updateDoc, where } from 'firebase/firestore';
 
 /** En önskan lever så här länge, därefter filtreras den bort ur karthämtningen.
  *  14 dagar t.o.m. 22/9, sedan 7 (Josef: "det räcker typ"). */
 export const WISH_LIFETIME_DAYS = 7;
+
+/**
+ * Kartans önskningspoll (app/(v2)/page.tsx), bara medan fliken syns
+ * (utils/visiblePoll). Var 30 s utan visibility-vakt t.o.m. 14/10: varje varv
+ * kostar minst ett Firestore-read, och önskningar skapas några i veckan.
+ * Egna nyskapade slås in lokalt direkt, så takten märks bara för andras.
+ */
+export const WISH_POLL_MS = 5 * 60_000;
 
 const toDate = (v: unknown): Date =>
     v instanceof Timestamp ? v.toDate() : new Date(v as string | number | Date);
@@ -45,15 +53,21 @@ export const wishService = {
     },
 
     /**
-     * Alla AKTIVA önskningar: ej uppfyllda, ej utgångna. Hela collectionen läses
-     * och filtreras på klienten (volymen är liten och det slipper composite-
-     * index för fulfilled+expiresAt) — samma enkla mönster som användarevent-
-     * hämtningen i linkEventService.
+     * Alla AKTIVA önskningar: ej uppfyllda, ej utgångna. Utgångna sållas på
+     * servern (expiresAt > nu, enfältsindexet räcker - ingen composite för
+     * fulfilled+expiresAt), resten på klienten. Förr lästes HELA collectionen
+     * varje varv, så kostnaden växte med varje önskan som någonsin skapats.
+     * Både webben och appen skriver expiresAt som Timestamp, så filtret
+     * missar inga.
      */
     async fetchActiveWishes(): Promise<EventWish[]> {
         try {
             if (!db) return [];
-            const snap = await getDocs(collection(db, 'eventWishes'));
+            const snap = await getDocs(query(
+                collection(db, 'eventWishes'),
+                where('expiresAt', '>', Timestamp.now()),
+                limit(500),
+            ));
             const now = Date.now();
             return snap.docs
                 .map((d) => {

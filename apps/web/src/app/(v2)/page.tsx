@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { EventWish, LinkEvent, type EventRsvpStatus } from '@/types';
 import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
-import { wishService, WISH_LIFETIME_DAYS } from '@/services/wishService';
+import { wishService, WISH_LIFETIME_DAYS, WISH_POLL_MS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CreateEventButton from '@/components/v2/CreateEventButton';
@@ -32,6 +32,7 @@ import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
 import { zoomInCenter } from '@/utils/zoomInCenter';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug } from '@/utils/organizerPages';
 import { markActive, readShouldAutoShowWelcome } from '@/utils/welcomeGate';
+import { startVisiblePoll } from '@/utils/visiblePoll';
 import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
@@ -1515,11 +1516,11 @@ export default function HomePage() {
     // (KVÄLLSLANDNINGEN 13/9 låg här - ersatt 24/9 av auto-hoppet till
     // Imorgon längre ner, som mäter KARTANS RUTA i stället för hela landet.)
 
-    // Önskningarna: EGEN poll (samma mönster som användarevent-hämtningen i
-    // linkEventService — de bor bara i Firestore). Servicen filtrerar redan
-    // bort uppfyllda + utgångna; här slås sessionens egna nyskapade in (syns
-    // direkt) och lokalt uppfyllda/raderade hålls borta även om en poll som
-    // startade före skrivningen hinner svara med dem.
+    // Önskningarna: EGEN poll (de bor bara i Firestore). Servicen filtrerar
+    // redan bort uppfyllda + utgångna; här slås sessionens egna nyskapade in
+    // (syns direkt) och lokalt uppfyllda/raderade hålls borta även om en poll
+    // som startade före skrivningen hinner svara med dem. Pollen står still i
+    // dold flik (utils/visiblePoll) - den gick var 30:e s dygnet runt t.o.m. 14/10.
     useEffect(() => {
         let active = true;
         const load = async () => {
@@ -1530,9 +1531,8 @@ export default function HomePage() {
             const extras = myWishesRef.current.filter(w => !seen.has(w.id) && w.expiresAt.getTime() > nowMs);
             setWishes([...fetched, ...extras].filter(w => !goneWishIdsRef.current.has(w.id)));
         };
-        load();
-        const iv = setInterval(load, 30000);
-        return () => { active = false; clearInterval(iv); };
+        const stop = startVisiblePoll(load, WISH_POLL_MS);
+        return () => { active = false; stop(); };
     }, []);
 
     // Håll det ÖPPNA kortet i synk med den progressiva laddningen: cards-/
