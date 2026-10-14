@@ -1,35 +1,10 @@
 'use client';
 
+import { TODAY_SLICE_BOOT } from '@/utils/todaySliceBoot';
+
 // Kartan följer temasystemet (ThemeProvider): sparat tema vinner, annars
 // webbläsarens mörka/ljusa läge. Tidigare tvingades kartan alltid ljus här —
 // borttaget 2026-07-05 (användarbeslut: mörka eventkort är OK i darkmode).
-
-// Snabbstart för dagens prickar: hämtningarna av dagens event börjar HÄR,
-// i HTML-parsningen — långt innan JS-bundlen laddat klart och hydrerat (~2 s
-// på mobil). TVÅ källor parallellt: den statiska dagsfilen (ren CDN-fil bakad
-// vid deploy, ~100 kB gz — snabbast och opåverkad av funktions-kallstarter)
-// och API-slicen (färskast). fetchTodayStatic/fetchTodaySlice i
-// linkEventService plockar upp promisarna via window.__vadkulToday* i stället
-// för att starta egna hämtningar; dagstämpeln (slice) resp. day-fältet i
-// filen (static) skyddar mot förlegade svar (flik över midnatt / besök före
-// morgondeployen). URL-formen för slicen MÅSTE spegla fetchTodaySlice (lokal
-// midnatt→midnatt som UTC-ISO) — CDN:en cachar per URL, en post per dag/tidszon.
-// Djuplänken (?event=) får samma försprång: /api/event?id= (~1 kB, hela
-// kortfältet inkl. beskrivning) börjar hämtas här så svaret ofta redan finns
-// när djuplänks-snabbstarten i page.tsx frågar (fetchDeepLinkEvent i
-// utils/eventSeed återanvänder promisen). Körs bara vid FULL sidladdning —
-// klientnavigering (t.ex. /e/-sidans router.replace) exekverar inte inline-
-// script, och där hämtar fetchDeepLinkEvent själv.
-const TODAY_SLICE_BOOT = `(function(){try{
-var f=new Date();f.setHours(0,0,0,0);var t=new Date();t.setHours(23,59,59,999);
-window.__vadkulTodaySliceDay=f.toDateString();
-window.__vadkulTodayStatic=fetch('/events-today.json').then(function(r){return r.ok?r.json():null}).catch(function(){return null});
-window.__vadkulTodaySlice=fetch('/api/events/destinations?from='+encodeURIComponent(f.toISOString())+'&to='+encodeURIComponent(t.toISOString()))
-.then(function(r){return r.ok?r.json():null}).catch(function(){return null});
-var ev=new URLSearchParams(location.search).get('event');
-if(ev){window.__vadkulDeepLinkEvent=fetch('/api/event?id='+encodeURIComponent(ev))
-.then(function(r){return r.ok?r.json():null}).catch(function(){return null});}
-}catch(e){}})();`;
 
 export default function V2Layout({ children }: { children: React.ReactNode }) {
     return (

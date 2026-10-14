@@ -10,6 +10,26 @@ import { usableImageUrl } from '../lib/deepLinkEventIndex';
 import { timelineWindowRange, type TimelineWindowRange } from '../utils/timelineWindow';
 import { tilesForBounds, boundsCoveredBy, composeAreaRows, descBucketFor, type Bounds } from '../utils/eventTiles';
 import { apiEventToLinkEvent } from '../utils/eventSeed';
+import { isApiBot, isBotRefusal } from '../utils/apiBot';
+
+// ── Botar får ingen eventdata ──────────────────────────────────────────────
+// API:t svarar botar 403 (utils/apiBot), men klienten föll förut vidare till
+// sina reservvägar: rutfelet drog in landslagret, och fetchLayer tog de
+// statiska helfilerna /events-destinations.json + /events-cards.json (1,8 +
+// 1,1 MB br per rendering). Botarna renderar kartan 1 000-8 000 gånger per
+// dygn (mest /?event=-djuplänkar från stadssidorna), så spärren 14/10 gjorde
+// dem DYRARE i Hosting-bandbredd. Nu hämtar en bot-webbläsare (samma regel på
+// navigator.userAgent) ingenting alls, och en bot-spärr från servern (om
+// webbläsarens UA inte avslöjar boten) stänger alla vägar resten av sidan.
+let botRefused = false;
+function isBotSession(): boolean {
+    return botRefused || (typeof navigator !== 'undefined' && isApiBot(navigator.userAgent));
+}
+/** Noterar en bot-spärr; sant = svaret ska inte följas av någon reservväg. */
+function noteBotRefusal(res: { status: number; headers?: { get(name: string): string | null } }): boolean {
+    if (isBotRefusal(res)) botRefused = true;
+    return botRefused;
+}
 
 /**
  * Är eventet boostat just nu? Sant om featuredUntil finns och ligger i framtiden.
@@ -197,6 +217,7 @@ const STATIC_HEADSTART_MS = 1500;
  * per dag. Fel/tomt svar → null (kartan väntar på fulla lagret som förut).
  */
 async function fetchTodaySlice(): Promise<any[] | null> {
+    if (isBotSession()) return null;
     try {
         // Boot-scriptet i (v2)/layout.tsx startar hämtningen redan i HTML-
         // parsningen (långt före hydreringen) — återanvänd dess promise om den
@@ -210,7 +231,7 @@ async function fetchTodaySlice(): Promise<any[] | null> {
         } else {
             const to = new Date(); to.setHours(23, 59, 59, 999);
             const res = await fetch(`/api/events/destinations?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
-            if (!res.ok) return null;
+            if (!res.ok) { noteBotRefusal(res); return null; }
             data = await res.json();
         }
         if (!data?.events?.length) return null;
@@ -228,6 +249,7 @@ async function fetchTodaySlice(): Promise<any[] | null> {
 const STOCKHOLM_DAY_FMT = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }); // → 'ÅÅÅÅ-MM-DD'
 
 async function fetchTodayStatic(): Promise<any[] | null> {
+    if (isBotSession()) return null;
     try {
         const w = window as unknown as { __vadkulTodayStatic?: Promise<{ day?: string; events?: unknown[] } | null> };
         const data = w.__vadkulTodayStatic
@@ -285,6 +307,8 @@ let onDescriptionsLanded: ((data: Record<string, string>) => void) | null = null
  *  4xx är ett definitivt besked (okänd ruta, eventet finns inte) — inget
  *  omtag; `definitive` skiljer det från "gick inte fram". */
 async function fetchJsonWithStatus(url: string): Promise<{ data: any; definitive: boolean }> {
+    // Bot: svaret vore en 403 - fråga inte ens (varje 403 är ett SSR-anrop).
+    if (isBotSession()) return { data: null, definitive: true };
     for (let attempt = 0; attempt < 2; attempt++) {
         try {
             const res = await fetch(url);
@@ -292,6 +316,7 @@ async function fetchJsonWithStatus(url: string): Promise<{ data: any; definitive
                 const data = await res.json();
                 if (data) return { data, definitive: true };
             } else if (res.status >= 400 && res.status < 500) {
+                noteBotRefusal(res);
                 return { data: null, definitive: true };
             }
         } catch { /* omtag nedan */ }
@@ -419,12 +444,17 @@ async function fetchLayer(layerName: 'destinations' | 'cards'): Promise<any> {
     // (funktions-timeouten klipper strömmen mitt i → res.json() kastar
     // "Unterminated string"). Ett omtag träffar då nästan alltid ett komplett,
     // CDN-cachat svar.
+    // Bot (eller bot-spärr från servern): ingen väg alls - framför allt inte
+    // den statiska reserven nedan, som är hela landet på 1-2 MB br.
+    if (isBotSession()) return null;
     for (let attempt = 0; attempt < 2; attempt++) {
         try {
             const res = await fetch(`/api/events/${layerName}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data) return data;
+            } else if (noteBotRefusal(res)) {
+                return null;
             }
         } catch (e) {
             if (attempt === 1) {
@@ -460,12 +490,15 @@ async function fetchLayer(layerName: 'destinations' | 'cards'): Promise<any> {
  * (som också är fallbacken när routen saknar slice-stödets nya spann).
  */
 async function fetchTimelineWindow(range: TimelineWindowRange): Promise<any> {
+    if (isBotSession()) return null;
     for (let attempt = 0; attempt < 2; attempt++) {
         try {
             const res = await fetch(`/api/events/destinations?from=${encodeURIComponent(range.fromIso)}&to=${encodeURIComponent(range.toIso)}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data?.events?.length) return data;
+            } else if (noteBotRefusal(res)) {
+                return null;
             }
         } catch { /* omtag nedan */ }
         if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
@@ -1081,6 +1114,17 @@ export const linkEventService = {
         // landslagret först när requestNationwide/en för bred vy kräver det.
         opts?: { area?: boolean },
     ): () => void {
+        // Bot-rendering (se isBotSession): tom karta med ett definitivt
+        // "laddat" - inga lager, inga statiska filer, ingen Firestore-poll.
+        if (isBotSession()) {
+            let live = true;
+            queueMicrotask(() => {
+                if (!live) return;
+                callback([]);
+                onInitialLoad?.();
+            });
+            return () => { live = false; };
+        }
         let active = true;
         let baseEvents: LinkEvent[] = [];   // sammanslagna aggregat-lager (utan user-events)
         let userEvents: LinkEvent[] = [];   // senast hämtade användarskapade event
@@ -1197,6 +1241,8 @@ export const linkEventService = {
                     emit();
                 });
                 staticTimer = setTimeout(async () => {
+                    // Bot-spärren kom före försprånget: ingen snapshot.
+                    if (isBotSession()) return;
                     try {
                         const res = await fetch('/events-destinations.json');
                         if (!res.ok) return;

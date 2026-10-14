@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/firestore-admin';
 import { buildDeepLinkEventIndex, type DeepLinkEvent } from '@/lib/deepLinkEventIndex';
-import { isApiBot } from '@/utils/apiBot';
+import { isApiBot, BOT_REFUSAL_HEADER } from '@/utils/apiBot';
 
 /**
  * ETT event ur aggregaten: /api/event?id=<eventId>
@@ -132,7 +132,7 @@ async function readUserCreatedEvent(db: Firestore, id: string): Promise<DeepLink
 export async function GET(request: Request) {
     // Samma botvakt som /api/events: indexet här bygger alla tre lagren.
     if (isApiBot(request.headers.get('user-agent'))) {
-        return new NextResponse(null, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+        return new NextResponse(null, { status: 403, headers: { 'Cache-Control': 'no-store', [BOT_REFUSAL_HEADER]: '1' } });
     }
     const id = new URL(request.url).searchParams.get('id');
     if (!id) {

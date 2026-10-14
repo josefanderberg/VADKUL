@@ -11,7 +11,7 @@ import { buildCardIndex } from '@/utils/eventKey';
 import { parseTileKey, parseDescBucket } from '@/utils/eventTiles';
 import { sliceDestinations, sliceCards, buildDescBuckets, type SliceSpec } from '@/lib/eventLayerSlices';
 import { countPerDay } from '@/utils/dayCounts';
-import { isApiBot } from '@/utils/apiBot';
+import { isApiBot, BOT_REFUSAL_HEADER } from '@/utils/apiBot';
 
 /**
  * CDN-cachad utlämning av event-aggregaten (destinations/cards/descriptions).
@@ -374,7 +374,7 @@ export async function GET(
     // Botar (utils/apiBot) får inga lager. no-store: CDN:en nycklar bara på
     // URL:en, så ett cachat 403 hade slagit ut rutan för riktiga besökare.
     if (isApiBot(request.headers.get('user-agent'))) {
-        return new NextResponse(null, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+        return new NextResponse(null, { status: 403, headers: { 'Cache-Control': 'no-store', [BOT_REFUSAL_HEADER]: '1' } });
     }
     const { layer } = await params;
     if (!LAYERS.has(layer) && !APP_LAYERS.has(layer)) {

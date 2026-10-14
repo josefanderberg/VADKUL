@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isApiBot } from './apiBot';
+import { isApiBot, isBotRefusal, BOT_REFUSAL_HEADER } from './apiBot';
 
 describe('isApiBot', () => {
     it('känner igen botarna ur SSR-loggen 14/10', () => {
@@ -31,5 +31,16 @@ describe('isApiBot', () => {
         expect(isApiBot('')).toBe(false);
         expect(isApiBot(null)).toBe(false);
         expect(isApiBot(undefined)).toBe(false);
+    });
+
+    it('bot-spärren känns igen på 403 + rubriken, inte på vilken 403 som helst', () => {
+        const withHeader = new Headers({ [BOT_REFUSAL_HEADER]: '1' });
+        expect(isBotRefusal({ status: 403, headers: withHeader })).toBe(true);
+        // Cloud Run-behörighet som fallit bort ger också 403 - då ska
+        // klientens statiska reservfiler fortfarande rädda kartan.
+        expect(isBotRefusal({ status: 403, headers: new Headers() })).toBe(false);
+        expect(isBotRefusal({ status: 404, headers: withHeader })).toBe(false);
+        // Teststubbar och gamla svar utan headers.
+        expect(isBotRefusal({ status: 403 })).toBe(false);
     });
 });

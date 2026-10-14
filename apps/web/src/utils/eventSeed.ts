@@ -1,5 +1,6 @@
 import type { LinkEvent } from '@/types';
 import type { EventCategoryType } from '@/utils/categories';
+import { isApiBot } from '@/utils/apiBot';
 
 // ── Djuplänks-seed: kortet före kartan ───────────────────────────────────────
 // Ett klick på ett event på en stadssida (eller /e/-delningssidan) navigerar
@@ -190,6 +191,8 @@ export function mergeDeepLinkEvent(base: LinkEvent, extra: LinkEvent | null | un
  *  scriptets promise (startad i HTML-parsningen, se (v2)/layout.tsx) när den
  *  finns. null vid miss/fel: kortet väntar då på aggregaten som förut. */
 export async function fetchDeepLinkEvent(id: string): Promise<LinkEvent | null> {
+    // Botar får 403 av /api/event (utils/apiBot) - fråga inte ens.
+    if (typeof navigator !== 'undefined' && isApiBot(navigator.userAgent)) return null;
     try {
         const w = window as unknown as { __vadkulDeepLinkEvent?: Promise<{ event?: unknown } | null> };
         const data = w.__vadkulDeepLinkEvent
