@@ -9,6 +9,7 @@ import { publishableImageUrl } from '../utils/imageFilter';
 import { sanitizeEndDate } from '../utils/eventEnd';
 import { cleanHostName } from '../scrapers/facebook/hostFallback';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
+import { AggregatedDocIds } from '../utils/aggregatedDocIds';
 import { buildAppFeeds, loadCities, APP_FEED_DAYS } from '../utils/appFeed';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -327,6 +328,12 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
 
     console.log('   📤 Uploading aggregated layers to Firestore collection "aggregatedEvents"...');
 
+    // EN namnlistning av aggregatedEvents för hela körningen, delad av alla
+    // städsteg nedan (blobbar, app-regioner, JSON-shards). En listning per steg
+    // var ~25 st à ~240 debiterade reads = ~430 000 reads/dygn med daemonens
+    // takt - se utils/aggregatedDocIds.
+    const docIds = new AggregatedDocIds(db.collection('aggregatedEvents'));
+
     // Förpackade blobbar (brotli q11 + gzip 9) FÖRE JSON-lagren: routen matchar
     // blobben på exakt updatedAt, så när lagrets nya updatedAt blir synligt ska
     // blobben redan ligga där (miss → routens q6-väg, bara långsammare). Ett
@@ -337,7 +344,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         ['descriptions', descriptionsPayload],
     ] as const) {
         try {
-            await uploadPrepackedBlobs(db, layer, updatedAt, Buffer.from(JSON.stringify(payload)));
+            await uploadPrepackedBlobs(db, layer, updatedAt, Buffer.from(JSON.stringify(payload)), docIds);
         } catch (e) {
             console.error(`      ⚠️ Blob "${layer}" misslyckades (routen packar q6 själv):`, (e as Error).message);
         }
@@ -354,7 +361,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         for (const [region, events] of [...appFeeds.entries()].sort()) {
             const layer = `app-${region}`;
             const payload = { updatedAt, region, days: APP_FEED_DAYS, events };
-            await uploadPrepackedBlobs(db, layer, updatedAt, Buffer.from(JSON.stringify(payload)));
+            await uploadPrepackedBlobs(db, layer, updatedAt, Buffer.from(JSON.stringify(payload)), docIds);
             await db.collection('aggregatedEvents').doc(layer).set({ updatedAt, region, days: APP_FEED_DAYS, count: events.length });
             appEventCount += events.length;
         }
@@ -370,7 +377,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         const destBytes = Buffer.byteLength(JSON.stringify(destinationsPayload), 'utf-8');
         if (destBytes < 900_000) {
             await db.collection('aggregatedEvents').doc('destinations').set(destinationsPayload);
-            await deleteShards(db, 'destinations_');
+            await deleteShards(db, 'destinations_', 0, docIds);
             console.log(`      ✅ Uploaded "destinations" document (${(destBytes / 1024).toFixed(0)} KB)`);
         } else {
             // Packa på FAKTISKA bytes, inte antal: ett antal-baserat tak (2000 st)
@@ -397,7 +404,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             console.log(`      ℹ️  Destinations är ${(destBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar (byte-budget)`);
             await uploadShardedLayer(db, 'destinations',
                 { updatedAt, shardCount: shards.length, totalEvents: destinations.length },
-                shards.map((events, i) => ({ updatedAt, shardIndex: i, events })));
+                shards.map((events, i) => ({ updatedAt, shardIndex: i, events })), docIds);
             console.log(`      ✅ Uploaded "destinations" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -411,7 +418,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             // Får plats i ett dokument
             await db.collection('aggregatedEvents').doc('cards').set(cardsPayload);
             // Rensa ev. tidigare shards
-            await deleteCardsShards(db);
+            await deleteCardsShards(db, 0, docIds);
             console.log(`      ✅ Uploaded "cards" document (${(cardsBytes / 1024).toFixed(0)} KB)`);
         } else {
             // Sharda. Index-doc har shardCount, varje shard har events-array.
@@ -423,7 +430,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             console.log(`      ℹ️  Cards är ${(cardsBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
             await uploadShardedLayer(db, 'cards',
                 { updatedAt, shardCount: shards.length, totalEvents: cards.length },
-                shards.map((events, i) => ({ updatedAt, shardIndex: i, events })));
+                shards.map((events, i) => ({ updatedAt, shardIndex: i, events })), docIds);
             console.log(`      ✅ Uploaded "cards" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -435,7 +442,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
         const descBytes = Buffer.byteLength(JSON.stringify(descriptionsPayload), 'utf-8');
         if (descBytes < 900_000) {
             await db.collection('aggregatedEvents').doc('descriptions').set(descriptionsPayload);
-            await deleteShards(db, 'descriptions_');
+            await deleteShards(db, 'descriptions_', 0, docIds);
             console.log(`      ✅ Uploaded "descriptions" document (${(descBytes / 1024).toFixed(0)} KB)`);
         } else {
             // Packa på FAKTISKA bytes, inte antal: beskrivningar varierar vilt i
@@ -463,7 +470,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             console.log(`      ℹ️  Descriptions är ${(descBytes / 1024).toFixed(0)} KB > 900 KB → shardas i ${shards.length} delar`);
             await uploadShardedLayer(db, 'descriptions',
                 { updatedAt, shardCount: shards.length, totalEntries: entries.length },
-                shards.map((data, i) => ({ updatedAt, shardIndex: i, data })));
+                shards.map((data, i) => ({ updatedAt, shardIndex: i, data })), docIds);
             console.log(`      ✅ Uploaded "descriptions" + ${shards.length} shards`);
         }
     } catch (e) {
@@ -474,8 +481,8 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
 }
 
 /** Radera cards_<N> shards som inte längre används. */
-async function deleteCardsShards(db: FirebaseFirestore.Firestore, keepBelow: number = 0): Promise<void> {
-    return deleteShards(db, 'cards_', keepBelow);
+async function deleteCardsShards(db: FirebaseFirestore.Firestore, keepBelow: number = 0, docIds?: AggregatedDocIds): Promise<void> {
+    return deleteShards(db, 'cards_', keepBelow, docIds);
 }
 
 /**
@@ -492,13 +499,14 @@ export async function uploadShardedLayer(
     baseDocId: string,
     indexPayload: Record<string, unknown>,
     shardPayloads: Record<string, unknown>[],
+    docIds?: AggregatedDocIds,
 ): Promise<void> {
     const prefix = `${baseDocId}_`;
     for (let i = 0; i < shardPayloads.length; i++) {
         await db.collection('aggregatedEvents').doc(`${prefix}${i}`).set(shardPayloads[i]);
     }
     await db.collection('aggregatedEvents').doc(baseDocId).set(indexPayload);
-    await deleteShards(db, prefix, shardPayloads.length);
+    await deleteShards(db, prefix, shardPayloads.length, docIds);
 }
 
 /**
@@ -511,18 +519,19 @@ export async function uploadShardedLayer(
  * gång audit-daemonen betat av en batch, så det blev ~100 MB egress per
  * körning och den överlägset största posten på Firebase-fakturan:
  * 134 GiB / 144 kr i augusti = 76 % av notan. listDocuments() hämtar bara
- * namnen och kostar i praktiken ingenting.
+ * namnen - men debiteras ändå ett read per dokument, så runAggregation delar
+ * EN listning mellan alla städsteg (docIds, se utils/aggregatedDocIds). Utan
+ * docIds listas kollektionen här, som för fristående skript.
  */
-export async function deleteShards(db: FirebaseFirestore.Firestore, prefix: string, keepBelow: number = 0): Promise<void> {
+export async function deleteShards(
+    db: FirebaseFirestore.Firestore,
+    prefix: string,
+    keepBelow: number = 0,
+    docIds?: AggregatedDocIds,
+): Promise<void> {
     try {
-        const refs = await db.collection('aggregatedEvents').listDocuments();
-        const re = new RegExp(`^${prefix}(\\d+)$`);
-        for (const ref of refs) {
-            const m = ref.id.match(re);
-            if (m && parseInt(m[1], 10) >= keepBelow) {
-                await ref.delete();
-            }
-        }
+        const ids = docIds ?? new AggregatedDocIds(db.collection('aggregatedEvents'));
+        await ids.deleteNumbered(prefix, keepBelow);
     } catch { /* ignore */ }
 }
 

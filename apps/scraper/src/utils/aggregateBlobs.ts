@@ -18,6 +18,7 @@
  * blobben missmatchar av sig själv och routen bygger q6 tills nästa aggregat.
  */
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from 'zlib';
+import { AggregatedDocIds } from './aggregatedDocIds';
 
 /** Samma kodningsnamn som routens Enc. */
 export type BlobEncoding = 'br' | 'gzip';
@@ -55,6 +56,8 @@ export async function uploadPrepackedBlobs(
     layer: string,
     updatedAt: string,
     raw: Buffer,
+    /** Körningens delade namnlistning (se aggregatedDocIds). Utan den listas kollektionen här. */
+    docIds?: AggregatedDocIds,
 ): Promise<void> {
     const t0 = Date.now();
     const enc = packEncodings(raw);
@@ -71,13 +74,12 @@ export async function uploadPrepackedBlobs(
     await col.doc(`blob_${layer}`).set({ updatedAt, encodings: meta });
 
     // Städa överblivna shards från en generation med fler delar. listDocuments()
-    // — ALDRIG get(): bara namnen behövs (33,6 MB-läxan i deleteShards).
-    const refs = await col.listDocuments();
-    for (const ref of refs) {
-        for (const e of ['br', 'gzip'] as BlobEncoding[]) {
-            const m = ref.id.match(new RegExp(`^blob_${layer}_${e}_(\\d+)$`));
-            if (m && parseInt(m[1], 10) >= meta[e].shardCount) await ref.delete();
-        }
+    // - ALDRIG get(): bara namnen behövs (33,6 MB-läxan i deleteShards). Och
+    // bara EN listning per aggregatkörning (docIds): en per lager kostade
+    // ~430 000 reads/dygn (14/10).
+    const ids = docIds ?? new AggregatedDocIds(col);
+    for (const e of ['br', 'gzip'] as BlobEncoding[]) {
+        await ids.deleteNumbered(`blob_${layer}_${e}_`, meta[e].shardCount);
     }
     console.log(`      📦 Blob "${layer}": br ${(enc.br.length / 1e6).toFixed(2)} MB (${meta.br.shardCount} shards)`
         + ` + gzip ${(enc.gzip.length / 1e6).toFixed(2)} MB (${meta.gzip.shardCount} shards)`
