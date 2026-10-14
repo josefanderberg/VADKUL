@@ -1,11 +1,18 @@
 {
-  "generatedAt": "2026-10-13T12:09:01.051Z",
+  "generatedAt": "2026-10-14T07:22:35.084Z",
   "counts": {
     "fel": 0,
-    "varning": 39,
-    "nollkoordinatTotalt": 1047
+    "varning": 40,
+    "nollkoordinatTotalt": 901
   },
   "alerts": [
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "destination-uppsala",
+      "since": "2026-10-07",
+      "message": "gav 109 event 2026-10-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -78,13 +85,13 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Örebro läns museum",
-      "message": "14 av 19 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+      "message": "15 av 19 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "1047 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Panora 78, NBV 57, Visit Vemdalen 28, Gotlands Museum 24, Förlösa-Kläckeberga församling 22"
+      "source": "901 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Panora 78, NBV 52, Gotlands Museum 24, Medleymalmo 19, Förlösa-Kläckeberga församling 18"
     },
     {
       "level": "varning",
@@ -114,7 +121,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 32 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 31 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",

@@ -3,7 +3,9 @@
   "sources": {
     "bjorndammens-masugn": {
       "since": "2026-10-07",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-14",
+      "emptyRetries": 1
     },
     "bollebygd-kommun": {
       "since": "2026-10-09",
@@ -50,8 +52,8 @@
     "naturskyddsforeningen": {
       "since": "2026-09-30",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-07",
-      "emptyRetries": 1
+      "lastRetry": "2026-10-14",
+      "emptyRetries": 2
     },
     "nordmaling": {
       "since": "2026-08-19",
