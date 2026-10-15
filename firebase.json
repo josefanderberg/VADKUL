@@ -23,7 +23,17 @@
       "region": "europe-north1",
       "memory": "2GiB"
     },
+    "appAssociation": "NONE",
     "headers": [
+      {
+        "source": "/.well-known/apple-app-site-association",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
       {
         "source": "/maplibre/**",
         "headers": [
