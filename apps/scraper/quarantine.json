@@ -36,8 +36,8 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-08",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-15",
+      "emptyRetries": 8
     },
     "jonkoping": {
       "since": "2026-10-11",
@@ -64,8 +64,8 @@
     "nybro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-08",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-15",
+      "emptyRetries": 8
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -78,10 +78,6 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-10-10",
       "emptyRetries": 7
-    },
-    "rumskulla-hembygdsforening": {
-      "since": "2026-10-08",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "sb-visitbastad-se": {
       "since": "2026-10-02",

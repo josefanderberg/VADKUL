@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-14T07:22:35.084Z",
+  "generatedAt": "2026-10-15T07:34:37.574Z",
   "counts": {
     "fel": 0,
-    "varning": 40,
-    "nollkoordinatTotalt": 901
+    "varning": 39,
+    "nollkoordinatTotalt": 682
   },
   "alerts": [
     {
@@ -48,14 +48,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Mora Kommun",
-      "message": "8 av 12 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
+      "source": "Hedemora Kommun",
+      "message": "30 av 41 kommande event ligger 2026-10-24 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Panora",
-      "message": "68 av 78 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
+      "source": "Kolmårdens församling",
+      "message": "7 av 11 kommande event ligger 2026-10-21 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Mora Kommun",
+      "message": "8 av 11 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -73,13 +79,13 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Stora Teatern",
-      "message": "70 av 106 kommande event ligger 2026-10-15 — sajtvitt datum i stället för eventets?"
+      "message": "70 av 108 kommande event ligger 2026-10-15 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Söderköpingsguiden",
-      "message": "38 av 56 kommande event ligger 2026-10-14 — sajtvitt datum i stället för eventets?"
+      "source": "Visit Tjörn",
+      "message": "6 av 10 kommande event ligger 2026-10-16 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -90,26 +96,26 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "901 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Panora 78, NBV 52, Gotlands Museum 24, Medleymalmo 19, Förlösa-Kläckeberga församling 18"
+      "source": "682 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 48, Studiefrämjandet 14, Förlösa-Kläckeberga församling 14, Equmenia 12, Katrineholmsbygdens församling 12"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Kulturhuset Bergsjön",
+      "message": "invariant-vakten larmar (2 av 121 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Mora Kommun",
-      "message": "invariant-vakten larmar (8 av 12 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Panora",
-      "message": "invariant-vakten larmar (8 av 78 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 11 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 297 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 296 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -122,12 +128,6 @@
       "kind": "invariant",
       "source": "Superettan",
       "message": "invariant-vakten larmar (8 av 31 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Söderköpingsguiden",
-      "message": "invariant-vakten larmar (19 av 56 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -226,13 +226,6 @@
       "source": "rosendals-tradgard",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "rumskulla-hembygdsforening",
-      "since": "2026-10-08",
-      "message": "i karantän sedan 2026-10-08: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
