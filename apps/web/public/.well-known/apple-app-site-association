@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID_SAKNAS.se.vadkul.app"],
+        "components": [
+          { "/": "/e/*", "comment": "Delade event och Bjud med-inbjudningar (src/app/e i appen)" },
+          { "/": "/evenemang", "comment": "Stadsöversikten" },
+          { "/": "/evenemang/*", "comment": "Stadssidorna" },
+          { "/": "/arrangor/*", "comment": "Arrangörssidorna" },
+          { "/": "/", "?": { "event": "?*" }, "comment": "Kartans ?event=-djuplänk" }
+        ]
+      }
+    ]
+  }
+}

@@ -59,6 +59,8 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 - [ ] **App Privacy-formuläret**: uppdatera innan appen skickas till granskning. Svaren står i `app-store-butik.md` under "App Privacy" (utkast 12/10). Nytt mot 9/10: Diagnostik → Kraschdata och Annan diagnostikdata (Crashlytics, från build 7), plus konto- och användarinnehållet som 9/10-utkastet saknade (namn, foton, chatt, vänner, profilfält). Plats tas bort - koordinaterna lämnar aldrig telefonen. Ingen spårning, inga annonser.
 - [ ] Ladda upp skärmbilderna under versionens "Förhandsvisningar och skärmbilder": mellanstor skärm = `app-store-mellan/` (1206x2622, krävs), stor skärm = `skarmbild-*.png` (1320x2868). Fel mått ger "File dimensions are invalid". Header-/sökrutan (creative assets, 21:9 / 3:2 / 16:9) är något annat och frivillig. Marknadsikonen om Connect ber om en separat (`app-store-ikon-1024.png`).
 
+- [ ] **Team ID till de universella länkarna**: developer.apple.com/account → Membership details → Team ID (10 tecken). Ersätt `TEAMID_SAKNAS` i `apps/web/public/.well-known/apple-app-site-association` och deploya hosting - tills dess öppnar delade /e/-länkar webben i stället för appen. Kontroll efteråt: `curl https://vadkul.se/.well-known/apple-app-site-association` ska visa id:t.
+
 ### Google Play Console (Android)
 - [ ] **Finns Play-kontot?** Okänt om ett Google Play Console-utvecklarkonto ens är registrerat (25 USD engångsavgift + identitetsverifiering, kan ta några dagar). Kolla FÖRST - allt annat nedan väntar på det.
 - [ ] **Datasäkerhetsformuläret** (utkast till svar, uppdaterat 12/10 inför build 7 - samma underlag som App Privacy i `app-store-butik.md`):
