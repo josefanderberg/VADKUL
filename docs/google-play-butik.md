@@ -57,6 +57,11 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 
 ### App Store Connect (iOS)
 - [ ] **App Privacy-formuläret**: uppdatera innan appen skickas till granskning. Svaren står i `app-store-butik.md` under "App Privacy" (utkast 12/10). Nytt mot 9/10: Diagnostik → Kraschdata och Annan diagnostikdata (Crashlytics, från build 7), plus konto- och användarinnehållet som 9/10-utkastet saknade (namn, foton, chatt, vänner, profilfält). Plats tas bort - koordinaterna lämnar aldrig telefonen. Ingen spårning, inga annonser.
+- [ ] **Åldersklassningen**: svara på enkäten utifrån innehållet - med eventchatten
+  och användarinnehållet (modererat; anmäl + blockera finns sedan build 8) landar
+  den troligen på 13+ i Apples nya nivåer (4+/9+/13+/16+/18+). Registrera INTE
+  appen i barnkategorin ("Made for Kids") - målgruppen är vuxna/föräldrar,
+  barnaktiviteterna är innehåll för dem, inte en app för barn.
 - [ ] Ladda upp skärmbilderna under versionens "Förhandsvisningar och skärmbilder": mellanstor skärm = `app-store-mellan/` (1206x2622, krävs), stor skärm = `skarmbild-*.png` (1320x2868). Fel mått ger "File dimensions are invalid". Header-/sökrutan (creative assets, 21:9 / 3:2 / 16:9) är något annat och frivillig. Marknadsikonen om Connect ber om en separat (`app-store-ikon-1024.png`).
 
 ### Google Play Console (Android)
@@ -75,6 +80,12 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
   - Plats: deklareras INTE - positionen används bara på enheten och skickas aldrig till servern, så den räknas inte som insamlad (förra utkastet listade den).
   - Annonser: inga. Ingen spårning.
   - Dataradering: användaren raderar kontot inifrån appen (Profil → Radera konto), då försvinner kontodatan. Kraschrapporter rensas automatiskt efter 90 dagar.
+- [ ] **Målgruppen** ("Målgrupp och innehåll" - separat från IARC): appen riktar
+  sig till VUXNA (föräldrar och eventbesökare); barn/familj är en INNEHÅLLS-
+  kategori, inte målgruppen. Välj **13 år och uppåt** (eller äldre) och kryssa
+  ALDRIG i någon grupp under 13 - då slår Googles Families-policy in (hårdare
+  granskning; eventchatten och kontona blir granskningsproblem). IARC-utfallet
+  nedan är innehållsklassning och påverkas inte av målgruppsvalet.
 - [ ] **Innehållsklassningen** (IARC-enkäten): inga våldsamma/sexuella inslag, inget köp, ingen användargenererad kommunikation utan konto - men ange att appen visar användarskapat innehåll (event + eventchatt för inloggade) och har rapporteringsväg. Väntat utfall: 3+/E for Everyone.
 - [ ] **Play-skärmbilderna**: använd `play/`-varianterna (1320x2640, exakt 2:1 - Plays tak för telefonskärmbilder). Bilderna är tagna på iPhone; vill Google se Android-UI någon gång går de att ta om på en Android-enhet, men kravlistan (320-3840 px, max 2:1, PNG utan alfa, under 8 MB) är uppfylld som de är.
 - [ ] **Produktions-aab:en** från 9/10 finns byggd, men inget Play-butiksbeslut är taget - det här dokumentet gör materialet redo, inte beslutet.
