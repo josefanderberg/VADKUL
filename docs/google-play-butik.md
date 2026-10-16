@@ -78,3 +78,23 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 - [ ] **Innehållsklassningen** (IARC-enkäten): inga våldsamma/sexuella inslag, inget köp, ingen användargenererad kommunikation utan konto - men ange att appen visar användarskapat innehåll (event + eventchatt för inloggade) och har rapporteringsväg. Väntat utfall: 3+/E for Everyone.
 - [ ] **Play-skärmbilderna**: använd `play/`-varianterna (1320x2640, exakt 2:1 - Plays tak för telefonskärmbilder). Bilderna är tagna på iPhone; vill Google se Android-UI någon gång går de att ta om på en Android-enhet, men kravlistan (320-3840 px, max 2:1, PNG utan alfa, under 8 MB) är uppfylld som de är.
 - [ ] **Produktions-aab:en** från 9/10 finns byggd, men inget Play-butiksbeslut är taget - det här dokumentet gör materialet redo, inte beslutet.
+
+### Firebase Console (djuplänkarna - gäller BÅDA plattformarna)
+
+Upptäckt 16/10: `vadkul.se/.well-known/apple-app-site-association` och
+`assetlinks.json` svarar 200 men är **tomma** - universal links/app links ur
+vadkul.se-länkar öppnar alltså inte appen, trots `associatedDomains` i app.json.
+Hosting kör appAssociation i AUTO-läge och genererar filerna automatiskt ur
+Firebase-projektets appinställningar, så fixen är ren konsol - **ingen deploy**:
+
+- [ ] **iOS:** Firebase Console → Projektinställningar → Allmänt → iOS-appen →
+  fyll i **App Store-ID** och **Team-ID** (Apple Developer → Membership).
+  Hosting börjar servera korrekt AASA direkt. OBS: Apples CDN cachar AASA,
+  så enheter kan behöva upp till ett dygn (eller ominstallation av appen)
+  innan universal links slår igenom.
+- [ ] **Android:** samma vy → Android-appen → lägg till **SHA-256-fingeravtrycket**
+  från EAS-nyckeln (`eas credentials` i vadkul-app visar det). Då fylls
+  assetlinks.json i automatiskt.
+- [ ] Kvittera efteråt: `curl https://vadkul.se/.well-known/apple-app-site-association`
+  ska visa bundle-id:t under `details`, och `assetlinks.json` ska lista
+  paketnamnet + fingeravtrycket.

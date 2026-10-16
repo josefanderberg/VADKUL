@@ -255,7 +255,7 @@ ingen API-yta står och skräpar utan anropare.
 | Fas | Innehåll | Klart när |
 |---|---|---|
 | **0. Kontrakt** ✅ 25/9 | `packages/kontrakt`, typflytt, functions-styckning (esbuild-bundling) | allt grönt, webben oförändrad i beteende ✓ |
-| **1. App-flödet** ✅ 25/9 | slimmat per-region-flöde som blobbar i befintliga nattkedjan + `/api/events/app-<region>` (se §3.4) | uppmätt lokalt: alla regioner < 200 kB br ✓ — curl mot prod kvitteras efter merge + deploy + nästa nattaggregat |
+| **1. App-flödet** ✅ 25/9 | slimmat per-region-flöde som blobbar i befintliga nattkedjan + `/api/events/app-<region>` (se §3.4) | uppmätt lokalt: alla regioner < 200 kB br ✓ — prod-kvitterat 16/10: `/api/events/app-stockholm` svarar 200 med 3 703 event ✓ |
 | **2. App-MVP** 🔨 | vadkul-app-repot: karta + flöde + eventkort + djuplänkar (`/e/`-slugs via `@vadkul/kontrakt`; AASA/assetlinks.json upp på vadkul.se — finns inte idag). **Byggt 25/9:** repot uppe (github.com/josefanderberg/vadkul-app), regionval + flödesklient + karta, nöjesfälts-transformen portad (testad), teardrop-brickor som förbakade kategori-PNG:er i symbol-lager (MapLibre kan inte rendera färg-emoji som text; eventets fria emoji kräver runtime-bakning — senare steg), GPS-regionval via MapLibre RN:s LocationManager, eventkort med `/e/`-utlänk. **Kvar:** kontraktspubliceringen (§9.1 — `file:../packages/kontrakt` löser INTE i EAS-molnbyggen), EAS dev build på riktig enhet, AASA/assetlinks, Crashlytics/Sentry | intern TestFlight |
 | **3. API + Konton** | Hono-skelettet, `api.vadkul.se`, App Check (monitor→enforce); auth, stjärnor, påminnelser, user-events, push-tokens, kontoradering | funktionsparitet med inloggad webb (minus boost) |
 | **4. Lansering** | butiksmaterial, App Privacy/Data Safety-deklarationer, granskning, mejlet "ditt event är ute → boosta på webben" | live i App Store + Play |
@@ -336,7 +336,7 @@ navraden, filterunionen och interaktionerna är i paritet - se vadkul-app-commit
 - [x] "Visa även på kartan" (opt-in-källor) i profilen - FAMILJEFILTRET återstår (🧸 syns alltid)
 - [x] Listan under kortet: Har varit-sektionen, Visa/Dölj bilder (11/10, vadkul-app c89cd1f: bildflödet i infovyn/väljarlistan, alla rader + Visa/Dölj bilder i listvyn; "har varit" = väljarlistans hopfällda historik som webbens EventCardGroupList - webbens fliklista visar inga passerade sedan 23/9, gamla "Har varit · N"-utfällningen nås inte från kartan)
 - [x] Kort öppnat från sök/profil/stadssida får Nästa + lista (11/10, vadkul-app c89cd1f: öppnas PÅ KARTAN som webbens jumpToEvent, lib/kartHopp; ← ☰ tillbaka till sökningen/stadssidan) - arrangörsskärmen öppnar fortfarande eget kort
-- [x] Djuplänkar /e/<slug> och ?event= (TestFlight 1.0.0, associatedDomains i app.json)
+- [x] Djuplänkar /e/<slug> och ?event= (TestFlight 1.0.0, associatedDomains i app.json) - **OBS 16/10: AASA/assetlinks på vadkul.se är TOMMA** (`{"applinks":{"apps":[],"details":[]}}` resp. `[]`). Hosting kör appAssociation AUTO och genererar filerna ur Firebase-projektets appinställningar - där saknas Team ID + App Store ID (iOS) och SHA-256 (Android). Universal links ur vadkul.se-länkar funkar INTE förrän det fyllts i - fixen står i checklistan i `google-play-butik.md` (Firebase Console-sektionen), ingen deploy behövs
 
 *Konto + Firestore*
 - [x] Konton på (KONTON_PÅ=true sedan TestFlight 1.0.0; profil + radera konto)
