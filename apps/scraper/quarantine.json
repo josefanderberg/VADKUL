@@ -24,8 +24,8 @@
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-09",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-16",
+      "emptyRetries": 8
     },
     "folk-goteborg": {
       "since": "2026-08-19",
@@ -100,14 +100,22 @@
     "storsjoyran": {
       "since": "2026-09-18",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-09",
-      "emptyRetries": 3
+      "lastRetry": "2026-10-16",
+      "emptyRetries": 4
     },
     "tingsryd": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-10-12",
       "emptyRetries": 6
+    },
+    "uppsala": {
+      "since": "2026-10-16",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "vallentuna-kommun": {
+      "since": "2026-10-16",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
 }
