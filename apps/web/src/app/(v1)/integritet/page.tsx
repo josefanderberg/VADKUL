@@ -27,7 +27,8 @@ export default function IntegritetPage() {
             title: 'Utan konto',
             body: (
                 <>Du kan använda hela kartan utan konto, och då lagrar vi inga personuppgifter om dig.
-                Event du sparar (hjärtan) ligger bara lokalt i din webbläsare.</>
+                Event du sparar (hjärtan) ligger bara lokalt i din webbläsare. Kraschar mobilappen
+                skickas en anonym teknisk rapport (se ”Kraschrapporter i mobilappen” nedan).</>
             ),
         },
         {
@@ -53,7 +54,22 @@ export default function IntegritetPage() {
             title: 'Var datan lagras',
             body: (
                 <>All kontodata lagras i Google Firebase i EU (regionerna europe-north1/north2,
-                norra Europa).</>
+                norra Europa). Undantaget är kraschrapporterna från mobilappen (nästa avsnitt) -
+                de hanteras av Crashlytics, en global Firebase-tjänst där Google kan behandla
+                datan utanför EU.</>
+            ),
+        },
+        {
+            title: 'Kraschrapporter i mobilappen',
+            body: (
+                <>Kraschar mobilappen skickas en rapport till Firebase Crashlytics (Google) så
+                att vi kan hitta och laga felet. Rapporten innehåller tekniska uppgifter:
+                enhetsmodell, operativsystemsversion, appversion och vad som hände i koden vid
+                kraschen - aldrig innehållet i det du skrivit. Är du inloggad följer ditt
+                konto-id med så att vi kan koppla ihop rapporter från samma konto; utan konto är
+                rapporten anonym. Crashlytics är en global tjänst, så kraschdatan lagras inte
+                enbart i EU, och Google raderar den efter 90 dagar. Webbplatsen skickar inga
+                kraschrapporter.</>
             ),
         },
         {
@@ -99,7 +115,7 @@ export default function IntegritetPage() {
                 </Link>
 
                 <h1 className="mt-5 text-3xl font-black text-[#006AA7] tracking-tight">Integritet på VADKUL</h1>
-                <p className="mt-1 text-xs font-bold text-slate-400">Senast uppdaterad 10 oktober 2026</p>
+                <p className="mt-1 text-xs font-bold text-slate-400">Senast uppdaterad 17 oktober 2026</p>
 
                 <div className="mt-8 flex flex-col gap-7">
                     {sections.map(s => (

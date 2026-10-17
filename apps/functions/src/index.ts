@@ -8,6 +8,7 @@ export { dailyScraper } from './dailyScraperJob';
 export { redeemCode, redeemStarGift, placeStar } from './stars';
 export { acceptFriendInvite } from './friendInvites';
 export { sendPushNotification } from './pushNotifications';
+export { reportAlert } from './reports';
 export { eventReminders } from './reminders';
 export { weeklyWeekendDigest } from './digest';
 export { createBoostCheckout, confirmBoost, applyEventBoost } from './boost';

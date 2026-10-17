@@ -12,7 +12,7 @@ import { feedbackService } from '@/services/feedbackService';
 import EventListRow from './EventListRow';
 import FriendsSection from './FriendsSection';
 import SavedSection from './SavedSection';
-import { X, Pencil, Check, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info, LocateFixed, UserPlus } from 'lucide-react';
+import { X, Pencil, Check, KeyRound, LogOut, Trash2, ChevronRight, ChevronDown, Settings, ShieldCheck, Camera, MessageSquare, Send, Bell, BellOff, MapPin, Baby, Info, LocateFixed, UserPlus, ScrollText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getNotisStatus, enableEventReminders, disableEventReminders, NotisStatus } from '@/utils/fcm';
 import { doc, getDoc, setDoc, deleteField, serverTimestamp, collection, getDocs, query, where, limit, Timestamp } from 'firebase/firestore';
@@ -963,6 +963,11 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                             </div>
                                         )}
                                     </div>
+                                    <a href="/villkor" target="_blank" rel="noopener" className={actionRow}>
+                                        <ScrollText size={16} className="text-slate-500 shrink-0" />
+                                        <span className="flex-1">Användarvillkor</span>
+                                        <ChevronRight size={15} className="text-slate-400 shrink-0" />
+                                    </a>
                                     <a href="/integritet" target="_blank" rel="noopener" className={actionRow}>
                                         <ShieldCheck size={16} className="text-slate-500 shrink-0" />
                                         <span className="flex-1">Integritet</span>

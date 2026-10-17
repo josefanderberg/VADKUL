@@ -70,7 +70,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             })),
         {
             url: 'https://vadkul.se/integritet',
-            lastModified: new Date('2026-06-01'),
+            lastModified: new Date('2026-10-17'),
+            changeFrequency: 'monthly',
+            priority: 0.3,
+        },
+        {
+            url: 'https://vadkul.se/villkor',
+            lastModified: new Date('2026-10-17'),
             changeFrequency: 'monthly',
             priority: 0.3,
         },

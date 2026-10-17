@@ -17,3 +17,4 @@ export * from './categories';
 export * from './eventShareSlug';
 export * from './organizer';
 export * from './konto';
+export * from './chattfilter';

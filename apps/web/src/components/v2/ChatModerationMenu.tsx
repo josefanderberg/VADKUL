@@ -148,7 +148,7 @@ export default function ChatModerationMenu({ target, eventId, eventTitle, myUid,
             title = 'Tack för din anmälan';
             content = (
                 <>
-                    <Hint>Vi går igenom den och tar bort innehåll som bryter mot våra regler. Meddelandet är dolt för dig.</Hint>
+                    <Hint>Vi går igenom den inom 24 timmar och tar bort innehåll som bryter mot våra regler. Meddelandet är dolt för dig.</Hint>
                     {!didBlock && (
                         <MenuButton tone="danger" onClick={() => setStep('confirmBlock')} icon={<UserX size={15} aria-hidden />}>
                             Blockera {name} också

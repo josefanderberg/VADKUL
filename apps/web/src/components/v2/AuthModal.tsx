@@ -506,7 +506,11 @@ export default function AuthModal({ open, onClose, reason, onOpenAbout, startCit
 
                 {mode === 'register' && (
                     <p className="text-[11px] font-semibold text-white/40 text-center -mt-1">
-                        Genom att skapa konto godkänner du vår{' '}
+                        Genom att skapa konto godkänner du våra{' '}
+                        <a href="/villkor" target="_blank" rel="noopener" className="underline hover:text-white/70 transition-colors">
+                            användarvillkor
+                        </a>{' '}
+                        och vår{' '}
                         <a href="/integritet" target="_blank" rel="noopener" className="underline hover:text-white/70 transition-colors">
                             integritetspolicy
                         </a>.

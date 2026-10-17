@@ -14,6 +14,7 @@ import {
 import { isThreadMember, pickPrivateThread, privateInviteThreadId, threadOthersLabel, type PrivateThreadLite } from '@/utils/privateChat';
 import { inviteUrl } from '@/utils/rsvpTransition';
 import { canModerate, visibleMessages } from '@/utils/chatModeration';
+import { hittaStötandeOrd, ORDFILTER_STOPP } from '@/utils/chatFilter';
 import { useModeration } from '@/services/moderationService';
 import ChatModerationMenu, { type ChatModerationTarget } from './ChatModerationMenu';
 import type { ChatMessage } from '@/types';
@@ -69,6 +70,13 @@ function ChatThread({ messages, myUid, emptyText, placeholder, onSend, onModerat
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!text.trim() || sending) return;
+        // Ordfiltret (App Store-regel 1.2, delas med appen via kontraktet):
+        // stoppas meddelandet skrivs inget till Firestore, och texten står
+        // kvar i fältet så den går att redigera.
+        if (hittaStötandeOrd(text)) {
+            toast.error(ORDFILTER_STOPP);
+            return;
+        }
         setSending(true);
         try {
             await onSend(text.trim());
