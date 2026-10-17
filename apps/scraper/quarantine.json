@@ -17,6 +17,10 @@
       "lastRetry": "2026-10-11",
       "emptyRetries": 6
     },
+    "destination-uppsala": {
+      "since": "2026-10-17",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "elin-sundbergs-vanforening": {
       "since": "2026-10-13",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
@@ -70,14 +74,14 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-10",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-17",
+      "emptyRetries": 8
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-10",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-17",
+      "emptyRetries": 8
     },
     "sb-visitbastad-se": {
       "since": "2026-10-02",

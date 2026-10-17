@@ -1,24 +1,17 @@
 {
-  "generatedAt": "2026-10-16T07:54:22.797Z",
+  "generatedAt": "2026-10-17T07:09:53.730Z",
   "counts": {
     "fel": 1,
-    "varning": 44,
-    "nollkoordinatTotalt": 516
+    "varning": 40,
+    "nollkoordinatTotalt": 521
   },
   "alerts": [
     {
       "level": "fel",
       "kind": "krasch",
       "source": "visit-skelleftea",
-      "since": "2026-10-15",
+      "since": "2026-10-16",
       "message": "senaste körningen gav 0 event och fel: engine threw: fetch failed"
-    },
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "destination-uppsala",
-      "since": "2026-10-07",
-      "message": "gav 109 event 2026-10-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -43,26 +36,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Astrid Lindgrens Värld",
-      "message": "18 av 18 kommande event ligger 2026-10-16 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Brunflo församling",
-      "message": "8 av 12 kommande event ligger 2026-10-20 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Forshaga-Munkfors församling",
-      "message": "7 av 10 kommande event ligger 2026-10-21 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Friluftsfrämjandet Järfälla",
-      "message": "7 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+      "message": "7 av 11 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -73,20 +48,26 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Härlanda församling",
+      "message": "6 av 10 kommande event ligger 2026-10-21 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Kolmårdens församling",
+      "message": "7 av 10 kommande event ligger 2026-10-21 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Korpen Uppsala",
-      "message": "40 av 65 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+      "message": "40 av 64 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Mora Kommun",
       "message": "8 av 11 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Nederluleå församling",
-      "message": "11 av 16 kommande event ligger 2026-10-20 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -109,32 +90,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Värö-Stråvalla församling",
-      "message": "6 av 10 kommande event ligger 2026-10-20 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Västerås Badelunda församling",
-      "message": "6 av 10 kommande event ligger 2026-10-20 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Örebro läns museum",
       "message": "15 av 19 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "516 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 20, Studiefrämjandet 14, Uu 11, Panora 10, Equmenia 10"
+      "source": "521 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 20, Studiefrämjandet 12, Förlösa-Kläckeberga församling 12, Tickster Norge 12, Uu 11"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Kulturhuset Bergsjön",
-      "message": "invariant-vakten larmar (2 av 117 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (2 av 113 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -174,6 +143,13 @@
       "source": "dalhalla",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "destination-uppsala",
+      "since": "2026-10-17",
+      "message": "i karantän sedan 2026-10-17: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
