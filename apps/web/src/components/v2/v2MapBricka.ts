@@ -280,7 +280,8 @@ export const GL_ICON_SIZE_TOP = 0.98;
 const BADGE_SIDE_PAD = 6;
 
 // Baka en bricka som ImageData för GL-symbol-lagret. bodyColor = kategori-/käll-
-// färg (utelämnad → mörk standard); selected → tydlig vit ram; saved → vit kropp
+// färg (utelämnad → mörk standard); selected → DOM-markörens valda look (blek
+// opak kropp + ram i brickans färg, se selBase nedan); saved → vit kropp
 // + ljusblå ram (matchar DOM-markörens sparad-look); wish → "drömsk" önske-look:
 // halvtransparent lila kropp, streckad vit kant + liten ✨ vid axeln; starred →
 // stjärn-gåvans GULD-kropp + varm ljus kant + liten ⭐ vid axeln (guld vinner
@@ -329,7 +330,19 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     // önskan = halvtransparent lila "dröm" (kartan skiner igenom → skiljs direkt
     // från riktiga event); annars källans/kategorins färg eller mörk standard.
     const goldBody = starred || gold;
-    const stops = wish
+    // VALD bricka = DOM-markörens look (ägarbeslut 30/9, selectedMarkerColors):
+    // kroppen = brickans färg på 50 % ÖVER VITT (ogenomskinlig) och ramen i
+    // brickans EGEN färg - guld räknas som webbens #f59e0b, färglös kategori
+    // som skiffer. Ersätter den gamla vita ramen som levde kvar här i GL-
+    // bakningen efter 30/9 (webben lägger DOM-markören ovanpå, men appens
+    // förbakade brickor ritas härifrån och behöll fel look). Ringens svep
+    // (ringA→ringB) går inte i en stillbild - ramen står i basfärgen.
+    const selBase = selected && !wish
+        ? (goldBody ? '#f59e0b' : bodyColor ?? SELECTED_RING_FALLBACK_HEX)
+        : null;
+    const stops = selBase
+        ? [mixHex(selBase, '#ffffff', 0.22, 0.5), withAlpha(selBase, 0.5), mixHex(selBase, '#000000', 0.32, 0.5)]
+        : wish
         ? ['rgba(221,190,254,0.80)', 'rgba(167,139,250,0.66)', 'rgba(109,40,217,0.58)']
         : goldBody
         ? ['#ffe9a3', '#f0b429', '#a8730a']
@@ -341,13 +354,26 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     grad.addColorStop(0, stops[0]);
     grad.addColorStop(0.55, stops[1]);
     grad.addColorStop(1, stops[2]);
-    ctx.fillStyle = grad;
-    ctx.shadowColor = wish ? 'rgba(88,28,135,0.28)' : 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 2;
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    // Ram: vald = tydlig opak vit (markeringen man är "på"); stjärnmärkt = varm
+    if (selBase) {
+        // Vitt under gradienten = DOM:ens `background: var(--sel-body), #ffffff`
+        // - halvalfats-stoppen ovan blir då en OGENOMSKINLIG blek nyans.
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.fillStyle = grad;
+        ctx.fill();
+    } else {
+        ctx.fillStyle = grad;
+        ctx.shadowColor = wish ? 'rgba(88,28,135,0.28)' : 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+    }
+    // Ram: vald = brickans egen färg (30/9, se selBase ovan); stjärnmärkt = varm
     // ljusgul kant mot guldkroppen; sparad = ljusblå (#5BA3CC, samma som DOM);
     // önskan = STRECKAD vit (drömlinje).
     // Vanliga brickor: en LJUSARE NYANS av kroppens egen färg (ägarbeslut 30/9,
@@ -358,7 +384,11 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     // filtret AV. (Förr: svag vit kant 0.28 och nästan opak vit för 🔥.)
     if (wish) ctx.setLineDash([5, 4]);
     ctx.lineWidth = selected ? 3.5 : goldBody || saved ? 2.5 : pop ? 3 : 2;
-    if (selected || goldBody || saved || wish) {
+    if (selBase) {
+        // Ramen i brickans egen färg (30/9) - inte den gamla vita.
+        ctx.strokeStyle = selBase;
+        ctx.stroke();
+    } else if (selected || goldBody || saved || wish) {
         ctx.strokeStyle = selected ? '#ffffff' : goldBody ? '#fff3c4' : saved ? '#5BA3CC' : 'rgba(255,255,255,0.9)';
         ctx.stroke();
     } else {
