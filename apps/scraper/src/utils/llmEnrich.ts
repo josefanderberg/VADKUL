@@ -7,6 +7,7 @@
  */
 
 import { OLLAMA_TIMEOUT_MS } from './ollamaPool';
+import { normalizeCategory } from './categoryNormalize';
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen3:8b';
@@ -97,17 +98,25 @@ function normalizePrice(v: unknown): string | null {
     return min === max ? String(min) : `${min}–${max}`;
 }
 
-function normalizeCategory(v: unknown): string {
+/**
+ * Promptens ordförråd (performing-arts/education/food-drink …) är modellvänligt
+ * men INTE kanoniskt — svaret måste därför alltid sist genom categoryNormalize,
+ * annars skriver llm-enrich-missing icke-kanoniska värden till
+ * link_events.category som webben bara kan degradera till "Övrigt".
+ * Exporterad för test.
+ */
+export function normalizeLlmCategory(v: unknown): string {
     if (typeof v !== 'string') return 'other';
     const lower = v.toLowerCase();
-    if (VALID_CATEGORIES.has(lower)) return lower;
-    // Fuzzy mapping for common model variants
-    if (/dansfest|dance|dans/.test(lower)) return 'performing-arts';
-    if (/musik|music|konsert|concert/.test(lower)) return 'music';
-    if (/festival/.test(lower)) return 'music';
-    if (/quiz|pub/.test(lower)) return 'social';
-    if (/sport|träning/.test(lower)) return 'sport';
-    return 'other';
+    // Grovmappning av vanliga modellvarianter utanför promptens lista …
+    if (!VALID_CATEGORIES.has(lower)) {
+        if (/dansfest|dance|dans/.test(lower)) return 'stage';
+        if (/musik|music|konsert|concert|festival/.test(lower)) return 'music';
+        if (/quiz|pub/.test(lower)) return 'social';
+        if (/sport|träning/.test(lower)) return 'sport';
+    }
+    // … och därefter kanoniskt (performing-arts → stage, education → course …).
+    return normalizeCategory(lower);
 }
 
 /**
@@ -139,7 +148,7 @@ Ge JSON: {"location": <plats/adress ur texten eller null>, "city": <stad eller n
     return {
         locationCandidate: typeof parsed.location === 'string' && parsed.location !== 'null' ? parsed.location : null,
         city: typeof parsed.city === 'string' && parsed.city !== 'null' ? parsed.city : null,
-        category: normalizeCategory(parsed.category),
+        category: normalizeLlmCategory(parsed.category),
         isJunk: parsed.isJunk === true,
         confidence: normalizeConfidence(parsed.confidence),
         price: normalizePrice(parsed.price),

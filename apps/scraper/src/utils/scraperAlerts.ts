@@ -11,7 +11,7 @@
  */
 
 export type AlertLevel = 'fel' | 'varning';
-export type AlertKind = 'krasch' | 'tyst' | 'karantan' | 'datumkluster' | 'nollkoordinat' | 'invariant';
+export type AlertKind = 'krasch' | 'tyst' | 'karantan' | 'datumkluster' | 'nollkoordinat' | 'utlandskoordinat' | 'invariant';
 
 export interface Alert {
     level: AlertLevel;
@@ -122,6 +122,39 @@ export function detectNullIsland(hosts: string[], minTotal = 10, top = 5): { tot
     };
 }
 
+/**
+ * Norden-boxen: Ticketmaster-källan hämtar medvetet SE+NO+DK, så grannländerna
+ * är hemma här. Utanför boxen är ett kommande event nästan säkert felgeokodat
+ * eller utländskt innehåll på svensk plattform (billetto.se:s Mexiko-turer,
+ * sedda 18/10) — och till skillnad från 0,0-eventen VISAS de på kartan.
+ */
+export const NORDEN_BOX = { latMin: 54, latMax: 72, lngMin: 4, lngMax: 32 };
+
+/** Synliga kommande event med koordinater utanför Norden — EN samlad rad. */
+export function detectForeignCoords(
+    rows: { host: string; lat: number | null; lng: number | null }[],
+    top = 5,
+): Alert[] {
+    const counts = new Map<string, number>();
+    let total = 0;
+    for (const r of rows) {
+        if (r.lat == null || r.lng == null) continue;
+        if (Math.abs(r.lat) < 0.01 && Math.abs(r.lng) < 0.01) continue; // 0,0 har egen rad
+        const ute = r.lat < NORDEN_BOX.latMin || r.lat > NORDEN_BOX.latMax
+            || r.lng < NORDEN_BOX.lngMin || r.lng > NORDEN_BOX.lngMax;
+        if (!ute) continue;
+        total++;
+        counts.set(r.host, (counts.get(r.host) ?? 0) + 1);
+    }
+    if (total === 0) return [];
+    const worst = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, top)
+        .map(([h, n]) => `${h} ${n}`).join(', ');
+    return [{
+        level: 'varning', kind: 'utlandskoordinat', source: `${total} event`,
+        message: `koordinater utanför Norden, syns på kartan — felgeokodat eller utländskt innehåll: ${worst}`,
+    }];
+}
+
 export function quarantineAlerts(q: Record<string, { since?: string; reason?: string }>): Alert[] {
     return Object.entries(q).map(([id, e]) => ({
         level: 'varning' as const, kind: 'karantan' as const, source: id, since: e.since,
@@ -129,9 +162,9 @@ export function quarantineAlerts(q: Record<string, { since?: string; reason?: st
     }));
 }
 
-/** Fel först, sedan varningar; inom nivå: krasch > tyst > datum > 0,0 > invariant > karantän. */
+/** Fel först, sedan varningar; inom nivå: krasch > tyst > datum > 0,0 > utland > invariant > karantän. */
 export function sortAlerts(alerts: Alert[]): Alert[] {
-    const kindOrder: AlertKind[] = ['krasch', 'tyst', 'datumkluster', 'nollkoordinat', 'invariant', 'karantan'];
+    const kindOrder: AlertKind[] = ['krasch', 'tyst', 'datumkluster', 'nollkoordinat', 'utlandskoordinat', 'invariant', 'karantan'];
     return [...alerts].sort((a, b) =>
         (a.level === b.level ? 0 : a.level === 'fel' ? -1 : 1)
         || kindOrder.indexOf(a.kind) - kindOrder.indexOf(b.kind)

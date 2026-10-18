@@ -15,7 +15,7 @@ import Database from 'better-sqlite3';
 import { getSqlitePath } from '../utils/sqliteHelper';
 import { SOURCES } from '../sources/registry';
 import {
-    detectRunProblems, detectDayClusters, detectNullIsland, quarantineAlerts, sortAlerts,
+    detectRunProblems, detectDayClusters, detectNullIsland, detectForeignCoords, quarantineAlerts, sortAlerts,
     type Alert, type RunRow,
 } from '../utils/scraperAlerts';
 
@@ -43,7 +43,7 @@ function main() {
         bySource.set(r.source_id, list);
     }
 
-    // 2. Kommande synliga event (30 d) — datumkluster och 0,0.
+    // 2. Kommande synliga event (30 d) — datumkluster, 0,0 och utlandskoordinater.
     const upcoming = sqlite.prepare(`
         SELECT hostName AS host, date(time, 'localtime') AS day, lat, lng
         FROM link_events
@@ -53,6 +53,7 @@ function main() {
     const nullIsland = detectNullIsland(
         withHost.filter((r) => Math.abs(r.lat ?? 0) < 0.01 && Math.abs(r.lng ?? 0) < 0.01).map((r) => r.host),
     );
+    const foreignCoords = detectForeignCoords(withHost);
 
     // 3. Invariant-vaktens larm från senaste körningen.
     let invariantAlerts: Alert[] = [];
@@ -71,6 +72,7 @@ function main() {
         ...detectRunProblems(bySource, skip),
         ...detectDayClusters(withHost),
         ...nullIsland.alerts,
+        ...foreignCoords,
         ...invariantAlerts,
         ...quarantineAlerts(quarantine),
     ]);
