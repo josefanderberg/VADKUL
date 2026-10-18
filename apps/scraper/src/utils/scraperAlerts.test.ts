@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectRunProblems, detectDayClusters, detectNullIsland, quarantineAlerts, sortAlerts, RunRow } from './scraperAlerts';
+import { detectRunProblems, detectDayClusters, detectNullIsland, detectForeignCoords, quarantineAlerts, sortAlerts, RunRow } from './scraperAlerts';
 
 const run = (day: string, found: number, over: Partial<RunRow> = {}): RunRow =>
     ({ source_id: 'x', started_at: `2026-09-${day}T01:00:00Z`, found, skipped_duplicate: 0, error_count: 0, ...over });
@@ -61,6 +61,30 @@ describe('detectNullIsland', () => {
 
     it('under tröskeln → inget larm', () => {
         expect(detectNullIsland(['A', 'B']).alerts).toEqual([]);
+    });
+});
+
+describe('detectForeignCoords', () => {
+    it('Mexiko-turen larmar, Norden och 0,0 gör det inte (billetto-fallet 18/10)', () => {
+        const a = detectForeignCoords([
+            { host: 'Billetto', lat: 19.36, lng: -99.16 },   // Mexico City
+            { host: 'Billetto', lat: 42.52, lng: -70.88 },   // Salem, USA
+            { host: 'Ticketmaster', lat: 55.67, lng: 12.56 }, // Köpenhamn — medveten källa
+            { host: 'USF Verftet', lat: 60.4, lng: 5.31 },    // Bergen — inom Norden
+            { host: 'NBV', lat: 0, lng: 0 },                  // null-ön har egen rad
+            { host: 'Okänd', lat: null, lng: null },
+        ]);
+        expect(a).toHaveLength(1);
+        expect(a[0]).toMatchObject({ kind: 'utlandskoordinat', level: 'varning', source: '2 event' });
+        expect(a[0].message).toContain('Billetto 2');
+        expect(a[0].message).not.toContain('Ticketmaster');
+    });
+
+    it('allt inom Norden → inget larm', () => {
+        expect(detectForeignCoords([
+            { host: 'A', lat: 59.33, lng: 18.07 },
+            { host: 'B', lat: 67.86, lng: 20.23 },
+        ])).toEqual([]);
     });
 });
 

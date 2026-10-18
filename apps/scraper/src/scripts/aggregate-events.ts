@@ -7,6 +7,7 @@ import { firstSeenExport } from '../utils/firstSeenExport';
 import { eventKey } from '../utils/eventKey';
 import { publishableImageUrl } from '../utils/imageFilter';
 import { sanitizeEndDate } from '../utils/eventEnd';
+import { normalizeCategory } from '../utils/categoryNormalize';
 import { cleanHostName } from '../scrapers/facebook/hostFallback';
 import { uploadPrepackedBlobs } from '../utils/aggregateBlobs';
 import { AggregatedDocIds } from '../utils/aggregatedDocIds';
@@ -199,12 +200,18 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             ? row.hasSpecificTime === 1
             : !((t.getHours() === 0 && t.getMinutes() === 0) || (t.getUTCHours() === 0 && t.getUTCMinutes() === 0));
 
+        // Sista grinden för kategorin: historiska rader och sidospår (LLM-
+        // berikningen före 18/10-fixen) har läckt icke-kanoniska värden
+        // ('workshop', 'performing-arts') som webben tyst degraderar till
+        // "Övrigt" — normalisera här, oavsett hur raden en gång skrevs.
+        const category = normalizeCategory(row.category);
+
         const ps = popularRank(
             {
                 url: id,
                 title: row.title || '',
                 time: row.time,
-                category: row.category || 'other',
+                category,
                 hasSpecificTime,
                 coverImage: row.coverImage,
                 price: row.price,
@@ -233,7 +240,7 @@ export async function runAggregation(opts: { includeUnpublished?: boolean } = {}
             lat: safeLat,
             lng: safeLng,
             locationName: row.locationName || '',
-            category: row.category || 'other',
+            category,
             emoji: row.emoji || undefined,
             pop,
             ps,
