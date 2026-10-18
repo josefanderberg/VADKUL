@@ -99,6 +99,14 @@ export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
     { slug: 'framnasfolkhogskola', name: 'Framnäs folkhögskola', city: 'Öjebyn' },
     { slug: 'piteaif', name: 'Piteå IF', city: 'Piteå' },
 
+    // ── Nyköping (community-tips 2026-09-30) ────────────────────────────
+    // Höstmarknaden 4/10 tipsades i kommentarerna på "Evenemang i Sörmland"
+    // och saknades helt. Sluggen ur webbsök (facebook.com/mikaeliskolan),
+    // EJ headless-verifierad (molnsession utan FB-nät) — 0 eventlänkar i
+    // nattloggen ⇒ kolla facebook.com/mikaeliskolan/events. Själva marknaden
+    // ligger redan som tips; tipGuard.ts hindrar att den skrapas in igen.
+    { slug: 'mikaeliskolan', name: 'Mikaeliskolan Nyköpings Waldorfskola', city: 'Nyköping' },
+
     // ── Timrå (användartips via FB-meddelande 2026-10-08) ───────────────
     // "Söråkers Folkets hus har många event men hittar inte att något var
     // med." Bara deras FHP-/Riksteatern-turnéer och enstaka FB-event kom in;
