@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { X, Download, Share, SquarePlus, EllipsisVertical } from 'lucide-react';
 import {
+    appStoreLinkFor,
     detectInstallPlatform,
     installGuide,
     shouldOfferInstall,
+    storeNameFor,
     INSTALL_SNOOZE_MS,
     type InstallGuide,
 } from '@/utils/installPrompt';
@@ -17,6 +19,10 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISSED_KEY = 'pwa-install-dismissed';
 const SNOOZE_KEY = 'pwa-install-snooze-until';
+// Butiksbannern har EGNA nycklar: den som kryssat bort PWA-erbjudandet ska
+// ändå få veta att det numera finns en riktig app.
+const STORE_DISMISSED_KEY = 'app-store-banner-dismissed';
+const STORE_SNOOZE_KEY = 'app-store-banner-snooze-until';
 
 // Två vägar till hemskärmen, båda så automatiska som webbläsarna tillåter:
 //  1. Chromium (Chrome/Edge/Samsung): beforeinstallprompt fångas → knappen
@@ -24,21 +30,30 @@ const SNOOZE_KEY = 'pwa-install-snooze-until';
 //  2. iOS (alla webbläsare) + Firefox/Android: inget API finns — knappen
 //     öppnar en guide med exakt de steg som gäller just den webbläsaren
 //     (detectInstallPlatform i utils/installPrompt).
+// Finns den RIKTIGA appen i plattformens butik (appStoreLinkFor - länken
+// sätts vid släppet) visas i stället BUTIKSBANNERN: samma kort, men knappen
+// leder till App Store/Google Play. Egna nycklar, samma besöksgrind.
 export default function InstallPrompt() {
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [showPrompt, setShowPrompt] = useState(false);
     const [manualGuide, setManualGuide] = useState<InstallGuide | null>(null);
     const [showGuide, setShowGuide] = useState(false);
+    const [storeOffer, setStoreOffer] = useState<{ url: string; store: string } | null>(null);
 
     useEffect(() => {
+        const platform = detectInstallPlatform(navigator.userAgent, navigator.maxTouchPoints);
+        const storeUrl = appStoreLinkFor(platform);
+        const dismissKey = storeUrl ? STORE_DISMISSED_KEY : DISMISSED_KEY;
+        const snoozeKey = storeUrl ? STORE_SNOOZE_KEY : SNOOZE_KEY;
+
         let visits = 0;
         let dismissedForever = false;
         let snoozedUntil: number | null = null;
         try {
             visits = parseInt(localStorage.getItem('vadkul_visits') ?? '0', 10) + 1;
             localStorage.setItem('vadkul_visits', String(visits));
-            dismissedForever = localStorage.getItem(DISMISSED_KEY) === 'true';
-            const snooze = localStorage.getItem(SNOOZE_KEY);
+            dismissedForever = localStorage.getItem(dismissKey) === 'true';
+            const snooze = localStorage.getItem(snoozeKey);
             snoozedUntil = snooze ? parseInt(snooze, 10) || null : null;
         } catch { return; /* localStorage blockerad → visa inte */ }
 
@@ -46,6 +61,16 @@ export default function InstallPrompt() {
             || (navigator as unknown as { standalone?: boolean }).standalone === true;
         if (!shouldOfferInstall({ dismissedForever, snoozedUntil, visits, standalone }, Date.now())) {
             return;
+        }
+
+        // Butiksbannern: ingen PWA-lyssnare, bara kortet med butikslänken
+        // efter samma lilla fördröjning som guiden.
+        if (storeUrl) {
+            const timer = setTimeout(() => {
+                setStoreOffer({ url: storeUrl, store: storeNameFor(platform) ?? 'butiken' });
+                setShowPrompt(true);
+            }, 3000);
+            return () => clearTimeout(timer);
         }
 
         const onBeforeInstall = (e: Event) => {
@@ -66,7 +91,7 @@ export default function InstallPrompt() {
         // Webbläsare som aldrig skickar beforeinstallprompt får banderollen
         // ändå, med guiden bakom knappen. Liten fördröjning så den inte
         // landar mitt i sidladdningen.
-        const guide = installGuide(detectInstallPlatform(navigator.userAgent, navigator.maxTouchPoints));
+        const guide = installGuide(platform);
         let timer: ReturnType<typeof setTimeout> | undefined;
         if (guide) {
             timer = setTimeout(() => {
@@ -97,17 +122,22 @@ export default function InstallPrompt() {
     };
 
     // "Senare"/stängd guide = snooze — banderollen får återkomma om två veckor.
+    // Butiksbannern skriver sina egna nycklar.
     const snooze = () => {
         setShowPrompt(false);
         setShowGuide(false);
-        try { localStorage.setItem(SNOOZE_KEY, String(Date.now() + INSTALL_SNOOZE_MS)); } catch { /* ok */ }
+        try {
+            localStorage.setItem(storeOffer ? STORE_SNOOZE_KEY : SNOOZE_KEY, String(Date.now() + INSTALL_SNOOZE_MS));
+        } catch { /* ok */ }
     };
 
     // Krysset och guidens "Klart!" = aldrig mer på den här enheten.
     const dismissForever = () => {
         setShowPrompt(false);
         setShowGuide(false);
-        try { localStorage.setItem(DISMISSED_KEY, 'true'); } catch { /* ok */ }
+        try {
+            localStorage.setItem(storeOffer ? STORE_DISMISSED_KEY : DISMISSED_KEY, 'true');
+        } catch { /* ok */ }
     };
 
     if (showGuide && manualGuide) {
@@ -192,18 +222,32 @@ export default function InstallPrompt() {
                     </div>
                     <div className="flex-1 pr-6">
                         <h3 className="font-bold text-lg mb-1">
-                            Installera VADKUL
+                            {storeOffer ? 'Skaffa VADKUL-appen' : 'Installera VADKUL'}
                         </h3>
                         <p className="text-sm text-sky-100 mb-3">
-                            Lägg till på hemskärmen — kartan ett tryck bort.
+                            {storeOffer
+                                ? 'Hela eventkartan i fickan - snabbare och med push.'
+                                : 'Lägg till på hemskärmen — kartan ett tryck bort.'}
                         </p>
                         <div className="flex gap-2">
-                            <button
-                                onClick={handleInstall}
-                                className="bg-white text-[#006AA7] font-bold px-4 py-2 rounded-lg hover:bg-sky-50 transition-colors text-sm"
-                            >
-                                {deferredPrompt ? 'Installera' : 'Visa hur'}
-                            </button>
+                            {storeOffer ? (
+                                <a
+                                    href={storeOffer.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={dismissForever}
+                                    className="bg-white text-[#006AA7] font-bold px-4 py-2 rounded-lg hover:bg-sky-50 transition-colors text-sm"
+                                >
+                                    Hämta i {storeOffer.store}
+                                </a>
+                            ) : (
+                                <button
+                                    onClick={handleInstall}
+                                    className="bg-white text-[#006AA7] font-bold px-4 py-2 rounded-lg hover:bg-sky-50 transition-colors text-sm"
+                                >
+                                    {deferredPrompt ? 'Installera' : 'Visa hur'}
+                                </button>
+                            )}
                             <button
                                 onClick={snooze}
                                 className="text-white/90 font-medium px-3 py-2 hover:bg-white/10 rounded-lg transition-colors text-sm"

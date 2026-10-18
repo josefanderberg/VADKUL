@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+    appStoreLinkFor,
+    storeNameFor,
     detectInstallPlatform,
     installGuide,
     shouldOfferInstall,
@@ -101,5 +103,40 @@ describe('shouldOfferInstall', () => {
         expect(shouldOfferInstall({ ...open, snoozedUntil: NOW + 1000 }, NOW)).toBe(false);
         expect(shouldOfferInstall({ ...open, snoozedUntil: NOW - 1000 }, NOW)).toBe(true);
         expect(shouldOfferInstall({ ...open, snoozedUntil: NOW - INSTALL_SNOOZE_MS }, NOW)).toBe(true);
+    });
+});
+
+// Butiksbannern: fel länk på fel plattform skickar iPhone-folk till Google
+// Play (eller tvärtom), och en satt länk före släppet ger en död butikssida.
+describe('appStoreLinkFor + storeNameFor (butiksbannern)', () => {
+    const länkar = { ios: 'https://apps.apple.com/se/app/id6820135961', android: 'https://play.google.com/store/apps/details?id=se.vadkul.app' };
+
+    it('alla iOS-webbläsare (även in-app-webview) får App Store-länken', () => {
+        const ios: InstallPlatform[] = ['ios-safari', 'ios-chrome', 'ios-firefox', 'ios-edge', 'ios-other'];
+        for (const p of ios) {
+            expect(appStoreLinkFor(p, länkar)).toBe(länkar.ios);
+            expect(storeNameFor(p)).toBe('App Store');
+        }
+    });
+
+    it('Android (Chrome och Firefox) får Play-länken', () => {
+        expect(appStoreLinkFor('android', länkar)).toBe(länkar.android);
+        expect(appStoreLinkFor('android-firefox', länkar)).toBe(länkar.android);
+        expect(storeNameFor('android')).toBe('Google Play');
+    });
+
+    it('desktop har ingen butik', () => {
+        expect(appStoreLinkFor('desktop', länkar)).toBeNull();
+        expect(storeNameFor('desktop')).toBeNull();
+    });
+
+    it('osläppt butik (null-länk) ger ingen banner på den plattformen', () => {
+        expect(appStoreLinkFor('ios-safari', { ios: null, android: länkar.android })).toBeNull();
+        expect(appStoreLinkFor('android', { ios: länkar.ios, android: null })).toBeNull();
+    });
+
+    it('defaultlänkarna är AV tills släppet (båda null idag)', () => {
+        expect(appStoreLinkFor('ios-safari')).toBeNull();
+        expect(appStoreLinkFor('android')).toBeNull();
     });
 });

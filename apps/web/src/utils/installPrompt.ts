@@ -44,6 +44,44 @@ export function detectInstallPlatform(ua: string, maxTouchPoints = 0): InstallPl
     return 'desktop';
 }
 
+// ── Nativa appen i butikerna ───────────────────────────────────────────────
+// Butikslänkarna sätts NÄR APPEN SLÄPPS i respektive butik - null = inte
+// släppt där än, och då visas ingen butiksbanner på den plattformen (PWA-
+// erbjudandet gäller som förut). Finns länken tar butiksbannern över: en
+// riktig app slår "lägg till på hemskärmen". Vid släpp, fyll i:
+//   iOS:     'https://apps.apple.com/se/app/id6820135961'
+//            (ascAppId i vadkul-app/eas.json; sidan finns först när Josef
+//            tryckt release i App Store Connect - fyll aldrig i före det)
+//   Android: 'https://play.google.com/store/apps/details?id=se.vadkul.app'
+export const APP_STORE_URL: string | null = null;
+export const PLAY_STORE_URL: string | null = null;
+
+export interface StoreLinks {
+    ios: string | null;
+    android: string | null;
+}
+
+/** Butiksnamnet för knappen, per plattform. */
+export function storeNameFor(platform: InstallPlatform): 'App Store' | 'Google Play' | null {
+    if (platform.startsWith('ios')) return 'App Store';
+    if (platform.startsWith('android')) return 'Google Play';
+    return null;
+}
+
+/**
+ * Butikslänken för plattformen - null = ingen butik (desktop, eller appen
+ * inte släppt där än). In-app-webbvyer (ios-other/Instagram) får länken
+ * också: butikslänkar öppnar App Store/Play från alla webbvyer.
+ */
+export function appStoreLinkFor(
+    platform: InstallPlatform,
+    links: StoreLinks = { ios: APP_STORE_URL, android: PLAY_STORE_URL },
+): string | null {
+    if (platform.startsWith('ios')) return links.ios;
+    if (platform.startsWith('android')) return links.android;
+    return null;
+}
+
 export interface InstallGuide {
     /** Webbläsarnamnet guiden gäller — visas i rubriken. */
     browser: string;
