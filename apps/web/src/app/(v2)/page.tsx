@@ -17,7 +17,7 @@ import WelcomeOverlay from '@/components/v2/WelcomeOverlay';
 import StartCityPicker from '@/components/v2/StartCityPicker';
 import { userService } from '@/services/userService';
 import { starService } from '@/services/starService';
-import { acceptFriendInvite, fetchUserLite } from '@/services/friendService';
+import { acceptFriendInvite, fetchUserLite, recordInviteLanding } from '@/services/friendService';
 import { storageService } from '@/services/storageService';
 import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
 import { setRsvpStatus } from '@/services/rsvpService';
@@ -55,7 +55,7 @@ import { normalizeTipUrl } from '@/utils/tipUrl';
 import { isNewSince, readAndStampVisit, NEW_SINCE_MIN_COUNT } from '@/utils/newSinceLastVisit';
 import PostCreateNudge from '@/components/v2/PostCreateNudge';
 import FriendInviteCard from '@/components/v2/FriendInviteCard';
-import { FRIEND_INVITE_KEY, FRIEND_INVITE_PARAM, parseParkedInvite, pickFriendInvite, serializeInvite } from '@/utils/friendInvite';
+import { FRIEND_INVITE_KEY, FRIEND_INVITE_PARAM, INVITE_LANDING_KEY, parseParkedInvite, pickFriendInvite, registerLanding, serializeInvite } from '@/utils/friendInvite';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -4100,6 +4100,13 @@ export default function HomePage() {
         }
         if (fran === param) {
             try { localStorage.setItem(FRIEND_INVITE_KEY, serializeInvite(fran, nowMs)); } catch { /* privat läge */ }
+            // Landningsräknaren (18/10): bara vid ankomst VIA LÄNKEN (inte den
+            // parkerade kopian), en gång per inbjudare och webbläsare.
+            let landRaw: string | null = null;
+            try { landRaw = localStorage.getItem(INVITE_LANDING_KEY); } catch { /* privat läge */ }
+            const landning = registerLanding(landRaw, fran, nowMs);
+            try { localStorage.setItem(INVITE_LANDING_KEY, landning.next); } catch { /* privat läge */ }
+            if (landning.count) recordInviteLanding(fran);
         }
         let cancelled = false;
         fetchUserLite(fran).then(p => {

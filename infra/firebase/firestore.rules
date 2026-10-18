@@ -818,6 +818,26 @@ service cloud.firestore {
               && exists(/databases/$(database)/documents/eventRsvps/$(request.resource.data.eventSlug)/svar/$(request.auth.uid))));
     }
 
+    // VÄN-INBJUDNINGARNAS TRATT (18/10): friendInviteStats/{inbjudare} -
+    // shared = inbjudaren tryckte Bjud in en vän (bara ägaren får öka),
+    // landed = någon öppnade ?van=-länken (alla, även oinloggade; dedupe per
+    // webbläsare i utils/friendInvite). Ren ägarstatistik, samma accepterade
+    // spamrisk som eventStats (regel 18): räknarna ger inga stjärnor -
+    // belöningarna bokförs i friendInviters/friendInvites som bara admin-SDK
+    // skriver (ingen match = stängda). Ingen klient läser; tratten tas ut
+    // med npm run inbjudningar (apps/scraper).
+    match /friendInviteStats/{uid} {
+      allow read, delete: if false;
+      allow create: if request.resource.data.keys().hasOnly(['shared', 'landed'])
+        && (!('shared' in request.resource.data)
+            || (request.resource.data.shared is number && isOwner(uid)))
+        && (!('landed' in request.resource.data) || request.resource.data.landed is number);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shared', 'landed'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['shared'])
+            || (request.resource.data.shared is number && isOwner(uid)))
+        && (!('landed' in request.resource.data) || request.resource.data.landed is number);
+    }
+
     // 19. OUTREACH-KONTAKTER (FB-grupper, arrangörer, medlemslistan)
     // 20. OUTREACH-LOGG (varje publiceringsförsök, inkl. hela inläggstexten)
     // 21. OUTREACH-ANTECKNINGAR (Claudes insikter, Anta/Förkasta)

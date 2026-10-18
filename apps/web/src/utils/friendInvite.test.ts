@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    INVITE_TTL_MS, friendInviteUrl, isInviteUid, parseParkedInvite, pickFriendInvite, serializeInvite,
+    INVITE_TTL_MS, friendInviteUrl, isInviteUid, parseParkedInvite, pickFriendInvite, registerLanding, serializeInvite,
 } from './friendInvite';
 
 const UID = 'aBc123XyZ0aBc123XyZ0aBc123Xy';
@@ -45,5 +45,28 @@ describe('pickFriendInvite', () => {
     it('ens egen länk ger ingen banner', () => {
         expect(pickFriendInvite(UID, null, UID)).toBeNull();
         expect(pickFriendInvite(null, null, null)).toBeNull();
+    });
+});
+
+describe('registerLanding', () => {
+    it('första landningen räknas, omklicket inte', () => {
+        const forsta = registerLanding(null, UID, NU);
+        expect(forsta.count).toBe(true);
+        const andra = registerLanding(forsta.next, UID, NU + 1000);
+        expect(andra.count).toBe(false);
+    });
+    it('en annan inbjudare räknas separat', () => {
+        const forsta = registerLanding(null, UID, NU);
+        expect(registerLanding(forsta.next, 'annanInbjudare99', NU).count).toBe(true);
+    });
+    it('utgången post rensas - landningen räknas igen', () => {
+        const forsta = registerLanding(null, UID, NU);
+        const senare = registerLanding(forsta.next, UID, NU + INVITE_TTL_MS + 1);
+        expect(senare.count).toBe(true);
+        expect(JSON.parse(senare.next)).toEqual({ [UID]: NU + INVITE_TTL_MS + 1 });
+    });
+    it('trasigt värde = börja om och räkna', () => {
+        expect(registerLanding('{', UID, NU).count).toBe(true);
+        expect(registerLanding(JSON.stringify({ [UID]: 'hej' }), UID, NU).count).toBe(true);
     });
 });

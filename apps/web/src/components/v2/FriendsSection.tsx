@@ -7,7 +7,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import type { LinkEvent } from '@/types';
-import { acceptFriendRequest, fetchFriendProfile, fetchMyFriends, removeFriend } from '@/services/friendService';
+import { acceptFriendRequest, fetchFriendProfile, fetchMyFriends, recordInviteShared, removeFriend } from '@/services/friendService';
 import { bucketFriendRows, type FriendRow } from '@/utils/friendStatus';
 import { friendRsvpVisible, upcomingFriendEvents, type FriendUpcomingEvent } from '@/utils/friendEvents';
 import { fetchDeepLinkEvent } from '@/utils/eventSeed';
@@ -272,9 +272,12 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
         try {
             if (navigator.share) {
                 await navigator.share({ title: 'VADKUL', text: FRIEND_INVITE_TEXT, url });
+                // Räknas EFTER await - en avbruten delning kastar och räknas inte.
+                recordInviteShared(uid);
                 return;
             }
             await navigator.clipboard.writeText(`${FRIEND_INVITE_TEXT} ${url}`);
+            recordInviteShared(uid);
             toast.success('Inbjudningslänken är kopierad - skicka den till en vän!');
         } catch { /* avbruten delning är inget fel */ }
     };

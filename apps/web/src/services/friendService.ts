@@ -1,7 +1,7 @@
 // src/services/friendService.ts
 import {
-    collection, doc, getDoc, getDocs, limit as qLimit,
-    query, serverTimestamp, writeBatch,
+    collection, doc, getDoc, getDocs, increment, limit as qLimit,
+    query, serverTimestamp, setDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import {
@@ -114,6 +114,23 @@ export async function acceptFriendInvite(fran: string): Promise<FriendInviteResu
         console.error('Kunde inte ta emot vän-inbjudan:', e);
         return { success: false, message: e instanceof Error ? e.message : 'Kunde inte bli vänner. Försök igen.' };
     }
+}
+
+/** Inbjudningstratten (18/10): friendInviteStats/{inbjudare} - `shared`
+ *  räknar inbjudarens delningar av länken, `landed` att någon öppnade den
+ *  (dedupe per webbläsare i utils/friendInvite.registerLanding). Ren
+ *  ägarstatistik som eventStats: fire-and-forget, ett fel får aldrig störa
+ *  flödet. Fullföljda värvningar bokförs separat i friendInviters
+ *  (admin-SDK, acceptFriendInvite). Tratten tas ut med npm run inbjudningar
+ *  i apps/scraper. */
+export function recordInviteShared(uid: string): void {
+    void setDoc(doc(db, 'friendInviteStats', uid), { shared: increment(1) }, { merge: true })
+        .catch(() => { /* statistik, aldrig blockerande */ });
+}
+
+export function recordInviteLanding(fran: string): void {
+    void setDoc(doc(db, 'friendInviteStats', fran), { landed: increment(1) }, { merge: true })
+        .catch(() => { /* statistik, aldrig blockerande */ });
 }
 
 /** Avböj förfrågan, ångra skickad eller ta bort vän - raderar båda raderna. */

@@ -19,6 +19,7 @@
     "dashboard": "ts-node src/scripts/dashboard.ts",
     "dashboard:local": "DB_TARGET=2 ts-node src/scripts/dashboard.ts",
     "dashboard:test": "DB_TARGET=3 ts-node src/scripts/dashboard.ts",
+    "inbjudningar": "ts-node src/scripts/inbjudningar.ts",
     "create": "ts-node src/scripts/create-event.ts",
     "publish-fb": "ts-node src/scripts/publish-fb.ts",
     "fb-kommentarer": "ts-node src/scripts/fb-kommentarer.ts",

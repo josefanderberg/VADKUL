@@ -51,6 +51,35 @@ export function parseParkedInvite(raw: string | null, nowMs: number): ParkedInvi
     }
 }
 
+/** localStorage-nyckeln för räknade landningar: { [inbjudarUid]: nowMs }. */
+export const INVITE_LANDING_KEY = 'vadkul_van_landningar';
+
+/** Ska den här ?van=-landningen räknas (friendInviteStats.landed)? En per
+ *  inbjudare och webbläsare - omladdningar och omklick på samma länk ska
+ *  inte blåsa upp statistiken. Gamla poster rensas med samma TTL som
+ *  inbjudan; `next` skrivs alltid tillbaka till localStorage. */
+export function registerLanding(
+    raw: string | null,
+    fran: string,
+    nowMs: number,
+): { count: boolean; next: string } {
+    const seen: Record<string, number> = {};
+    if (raw) {
+        try {
+            const d = JSON.parse(raw) as Record<string, unknown>;
+            for (const [k, v] of Object.entries(d)) {
+                if (isInviteUid(k) && typeof v === 'number' && Number.isFinite(v)
+                    && nowMs - v <= INVITE_TTL_MS && v - nowMs <= 60_000) {
+                    seen[k] = v;
+                }
+            }
+        } catch { /* trasigt värde = börja om */ }
+    }
+    const count = !(fran in seen);
+    if (count) seen[fran] = nowMs;
+    return { count, next: JSON.stringify(seen) };
+}
+
 /** Vems inbjudan som gäller: länken vinner över en parkerad. Ens egen länk
  *  (man testar att öppna den själv) ger ingen banner. */
 export function pickFriendInvite(
