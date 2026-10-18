@@ -58,6 +58,8 @@ import FriendInviteCard from '@/components/v2/FriendInviteCard';
 import { FRIEND_INVITE_KEY, FRIEND_INVITE_PARAM, INVITE_LANDING_KEY, parseParkedInvite, pickFriendInvite, registerLanding, serializeInvite } from '@/utils/friendInvite';
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
+import { useSidePanelMode } from '@/hooks/useSidePanelMode';
+import { SIDE_PANEL_W } from '@/utils/sidePanel';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getNotisStatus, enableEventReminders } from '@/utils/fcm';
@@ -897,6 +899,13 @@ export default function HomePage() {
     // Kromet (navbar, kategorikolumn, stadsruta …) ligger nere BARA under
     // välkomstrutan.
     const chromeHidden = welcomeOpen;
+    // SIDOPANELEN (18/10, utils/sidePanel): på bred skärm dockar eventkortet
+    // kant i kant längs vänsterkanten i full höjd. Kartkromet som annars
+    // hamnat under panelen - profilen, stadsplattan, dagväljaren - flyttar
+    // in i den fria kartytan till höger (Josef: "flytta profilikonen till
+    // höger om eventfönstret"). Samma villkor som EventCards sideNav.
+    const sidePanelMode = useSidePanelMode();
+    const chromeLeft = sidePanelMode && selectedEvent ? SIDE_PANEL_W : 0;
     const welcomeAutoShownRef = useRef(false);
     const welcomeNewVisitRef = useRef<boolean | null>(null);
     useEffect(() => {
@@ -4791,6 +4800,7 @@ export default function HomePage() {
             <FloatingNavbar
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
+                leftInset={chromeLeft}
             />
             )}
 
@@ -4840,7 +4850,7 @@ export default function HomePage() {
                 gröt över ljusa kvarter. Gridet runt plattan håller den fri
                 från hörnknapparna (se kommentaren vid gridet). */}
 {!chromeHidden && (
-    <div className="fixed inset-x-0 top-6 z-[1090] flex flex-col items-center gap-1.5 pointer-events-none">
+    <div className="fixed right-0 top-6 z-[1090] flex flex-col items-center gap-1.5 pointer-events-none transition-[left] duration-300" style={{ left: chromeLeft }}>
         {/* Plattans rad: samma kolumn som hörnknapparna (px-4 + max-w-[1400px])
             i ett tredelat grid. Sidokolumnerna delar luften lika (plattan står
             mitt på skärmen) men blir aldrig smalare än knappen i sitt hörn +
@@ -5057,7 +5067,7 @@ export default function HomePage() {
                 key på HOPP-nyckeln → tonar in på nytt vid stadshopp, precis
                 som stadsnamnet. */}
 {!chromeHidden && liveCityName && (
-    <div className="fixed inset-x-0 bottom-[92px] z-[1090] flex justify-center px-2 pointer-events-none">
+    <div className="fixed right-0 bottom-[92px] z-[1090] flex justify-center px-2 pointer-events-none transition-[left] duration-300" style={{ left: chromeLeft }}>
         <div
             key={cityTourTarget?.key ?? 0}
             className="flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 pointer-events-none"
@@ -5374,6 +5384,7 @@ export default function HomePage() {
                 optInCategories={{ selected: selectedCategories, onToggle: handleToggleCategory }}
                 onOpenAbout={() => { setProfilePanelOpen(false); setWelcomeOpen(true); }}
                 startCity={{ name: chosenStart?.name ?? null, onChange: () => { setProfilePanelOpen(false); setStartPicker({ withCategories: false }); } }}
+                leftInset={chromeLeft}
             />
 
             {/* 2. Fullskärmskarta underst */}

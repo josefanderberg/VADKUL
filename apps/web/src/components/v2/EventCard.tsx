@@ -22,6 +22,7 @@ import { eventDays, isPopularListed, LIST_HORIZON_DAYS, takeRows } from '@/utils
 import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease, releaseVelocity } from '@/utils/sheetSnap';
+import { SIDE_PANEL_QUERY, SIDE_PANEL_W } from '@/utils/sidePanel';
 import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM } from '@/utils/eventSearch';
 import type { CityPoint } from '@/utils/cityPoints';
 import type { CityHit } from './SearchResults';
@@ -1497,11 +1498,19 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // returnerar tidigt; updateHeightVh klampar upp alla öppningshöjder, bara
     // stängningen släpps igenom) — innehållet scrollar direkt, och stads-/
     // arrangörslänkarna (CardMoreRows) nås utan att dra upp något.
+    // 18/10 (utils/sidePanel): ett VALT EVENT dockar kant i kant och går
+    // från topp till botten (SIDE_DOCKED_VH) - inga dragstreck, inget att
+    // dra ner. Sökarket (inget event) står kvar centrerat på 80 vh.
     const SIDE_HEIGHT_VH = 80;
+    const SIDE_DOCKED_VH = 100;
     const [sideMode, setSideMode] = useState(false);
     const sideModeRef = useRef(false);
+    // Speglar selectedEvent för updateHeightVh (anropas ur gester/timers
+    // som inte ser propen) - dockat = sideModeRef && sideHasEventRef.
+    const sideHasEventRef = useRef(!!selectedEvent);
+    useLayoutEffect(() => { sideHasEventRef.current = !!selectedEvent; }, [selectedEvent]);
     useEffect(() => {
-        const mq = window.matchMedia('(min-width: 1280px)');
+        const mq = window.matchMedia(SIDE_PANEL_QUERY);
         const apply = () => { sideModeRef.current = mq.matches; setSideMode(mq.matches); };
         apply();
         mq.addEventListener('change', apply);
@@ -1520,8 +1529,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const updateHeightVh = (vh: number, live = false) => {
         // Sidopanelen (xl): kortet står alltid högt — alla öppnings- och
         // snäpphöjder klampas upp till panelhöjden; bara stängningen (≤8 vh,
-        // closeCard:s glid) släpps igenom.
-        if (sideModeRef.current && vh > 8) vh = Math.max(vh, SIDE_HEIGHT_VH);
+        // closeCard:s glid) släpps igenom. Dockat event = hela höjden.
+        if (sideModeRef.current && vh > 8) {
+            vh = Math.max(vh, sideHasEventRef.current ? SIDE_DOCKED_VH : SIDE_HEIGHT_VH);
+        }
         heightVhRef.current = vh;
         if (live) {
             sheetRef.current?.style.setProperty('--sheet-h', `${vh}vh`);
@@ -1729,12 +1740,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const measureCollapsedHeight = (): number => measureCompactHeight() ?? COLLAPSED_HEIGHT_VH;
 
     // Sidopanelen: när läget slås PÅ (skärmen breddas eller ett kort öppnas
-    // på bred skärm) reser sig kortet till panelhöjden direkt — klampen i
+    // på bred skärm) reser sig kortet till full höjd direkt - klampen i
     // updateHeightVh håller den sedan.
     useEffect(() => {
         if (!sideMode || !selectedEvent) return;
         setIsAnimating(true);
-        updateHeightVh(Math.max(heightVhRef.current, SIDE_HEIGHT_VH));
+        updateHeightVh(Math.max(heightVhRef.current, SIDE_DOCKED_VH));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sideMode, selectedEvent]);
 
@@ -3652,9 +3663,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // längst ner. sen de andra knapparna ... de kan vara ovanpå nästaknappen"):
     // i sidopanelsläget lämnar navraden platsen ovanför kortet och blir en
     // KOLUMN till höger om panelen, nederkant mot skärmens botten - Nästa
-    // längst ner, bakåt/lista/pager staplade ovanför. Smala knappar ovanför
-    // Nästa (≤ 62 px) går fria från den skärmcentrerade dagväljaren även på
-    // en 1280 px-skärm; Nästa själv står under väljarens bottom-[92px].
+    // längst ner, bakåt/lista/pager staplade ovanför. Dagväljaren står
+    // centrerad i den FRIA kartytan (sidan flyttar den, 18/10), så kolumnen
+    // går fri från den; Nästa står dessutom under väljarens bottom-[92px].
+    // sideNav = PANELEN ÄR DOCKAD (valt event på bred skärm): kant i kant,
+    // topp till botten, SIDE_PANEL_W bred (utils/sidePanel, 18/10).
     const sideNav = sideMode && !!selectedEvent;
     // ml-auto knuffar ut gruppen i högerkanten på raden - i kolumnen hade den
     // högerställt knapparna mot den bredaste, så den släpps där.
@@ -3665,14 +3678,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         {/* Nedre rad — ALLTID synlig (verktyg till vänster, Nästa till höger om kort finns) */}
         {/* z-[1250]: kortet ligger över ALLT kartkrom — kategorikolumnen (1150),
             stadsrutan (1090), navbaren (1160). Bara modaler (1300) går över. */}
-        {/* SIDOPANELEN (6/10): på xl med öppet kort dockar hela kolumnen
-            (navrad + kort) till VÄNSTER som en 400 px panel i stället för
-            centrerat bottenark — kartan ligger fri till höger. */}
-        <div className={`fixed bottom-0 left-0 right-0 z-[1250] flex flex-col ${sideMode && selectedEvent ? 'items-start' : 'items-center'} px-4 pointer-events-none`} style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
-            <div className={sideNav
-                // 432 = kolumnens px-4 (16) + panelen (400) + luft (16).
-                ? 'absolute bottom-4 left-[432px] flex flex-col items-start gap-2'
-                : 'w-full max-w-4xl flex justify-between items-center mb-4'}>
+        {/* SIDOPANELEN (6/10, 18/10): på xl med öppet kort dockar kortet
+            kant i kant längs VÄNSTERKANTEN, topp till botten, i stället för
+            centrerat bottenark - kartan ligger fri till höger. Kolumnen
+            släpper då sin px-4 så panelen når skärmkanten. */}
+        <div className={`fixed bottom-0 left-0 right-0 z-[1250] flex flex-col ${sideNav ? 'items-start px-0' : 'items-center px-4'} pointer-events-none`} style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
+            <div
+                className={sideNav
+                    ? 'absolute bottom-4 flex flex-col items-start gap-2'
+                    : 'w-full max-w-4xl flex justify-between items-center mb-4'}
+                // Panelen + 16 px luft.
+                style={sideNav ? { left: SIDE_PANEL_W + 16 } : undefined}
+            >
 
                 {/* Vänster: verktygs-pill (dagväljaren är flyttad till toppen). */}
                 <div className="flex items-center gap-2 pointer-events-auto">
@@ -3916,10 +3933,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             {/* Draggable bottom sheet card container — visas när ett event är
                 valt ELLER sökarket (filterknappen uppe till höger) är öppet. */}
             {selectedEvent || searchOnly ? (
-            <div className={`w-full ${sideMode ? 'max-w-[400px]' : 'max-w-4xl'}`}>
+            <div
+                className={`w-full ${sideNav ? '' : sideMode ? 'max-w-[400px]' : 'max-w-4xl'}`}
+                style={sideNav ? { maxWidth: SIDE_PANEL_W } : undefined}
+            >
+            {/* Dockad panel (18/10): raka hörn mot skärmkanterna och skuggan
+                åt kartan till höger. Ingen scroll-nudge - den studsar HÖJDEN
+                och en panel i full höjd skulle sticka upp över överkanten. */}
             <div
                 ref={sheetRef}
-                className={`relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)] overflow-hidden border border-border/10${scrollNudgeActive ? ' scroll-nudge-anim' : ''}`}
+                className={`relative w-full max-w-4xl pointer-events-auto flex flex-col bg-card ${sideNav ? 'shadow-[12px_0_60px_rgba(0,0,0,0.25)]' : 'rounded-t-[2rem] shadow-[0_-12px_60px_rgba(0,0,0,0.3)]'} overflow-hidden border border-border/10${scrollNudgeActive && !sideNav ? ' scroll-nudge-anim' : ''}`}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -3957,18 +3980,21 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                     stickies fäster på top-6 (under zonen). z-[39]: över
                     innehållets stickies (z-10/z-20), under strecken (z-40). */}
                 <div
-                    className="absolute top-0 left-0 right-0 h-6 cursor-grab active:cursor-grabbing select-none z-[39] bg-card"
+                    className={`absolute top-0 left-0 right-0 h-6 select-none z-[39] bg-card${sideNav ? '' : ' cursor-grab active:cursor-grabbing'}`}
                     style={{ touchAction: 'none' }}
                 />
 
                 {/* Absolut drag-indikator: två parallella streck för tydligare
                     "dra upp/ner"-affordance. Ligger ovanpå kortet (absolute) så den
                     inte adderar någon höjd/padding. pointer-events-none → drag går
-                    rakt igenom till kortet. */}
-                <div className="absolute top-2 left-0 right-0 z-40 flex flex-col items-center justify-center gap-1 pointer-events-none">
-                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-zinc-500/90" />
-                    <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-zinc-500/90" />
-                </div>
+                    rakt igenom till kortet. Inte i den dockade panelen (18/10) -
+                    den går inte att dra, så strecken vore ett löfte den inte håller. */}
+                {!sideNav && (
+                    <div className="absolute top-2 left-0 right-0 z-40 flex flex-col items-center justify-center gap-1 pointer-events-none">
+                        <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-zinc-500/90" />
+                        <div className="h-1 w-10 rounded-full bg-slate-400/90 dark:bg-zinc-500/90" />
+                    </div>
+                )}
 
                 {/* Visual feedback overlays during drag (Tinder swipe overlays) */}
                 {dragX > 20 && (

@@ -60,6 +60,10 @@ interface ProfilePanelProps {
     /** Var panelen hänger: under profilknappen i kartans VÄNSTRA hörn
      *  (default) eller till höger (stadssidornas toppnav). */
     anchor?: 'left' | 'right';
+    /** Den dockade sidopanelens bredd (utils/sidePanel) när ett event är
+     *  öppet på bred skärm: profilknappen står då till höger om eventpanelen
+     *  (18/10), och panelen ska hänga under knappen - inte under kortet. */
+    leftInset?: number;
     /** "Visa även på kartan" — opt-in-källorna (Svenska kyrkan, PRO, 🧸 Familj)
      *  som kategorikolumnen kryssade t.o.m. 15/9. Utelämnad (stadssidornas
      *  toppnav — där finns inget kartfilter) → sektionen döljs. */
@@ -80,7 +84,7 @@ const NO_EVENTS: LinkEvent[] = [];
  * e-post, egna event, sparat-genväg, lösenordsbyte, logga ut och radera
  * konto. Ersätter gamla profilmenyn + v1-profilsidan.
  */
-export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, saved, anchor = 'left', optInCategories, onOpenAbout, startCity }: ProfilePanelProps) {
+export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_EVENTS, onPickEvent, onDeleteEvent, saved, anchor = 'left', leftInset = 0, optInCategories, onOpenAbout, startCity }: ProfilePanelProps) {
     // Mina event HOPGRUPPERADE till en rad per sak man skapat (Josef 14/9:
     // "nu blir det en jättelång lista"): både veckoserier och samma event
     // inlagt på flera datum (Josef 16/9, destilleribesöken på Stobirk —
@@ -539,7 +543,10 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                 krom men under eventkortet (1250)/modalerna (1300); utanför-
                 ytan fångar klick på kromet panelen täcker och stänger. */}
             <div className="fixed inset-0 z-[1164]" onClick={onClose} />
-            <div className={`absolute top-[4.6rem] left-4 right-4 ${anchor === 'right' ? 'sm:left-auto sm:right-4' : 'sm:right-auto'} sm:w-[420px] z-[1165] pointer-events-auto`}>
+            <div
+                className={`absolute top-[4.6rem] left-4 right-4 ${anchor === 'right' ? 'sm:left-auto sm:right-4' : 'sm:right-auto'} sm:w-[420px] z-[1165] pointer-events-auto`}
+                style={leftInset && anchor === 'left' ? { left: leftInset + 16 } : undefined}
+            >
                 <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-white/60 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[min(70vh,34rem)] animate-in fade-in slide-in-from-top-2 duration-200">
 
                     {/* Identitet */}

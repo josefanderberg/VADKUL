@@ -9,6 +9,10 @@ interface FloatingNavbarProps {
     onLoginClick?: () => void;
     /** Inloggad: profilknappen öppnar profilpanelen (allt konto-relaterat). */
     onOpenProfile?: () => void;
+    /** Den dockade sidopanelens bredd (utils/sidePanel) när ett event är
+     *  öppet på bred skärm, annars 0: profilen står då till HÖGER om panelen
+     *  (Josef 18/10) i stället för under den. */
+    leftInset?: number;
     /* (SÖKEN OCH FILTERKNAPPEN ÄR BORTTAGNA 7/10 på ägarbeslut: "vi kan ju
        ta bort sök och filter på kartan" — kortets sök/filter-ikon äger sök +
        kategorichips numera, och + bor i högra hörnet (CreateEventButton).
@@ -60,6 +64,7 @@ export const getDayLabel = (offset: number, days = 1) => {
 export default function FloatingNavbar({
     onLoginClick,
     onOpenProfile,
+    leftInset = 0,
 }: FloatingNavbarProps) {
     const { user } = useAuth();
 
@@ -76,8 +81,10 @@ export default function FloatingNavbar({
     return (
         // z-[1160]: över stadsrutan (1090). Eventkortet (1250) och modaler
         // (1300) ligger fortfarande över.
-        <div className="absolute top-6 left-0 right-0 z-[1160] px-4 pointer-events-none">
-            <div className="flex flex-col gap-3 w-full max-w-[1400px] mx-auto">
+        // Bredvid panelen släpps max-w-centreringen: på en jättebred skärm
+        // hade profilen annars hamnat en bit ut på kartan, inte intill kortet.
+        <div className="absolute top-6 right-0 z-[1160] px-4 pointer-events-none transition-[left] duration-300" style={{ left: leftInset }}>
+            <div className={`flex flex-col gap-3 w-full${leftInset ? '' : ' max-w-[1400px] mx-auto'}`}>
 
                 {/* Top Row. items-start: kontrollerna ligger i topplinjen. */}
                 <div className="relative flex items-start gap-2 w-full">
