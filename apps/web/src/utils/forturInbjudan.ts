@@ -60,6 +60,16 @@ export function memberInviteUrl(origin: string, uid: string): string {
     return `${origin}/?fran=${encodeURIComponent(uid)}`;
 }
 
+/**
+ * Kvittoraden i profilen: hur många vänner som gått med via ens inbjudningar
+ * (= antalet forturInbjudningar-poster med fran == eget uid, en per vän).
+ */
+export function forturVannerText(count: number): string {
+    return count === 1
+        ? '1 vän har gått med via dig'
+        : `${count} vänner har gått med via dig`;
+}
+
 /** Det som skrivs till lagringen - exporterad för testerna. */
 export function serializePendingFortur(fran: string, nowMs: number): string {
     return JSON.stringify({ fran, at: nowMs });

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     FORTUR_MAX_AGE_MS,
     forturPost,
+    forturVannerText,
     franFromSearch,
     memberInviteUrl,
     parsePendingFortur,
@@ -100,5 +101,13 @@ describe('memberInviteUrl', () => {
         const url = memberInviteUrl('https://vadkul.se', INBJUDARE);
         expect(url).toBe(`https://vadkul.se/?fran=${INBJUDARE}`);
         expect(franFromSearch(new URL(url).search)).toBe(INBJUDARE);
+    });
+});
+
+describe('forturVannerText', () => {
+    it('böjer vän/vänner efter antalet', () => {
+        expect(forturVannerText(1)).toBe('1 vän har gått med via dig');
+        expect(forturVannerText(2)).toBe('2 vänner har gått med via dig');
+        expect(forturVannerText(14)).toBe('14 vänner har gått med via dig');
     });
 });

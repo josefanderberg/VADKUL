@@ -796,11 +796,17 @@ service cloud.firestore {
     // per par (utils/forturInbjudan). Den INBJUDNA skriver posten själv, en
     // gång (ingen uppdatering eller radering): 'konto' kräver riktigt konto,
     // 'svar' kräver att svaret faktiskt ligger i eventRsvps (en exists-läsning
-    // per skapad post; anonyma svar räknas, precis som i eventRsvps). Ingen
-    // klient läser - listan tas ut med service-kontot
-    // (docs/outreach/build-forturlista.mjs).
+    // per skapad post; anonyma svar räknas, precis som i eventRsvps). Listan
+    // tas ut med service-kontot (docs/outreach/build-forturlista.mjs).
+    // LÄSNING (18/10, förturskvittot i profilen): inbjudaren får läsa SINA
+    // poster - fran == eget uid. En fråga (även count()-aggregeringen som
+    // profilen använder) släpps bara igenom med filtret fran == eget uid;
+    // utan det kan villkoret inte bevisas och frågan nekas. Den INBJUDNA kan
+    // inte läsa posten (inbjuden-fältet ger ingen läsrätt), så ingen ser
+    // vem mer en viss person bjudits av.
     match /forturInbjudningar/{postId} {
-      allow read, update, delete: if false;
+      allow read: if isAuthenticated() && resource.data.fran == request.auth.uid;
+      allow update, delete: if false;
       allow create: if isAuthenticated()
         && request.resource.data.keys().hasOnly(['inbjuden', 'fran', 'typ', 'eventSlug', 'tid'])
         && request.resource.data.inbjuden == request.auth.uid

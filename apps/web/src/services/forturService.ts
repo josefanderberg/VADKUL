@@ -1,5 +1,5 @@
 // src/services/forturService.ts
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, getCountFromServer, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { clearPendingFortur, forturPost, readPendingFortur, type ForturTyp } from '../utils/forturInbjudan';
 
@@ -13,6 +13,19 @@ import { clearPendingFortur, forturPost, readPendingFortur, type ForturTyp } fro
  * svar. Finns posten redan för paret nekar reglerna (bara create är
  * tillåtet) - inbjudaren är då redan bokförd.
  */
+/**
+ * Förturskvittot i profilen: hur många vänner som gått med via ens
+ * inbjudningar. count()-aggregering (inga dokument läses - billigt oavsett
+ * antal), och reglerna kräver exakt det här filtret: fran == eget uid.
+ * Kastar vid nekad läsning (reglerna inte ute än) - anroparen gömmer raden.
+ */
+export async function countForturInvites(uid: string): Promise<number> {
+    const snap = await getCountFromServer(
+        query(collection(db, 'forturInbjudningar'), where('fran', '==', uid)),
+    );
+    return snap.data().count;
+}
+
 export async function recordForturInvite(inbjuden: string, typ: ForturTyp, eventSlug?: string): Promise<void> {
     const pending = readPendingFortur();
     if (!pending) return;

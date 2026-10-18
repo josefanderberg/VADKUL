@@ -21,7 +21,8 @@ import { CITIES, getCity } from '@/lib/cityUtils';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { boostedUntilLabel } from '@/utils/boostLabel';
 import { EVENT_CATEGORIES, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
-import { memberInviteUrl } from '@/utils/forturInbjudan';
+import { forturVannerText, memberInviteUrl } from '@/utils/forturInbjudan';
+import { countForturInvites } from '@/services/forturService';
 
 /** "Visa även på kartan"-raderna: opt-in-källorna + 🧸 (samma ordning som
  *  kategorikolumnen hade dem överst, innan den revs 15/9). */
@@ -126,6 +127,10 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
     // sektionen göms då helt (inklusive innan rules-deployen som öppnar
     // läsrätten på egna kvitton: permission denied ⇒ tyst tom lista).
     const [myBoosts, setMyBoosts] = useState<MyBoost[] | null>(null);
+    // Förturskvittot (8/10-löftet): antalet vänner som gått med via ens
+    // inbjudningar. null = inte hämtat eller nekat (rules-deployen före
+    // webben) - raden göms då, precis som Mina boostar.
+    const [forturCount, setForturCount] = useState<number | null>(null);
 
     // Läs av notis-läget varje gång panelen öppnas (kan ha ändrats i
     // webbläsarens inställningar sedan sist).
@@ -150,6 +155,17 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                     : []);
             })
             .catch(() => { /* visa tomt — valen funkar ändå */ });
+        return () => { stale = true; };
+    }, [open, user]);
+
+    // Förturskvittot när panelen öppnas: EN count()-aggregering (inga
+    // dokument läses, oavsett hur många vänner som gått med).
+    useEffect(() => {
+        if (!open || !user) return;
+        let stale = false;
+        countForturInvites(user.uid)
+            .then(n => { if (!stale) setForturCount(n); })
+            .catch(() => { /* reglerna inte ute än - ingen rad */ });
         return () => { stale = true; };
     }, [open, user]);
 
@@ -631,6 +647,26 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                 <span className="flex-1 text-sm font-bold text-slate-700 dark:text-slate-200">Bjud in en vän</span>
                                 <span className="text-[10px] font-bold text-slate-400">få appen först</span>
                             </button>
+                            {/* Förturskvittot: en vän som gått med via ens länk
+                                (eller Bjud med) = förtur säkrad. Göms tills
+                                count()-svaret kommit, och helt om läsningen
+                                nekas (rules-deployen före webben). */}
+                            {forturCount !== null && (
+                                <div className="flex items-start gap-1.5 pl-11 pr-4 pb-2.5 -mt-0.5">
+                                    {forturCount > 0 ? (
+                                        <>
+                                            <Check size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-px" />
+                                            <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                                Förtur säkrad - {forturVannerText(forturCount)}
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="text-xs font-semibold text-slate-500">
+                                            Går en vän med via din länk (eller ditt Bjud med på ett event) har du förtur till appen.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Vänner (spår 3, 7/10 kväll): förfrågningar, vänlistan med
