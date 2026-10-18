@@ -2,6 +2,7 @@ import type { EventWish } from '../types';
 import { EVENT_CATEGORIES, EventCategoryType } from '../utils/categories';
 import { db } from '../lib/firebase';
 import { addDoc, collection, deleteDoc, doc, getDocs, limit, query, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { track } from './analyticsService';
 
 /** En önskan lever så här länge, därefter filtreras den bort ur karthämtningen.
  *  14 dagar t.o.m. 22/9, sedan 7 (Josef: "det räcker typ"). */
@@ -49,6 +50,7 @@ export const wishService = {
             fulfilled: false,
         };
         const ref = await addDoc(collection(db, 'eventWishes'), payload);
+        track('event_wish', { kategori: payload.category });
         return { ...payload, id: ref.id, createdAt, expiresAt };
     },
 

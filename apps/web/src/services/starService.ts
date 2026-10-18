@@ -57,6 +57,10 @@ export const starService = {
       const { functions } = await import('../lib/firebase');
       const fn = httpsCallable<{ eventId: string }, { success: boolean; message: string; starsLeft?: number }>(functions, 'placeStar');
       const result = await fn({ eventId });
+      if (result.data.success) {
+        const { track } = await import('./analyticsService');
+        track('star_placed');
+      }
       return result.data;
     } catch (e: unknown) {
       console.error('Kunde inte placera stjärnan:', e);

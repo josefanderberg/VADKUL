@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Download, Share, SquarePlus, EllipsisVertical } from 'lucide-react';
+import { track } from '@/services/analyticsService';
 import {
     appStoreLinkFor,
     detectInstallPlatform,
@@ -235,7 +236,7 @@ export default function InstallPrompt() {
                                     href={storeOffer.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    onClick={dismissForever}
+                                    onClick={() => { track('store_banner_click', { butik: storeOffer.store }); dismissForever(); }}
                                     className="bg-white text-[#006AA7] font-bold px-4 py-2 rounded-lg hover:bg-sky-50 transition-colors text-sm"
                                 >
                                     Hämta i {storeOffer.store}

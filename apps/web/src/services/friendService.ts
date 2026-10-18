@@ -4,6 +4,7 @@ import {
     query, serverTimestamp, setDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { track } from './analyticsService';
 import {
     friendAcceptWrites, friendRemoveWrites, friendRequestWrites, parseFriendRow,
     type FriendDocStatus, type FriendPerson, type FriendRow, type FriendWrite,
@@ -109,6 +110,7 @@ export async function acceptFriendInvite(fran: string): Promise<FriendInviteResu
         const { functions } = await import('../lib/firebase');
         const fn = httpsCallable<{ fran: string }, FriendInviteResult>(functions, 'acceptFriendInvite');
         const result = await fn({ fran });
+        if (result.data.success) track('invite_accept', { ny_stjarna: result.data.vanStjarna === true });
         return result.data;
     } catch (e: unknown) {
         console.error('Kunde inte ta emot vän-inbjudan:', e);
@@ -124,11 +126,13 @@ export async function acceptFriendInvite(fran: string): Promise<FriendInviteResu
  *  (admin-SDK, acceptFriendInvite). Tratten tas ut med npm run inbjudningar
  *  i apps/scraper. */
 export function recordInviteShared(uid: string): void {
+    track('invite_share');
     void setDoc(doc(db, 'friendInviteStats', uid), { shared: increment(1) }, { merge: true })
         .catch(() => { /* statistik, aldrig blockerande */ });
 }
 
 export function recordInviteLanding(fran: string): void {
+    track('invite_landing');
     void setDoc(doc(db, 'friendInviteStats', fran), { landed: increment(1) }, { merge: true })
         .catch(() => { /* statistik, aldrig blockerande */ });
 }

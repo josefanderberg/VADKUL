@@ -3,6 +3,7 @@ import type { LinkEvent } from '../types';
 import { db } from '../lib/firebase';
 import { doc, collection, query, where, getDocs, getCountFromServer, addDoc, deleteDoc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { decideUserEventPoll } from '../utils/userEventPoll';
+import { track } from './analyticsService';
 import { getAuthHeaders } from '../lib/authHeaders';
 import { applyVenueFixInPlace } from '../data/venueFixes';
 import { buildCardIndex } from '../utils/eventKey';
@@ -903,6 +904,7 @@ export const linkEventService = {
         }
         try {
             const ref = await addDoc(collection(db, 'linkEvents'), payload);
+            track('event_create', { typ: input.isTip ? 'tips' : 'eget', kategori: String(payload.category) });
             return ref.id;
         } catch (e: any) {
             // Reglernas hasOnly-lista avvisar HELA skrivningen om den känner

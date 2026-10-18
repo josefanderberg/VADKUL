@@ -2,6 +2,7 @@
 import { doc, getDoc, setDoc, increment, collection, query, where, documentId, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { eventShareSlug } from '../utils/eventShareSlug';
+import { track } from './analyticsService';
 
 /**
  * Visningsräknare per event: eventStats/{slug} med fältet `views`.
@@ -15,6 +16,7 @@ import { eventShareSlug } from '../utils/eventShareSlug';
  */
 export function recordEventView(eventId: string): void {
     try {
+        track('event_view', { event_slug: eventShareSlug(eventId) });
         const ref = doc(db, 'eventStats', eventShareSlug(eventId));
         // Fire-and-forget setDoc-merge + increment (samma mönster som
         // users.inviteCount): räknaren är best-effort och får aldrig störa UI:t.
@@ -48,6 +50,7 @@ export function recordEventClick(evt: { id: string; url?: string; title?: string
         const day = now.slice(0, 10);   // 'ÅÅÅÅ-MM-DD'
         let domain: string | null = null;
         try { domain = new URL(evt.url || evt.id).hostname.replace(/^www\./, ''); } catch { /* icke-URL */ }
+        track('event_anmal_click', { event_slug: eventShareSlug(evt.id), ...(domain ? { domain } : {}) });
         // OBS: nästlad map (INTE punktnotation) — setDoc+merge deep-mergar
         // mapar, medan 'clicksByMonth.2026-07' som nyckel hade blivit ett
         // bokstavligt fältnamn med punkt i (punktvägar tolkas bara av updateDoc).
@@ -76,6 +79,7 @@ export function recordEventClick(evt: { id: string; url?: string; title?: string
  */
 export function recordEventLike(eventId: string, delta: 1 | -1): void {
     try {
+        if (delta === 1) track('event_like', { event_slug: eventShareSlug(eventId) });
         const ref = doc(db, 'eventStats', eventShareSlug(eventId));
         setDoc(ref, { likes: increment(delta), eventId }, { merge: true }).catch(() => {
             /* nätverk/regler nere → släpp gillningen ur statistiken */
@@ -97,6 +101,9 @@ export function recordEventRsvpCount(eventId: string, deltas: { going?: number; 
     if (deltas.interested) fields.interested = increment(deltas.interested);
     if (Object.keys(fields).length === 0) return;
     try {
+        // Bara nya svar (positiv delta) - byten loggas som det nya valet.
+        if ((deltas.going ?? 0) > 0) track('event_rsvp', { status: 'going', event_slug: eventShareSlug(eventId) });
+        else if ((deltas.interested ?? 0) > 0) track('event_rsvp', { status: 'interested', event_slug: eventShareSlug(eventId) });
         const ref = doc(db, 'eventStats', eventShareSlug(eventId));
         setDoc(ref, { ...fields, eventId }, { merge: true }).catch(() => {
             /* nätverk/regler nere → släpp räknaren, aldrig svaret */
