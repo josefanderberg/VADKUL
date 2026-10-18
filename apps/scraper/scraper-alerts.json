@@ -1,18 +1,11 @@
 {
-  "generatedAt": "2026-10-17T07:09:53.730Z",
+  "generatedAt": "2026-10-18T06:50:30.453Z",
   "counts": {
-    "fel": 1,
-    "varning": 40,
-    "nollkoordinatTotalt": 521
+    "fel": 0,
+    "varning": 42,
+    "nollkoordinatTotalt": 504
   },
   "alerts": [
-    {
-      "level": "fel",
-      "kind": "krasch",
-      "source": "visit-skelleftea",
-      "since": "2026-10-16",
-      "message": "senaste körningen gav 0 event och fel: engine threw: fetch failed"
-    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -43,7 +36,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Hedemora Kommun",
-      "message": "30 av 41 kommande event ligger 2026-10-24 — sajtvitt datum i stället för eventets?"
+      "message": "30 av 44 kommande event ligger 2026-10-24 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -67,7 +60,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Mora Kommun",
-      "message": "8 av 11 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
+      "message": "8 av 12 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -96,32 +89,50 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "521 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 20, Studiefrämjandet 12, Förlösa-Kläckeberga församling 12, Tickster Norge 12, Uu 11"
+      "source": "504 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 19, Uu 13, Förlösa-Kläckeberga församling 12, Tickster Norge 12, Bohusläns Museum 10"
+    },
+    {
+      "level": "varning",
+      "kind": "utlandskoordinat",
+      "source": "3 event",
+      "message": "koordinater utanför Norden, syns på kartan — felgeokodat eller utländskt innehåll: Billetto 3"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Hörby Kommun",
+      "message": "invariant-vakten larmar (1 av 10 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Korpen Gävle",
+      "message": "invariant-vakten larmar (7 av 32 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Kulturhuset Bergsjön",
-      "message": "invariant-vakten larmar (2 av 113 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (2 av 129 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Mora Kommun",
-      "message": "invariant-vakten larmar (8 av 11 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 12 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (7 av 288 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 282 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 31 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 27 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -185,13 +196,6 @@
       "source": "jonkoping",
       "since": "2026-10-11",
       "message": "i karantän sedan 2026-10-11: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "karlskoga",
-      "since": "2026-09-28",
-      "message": "i karantän sedan 2026-09-28: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",

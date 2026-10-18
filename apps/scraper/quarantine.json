@@ -9,7 +9,9 @@
     },
     "bollebygd-kommun": {
       "since": "2026-10-09",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-18",
+      "emptyRetries": 1
     },
     "dalhalla": {
       "since": "2026-08-19",
@@ -46,12 +48,6 @@
     "jonkoping": {
       "since": "2026-10-11",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
-    "karlskoga": {
-      "since": "2026-09-28",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-11",
-      "emptyRetries": 1
     },
     "naturskyddsforeningen": {
       "since": "2026-09-30",
@@ -92,8 +88,8 @@
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-11",
-      "emptyRetries": 4
+      "lastRetry": "2026-10-18",
+      "emptyRetries": 5
     },
     "staffanstorp": {
       "since": "2026-08-19",
