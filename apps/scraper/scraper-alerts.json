@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-10-18T06:50:30.453Z",
+  "generatedAt": "2026-10-19T08:19:16.075Z",
   "counts": {
-    "fel": 0,
-    "varning": 42,
-    "nollkoordinatTotalt": 504
+    "fel": 1,
+    "varning": 37,
+    "nollkoordinatTotalt": 520
   },
   "alerts": [
     {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "konserthuset-stockholm",
-      "since": "2026-10-09",
-      "message": "gav 1 event 2026-10-06, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+      "level": "fel",
+      "kind": "krasch",
+      "source": "visit-skelleftea",
+      "since": "2026-10-18",
+      "message": "senaste körningen gav 0 event och fel: engine threw: fetch failed"
     },
     {
       "level": "varning",
@@ -29,38 +29,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Destination Uppsala",
+      "message": "14 av 22 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Friluftsfrämjandet Järfälla",
-      "message": "7 av 11 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+      "message": "7 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Hedemora Kommun",
       "message": "30 av 44 kommande event ligger 2026-10-24 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Härlanda församling",
-      "message": "6 av 10 kommande event ligger 2026-10-21 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Kolmårdens församling",
-      "message": "7 av 10 kommande event ligger 2026-10-21 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Korpen Uppsala",
-      "message": "40 av 64 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Mora Kommun",
-      "message": "8 av 12 kommande event ligger 2026-10-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -89,8 +71,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "504 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 19, Uu 13, Förlösa-Kläckeberga församling 12, Tickster Norge 12, Bohusläns Museum 10"
+      "source": "520 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 19, Förlösa-Kläckeberga församling 14, Uu 13, Söndrum-Vapnö församling 13, Tickster Norge 12"
     },
     {
       "level": "varning",
@@ -101,26 +83,14 @@
     {
       "level": "varning",
       "kind": "invariant",
-      "source": "Hörby Kommun",
-      "message": "invariant-vakten larmar (1 av 10 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
       "source": "Korpen Gävle",
-      "message": "invariant-vakten larmar (7 av 32 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 29 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Kulturhuset Bergsjön",
-      "message": "invariant-vakten larmar (2 av 129 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Mora Kommun",
-      "message": "invariant-vakten larmar (8 av 12 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (2 av 124 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -132,7 +102,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 27 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 25 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -196,6 +166,13 @@
       "source": "jonkoping",
       "since": "2026-10-11",
       "message": "i karantän sedan 2026-10-11: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "konserthuset-stockholm",
+      "since": "2026-10-19",
+      "message": "i karantän sedan 2026-10-19: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
