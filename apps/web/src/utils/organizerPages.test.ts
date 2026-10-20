@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isOptInSourceUrl } from '@vadkul/kontrakt';
-import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug, topOrganizers } from './organizerPages';
+import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug, topOrganizers, withOrganizerFilter } from './organizerPages';
 import { classifySource } from './sources';
 
 describe('organizerPageSlug', () => {
@@ -99,5 +99,21 @@ describe('isFromOrganizer', () => {
 describe('organizerNameFromSlug', () => {
     it('gör en läsbar reserv', () => {
         expect(organizerNameFromSlug('visit-linkoping')).toBe('Visit linkoping');
+    });
+});
+
+describe('withOrganizerFilter', () => {
+    it('lägger arrangören på en kartlänk som redan har parametrar', () => {
+        expect(withOrganizerFilter('/?plats=58.41,15.62,12', 'visit-linkoping'))
+            .toBe('/?plats=58.41,15.62,12&arrangor=visit-linkoping');
+        expect(withOrganizerFilter('/?event=https%3A%2F%2Fx.se%2F1', 'louis-de-geer-konsert-och-kongress'))
+            .toBe('/?event=https%3A%2F%2Fx.se%2F1&arrangor=louis-de-geer-konsert-och-kongress');
+    });
+    it('startar frågesträngen när länken saknar en', () => {
+        expect(withOrganizerFilter('/', 'visit-linkoping')).toBe('/?arrangor=visit-linkoping');
+    });
+    it('utan slug är länken orörd (stadssidornas karta)', () => {
+        expect(withOrganizerFilter('/?plats=1,2,3', null)).toBe('/?plats=1,2,3');
+        expect(withOrganizerFilter('/?plats=1,2,3', undefined)).toBe('/?plats=1,2,3');
     });
 });

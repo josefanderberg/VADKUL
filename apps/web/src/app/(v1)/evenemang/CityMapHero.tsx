@@ -7,6 +7,7 @@ import CityMapHeroCanvas from './CityMapHeroCanvas';
 import CityMapHeroMarkers from './CityMapHeroMarkers';
 import type { HeroLiveEvent } from './heroMarkers';
 import { mapHref } from './EventList';
+import { withOrganizerFilter } from '@/utils/organizerPages';
 import { existsSync } from 'fs';
 import path from 'path';
 
@@ -114,7 +115,7 @@ const MAX_LIVE_DATA = 350;
 /** Bygg den levande kartans eventdata (vid BUILD). Bara fälten markörerna
  *  behöver — titel/plats/klockslag åkte ut med hero-popupen 30/8 (mindre
  *  HTML-payload). */
-function buildLiveEvents(city: City, events: CityEvent[]): HeroLiveEvent[] {
+function buildLiveEvents(city: City, events: CityEvent[], organizerSlug?: string): HeroLiveEvent[] {
     const center = worldPx(city.lat, city.lng, HERO_ZOOM);
     return events
         .filter(e => e.lat && e.lng)
@@ -127,7 +128,7 @@ function buildLiveEvents(city: City, events: CityEvent[]): HeroLiveEvent[] {
             const p = worldPx(e.lat, e.lng, HERO_ZOOM);
             return {
                 id: e.id,
-                href: mapHref(e.id),
+                href: withOrganizerFilter(mapHref(e.id), organizerSlug),
                 dx: Math.round(p.x - center.x),
                 dy: Math.round(p.y - center.y),
                 lat: e.lat,
@@ -173,10 +174,13 @@ function pickBricks(city: City, events: CityEvent[], recommended: CityEvent[]): 
     return picked;
 }
 
-export default function CityMapHero({ city, events, recommended }: {
+export default function CityMapHero({ city, events, recommended, organizerSlug }: {
     city: City;
     events: CityEvent[];
     recommended: CityEvent[];
+    /** Arrangörssidans hero: kartbilden och brickorna öppnar kartan med
+     *  arrangörsfiltret på (?arrangor=), precis som sidans knapp. */
+    organizerSlug?: string;
 }) {
     const center = worldPx(city.lat, city.lng, HERO_ZOOM);
     const ctx = Math.floor(center.x / TILE);
@@ -204,7 +208,8 @@ export default function CityMapHero({ city, events, recommended }: {
     }
 
     const bricks = pickBricks(city, events, recommended);
-    const live = buildLiveEvents(city, events);
+    const live = buildLiveEvents(city, events, organizerSlug);
+    const bigMapHref = withOrganizerFilter(cityMapHref(city), organizerSlug);
     // FÖRRENDERAD KARTBILD finns → ingen kartmotor behövs (se nedan).
     // Kollas vid BUILD; saknas bilden faller staden tillbaka på GL-kartan, så
     // en ny stad fungerar direkt även innan någon kört renderingsskriptet.
@@ -244,14 +249,14 @@ export default function CityMapHero({ city, events, recommended }: {
                         className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
                         style={{ backgroundColor: THEMEPARK_LAND_COLOR_NEAR }}
                     />
-                    <CityMapHeroMarkers markers={live} bigMapHref={cityMapHref(city)} />
+                    <CityMapHeroMarkers markers={live} bigMapHref={bigMapHref} />
                 </>
             ) : (
             /* RESERVVÄGEN: ingen förrenderad bild för den här staden (t.ex.
                nytillagd) → rita kartan på riktigt med MapLibre, precis som
                före 20/9. Passiv men klickbar. De statiska SSR-brickorna
                skickas med som children men visas BARA om GL fallerar. */
-            <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} markers={live} bigMapHref={cityMapHref(city)} fallbackTiles={tiles} tileSize={TILE}>
+            <CityMapHeroCanvas lat={city.lat} lng={city.lng} zoom={HERO_GL_ZOOM} markers={live} bigMapHref={bigMapHref} fallbackTiles={tiles} tileSize={TILE}>
                 {bricks.map((b, i) => (
                     <span
                         key={b.id}

@@ -20,6 +20,15 @@ export const ORGANIZER_CITY_CHIP_MIN = 3;
 
 export const organizerHref = (slug: string) => `/arrangor/${slug}`;
 
+/** Kartlänk med arrangörsfiltret på (?arrangor=, 29/9). Allt på
+ *  arrangörssidan som öppnar kartan går hit - knappen, kartbilden och dess
+ *  brickor (Josef 20/10: "när man klickar på den kartbilden" ska filtret
+ *  också vara på, inte bara via knappen). Ingen slug = länken orörd. */
+export function withOrganizerFilter(href: string, slug: string | null | undefined): string {
+    if (!slug) return href;
+    return `${href}${href.includes('?') ? '&' : '?'}arrangor=${encodeURIComponent(slug)}`;
+}
+
 export type OrganizerChip = { slug: string; name: string; count: number };
 
 /**

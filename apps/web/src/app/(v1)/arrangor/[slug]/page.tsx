@@ -8,7 +8,7 @@ import TopNav from '../../evenemang/TopNav';
 import CityMapHero, { cityMapHref } from '../../evenemang/CityMapHero';
 import { DayFilterProvider } from '../../evenemang/dayFilter';
 import { getOrganizer, getNationalUpcomingCountRuntime, type Organizer } from '../organizerData';
-import { ORGANIZER_PAGE_INDEX_MIN, organizerHref } from '@/utils/organizerPages';
+import { ORGANIZER_PAGE_INDEX_MIN, organizerHref, withOrganizerFilter } from '@/utils/organizerPages';
 
 // Arrangörssidan (29/9): alla kommande event från en arrangör, för besökarna
 // (och Google). Statistiken för arrangören visas ALDRIG här - besökssiffror
@@ -109,7 +109,7 @@ export default async function OrganizerPage({ params }: { params: Promise<{ slug
                     {/* Kartan filtrerad till arrangören (?arrangor=, 29/9):
                         alla deras kommande event, bricka överst för att släppa. */}
                     <Link
-                        href={home ? `${cityMapHref(home)}&arrangor=${o.slug}` : `/?arrangor=${o.slug}`}
+                        href={withOrganizerFilter(home ? cityMapHref(home) : '/', o.slug)}
                         className="px-3 py-1.5 rounded-full bg-[#006AA7] border border-[#006AA7] text-xs font-bold text-white hover:bg-[#00598c] transition-colors"
                     >
                         Se alla på kartan →
@@ -123,7 +123,7 @@ export default async function OrganizerPage({ params }: { params: Promise<{ slug
                         brickor som stadssidorna, fast med BARA arrangörens
                         event. Periodchipsen i heron styr listan nedanför via
                         samma delade dagfilter. */}
-                    {home && <CityMapHero city={home} events={o.events} recommended={[]} />}
+                    {home && <CityMapHero city={home} events={o.events} recommended={[]} organizerSlug={o.slug} />}
                     <EventDayList events={o.events} cityName={home?.name ?? o.name} />
                 </DayFilterProvider>
 
