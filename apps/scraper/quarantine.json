@@ -16,8 +16,8 @@
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-11",
-      "emptyRetries": 6
+      "lastRetry": "2026-10-20",
+      "emptyRetries": 7
     },
     "destination-uppsala": {
       "since": "2026-10-17",
@@ -25,7 +25,9 @@
     },
     "elin-sundbergs-vanforening": {
       "since": "2026-10-13",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-20",
+      "emptyRetries": 1
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
@@ -47,7 +49,9 @@
     },
     "jonkoping": {
       "since": "2026-10-11",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-20",
+      "emptyRetries": 1
     },
     "konserthuset-stockholm": {
       "since": "2026-10-19",
@@ -86,8 +90,8 @@
     "sb-visitbastad-se": {
       "since": "2026-10-02",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-11",
-      "emptyRetries": 1
+      "lastRetry": "2026-10-20",
+      "emptyRetries": 2
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
@@ -98,8 +102,8 @@
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-13",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-20",
+      "emptyRetries": 8
     },
     "storsjoyran": {
       "since": "2026-09-18",
