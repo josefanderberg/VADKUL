@@ -21,7 +21,7 @@
     "scrape": "npm run start -w vadkul-scraper"
   },
   "dependencies": {
-    "next": "^15.5.0"
+    "next": "^15.5.27"
   },
   "overrides": {
     "postcss": "^8.5.23"
