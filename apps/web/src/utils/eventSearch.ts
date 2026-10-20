@@ -13,8 +13,19 @@
  * Nu: titeln först, och inom titeln början före mitten. URL-matchningen är
  * kvar (sök "tickster" → plattformens event) men hamnar sist. Inom varje nivå
  * behålls listans ordning (tid).
+ *
+ * FILTERLISTAN (Josef 20/10, appen först - vadkul-app lib/sok
+ * `tolkaKategorier`/`närmastPerDag`): "om jag bara klickar i populära ... då
+ * ska det vara de som är närmst en den dagen som ska visas" + "söker jag
+ * konst växjö ... då ska jag ju få upp allt med konst i växjö".
+ *  - `parseCategoryQuery`: ett HELT kategoriord ("konst", "konserter",
+ *    "barnen") i söktexten är kategorin - det ersätter kartfiltrets
+ *    kategorier och 🔥 för sökningen.
+ *  - `sortNearestFirst`: utan fritt sökord (bara chips, kategoriord och/eller
+ *    ort) har listan det närmaste först inom varje dag.
  */
 
+import { haversineKm } from '@/lib/cityUtils';
 import { EVENT_CATEGORIES, type EventCategoryType } from './categories';
 import { findCityPoint, type CityPoint } from './cityPoints';
 
@@ -87,7 +98,7 @@ function titleTier(lowerTitle: string, q: string): number {
  * orden i kategoriernas svenska namn ("Sport & träning" → sport, träning).
  * Övrigt är inget sökord. Förberäknat — listan är statisk.
  */
-const CATEGORY_WORDS: { key: string; words: string[] }[] = (Object.keys(EVENT_CATEGORIES) as EventCategoryType[])
+const CATEGORY_WORDS: { key: EventCategoryType; words: string[] }[] = (Object.keys(EVENT_CATEGORIES) as EventCategoryType[])
     .filter(key => key !== 'other')
     .map(key => ({
         key,
@@ -173,6 +184,125 @@ export function splitCityFromQuery(q: string): { city: CityPoint | null; text: s
         if (head) return { city: head, text: dropGlue(words.slice(n), 'start') };
     }
     return { city: null, text: q };
+}
+
+/** Vanliga sökord som betyder en kategori fast de inte står i dess namn. */
+const CATEGORY_SYNONYMS: Record<string, EventCategoryType> = {
+    teater: 'stage',
+    konsert: 'music',
+    utställning: 'art',
+    vernissage: 'art',
+    loppis: 'market',
+    quiz: 'social',
+};
+
+/** Svenska böjningsändelser som får hänga på ett kategoriord ("konsten",
+ *  "konserter", "barnen"). En lista, inte "några tecken till" som
+ *  rankningens categoryMatches: "match" är inte mat och "mats" inte heller. */
+const CATEGORY_INFLECTIONS = ['', 'n', 't', 'en', 'et', 'na', 'er', 'ar', 'or', 'erna', 'arna', 'orna'];
+
+/** Grundorden per riktig kategori - kategorinamnens ord (CATEGORY_WORDS,
+ *  utan Övrigt; källorna kyrkan/PRO är inga kategorier) plus synonymerna. */
+const CATEGORY_BASE_WORDS: { key: EventCategoryType; word: string }[] = [
+    ...CATEGORY_WORDS.flatMap(({ key, words }) => words.map(word => ({ key, word }))),
+    ...Object.entries(CATEGORY_SYNONYMS).map(([word, key]) => ({ key, word })),
+];
+
+/** Kategorin ett HELT sökord står för, annars null. Strängare än
+ *  rankningens kategoriträff: ett halvskrivet ord ("kon") räknas inte. */
+export function categoryForWord(word: string): EventCategoryType | null {
+    for (const { key, word: base } of CATEGORY_BASE_WORDS) {
+        if (word.startsWith(base) && CATEGORY_INFLECTIONS.includes(word.slice(base.length))) return key;
+    }
+    return null;
+}
+
+/** Bindeord mellan kategoriorden ("musik och teater", "mat & dryck"). */
+const CATEGORY_GLUE = new Set([...CITY_GLUE, 'och', '&', 'med']);
+
+/**
+ * Kategoriorden i en (normaliserad, ortfri - splitCityFromQuery först)
+ * söktext. Bara när VARJE ord är ett kategoriord eller ett bindeord blir det
+ * en kategorisökning: "konst", "musik och teater". Står något annat kvar
+ * ("jazz", "konst jazz") är det vanlig textsökning och rankningen sköter
+ * kategoriträffarna som förut. Tom mängd = ingen kategorisökning.
+ *
+ * En kategorisökning ERSÄTTER kartfiltrets kategorier och 🔥 (Josef 20/10:
+ * med 🔥 på gav "konst växjö" 0 träffar) - sidan filtrerar med de här
+ * kategorierna i stället och hoppar över textmatchningen.
+ */
+export function parseCategoryQuery(text: string): ReadonlySet<EventCategoryType> {
+    const categories = new Set<EventCategoryType>();
+    for (const word of text.split(' ').filter(Boolean)) {
+        if (CATEGORY_GLUE.has(word)) continue;
+        const key = categoryForWord(word);
+        if (!key) return new Set();
+        categories.add(key);
+    }
+    return categories;
+}
+
+/**
+ * Är sökningen en FILTERLISTA - inget fritt sökord, bara kategoriord
+ * och/eller en ort ("konst växjö", "i växjö")? `city`/`text` ur
+ * splitCityFromQuery, `categories` ur parseCategoryQuery. Ren ortsökning
+ * ("växjö", city = null) är det inte - den sköts av stadsraden.
+ */
+export function isFilterQuery(
+    city: CityPoint | null,
+    text: string,
+    categories: ReadonlySet<EventCategoryType>,
+): boolean {
+    return categories.size > 0 || (!!city && !text);
+}
+
+/**
+ * Inom så här många km räknas två event som lika nära, och då gäller
+ * klockslaget - inne i en stad betyder 300 m inget, 17:00 före 18:00 gör det.
+ * (Appens LIKA_NÄRA_KM.)
+ */
+export const SAME_DISTANCE_KM = 2;
+
+type LatLng = { lat: number; lng: number };
+
+/**
+ * Varifrån "närmast" räknas: sökets ort ("konst växjö") först, sedan ens
+ * position om den ligger i kartans ruta, annars kartans mitt. Positionen
+ * utanför rutan väljs bort med flit - tittar man på Göteborg från Växjö är
+ * det Göteborg man vill ha närmast, inte Göteborgs östra kant.
+ */
+export function nearestOrigin(
+    searchCity: LatLng | null,
+    userPos: LatLng | null,
+    bounds: { west: number; south: number; east: number; north: number } | null,
+): LatLng | null {
+    if (searchCity) return { lat: searchCity.lat, lng: searchCity.lng };
+    if (!bounds) return userPos;
+    if (userPos && userPos.lat >= bounds.south && userPos.lat <= bounds.north
+        && userPos.lng >= bounds.west && userPos.lng <= bounds.east) return userPos;
+    return { lat: (bounds.south + bounds.north) / 2, lng: (bounds.west + bounds.east) / 2 };
+}
+
+/**
+ * Filterlistans ordning inom EN dag: det närmaste `from` först, i band om
+ * SAME_DISTANCE_KM där klockslaget avgör. Lika klockslag behåller
+ * indataordningen (eventDays har redan skilt dem på id). Event utan
+ * koordinater hamnar sist.
+ */
+export function sortNearestFirst<T extends { time: Date; lat?: number | null; lng?: number | null }>(
+    events: readonly T[],
+    from: LatLng,
+): T[] {
+    const band = (e: T): number =>
+        typeof e.lat === 'number' && typeof e.lng === 'number' && !(e.lat === 0 && e.lng === 0)
+            ? Math.floor(haversineKm(from.lat, from.lng, e.lat, e.lng) / SAME_DISTANCE_KM)
+            : Infinity;
+    return events
+        .map((e, i) => ({ e, i, band: band(e) }))
+        .sort((a, b) => (a.band === b.band ? 0 : a.band < b.band ? -1 : 1)
+            || a.e.time.getTime() - b.e.time.getTime()
+            || a.i - b.i)
+        .map(x => x.e);
 }
 
 /**

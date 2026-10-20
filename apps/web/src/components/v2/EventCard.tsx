@@ -23,7 +23,7 @@ import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease, releaseVelocity } from '@/utils/sheetSnap';
 import { SIDE_PANEL_QUERY, SIDE_PANEL_W } from '@/utils/sidePanel';
-import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM } from '@/utils/eventSearch';
+import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM, parseCategoryQuery, sortNearestFirst } from '@/utils/eventSearch';
 import type { CityPoint } from '@/utils/cityPoints';
 import type { CityHit } from './SearchResults';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List, ZoomOut, SearchX } from 'lucide-react';
@@ -1354,9 +1354,16 @@ interface EventCardProps {
      *  träfflistan, klick flyger kartan dit (handlern tömmer sökningen). */
     cityHits?: CityHit[];
     onPickCity?: (city: CityPoint) => void;
+    /** FILTERLISTAN (20/10): satt = listan har det närmaste den här punkten
+     *  först inom varje dag (sidan avgör när - bara chips i sökarket, eller
+     *  en söktext som bara är kategoriord och/eller en ort). null = tid. */
+    listNearestFrom?: { lat: number; lng: number } | null;
+    /** "Visar allt inom Konst - sökordet går före filtret." - sökets
+     *  kategoriord ersätter ett kartfilter som säger något annat (20/10). */
+    searchFilterNote?: string | null;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet, onSearchChange, cityHits, onPickCity }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet, onSearchChange, cityHits, onPickCity, listNearestFrom = null, searchFilterNote = null }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -2512,8 +2519,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const matchesCardSearch = useMemo(() => {
         if (!cardQNorm) return null;
         const { city, text } = cardSearchParsed;
+        // Bara kategoriord ("konst växjö", 20/10): sidan filtrerar redan
+        // underlaget på sökets kategorier (matchesFilter) - kvar är orten.
+        const categorySearch = parseCategoryQuery(text).size > 0;
         return (e: LinkEvent) =>
-            (!text || eventSearchTier(e, text) >= 0)
+            (!text || categorySearch || eventSearchTier(e, text) >= 0)
             && (!city || (hasValidCoords(e)
                 && haversineKm(city.lat, city.lng, e.lat, e.lng) <= CITY_SEARCH_RADIUS_KM));
     }, [cardQNorm, cardSearchParsed]);
@@ -2677,7 +2687,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             && (!matchesCardSearch || matchesCardSearch(e)));
         const build = (include?: (e: LinkEvent) => boolean) => {
             const days = eventDays(kept, 0, nowDate, e => isEventPast(e, now), include).map(day => {
-                const items = day.events.map(evt => ({
+                // Filterlistan (20/10): närmast först inom dagen.
+                const ordered = listNearestFrom ? sortNearestFirst(day.events, listNearestFrom) : day.events;
+                const items = ordered.map(evt => ({
                     evt,
                     distanceKm: from && hasValidCoords(evt) ? haversineKm(from.lat, from.lng, evt.lat, evt.lng) : null,
                 }));
@@ -2694,7 +2706,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         };
         return { all: build(), popular: build(e => isPopularListed(e, now)) };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewEvents, discardedEventIds, selectedEvent, shownDay, listTodayAt, now, userPos, imagesOnlyList, matchesCardSearch]);
+    }, [viewEvents, discardedEventIds, selectedEvent, shownDay, listTodayAt, now, userPos, imagesOnlyList, matchesCardSearch, listNearestFrom]);
     const activeTabDays = tabDays[listTab].days;
     // Zoomringarna (8/10): det som fanns före varje utzoomning står kvar
     // överst, de nya under sin avdelare - dag för dag från den visade dagen.
@@ -4268,6 +4280,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         när det definitiva beskedet säger att inget finns nära.
                         Samma rad står också tills kortlagret landat (cardsReady),
                         så listan ritas EN gång med rätt innehåll. */}
+                    {/* SÖKORDET GÅR FÖRE FILTRET (20/10): kategoriord i
+                        söket ersätter ett kartfilter som säger något annat -
+                        chipsen lyser fortfarande, så säg varför. */}
+                    {listVisible && !!cardQNorm && !!searchFilterNote && (
+                        <p className="px-4 md:px-6 pt-1 pb-2 text-xs text-slate-500 dark:text-zinc-400">
+                            {searchFilterNote}
+                        </p>
+                    )}
                     {/* STADSTRÄFFAR överst i sökningen (11/10) - gamla
                         sökpanelens stadsrader, nu i kortets/arkets lista. */}
                     {listVisible && !!cardQNorm && !!onPickCity && (cityHits?.length ?? 0) > 0 && (

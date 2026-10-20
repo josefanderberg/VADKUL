@@ -39,7 +39,7 @@ import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
 import { readMapFilter, writeMapFilter } from '@/utils/mapFilter';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
-import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFromQuery, CITY_SEARCH_RADIUS_KM } from '@/utils/eventSearch';
+import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFromQuery, CITY_SEARCH_RADIUS_KM, parseCategoryQuery, isFilterQuery, nearestOrigin } from '@/utils/eventSearch';
 import { LABEL_TITLE_MIN_ZOOM, WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
 import { readStartCity, writeStartCity, parsePlatsParam } from '@/utils/startCity';
@@ -2250,6 +2250,13 @@ export default function HomePage() {
     const searchParsed = useMemo(() => splitCityFromQuery(searchQ), [searchQ]);
     const searchText = searchParsed.text;
     const searchCity = searchParsed.city;
+    // KATEGORIORD ERSÄTTER FILTRET (Josef 20/10, appen först: "söker jag
+    // konst växjö ... då ska jag ju få upp allt med konst i växjö" - med 🔥
+    // på gav det 0 träffar): består texten bara av kategoriord ("konst",
+    // "musik och teater") filtrerar söket på DE kategorierna i stället för
+    // kartfiltrets kategorier/🔥/källa, och textmatchningen hoppas över.
+    const searchCategories = useMemo(() => parseCategoryQuery(searchText), [searchText]);
+    const categorySearch = searchCategories.size > 0;
     // Sökningen matchar arrangör (hostName) och kortets url — fält som bor i
     // det lazy-laddade kortlagret. Första söktermen hämtar in det (idempotent),
     // så en sökning på "Håkan Hellström"/arrangör inte missar oladdade fält.
@@ -2334,10 +2341,10 @@ export default function HomePage() {
             : events;
         if (!searchQ) return base;
         return base.filter(evt =>
-            (!searchText || eventSearchTier(evt, searchText) >= 0)
+            (!searchText || categorySearch || eventSearchTier(evt, searchText) >= 0)
             && (!searchCity || (hasValidCoords(evt)
                 && haversineKm(searchCity.lat, searchCity.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM)));
-    }, [events, filteredEvents, searchQ, searchText, searchCity, organizerEvents, organizerRange, inPeriod, dayOffset, organizerDays]);
+    }, [events, filteredEvents, searchQ, searchText, searchCity, categorySearch, organizerEvents, organizerRange, inPeriod, dayOffset, organizerDays]);
     // Brickans namn: det riktiga värdnamnet så fort ett event matchat (länken
     // bär bara sluggen), annars en läsbar reserv ur sluggen.
     // Ur ALLA arrangörens event, inte bara periodens - en tom dag ska inte
@@ -2356,8 +2363,9 @@ export default function HomePage() {
     // flerval 6/10) smalnar allt annat till de valda kategorierna — även
     // ikryssade opt-in-källor. matchesFilterFor tar kategorimängden som
     // argument, så kategoriradens siffror räknar "vad visas om jag trycker
-    // här" med exakt samma regler (en enelements-mängd per chip).
-    const matchesFilterFor = useCallback((evt: LinkEvent, cats: ReadonlySet<string> | null, source: string | null = null) => {
+    // här" med exakt samma regler (en enelements-mängd per chip). `popular`
+    // = 🔥-läget; sökets kategoriord (20/10) skickar false - de ersätter 🔥.
+    const matchesFilterFor = useCallback((evt: LinkEvent, cats: ReadonlySet<string> | null, source: string | null = null, popular: boolean = popularOnly) => {
         // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
         // hela filtret, även ett aktivt kategorival.
         if (evt.userCreated) return true;
@@ -2370,8 +2378,8 @@ export default function HomePage() {
         // så ska det vara både scen och populära, inte bara de populära inom
         // scen"): populära event visas UTÖVER de valda kategorierna.
         // Bypass-mängden bor i utils/popularFilter.
-        const passesPop = passesPopularFilter(evt, popularOnly);
-        const unionPop = popularOnly && hasCats && passesPop;
+        const passesPop = passesPopularFilter(evt, popular);
+        const unionPop = popular && hasCats && passesPop;
         if (!passesPop && !(hasCats && cats.has(cat))) return false;
         const src = classifySource(evt.url || evt.id);
         // Fler-källan (16/9): BARA den källans event — och de visas även om
@@ -2386,9 +2394,15 @@ export default function HomePage() {
         if (familyOptIn && cat === 'family') return selectedCategories.has('family') || (hasCats && cats.has('family'));
         return true;
     }, [selectedCategories, familyOptIn, popularOnly]);
+    // Under en kategorisökning ("konst växjö") gäller SÖKETS kategorier i
+    // stället för kartfiltrets - kartan, listan och stadsraden följer söket,
+    // och det valda eventet räknas inte som bortfiltrerat. Opt-in-källorna
+    // och familjegrinden gäller som förut.
     const matchesFilter = useCallback(
-        (evt: LinkEvent) => matchesFilterFor(evt, mapCategories, mapSource),
-        [matchesFilterFor, mapCategories, mapSource],
+        (evt: LinkEvent) => (categorySearch
+            ? matchesFilterFor(evt, searchCategories, null, false)
+            : matchesFilterFor(evt, mapCategories, mapSource)),
+        [matchesFilterFor, mapCategories, mapSource, categorySearch, searchCategories],
     );
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
@@ -2461,7 +2475,8 @@ export default function HomePage() {
         const pool = eventsSettled && nationwideNow
             ? events.filter(evt =>
                 matchesFilter(evt) && hasValidCoords(evt) && evt.time >= start && evt.time < end
-                && (!matchText || eventSearchTier(evt, matchText) >= 0))
+                // Kategoriord räknas av matchesFilter (sökets kategorier).
+                && (!matchText || categorySearch || eventSearchTier(evt, matchText) >= 0))
             : null;
         return matches.map(city => ({
             city,
@@ -2470,7 +2485,7 @@ export default function HomePage() {
                 ? pool.filter(evt => haversineKm(city.lat, city.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM).length
                 : null,
         }));
-    }, [searchQuery, searchCity, searchText, events, eventsSettled, nationwideNow, matchesFilter]);
+    }, [searchQuery, searchCity, searchText, categorySearch, events, eventsSettled, nationwideNow, matchesFilter]);
 
     // Tidsfönstret: visas en dag bortom den laddade horisonten är datat inte
     // "settled" för den vyn — kartan visar sin vanliga "Laddar fler event…"-
@@ -3200,12 +3215,13 @@ export default function HomePage() {
             const now = new Date();
             const nowMs = now.getTime();
             const base = searchQ || organizerEvents ? searchFilteredEvents : events;
+            // Sökets kategoriord ersätter 🔥 (20/10) - då smalnar 🔥 inte heller här.
             return base.filter(e => e.id !== selectedEvent?.id
                 && inMapView(e)
-                && passesPopularFilter(e, popularOnly)
+                && passesPopularFilter(e, popularOnly && !categorySearch)
                 && inListWindow(e, dayOffset, now, evt => isEventPast(evt, nowMs)));
         },
-        [searchQ, organizerEvents, searchFilteredEvents, events, selectedEvent, inMapView, popularOnly, dayOffset],
+        [searchQ, organizerEvents, searchFilteredEvents, events, selectedEvent, inMapView, popularOnly, categorySearch, dayOffset],
     );
     // Eventkortets listflikar Alla · 🔥 Populärt (Josef 23/9, 24/9): eventen
     // i KARTANS RUTA som passerar kartans filter, ALLA dagar — inte bara den
@@ -3506,6 +3522,23 @@ export default function HomePage() {
     useEffect(() => {
         if (selectedEvent) setSearchSheetOpen(false);
     }, [selectedEvent]);
+    // EN TRÄFF UR EN KATEGORISÖKNING (20/10, appens kartHopp.kategorier):
+    // kartan får EXAKT sökets kategorier - 🔥 och källan släpps - så att
+    // kortet inte står bortfiltrerat (selectedFilteredOut → listvyn) när
+    // sökningen sedan rensas. Bara när ett NYTT event väljs (lista, karta,
+    // Nästa): att skriva "konst" med ett kort öppet ändrar inte kartfiltret.
+    const selectedEventId = selectedEvent?.id ?? null;
+    const lastSelectedIdRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (selectedEventId === lastSelectedIdRef.current) return;
+        lastSelectedIdRef.current = selectedEventId;
+        if (!selectedEventId || searchCategories.size === 0) return;
+        startTransition(() => {
+            setMapCategories(new Set(searchCategories));
+            setPopularOnly(false);
+            setMapSource(null);
+        });
+    }, [selectedEventId, searchCategories]);
     // (Stadsträffarnas klick-handler, handlePickSearchCity, bor uppe vid
     // skylt-hoppen - den landar som ett skylt-hopp med stadspuls, precis som
     // när sökrutan satt i navbaren.)
@@ -3648,6 +3681,34 @@ export default function HomePage() {
     // pricken). EventCard visar avståndet från den till det valda eventet.
     // null tills positionen är känd.
     const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+
+    // FILTERLISTAN (Josef 20/10, appen först: "om jag bara klickar i
+    // populära ... då ska det vara de som är närmst en den dagen som ska
+    // visas"): utan fritt sökord - bara chips i sökarket, eller en söktext
+    // som bara är kategoriord och/eller en ort - har kortets lista det
+    // NÄRMASTE först inom varje dag (utils/eventSearch sortNearestFirst).
+    // Listan börjar redan på kartans dag; det var ordningen inom dagen som
+    // var tid över hela rutan (eller hela landet under sökning). Räknas från
+    // sökets ort, ens position i kartans ruta, annars rutans mitt - den
+    // LUGNADE rutan, så raderna inte kastas om medan kameran glider.
+    // null = tidsordning som förut.
+    const listNearestFrom = useMemo(() => {
+        const filterList = searchQ
+            ? isFilterQuery(searchCity, searchText, searchCategories)
+            : searchSheetOpen && !selectedEvent && (popularOnly || mapCategories.size > 0 || mapSource !== null);
+        return filterList ? nearestOrigin(searchCity, userPos, settledMapBounds) : null;
+    }, [searchQ, searchCity, searchText, searchCategories, searchSheetOpen, selectedEvent, popularOnly, mapCategories, mapSource, userPos, settledMapBounds]);
+    // Kategoriordet går före ett kartfilter som säger något annat (🔥,
+    // en källa, andra kategorier) - chipsen lyser ju fortfarande, så säg
+    // varför listan inte följer dem. Samma som kartans val = ingen rad.
+    const searchFilterNote = useMemo(() => {
+        if (!categorySearch) return null;
+        const sameAsMap = !popularOnly && !mapSource && mapCategories.size === searchCategories.size
+            && [...searchCategories].every(c => mapCategories.has(c));
+        if (sameAsMap || (!popularOnly && !mapSource && mapCategories.size === 0)) return null;
+        const labels = [...searchCategories].map(c => categoryLabel(c)).join(' och ');
+        return `Visar allt inom ${labels} - sökordet går före filtret.`;
+    }, [categorySearch, searchCategories, popularOnly, mapSource, mapCategories]);
 
     // PLATSFRÅGAN (Josef 10/10): kartan frågar ALDRIG vid sidladdning - bara
     // tyst om platsen redan är tillåten. Frågan kommer när onboardingen slutar
@@ -6478,8 +6539,12 @@ export default function HomePage() {
                 onSearchChange={setSearchQuery}
                 cityHits={cityHits}
                 onPickCity={handlePickSearchCity}
-                // 🔥-chippet kopplar listan till Populärt-fliken (7/10 kväll).
-                popularFilterOn={popularOnly}
+                // 🔥-chippet kopplar listan till Populärt-fliken (7/10 kväll) -
+                // inte under en kategorisökning, som ersätter 🔥 (20/10).
+                popularFilterOn={popularOnly && !categorySearch}
+                // Filterlistan: närmast först inom dagen (20/10).
+                listNearestFrom={listNearestFrom}
+                searchFilterNote={searchFilterNote}
                 activeFilters={cardActiveFilters}
                 onRemoveFilter={handleRemoveCardFilter}
                 // Listans botten zoomar ut kartan (8/10) - inte under
