@@ -724,6 +724,31 @@ Programmet hittar du på vår hemsida.</div></body></html>`;
         expect(descFromDetailSelector(html, '.finns-inte')).toBeNull();
         expect(descFromDetailSelector('<div class="b">Kort.</div>', '.b')).toBeNull();
     });
+
+    // Ticksters markup (Billy Opel, Växjö Teater 21/10) med påhittad text:
+    // meta-description är en mall, texten står i #event-description och
+    // blockets sista stycke är "Framträdanden av <artist>".
+    const tickster = (body: string) => `<html><head>
+<meta name="description" content="Billy Opel - V&#228;xj&#246; Teater p&#229; V&#228;xj&#246; Teater i V&#228;xj&#246; den 20 november - Tickster.com" />
+</head><body><div id="event-description">
+    ${body}
+    <p itemprop="description">
+        <span class="title">Framtr&#228;danden av</span>
+        <span class="contents"><a class="performer" href="/se/sv/events/with/billy%20opel">Billy Opel</a></span>
+    </p>
+</div></body></html>`;
+
+    it('Tickster: tar #event-description utan Framträdanden-raden', () => {
+        const page = tickster(`<p>En kväll med visor om
+takboxar och bröllop.</p>
+<p>Välkommen!</p>`);
+        expect(descFromDetailSelector(page, '#event-description', 'p:has(.performer)'))
+            .toBe('En kväll med visor om takboxar och bröllop. Välkommen!');
+    });
+
+    it('Tickster utan egen text → null, inte artistraden', () => {
+        expect(descFromDetailSelector(tickster(''), '#event-description', 'p:has(.performer)')).toBeNull();
+    });
 });
 
 describe('Tickster-sidfotens kontorsadress (2/10)', () => {

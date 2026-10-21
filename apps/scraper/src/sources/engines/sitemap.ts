@@ -184,6 +184,12 @@ export interface SitemapConfig {
      */
     detailDescSelector?: string;
     /**
+     * CSS-selektor för delar INOM detailDescSelector-blocket som inte är
+     * beskrivning och tas bort före textutdraget. Tickster lägger "Framträdanden
+     * av <artist>" sist i samma #event-description (21/10).
+     */
+    detailDescStrip?: string;
+    /**
      * Regex som extraherar år+månad (och ev. dag) ur URL. När satt:
      * pre-filtrerar URL:er INNAN fetch — sparar enorm tid på stora sajter
      * som Studiefrämjandet (1500+ URLs) där bara veckans har relevans.
@@ -306,13 +312,15 @@ export function applyDetailPlace(html: string, selector: string, ev: RawEvent): 
 /**
  * Beskrivningen ur detaljsidans brödtextfält (SitemapConfig.detailDescSelector).
  * <br>/block-taggar → mellanslag (samma skäl som i dateFromDetailSelector:
- * cheerios .text() limmar ihop rader). null när fältet saknas eller är för
- * kort för att vara en beskrivning.
+ * cheerios .text() limmar ihop rader). `strip` tar bort delblock som inte är
+ * beskrivning (SitemapConfig.detailDescStrip). null när fältet saknas eller
+ * är för kort för att vara en beskrivning.
  */
-export function descFromDetailSelector(html: string, selector: string): string | null {
+export function descFromDetailSelector(html: string, selector: string, strip?: string): string | null {
     const $ = cheerio.load(html);
     const el = $(selector).first();
     if (el.length === 0) return null;
+    if (strip) el.find(strip).remove();
     const text = decodeHtmlEntities((el.html() ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
     return text.length >= 20 ? truncateAtBoundary(text, DEFAULT_DESCRIPTION_MAX) : null;
 }
@@ -1519,7 +1527,7 @@ export const sitemapEngine = async (
             }
             if (config.detailPlaceSelector) applyDetailPlace(html, config.detailPlaceSelector, ev);
             if (config.detailDescSelector) {
-                const d = descFromDetailSelector(html, config.detailDescSelector);
+                const d = descFromDetailSelector(html, config.detailDescSelector, config.detailDescStrip);
                 if (d) ev.description = d;
             }
             if (config.titlePlaces) applyTitlePlaces(ev, config.titlePlaces, config.defaultCity);

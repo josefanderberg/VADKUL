@@ -82,6 +82,20 @@ const TICKSTER_CITIES: Array<{ city: string; base: string; slug?: string; pages:
     { city: 'Karlskrona',   base: 'karlskrona',   pages: 1 },
 ];
 
+/**
+ * Ticksters riktiga beskrivning står i #event-description. Meta-description
+ * är en mall per sida ("Billy Opel - Växjö Teater på Växjö Teater i Växjö den
+ * 20 november - Tickster.com") och var allt 3 712 av 3 723 Tickster-event
+ * visade (21/10). Blockets sista stycke är "Framträdanden av <artist>" och
+ * strippas. Samma uppbyggnad på /no/nb/-sidorna.
+ */
+const TICKSTER_DESC = {
+    detailDescSelector: '#event-description',
+    detailDescStrip: 'p:has(.performer)',
+};
+/** Engångssvep: kända Tickster-event får texten (contentRefresh byter mallen). */
+const TICKSTER_DESC_SWEEP = '2026-10-21';
+
 export const SOURCES: Source[] = [
     // ─── BILJETTPLATTFORMAR (sitemap → detaljsidans JSON-LD Event) ───────────
     {
@@ -421,8 +435,10 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/se\/sv\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
             urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
             maxUrls: 2500,
+            ...TICKSTER_DESC,
         },
         updateFrequency: 'weekly',
+        contentSweep: TICKSTER_DESC_SWEEP,
         status: 'experimental',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.tickster.com/sitemap.xml', date: '2026-06-11' },
         notes: 'Probe 2026-06-11: sitemap har 9104 framtida event-URLs (datum-i-URL). Ingen JSON-LD men og:title + "DD månad"/ISO i text → cheerie-fallback. urlDateRegex förfiltrerar till fönstret. 2026-07-02: exakta koordinater plockas nu ur sidans Google Maps-länk + ort ur location-microdata (backfillPlaceFromHtml i sitemap-motorn) — tidigare var ~46% o-geokodade (venue utan ort) och alla fick footerns kontorsadress "Magasinsgatan 8" som extractedAddress.',
@@ -822,8 +838,10 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/no\/nb\/events\/[a-z0-9]+\/\d{4}-\d{2}-\d{2}/i],
             urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
             maxUrls: 400,
+            ...TICKSTER_DESC,
         },
         updateFrequency: 'every-3d',
+        contentSweep: TICKSTER_DESC_SWEEP,
         status: 'experimental',
         maxSavedPerRun: 300,
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.tickster.com/sitemap.xml', date: '2026-07-02' },
@@ -7553,8 +7571,10 @@ export const SOURCES: Source[] = [
             urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
             defaultCity: city,
             maxUrls: 100,
+            ...TICKSTER_DESC,
         },
         updateFrequency: 'weekly',
+        contentSweep: TICKSTER_DESC_SWEEP,
         status: 'experimental',
         windowDays: 180,
         notes: `Ticksters ortssida för ${city} — hela inventariet på en sida via ?take=100 (serverrenderad, ingen Puppeteer sedan 13/9). Går orten förbi 100 event: flytta till TICKSTER_CITIES med fler sidor.`,
@@ -7603,8 +7623,10 @@ export const SOURCES: Source[] = [
                 urlDateRegex: /\/events\/[a-z0-9]+\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/,
                 defaultCity: city,
                 maxUrls: 100,
+                ...TICKSTER_DESC,
             },
             updateFrequency: 'weekly',
+            contentSweep: TICKSTER_DESC_SWEEP,
             status: 'experimental',
             windowDays: 180,
             notes: `Sida ${i + 1} av ${pages} (skip=${i * 100}) av Ticksters ${city}-inventarie. Växer staden förbi ~${pages * 100} event tappas svansen tills en sida till läggs till i TICKSTER_CITIES.`,

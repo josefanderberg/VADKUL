@@ -48,6 +48,13 @@ describe('source-registryt', () => {
         expect(missing).toEqual([]);
     });
 
+    it('Tickster-källorna tar texten ur #event-description, inte meta-mallen (21/10)', () => {
+        const tickster = SOURCES.filter((s) => s.engine === 'sitemap' && /tickster\.com/.test(String(s.config.sitemapUrl)));
+        expect(tickster.length).toBeGreaterThan(30);
+        const missing = tickster.filter((s) => s.config.detailDescSelector !== '#event-description').map((s) => s.id);
+        expect(missing).toEqual([]);
+    });
+
     it('en ligasajt har EN sport', () => {
         const byHost = new Map<string, Set<string>>();
         for (const s of SOURCES) {

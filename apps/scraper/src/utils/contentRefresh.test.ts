@@ -40,9 +40,17 @@ describe('pickBetterDescription', () => {
         expect(pickBetterDescription('ABF-evenemang i Kalmar.', full)).toBe(full);
     });
 
+    it('byter Ticksters meta-mall mot sidans riktiga text (21/10)', () => {
+        const meta = 'Billy Opel - Växjö Teater på Växjö Teater i Växjö den 20 november - Tickster.com';
+        expect(pickBetterDescription(meta, full)).toBe(full);
+        expect(pickBetterDescription(meta, 'Morning Beat på Sofienberg Kirke i Oslo 20 oktober - Tickster.com')).toBeNull();
+    });
+
     it('isPlaceholderDescription känner igen motorernas mallar men inte riktig text', () => {
         expect(isPlaceholderDescription('PRO-aktivitet, Sverige.')).toBe(true);
         expect(isPlaceholderDescription('Kurs med Medborgarskolan i Lund.')).toBe(true);
+        expect(isPlaceholderDescription('Billy Opel - Växjö Teater på Växjö Teater i Växjö den 20 november - Tickster.com')).toBe(true);
+        expect(isPlaceholderDescription('Biljetter säljs via Tickster.com och i entrén från klockan 18.')).toBe(false);
         expect(isPlaceholderDescription('Vi spelar boule varje tisdag. Alla är välkomna, PRO bjuder på fika.')).toBe(false);
     });
 
