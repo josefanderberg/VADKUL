@@ -4,8 +4,8 @@
     "bjorndammens-masugn": {
       "since": "2026-10-07",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-14",
-      "emptyRetries": 1
+      "lastRetry": "2026-10-21",
+      "emptyRetries": 2
     },
     "bollebygd-kommun": {
       "since": "2026-10-09",
@@ -38,8 +38,8 @@
     "folk-goteborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-12",
-      "emptyRetries": 6
+      "lastRetry": "2026-10-21",
+      "emptyRetries": 7
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
@@ -60,14 +60,14 @@
     "naturskyddsforeningen": {
       "since": "2026-09-30",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-14",
-      "emptyRetries": 2
+      "lastRetry": "2026-10-21",
+      "emptyRetries": 3
     },
     "nordmaling": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-12",
-      "emptyRetries": 6
+      "lastRetry": "2026-10-21",
+      "emptyRetries": 7
     },
     "nybro": {
       "since": "2026-08-19",
@@ -114,8 +114,8 @@
     "tingsryd": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-12",
-      "emptyRetries": 6
+      "lastRetry": "2026-10-21",
+      "emptyRetries": 7
     },
     "uppsala": {
       "since": "2026-10-16",
