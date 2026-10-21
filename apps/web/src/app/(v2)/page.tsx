@@ -39,7 +39,7 @@ import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
 import { readMapFilter, writeMapFilter } from '@/utils/mapFilter';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
-import { normalizeSearchQuery, eventSearchTier, rankSearchResults, splitCityFromQuery, CITY_SEARCH_RADIUS_KM, parseCategoryQuery, isFilterQuery, nearestOrigin } from '@/utils/eventSearch';
+import { normalizeSearchQuery, filterSearchMatches, rankSearchResults, splitCityFromQuery, CITY_SEARCH_RADIUS_KM, parseCategoryQuery, nearestOrigin } from '@/utils/eventSearch';
 import { LABEL_TITLE_MIN_ZOOM, WEEK_VIEW_MIN_ZOOM } from '@/utils/mapUtils';
 import { isInVisibleMapArea, dayOffsetOf, nextPeriodWithEvents, TOUR_CARD_COVER_FRACTION } from '@/utils/viewportTour';
 import { readStartCity, writeStartCity, parsePlatsParam } from '@/utils/startCity';
@@ -2340,10 +2340,14 @@ export default function HomePage() {
             ? (organizerRange === 'all' ? organizerEvents : organizerEvents.filter(evt => inPeriod(evt, dayOffset, organizerDays)))
             : events;
         if (!searchQ) return base;
-        return base.filter(evt =>
-            (!searchText || categorySearch || eventSearchTier(evt, searchText) >= 0)
-            && (!searchCity || (hasValidCoords(evt)
-                && haversineKm(searchCity.lat, searchCity.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM)));
+        const inCity = searchCity
+            ? base.filter(evt => hasValidCoords(evt)
+                && haversineKm(searchCity.lat, searchCity.lng, evt.lat, evt.lng) <= CITY_SEARCH_RADIUS_KM)
+            : base;
+        // Samma träffmängd som kortets rankade lista (21/10): rena länk-
+        // träffar bara när inget annat träffar, så kartan inte tänder UUID-
+        // brus som listan inte visar.
+        return searchText && !categorySearch ? filterSearchMatches(inCity, searchText) : inCity;
     }, [events, filteredEvents, searchQ, searchText, searchCity, categorySearch, organizerEvents, organizerRange, inPeriod, dayOffset, organizerDays]);
     // Brickans namn: det riktiga värdnamnet så fort ett event matchat (länken
     // bär bara sluggen), annars en läsbar reserv ur sluggen.
@@ -2472,12 +2476,13 @@ export default function HomePage() {
         const matchText = searchCity && searchText ? searchText : undefined;
         // Hela landet krävs (sökningen begär det) — med bara rutorna runt
         // kartan hade en annan ort räknats som tom.
-        const pool = eventsSettled && nationwideNow
+        const week = eventsSettled && nationwideNow
             ? events.filter(evt =>
-                matchesFilter(evt) && hasValidCoords(evt) && evt.time >= start && evt.time < end
-                // Kategoriord räknas av matchesFilter (sökets kategorier).
-                && (!matchText || categorySearch || eventSearchTier(evt, matchText) >= 0))
+                matchesFilter(evt) && hasValidCoords(evt) && evt.time >= start && evt.time < end)
             : null;
+        // Kategoriord räknas av matchesFilter (sökets kategorier); fritt
+        // sökord med samma träffregel som listan.
+        const pool = week && matchText && !categorySearch ? filterSearchMatches(week, matchText) : week;
         return matches.map(city => ({
             city,
             matchText,
@@ -3248,8 +3253,9 @@ export default function HomePage() {
             // SÖKNING GÅR ÖVER HELA LANDET (11/10, som gamla sökpanelen):
             // med en sökterm släpper listan kartrutan - "Håkan Hellström om
             // tre veckor" i en annan stad ska synas i listan också, inte bara
-            // som markör. Själva textmatchningen gör kortet (matchesCardSearch
-            // speglar eventSearchTier + ortcirkeln).
+            // som markör. Själva textmatchningen gör kortet (fria söket
+            // rankas med utils/eventSearch searchEvents, filterlistan tar
+            // ortcirkeln via matchesCardSearch).
             return events.filter(e =>
                 hasValidCoords(e)
                 && (!!searchQ
@@ -3682,22 +3688,15 @@ export default function HomePage() {
     // null tills positionen är känd.
     const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
 
-    // FILTERLISTAN (Josef 20/10, appen först: "om jag bara klickar i
-    // populära ... då ska det vara de som är närmst en den dagen som ska
-    // visas"): utan fritt sökord - bara chips i sökarket, eller en söktext
-    // som bara är kategoriord och/eller en ort - har kortets lista det
-    // NÄRMASTE först inom varje dag (utils/eventSearch sortNearestFirst).
-    // Listan börjar redan på kartans dag; det var ordningen inom dagen som
-    // var tid över hela rutan (eller hela landet under sökning). Räknas från
-    // sökets ort, ens position i kartans ruta, annars rutans mitt - den
-    // LUGNADE rutan, så raderna inte kastas om medan kameran glider.
-    // null = tidsordning som förut.
-    const listNearestFrom = useMemo(() => {
-        const filterList = searchQ
-            ? isFilterQuery(searchCity, searchText, searchCategories)
-            : searchSheetOpen && !selectedEvent && (popularOnly || mapCategories.size > 0 || mapSource !== null);
-        return filterList ? nearestOrigin(searchCity, userPos, settledMapBounds) : null;
-    }, [searchQ, searchCity, searchText, searchCategories, searchSheetOpen, selectedEvent, popularOnly, mapCategories, mapSource, userPos, settledMapBounds]);
+    // VARIFRÅN SÖKET RÄKNAR "NÄRA" (20-21/10): filterlistan har det
+    // närmaste först inom varje dag och det fria söket närområdet först
+    // (kortet avgör läget, utils/eventSearch). Sökets ort, annars ens
+    // position i kartans ruta, annars rutans mitt - den LUGNADE rutan, så
+    // raderna inte kastas om medan kameran glider.
+    const listOrigin = useMemo(
+        () => nearestOrigin(searchCity, userPos, settledMapBounds),
+        [searchCity, userPos, settledMapBounds],
+    );
     // Kategoriordet går före ett kartfilter som säger något annat (🔥,
     // en källa, andra kategorier) - chipsen lyser ju fortfarande, så säg
     // varför listan inte följer dem. Samma som kartans val = ingen rad.
@@ -6542,8 +6541,8 @@ export default function HomePage() {
                 // 🔥-chippet kopplar listan till Populärt-fliken (7/10 kväll) -
                 // inte under en kategorisökning, som ersätter 🔥 (20/10).
                 popularFilterOn={popularOnly && !categorySearch}
-                // Filterlistan: närmast först inom dagen (20/10).
-                listNearestFrom={listNearestFrom}
+                // Söket räknar "nära" härifrån (20-21/10).
+                listOrigin={listOrigin}
                 searchFilterNote={searchFilterNote}
                 activeFilters={cardActiveFilters}
                 onRemoveFilter={handleRemoveCardFilter}
