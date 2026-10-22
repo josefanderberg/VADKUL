@@ -1,17 +1,30 @@
 {
-  "generatedAt": "2026-10-21T07:36:13.605Z",
+  "generatedAt": "2026-10-22T06:28:55.111Z",
   "counts": {
-    "fel": 0,
-    "varning": 36,
-    "nollkoordinatTotalt": 697
+    "fel": 1,
+    "varning": 39,
+    "nollkoordinatTotalt": 646
   },
   "alerts": [
+    {
+      "level": "fel",
+      "kind": "krasch",
+      "source": "bergmancenter",
+      "since": "2026-10-21",
+      "message": "senaste körningen gav 0 event och fel: engine threw: fetch failed"
+    },
     {
       "level": "varning",
       "kind": "tyst",
       "source": "tickster-ort-eskilstuna-2",
       "since": "2026-10-01",
       "message": "gav 6 event 2026-09-25, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Alseda församling",
+      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -23,7 +36,13 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Destination Uppsala",
-      "message": "14 av 22 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+      "message": "14 av 21 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Dösjebro församling",
+      "message": "6 av 10 kommande event ligger 2026-10-22 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -34,14 +53,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Korpen Vadstena",
-      "message": "10 av 16 kommande event ligger 2026-10-21 — sajtvitt datum i stället för eventets?"
+      "source": "Stiftelsen Läckö Slott",
+      "message": "7 av 10 kommande event ligger 2026-10-29 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Stiftelsen Läckö Slott",
-      "message": "7 av 10 kommande event ligger 2026-10-29 — sajtvitt datum i stället för eventets?"
+      "source": "Åtvids församling",
+      "message": "9 av 15 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -52,8 +71,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "697 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 23, Förlösa-Kläckeberga församling 21, Katrineholmsbygdens församling 18, Linde bergslags församling 15, Värö-Stråvalla församling 15"
+      "source": "646 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 20, NBV 18, Förlösa-Kläckeberga församling 17, Latinamerika i Fokus 16, Värö-Stråvalla församling 15"
     },
     {
       "level": "varning",
@@ -65,25 +84,31 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Götene pastorat",
-      "message": "invariant-vakten larmar (20 av 42 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (20 av 40 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Korpen Gävle",
-      "message": "invariant-vakten larmar (7 av 29 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 28 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Latinamerika i Fokus",
+      "message": "invariant-vakten larmar (2 av 27 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Ronneby församling",
-      "message": "invariant-vakten larmar (8 av 20 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 19 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (7 av 281 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 280 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",

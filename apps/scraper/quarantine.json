@@ -44,8 +44,8 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-15",
-      "emptyRetries": 8
+      "lastRetry": "2026-10-22",
+      "emptyRetries": 9
     },
     "jonkoping": {
       "since": "2026-10-11",
@@ -72,8 +72,8 @@
     "nybro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-15",
-      "emptyRetries": 8
+      "lastRetry": "2026-10-22",
+      "emptyRetries": 9
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
