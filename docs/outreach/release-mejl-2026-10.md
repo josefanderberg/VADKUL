@@ -127,7 +127,8 @@ Den skriver `fortur-<datum>.csv` (email, inbjudna, konto, svar, forst) -
 gitignorad, radera efter importen.
 
 **Förturstrofén (23/10, ägarbeslut):** de som hade förtur när appen släpptes
-får 🏆 bredvid namnet i profilen och vänprofilen (tryck = förklaringen).
+får raden "✦ Förtur till appen · nr 1 av 4" under namnet i profilen och
+vänprofilen (ingen pokal vid namnet - Josef ville inte ha den så synlig).
 Varje trofé är ett eget objekt i `trophies/{id}` med nummer och historik, så
 den kan byta ägare senare - modellen i `packages/kontrakt/src/trophies.ts`.
 Delas ut EN gång (typen är begränsad), först efter rules-deployen:
