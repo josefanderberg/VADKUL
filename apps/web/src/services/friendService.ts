@@ -10,6 +10,7 @@ import {
     type FriendDocStatus, type FriendPerson, type FriendRow, type FriendWrite,
 } from '../utils/friendStatus';
 import { friendRsvpVisible, pickFriendEventIds, type FriendRsvpPick } from '../utils/friendEvents';
+import { readTrophies, type TrophyMirror } from '@vadkul/kontrakt';
 
 /**
  * Vänner (spår 3, 7/10 kväll). Datamodell + övergångar bor i utils/
@@ -176,6 +177,8 @@ export interface FriendProfileData {
     /** false = vännen har stängt av synligheten (integritetsgrinden). */
     visible: boolean;
     picks: FriendRsvpPick[];
+    /** users.trophies (servergiven spegel) - visas även när eventen är dolda. */
+    trophies: TrophyMirror[];
 }
 
 export async function fetchFriendProfile(uid: string): Promise<FriendProfileData> {
@@ -188,8 +191,9 @@ export async function fetchFriendProfile(uid: string): Promise<FriendProfileData
             photoURL: typeof d?.photoURL === 'string' && d.photoURL ? d.photoURL as string : null,
             visible,
             picks: visible ? pickFriendEventIds(d?.goingEventIds, d?.interestedEventIds) : [],
+            trophies: readTrophies(d?.trophies),
         };
     } catch {
-        return { name: null, photoURL: null, visible: false, picks: [] };
+        return { name: null, photoURL: null, visible: false, picks: [], trophies: [] };
     }
 }

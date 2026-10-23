@@ -14,6 +14,8 @@ import { fetchDeepLinkEvent } from '@/utils/eventSeed';
 import { genitive, sortBlocked, type BlockRow } from '@/utils/chatModeration';
 import { blockUser, unblockUser, useModeration } from '@/services/moderationService';
 import { FRIEND_INVITE_TEXT, friendInviteUrl } from '@/utils/friendInvite';
+import type { TrophyMirror } from '@vadkul/kontrakt';
+import TrophyBadges from './TrophyBadges';
 
 /**
  * VÄNNER i profilpanelen (spår 3, 7/10 kväll - "man kan gå in på sina
@@ -47,6 +49,8 @@ interface FriendsSectionProps {
 interface FriendDetail {
     state: 'loading' | 'ready' | 'hidden';
     events: FriendUpcomingEvent[];
+    /** Vännens troféer (users.trophies) - syns även när eventen är dolda. */
+    trophies?: TrophyMirror[];
 }
 
 function eventTimeLabel(evt: LinkEvent): string {
@@ -231,7 +235,7 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
         setDetails(prev => ({ ...prev, [row.uid]: { state: 'loading', events: [] } }));
         const profile = await fetchFriendProfile(row.uid);
         if (!profile.visible) {
-            setDetails(prev => ({ ...prev, [row.uid]: { state: 'hidden', events: [] } }));
+            setDetails(prev => ({ ...prev, [row.uid]: { state: 'hidden', events: [], trophies: profile.trophies } }));
             return;
         }
         // Slå upp eventen: laddade datan först, /api/event som reserv.
@@ -243,7 +247,11 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
         }));
         setDetails(prev => ({
             ...prev,
-            [row.uid]: { state: 'ready', events: upcomingFriendEvents(profile.picks, resolved, Date.now()) },
+            [row.uid]: {
+                state: 'ready',
+                events: upcomingFriendEvents(profile.picks, resolved, Date.now()),
+                trophies: profile.trophies,
+            },
         }));
     };
 
@@ -395,6 +403,9 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
                                         </button>
                                         {open && (
                                             <div className="pl-[52px] pr-4 pb-2">
+                                                {detail?.trophies && detail.trophies.length > 0 && (
+                                                    <div className="mb-1"><TrophyBadges trophies={detail.trophies} /></div>
+                                                )}
                                                 {detail?.state === 'loading' || !detail ? (
                                                     <p className="text-[11px] font-semibold text-slate-400">Hämtar…</p>
                                                 ) : detail.state === 'hidden' ? (

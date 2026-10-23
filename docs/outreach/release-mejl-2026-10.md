@@ -126,6 +126,17 @@ Ta ut listan (läser bara forturInbjudningar, e-posten ur Auth):
 Den skriver `fortur-<datum>.csv` (email, inbjudna, konto, svar, forst) -
 gitignorad, radera efter importen.
 
+**Förturstrofén (23/10, ägarbeslut):** de som hade förtur när appen släpptes
+får 🏆 bredvid namnet i profilen och vänprofilen (tryck = förklaringen).
+Varje trofé är ett eget objekt i `trophies/{id}` med nummer och historik, så
+den kan byta ägare senare - modellen i `packages/kontrakt/src/trophies.ts`.
+Delas ut EN gång (typen är begränsad), först efter rules-deployen:
+
+    PATH="$HOME/.nvm/versions/node/v22.22.0/bin:$PATH" \
+      npx vite-node docs/outreach/dela-ut-forturstrofeer.ts -- --skarpt
+
+Utan `--skarpt` är det en provkörning.
+
 ## Öppningar, klick och påminnelsen
 
 Zoho Campaigns spårar öppningar och klick per kontakt automatiskt (Reports →

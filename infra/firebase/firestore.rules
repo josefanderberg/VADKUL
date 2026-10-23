@@ -46,7 +46,10 @@ service cloud.firestore {
     // 1. USERS
     match /users/{userId} {
       allow read: if true; // Behövs för att se andras profiler/bilder (även om man inte är inloggad)
-      allow create: if isOwner(userId); // Man får skapa sin egen profil
+      // Man får skapa sin egen profil - men aldrig med troféer i (23/10:
+      // users.trophies är en SERVERSKRIVEN spegel av trophies/{id}, se
+      // packages/kontrakt/src/trophies.ts).
+      allow create: if isOwner(userId) && !request.resource.data.keys().hasAny(['trophies']);
       
       // Man får uppdatera sin egen profil...
       // ELLER om man bara uppdaterar 'rating' och 'ratingCount' (för att ge omdöme)
@@ -57,13 +60,16 @@ service cloud.firestore {
       // koder kontot löst in) tillkom 22/8 när spärren blev per kod —
       // MÅSTE vara med i listan, annars kan man skriva upp sin räknare
       // eller radera sin inlösningshistorik och lösa in samma länk igen.
+      // trophies (23/10) är likadant servergiven - utdelningsskriptet skriver
+      // den med admin-SDK:t. Själva troféobjekten (trophies/{id}) har ingen
+      // match alls = stängda för klienter.
       allow update: if isOwner(userId)
         && (
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified']) || request.resource.data.isVerified == false)
           &&
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificationStatus']) || request.resource.data.verificationStatus in ['pending', 'none'])
           &&
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['starGift', 'starEventId', 'starsAvailable', 'starGiftCodes', 'starGiftCode'])
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['starGift', 'starEventId', 'starsAvailable', 'starGiftCodes', 'starGiftCode', 'trophies'])
         )
         || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratingCount']));
         

@@ -23,6 +23,8 @@ import { boostedUntilLabel } from '@/utils/boostLabel';
 import { EVENT_CATEGORIES, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
 import { forturVannerText, memberInviteUrl } from '@/utils/forturInbjudan';
 import { countForturInvites } from '@/services/forturService';
+import { readTrophies, type TrophyMirror } from '@vadkul/kontrakt';
+import TrophyBadges from './TrophyBadges';
 
 /** "Visa även på kartan"-raderna: opt-in-källorna + 🧸 (samma ordning som
  *  kategorikolumnen hade dem överst, innan den revs 15/9). */
@@ -126,6 +128,8 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
     const [hasChildren, setHasChildren] = useState(false);
     const [childAges, setChildAges] = useState<number[]>([]);
     const [childrenBusy, setChildrenBusy] = useState(false);
+    // Troféerna (users.trophies, servergiven spegel) - samma läsning som staden.
+    const [trophies, setTrophies] = useState<TrophyMirror[]>([]);
     // "Mina boostar": användarens boost-köp (boostPayments-kvitton) berikade
     // med eventtitel + featuredUntil. null = inte hämtat/inget att visa —
     // sektionen göms då helt (inklusive innan rules-deployen som öppnar
@@ -157,6 +161,7 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                 setChildAges(Array.isArray(data?.childAges)
                     ? data.childAges.filter((a: unknown): a is number => typeof a === 'number')
                     : []);
+                setTrophies(readTrophies(data?.trophies));
             })
             .catch(() => { /* visa tomt — valen funkar ändå */ });
         return () => { stale = true; };
@@ -606,6 +611,8 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                             ) : (
                                 <div className="flex items-center gap-1.5 min-w-0">
                                     <p className="font-black text-base text-black dark:text-white truncate">{displayName}</p>
+                                    {/* Bara symbolen här - förklaringen fälls ut under raden. */}
+                                    <TrophyBadges trophies={trophies} />
                                     <button
                                         type="button"
                                         onClick={startEditName}
