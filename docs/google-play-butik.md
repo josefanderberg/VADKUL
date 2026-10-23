@@ -65,7 +65,7 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 - [ ] Ladda upp skärmbilderna under versionens "Förhandsvisningar och skärmbilder": mellanstor skärm = `app-store-mellan/` (1206x2622, krävs), stor skärm = `skarmbild-*.png` (1320x2868). Fel mått ger "File dimensions are invalid". Header-/sökrutan (creative assets, 21:9 / 3:2 / 16:9) är något annat och frivillig. Marknadsikonen om Connect ber om en separat (`app-store-ikon-1024.png`).
 
 ### Google Play Console (Android)
-- [ ] **Finns Play-kontot?** Okänt om ett Google Play Console-utvecklarkonto ens är registrerat (25 USD engångsavgift + identitetsverifiering, kan ta några dagar). Kolla FÖRST - allt annat nedan väntar på det.
+- [ ] **Finns Play-kontot?** Okänt om ett Google Play Console-utvecklarkonto ens är registrerat (25 USD engångsavgift + identitetsverifiering, kan ta några dagar). Kolla FÖRST - allt annat nedan väntar på det. _23/10: play.google.com/console kräver Google-inloggning i webbläsarpanelen (Claude kan inte logga in) - Josef loggar in själv, sedan syns om kontot finns. OBS: ett personligt konto registrerat efter nov 2023 måste köra **sluten testning med minst 12 testare i 14 dagar** innan produktion låses upp; intern testning (upp till 100 testare via mejllista) går direkt._
 - [ ] **Datasäkerhetsformuläret** (utkast till svar, uppdaterat 12/10 inför build 7 - samma underlag som App Privacy i `app-store-butik.md`):
   - Samlas data in? Ja. Kraschdata från alla installationer (Crashlytics, från build 7); kontodata och användarinnehåll bara med frivilligt konto.
   - Krypteras under överföring? Ja (HTTPS). Delas med tredje part? Nej - Firebase är tjänsteleverantör, vilket inte räknas som delning.
@@ -80,6 +80,7 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
   - Plats: deklareras INTE - positionen används bara på enheten och skickas aldrig till servern, så den räknas inte som insamlad (förra utkastet listade den).
   - Annonser: inga. Ingen spårning.
   - Dataradering: användaren raderar kontot inifrån appen (Profil → Radera konto), då försvinner kontodatan. Kraschrapporter rensas automatiskt efter 90 dagar.
+  - **Raderings-URL (formuläret kräver en webbadress när appen har konton):** https://vadkul.se/integritet#radera-konto - avsnittet "Radera ditt konto" lades till 23/10 (commit 55608549 i huvudrepot). Ute på vadkul.se först när main pushas.
 - [ ] **Målgruppen** ("Målgrupp och innehåll" - separat från IARC): appen riktar
   sig till VUXNA (föräldrar och eventbesökare); barn/familj är en INNEHÅLLS-
   kategori, inte målgruppen. Välj **13 år och uppåt** (eller äldre) och kryssa
@@ -88,7 +89,8 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
   nedan är innehållsklassning och påverkas inte av målgruppsvalet.
 - [ ] **Innehållsklassningen** (IARC-enkäten): inga våldsamma/sexuella inslag, inget köp, ingen användargenererad kommunikation utan konto - men ange att appen visar användarskapat innehåll (event + eventchatt för inloggade) och har rapporteringsväg. Väntat utfall: 3+/E for Everyone.
 - [ ] **Play-skärmbilderna**: använd `play/`-varianterna (1320x2640, exakt 2:1 - Plays tak för telefonskärmbilder). Bilderna är tagna på iPhone; vill Google se Android-UI någon gång går de att ta om på en Android-enhet, men kravlistan (320-3840 px, max 2:1, PNG utan alfa, under 8 MB) är uppfylld som de är.
-- [ ] **Produktions-aab:en** från 9/10 finns byggd, men inget Play-butiksbeslut är taget - det här dokumentet gör materialet redo, inte beslutet.
+- [x] **Produktions-aab:en**: build 5 startad 23/10 21:35 (versionCode 5, EAS-bygge 3492edc4, commit ce525fb i vadkul-app, fingeravtryck cb8aab9d = dagens kod). Byggd från en REN git-worktree på HEAD (`git worktree add --detach <tmp> HEAD` + `cp -Rc node_modules <tmp>/node_modules`), eftersom checkouten hade okommitterade intro-/startval-ändringar från en annan session och EAS packar arbetsträdet. Androids byggkvot var inte slut (bara iOS-kvoten). Laddas upp till intern testning när inloggningen är klar. Build 2 (9/10) är förbrukad.
+- [ ] **App access-deklarationen**: chatten, vänner och Kommer kräver konto, så välj "vissa funktioner är begränsade" och ange demokontot från App Store Connect-inskicket (lösenordet har bara Josef).
 
 ### Firebase Console (djuplänkarna - gäller BÅDA plattformarna)
 
@@ -98,14 +100,14 @@ vadkul.se-länkar öppnar alltså inte appen, trots `associatedDomains` i app.js
 Hosting kör appAssociation i AUTO-läge och genererar filerna automatiskt ur
 Firebase-projektets appinställningar, så fixen är ren konsol - **ingen deploy**:
 
-- [ ] **iOS:** Firebase Console → Projektinställningar → Allmänt → iOS-appen →
+- [x] **iOS:** KLART (kollat 23/10 via Firebase Management API: App Store-ID 6820135961 + Team-ID 66D54NKWK7 ligger på iOS-appen, och AASA:n på vadkul.se listar `66D54NKWK7.se.vadkul.app`). Ursprunglig instruktion: Firebase Console → Projektinställningar → Allmänt → iOS-appen →
   fyll i **App Store-ID** och **Team-ID** (Apple Developer → Membership).
   Hosting börjar servera korrekt AASA direkt. OBS: Apples CDN cachar AASA,
   så enheter kan behöva upp till ett dygn (eller ominstallation av appen)
   innan universal links slår igenom.
-- [ ] **Android:** samma vy → Android-appen → lägg till **SHA-256-fingeravtrycket**
-  från EAS-nyckeln (`eas credentials` i vadkul-app visar det). Då fylls
-  assetlinks.json i automatiskt.
+- [x] **Android, uppladdningsnyckeln:** GJORT 23/10 via Firebase Management API (`POST firebase.googleapis.com/v1beta1/projects/vadkul-f2cb2/androidApps/1:888495806926:android:0576fefa5ae7eed361739f/sha` med firebase-tools-token). EAS-keystorens SHA-1 `91:55:72:1B:3A:3C:1A:75:DB:91:72:7F:03:E1:B9:C9:35:04:3B:35` och SHA-256 `0A:98:75:E8:99:61:5F:43:3D:BE:73:1E:3A:D4:ED:4F:EF:83:5D:59:48:C7:0A:EA:7B:6B:78:5F:80:3E:91:8D` (lästa med `keytool -printcert -jarfile build.aab`). Firebase skapade Android-OAuth-klienten automatiskt, så Google-inloggning funkar i byggen signerade med EAS-nyckeln (dev/preview/aab direkt). Appens google-services.json i repot saknar fortfarande den klienten - spelar ingen roll, RN Google Signin använder webClientId.
+- [ ] **Android, Play App Signing-nyckeln:** Play signerar OM butiksbyggena med Googles egen nyckel. Hämta dess SHA-1 + SHA-256 under Play Console → Setup → App signing (finns först när appen är skapad) och lägg till dem på samma sätt - annars ger Google-inloggningen DEVELOPER_ERROR i butiksversionen och app links faller.
+- [ ] assetlinks.json var fortfarande `[]` 23/10 21:50 trots SHA-256:an - Hosting kan behöva tid eller en ny deploy för att generera om. Kvittera igen; ligger den kvar tom får filen läggas statiskt i `apps/web/public/.well-known/`.
 - [ ] Kvittera efteråt: `curl https://vadkul.se/.well-known/apple-app-site-association`
   ska visa bundle-id:t under `details`, och `assetlinks.json` ska lista
   paketnamnet + fingeravtrycket.
