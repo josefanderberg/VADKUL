@@ -15,7 +15,7 @@ import { genitive, sortBlocked, type BlockRow } from '@/utils/chatModeration';
 import { blockUser, unblockUser, useModeration } from '@/services/moderationService';
 import { FRIEND_INVITE_TEXT, friendInviteUrl } from '@/utils/friendInvite';
 import type { TrophyMirror } from '@vadkul/kontrakt';
-import TrophyBadges from './TrophyBadges';
+import TrophyLines from './TrophyLines';
 
 /**
  * VÄNNER i profilpanelen (spår 3, 7/10 kväll - "man kan gå in på sina
@@ -403,9 +403,7 @@ export default function FriendsSection({ panelOpen, allEvents, onPickEvent }: Fr
                                         </button>
                                         {open && (
                                             <div className="pl-[52px] pr-4 pb-2">
-                                                {detail?.trophies && detail.trophies.length > 0 && (
-                                                    <div className="mb-1"><TrophyBadges trophies={detail.trophies} /></div>
-                                                )}
+                                                {detail?.trophies && <TrophyLines trophies={detail.trophies} className="mb-1" />}
                                                 {detail?.state === 'loading' || !detail ? (
                                                     <p className="text-[11px] font-semibold text-slate-400">Hämtar…</p>
                                                 ) : detail.state === 'hidden' ? (

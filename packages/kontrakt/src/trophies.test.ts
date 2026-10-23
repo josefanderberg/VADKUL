@@ -25,11 +25,12 @@ describe('readTrophies', () => {
 });
 
 describe('describeTrophy', () => {
-    it('ger symbolen och texten med numret', () => {
+    it('ger profilraden och förklaringen med numret', () => {
         expect(describeTrophy({ id: 'fortur-2026-2', type: 'fortur-2026', number: 2, of: 4 })).toEqual({
-            symbol: '🏆',
+            symbol: '✦',
             title: 'Förtur till appen',
             text: 'En av de 4 som bjöd in en vän innan appen släpptes. Nr 2 av 4.',
+            line: '✦ Förtur till appen · nr 2 av 4',
         });
     });
 });

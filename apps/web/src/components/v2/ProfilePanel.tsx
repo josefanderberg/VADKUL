@@ -24,7 +24,7 @@ import { EVENT_CATEGORIES, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
 import { forturVannerText, memberInviteUrl } from '@/utils/forturInbjudan';
 import { countForturInvites } from '@/services/forturService';
 import { readTrophies, type TrophyMirror } from '@vadkul/kontrakt';
-import TrophyBadges from './TrophyBadges';
+import TrophyLines from './TrophyLines';
 
 /** "Visa även på kartan"-raderna: opt-in-källorna + 🧸 (samma ordning som
  *  kategorikolumnen hade dem överst, innan den revs 15/9). */
@@ -611,8 +611,6 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                             ) : (
                                 <div className="flex items-center gap-1.5 min-w-0">
                                     <p className="font-black text-base text-black dark:text-white truncate">{displayName}</p>
-                                    {/* Bara symbolen här - förklaringen fälls ut under raden. */}
-                                    <TrophyBadges trophies={trophies} />
                                     <button
                                         type="button"
                                         onClick={startEditName}
@@ -625,6 +623,8 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                 </div>
                             )}
                             <p className="text-xs font-semibold text-slate-500 truncate">{user.email}</p>
+                            {/* Troféerna - en diskret rad, ingen symbol vid namnet. */}
+                            <TrophyLines trophies={trophies} className="mt-0.5" />
                         </div>
                         <button
                             type="button"

@@ -1,6 +1,7 @@
 /**
- * Troféerna (ägarbeslut 23/10 2026). Josef: "bygg det som objekt" och "det
- * räcker med en symbol, men att det kanske syns om man klickar på den".
+ * Troféerna (ägarbeslut 23/10 2026). Josef: "bygg det som objekt", och om
+ * visningen: ingen pokal vid namnet ("det behöver kanske inte vara synligt
+ * på det sättet") - en diskret RAD under namnet i profilen (`line`).
  *
  *  - Varje trofé är ett EGET OBJEKT, `trophies/{id}` (TrophyDoc), med nummer,
  *    ägare och historik. Då kan den en dag byta ägare genom att bara ägaren
@@ -12,7 +13,8 @@
  *  - BÅDA skrivs bara av admin-SDK:t (utdelningsskriptet). Reglerna har ingen
  *    match för trophies (stängd för klienter) och spärrar users.trophies för
  *    klientens create och update - annars kunde vem som helst ge sig en.
- *  - UI:t visar bara symbolen bredvid namnet; ett tryck visar describeTrophy.
+ *  - UI:t visar describeTrophy(t).line under namnet, i egen profil och i
+ *    den utfällda vänprofilen. Ingen knapp, ingen symbol vid namnet.
  */
 
 export const TROPHY_TYPES = ['fortur-2026'] as const;
@@ -44,7 +46,7 @@ export interface TrophyMirror {
 
 const DEFS: Record<TrophyType, { symbol: string; title: string; text: (t: TrophyMirror) => string }> = {
     'fortur-2026': {
-        symbol: '🏆',
+        symbol: '✦',
         title: 'Förtur till appen',
         text: t => `En av de ${t.of} som bjöd in en vän innan appen släpptes. Nr ${t.number} av ${t.of}.`,
     },
@@ -73,10 +75,15 @@ export function readTrophies(raw: unknown): TrophyMirror[] {
     return out;
 }
 
-/** Symbolen och texten som visas när man trycker på den. */
-export function describeTrophy(t: TrophyMirror): { symbol: string; title: string; text: string } {
+/** Raden profilerna visar (`line`) + en längre förklaring (`text`). */
+export function describeTrophy(t: TrophyMirror): { symbol: string; title: string; text: string; line: string } {
     const d = DEFS[t.type];
-    return { symbol: d.symbol, title: d.title, text: d.text(t) };
+    return {
+        symbol: d.symbol,
+        title: d.title,
+        text: d.text(t),
+        line: `${d.symbol} ${d.title} · nr ${t.number} av ${t.of}`,
+    };
 }
 
 export interface TrophyAward {
