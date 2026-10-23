@@ -14,7 +14,7 @@ export const metadata: Metadata = {
  * Innehållet speglar vad koden faktiskt gör — uppdatera sidan när datahanteringen ändras.
  */
 export default function IntegritetPage() {
-    const sections: { title: string; body: React.ReactNode }[] = [
+    const sections: { id?: string; title: string; body: React.ReactNode }[] = [
         {
             title: 'Vad VADKUL är',
             body: (
@@ -89,6 +89,22 @@ export default function IntegritetPage() {
             ),
         },
         {
+            // Google Play kräver en webbadress där man kan begära kontoradering
+            // (Data safety → Dataradering): https://vadkul.se/integritet#radera-konto
+            id: 'radera-konto',
+            title: 'Radera ditt konto',
+            body: (
+                <>Du raderar kontot själv, i appen och på vadkul.se: öppna profilen och välj Radera
+                konto. Då tas kontot och din profil bort direkt, och det går inte att ångra. Kommer
+                du inte åt appen kan du i stället mejla{' '}
+                <a href="mailto:hej@vadkul.se" className="underline hover:text-slate-900 transition-colors">
+                    hej@vadkul.se
+                </a>{' '}
+                från kontots e-postadress, så raderar vi kontot åt dig inom 30 dagar. Kraschrapporter
+                rensas automatiskt efter 90 dagar.</>
+            ),
+        },
+        {
             title: 'Eventdata och arrangörer',
             body: (
                 <>Eventen på kartan är publik information: titel, tid, plats och arrangör, hämtade
@@ -115,11 +131,11 @@ export default function IntegritetPage() {
                 </Link>
 
                 <h1 className="mt-5 text-3xl font-black text-[#006AA7] tracking-tight">Integritet på VADKUL</h1>
-                <p className="mt-1 text-xs font-bold text-slate-400">Senast uppdaterad 17 oktober 2026</p>
+                <p className="mt-1 text-xs font-bold text-slate-400">Senast uppdaterad 23 oktober 2026</p>
 
                 <div className="mt-8 flex flex-col gap-7">
                     {sections.map(s => (
-                        <section key={s.title}>
+                        <section key={s.title} id={s.id}>
                             <h2 className="text-base font-black text-slate-900 mb-1.5">{s.title}</h2>
                             <p className="text-sm leading-relaxed text-slate-600 font-medium">{s.body}</p>
                         </section>
