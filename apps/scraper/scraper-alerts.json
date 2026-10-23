@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-22T06:28:55.111Z",
+  "generatedAt": "2026-10-23T07:16:22.912Z",
   "counts": {
     "fel": 1,
-    "varning": 39,
-    "nollkoordinatTotalt": 646
+    "varning": 45,
+    "nollkoordinatTotalt": 574
   },
   "alerts": [
     {
@@ -16,9 +16,9 @@
     {
       "level": "varning",
       "kind": "tyst",
-      "source": "tickster-ort-eskilstuna-2",
-      "since": "2026-10-01",
-      "message": "gav 6 event 2026-09-25, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+      "source": "sb-followmeguide-se",
+      "since": "2026-10-16",
+      "message": "gav 32 event 2026-10-13, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -35,14 +35,26 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Destination Uppsala",
-      "message": "14 av 21 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+      "source": "Boxholms församling",
+      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Dösjebro församling",
-      "message": "6 av 10 kommande event ligger 2026-10-22 — sajtvitt datum i stället för eventets?"
+      "source": "Dalheimers hus",
+      "message": "7 av 11 kommande event ligger 2026-11-12 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Destination Uppsala",
+      "message": "14 av 20 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Fjälkinge församling",
+      "message": "7 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -53,14 +65,32 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Götene pastorat",
+      "message": "21 av 34 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Ronneby församling",
+      "message": "9 av 15 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Stiftelsen Läckö Slott",
       "message": "7 av 10 kommande event ligger 2026-10-29 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Tollarps församling",
+      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Åtvids församling",
-      "message": "9 av 15 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "message": "9 av 14 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -71,8 +101,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "646 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 20, NBV 18, Förlösa-Kläckeberga församling 17, Latinamerika i Fokus 16, Värö-Stråvalla församling 15"
+      "source": "574 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Tickster Norge 19, NBV 18, Söndrum-Vapnö församling 17, Katrineholmsbygdens församling 14, Förlösa-Kläckeberga församling 14"
     },
     {
       "level": "varning",
@@ -84,7 +114,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Götene pastorat",
-      "message": "invariant-vakten larmar (20 av 40 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (20 av 34 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -96,19 +126,19 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Latinamerika i Fokus",
-      "message": "invariant-vakten larmar (2 av 27 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (2 av 24 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Ronneby församling",
-      "message": "invariant-vakten larmar (8 av 19 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 15 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (7 av 280 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 276 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -248,6 +278,13 @@
       "source": "storsjoyran",
       "since": "2026-09-18",
       "message": "i karantän sedan 2026-09-18: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "tickster-ort-eskilstuna-2",
+      "since": "2026-10-23",
+      "message": "i karantän sedan 2026-10-23: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
