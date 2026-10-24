@@ -11,9 +11,14 @@ i en grupp: en butikslänk läses som annons av varje moderator, oavsett hur
 nyttig appen är. Gotland-lärdomen (72 likes, borttaget som reklam) och
 17/7-lärdomen (länkinlägg plockas inom ett dygn) gäller fullt ut. Därför:
 
-1. **Appnyheten åker snålskjuts på eventlistan, inte tvärtom.** Raderna med
-   lokala event är fortfarande värdet för den som aldrig klickar — appen är
-   ett PS i maker-stycket. Samma recept som satte rekorden i augusti.
+1. **Två format, välj per grupp.** Eventlistan (stommen nedan) är det
+   säkraste: raderna är värdet för den som aldrig klickar, och appen är ett
+   PS. Rakt-på-sak-varianten (variant R) är maker-storyn utan rader — bara
+   ort och eventantal byts. Den duger i grupper där kartan redan postats
+   och blev väl mottagen (nyheten är då "den jag visade i augusti finns som
+   app"), och är billig nog att hinna 2–3 grupper om dagen i flera veckor.
+   Raderna behövs fortfarande där vi är nya, där gruppen är strikt eller
+   ämnesbegränsad, och där ett inlägg redan tagits bort.
 2. **Ingen länk alls i grupperna** (ägarbeslut 24/10) — varken i inlägget
    eller i en kommentar. "Sök på vadkul i App Store" ersätter länken, precis
    som "googla vadkul" gjorde när gruppregler stoppade webblänken. En
@@ -68,6 +73,55 @@ skapar.
 **Ingen länkkommentar.** Frågar någon i tråden efter adressen: svara
 "vadkul.se, eller sök på vadkul i App Store" i klartext — ett svar på en
 fråga plockas inte som reklam.
+
+## Variant R — rakt på sak (utan eventrader)
+
+Maker-storyn (variant B i `facebook-poster.md`) med appnyheten. Det enda som
+byts per grupp är **ort** och **antal** — antalet är det lokala ankaret som
+gör texten till ett tips om just den här orten och inte en kopia. Hämta det
+från stadssidans rubrik (`vadkul.se/evenemang/[stad]`), eller be Claude
+räkna ur nattaggregatet. Småort utan stadssida: se nedan.
+
+> Hej [Ort]! 👋
+>
+> Jag har byggt vadkul.se — en karta där allt som händer i hela Sverige
+> samlas på ett ställe i stället för utspritt på tio olika sidor. Konserter,
+> loppisar, hockey, barnaktiviteter, teater. Just nu ligger [X] event i
+> [ort]-trakten på kartan.
+>
+> Nu finns den äntligen som riktig app för iPhone — sök på "vadkul" i
+> App Store. Android är på väg.
+>
+> Det är första versionen, byggd på kvällar och helger, så räkna med en och
+> annan bugg. Hittar du något som strular, eller ett event som saknas i
+> [ort], skriv här så fixar jag så fort jag kan. Gratis, och inget konto
+> behövs för att titta.
+>
+> Vad saknas i [ort]? 👇
+
+Utan rader måste slutfrågan göra jobbet: "vad saknas?" ger tips i
+kommentarerna, och kommentarer ger räckvidd. Räkna med färre
+"vilket går ni på?"-trådar och fler "lägg till X" — det är bra för kartan.
+
+**Tre öppningar att rotera** (identisk text i många grupper flaggas av
+FB:s filter även utan länk):
+
+1. "Hej [Ort]! 👋 Jag har byggt vadkul.se — ..."
+2. "Ni som brukar fråga här vad som händer i helgen: jag har byggt en
+   karta för exakt det — vadkul.se, där allt som händer i hela Sverige
+   samlas på ett ställe. ..."
+3. "Litet hobbyprojekt som växt: vadkul.se, en karta över allt som
+   händer i Sverige — [X] event i [ort]-trakten just nu. ..."
+
+**Småort (under ~5 event i själva orten):** skriv inte ut antalet för
+"trakten" (Nykvarn-läxan). Byt antalsmeningen mot: "För [ort] är kartan
+tunn just nu — det är därför jag skriver här: vad borde vara med?" Det är
+Malå-formatet, och det fungerar bättre än en siffra som lokalborna
+genomskådar.
+
+**Karens:** maker-storyn postas en gång per grupp. I grupper där B redan
+gått (augusti) är appsläppet ett giltigt andra tillfälle, men håll tre
+veckor sedan senaste inlägget som vanligt.
 
 ## Appstycket — tre formuleringar att rotera
 
