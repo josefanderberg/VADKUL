@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-23T07:16:22.912Z",
+  "generatedAt": "2026-10-24T06:15:52.346Z",
   "counts": {
     "fel": 1,
-    "varning": 45,
-    "nollkoordinatTotalt": 574
+    "varning": 47,
+    "nollkoordinatTotalt": 553
   },
   "alerts": [
     {
@@ -19,6 +19,13 @@
       "source": "sb-followmeguide-se",
       "since": "2026-10-16",
       "message": "gav 32 event 2026-10-13, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "skordefest",
+      "since": "2026-10-09",
+      "message": "gav 1 event 2026-10-02, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -53,6 +60,12 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Enskede-Årsta församling",
+      "message": "6 av 10 kommande event ligger 2026-10-28 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Fjälkinge församling",
       "message": "7 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
@@ -66,13 +79,13 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Götene pastorat",
-      "message": "21 av 34 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "message": "21 av 32 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Ronneby församling",
-      "message": "9 av 15 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "message": "9 av 13 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -101,8 +114,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "574 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Tickster Norge 19, NBV 18, Söndrum-Vapnö församling 17, Katrineholmsbygdens församling 14, Förlösa-Kläckeberga församling 14"
+      "source": "553 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Tickster Norge 19, NBV 17, Söndrum-Vapnö församling 15, Förlösa-Kläckeberga församling 13, Studiefrämjandet 12"
     },
     {
       "level": "varning",
@@ -114,7 +127,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Götene pastorat",
-      "message": "invariant-vakten larmar (20 av 34 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (20 av 32 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -126,13 +139,13 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Latinamerika i Fokus",
-      "message": "invariant-vakten larmar (2 av 24 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (2 av 20 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Ronneby församling",
-      "message": "invariant-vakten larmar (8 av 15 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 13 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -144,7 +157,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 23 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 22 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",

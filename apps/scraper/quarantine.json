@@ -78,14 +78,14 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-17",
-      "emptyRetries": 8
+      "lastRetry": "2026-10-24",
+      "emptyRetries": 9
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-17",
-      "emptyRetries": 8
+      "lastRetry": "2026-10-24",
+      "emptyRetries": 9
     },
     "sb-visitbastad-se": {
       "since": "2026-10-02",
