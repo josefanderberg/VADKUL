@@ -14,8 +14,13 @@ nyttig appen är. Gotland-lärdomen (72 likes, borttaget som reklam) och
 1. **Appnyheten åker snålskjuts på eventlistan, inte tvärtom.** Raderna med
    lokala event är fortfarande värdet för den som aldrig klickar — appen är
    ett PS i maker-stycket. Samma recept som satte rekorden i augusti.
-2. **Butikslänken i första kommentaren**, aldrig i inlägget. I hårda grupper
-   ingen länk alls: "sök på vadkul i App Store" funkar som "googla vadkul".
+2. **Ingen länk alls i grupperna** (ägarbeslut 24/10) — varken i inlägget
+   eller i en kommentar. "Sök på vadkul i App Store" ersätter länken, precis
+   som "googla vadkul" gjorde när gruppregler stoppade webblänken. En
+   butikslänk är den starkaste reklamsignalen vi kan skicka, och den som
+   vill hitta appen gör det på fem sekunder ändå. Kolla innan första
+   inlägget att sökningen "vadkul" i App Store verkligen visar appen överst
+   (nysläppta appar kan ta något dygn att indexeras).
 3. **Ärligheten om buggarna är en styrka, inte en brasklapp.** "Första
    versionen, byggd på kvällar och helger, säg till vad som strular" är exakt
    den hobbyprojekt-vinkel svenska grupper belönar — och den gör inlägget till
@@ -60,11 +65,9 @@ skapar.
 >
 > Vad lockar mest? 👇
 
-**Första kommentaren** (direkt efter publicering, i grupper som tål länkar):
-`Kartan för [ort]: https://vadkul.se/evenemang/[stad] · Appen: https://apps.apple.com/se/app/id6820135961 — tipsa om det som fattas!`
-Saknar orten stadssida: `https://vadkul.se`.
-
-Stjärnlänk, om den används: **STJARNA1**, aldrig ARRANGOR1 (attributionen).
+**Ingen länkkommentar.** Frågar någon i tråden efter adressen: svara
+"vadkul.se, eller sök på vadkul i App Store" i klartext — ett svar på en
+fråga plockas inte som reklam.
 
 ## Appstycket — tre formuleringar att rotera
 
@@ -89,6 +92,8 @@ helgen? 👇" / "Vad har jag missat i [ort]? 👇".
   gruppens ämne och kartan beskriven i gruppens språk.
 - Bara event i gruppens **kommun** (Landskrona-läxan 1/9); småort → räkna
   inom ~8 km, under fem event → Malå-formatet eller skippa.
+- Nämn vadkul.se högst en gång i brödtexten och butiken en gång — fler
+  omnämnanden gör texten till en annons igen, länk eller inte.
 - Max 2–3 grupper per dag, samma grupp tidigast var tredje vecka, nymedlem →
   delta någon dag först. Admin-DM först i grupper som avvisat tidigare.
 - Svara på varje kommentar första dygnet. Bugg i tråden = tacka, bekräfta,
@@ -99,8 +104,8 @@ helgen? 👇" / "Vad har jag missat i [ort]? 👇".
 ## När Android är live
 
 Byt appmeningen till: "...och nu finns den äntligen som riktig app, för både
-iPhone och Android (sök på "vadkul" i App Store eller Google Play)." Lägg
-Play-länken i första kommentaren: `https://play.google.com/store/apps/details?id=se.vadkul.app`.
+iPhone och Android (sök på "vadkul" i App Store eller Google Play)."
+Fortfarande ingen länk i grupperna.
 
 ## Variant D — när någon annan frågar vad man ska göra
 
@@ -122,3 +127,6 @@ Play-länken i första kommentaren: `https://play.google.com/store/apps/details?
 > https://apps.apple.com/se/app/id6820135961
 
 Med butiksskärmbilden `docs/butik-assets/skarmbild-01-karta.png` som bild.
+Butikslänkarna (App Store nu, Play när den finns:
+`https://play.google.com/store/apps/details?id=se.vadkul.app`) hör hemma
+här och i medlemsmejlet — inte i grupperna.
