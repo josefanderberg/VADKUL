@@ -76,48 +76,42 @@ fråga plockas inte som reklam.
 
 ## Variant R — rakt på sak (utan eventrader)
 
-Maker-storyn (variant B i `facebook-poster.md`) med appnyheten. Det enda som
-byts per grupp är **ort** och **antal** — antalet är det lokala ankaret som
-gör texten till ett tips om just den här orten och inte en kopia. Hämta det
-från stadssidans rubrik (`vadkul.se/evenemang/[stad]`), eller be Claude
-räkna ur nattaggregatet. Småort utan stadssida: se nedan.
+Maker-storyn (variant B i `facebook-poster.md`) med appnyheten. **En enda
+plats att byta per grupp: ortnamnet i hälsningen** (ägarbeslut 24/10 —
+"för många ställen att byta"). Brödtexten är generisk: "er stad och hela
+Sverige", "hos er".
 
 > Hej [Ort]! 👋
 >
-> Jag har byggt vadkul.se — en karta där allt som händer i hela Sverige
-> samlas på ett ställe i stället för utspritt på tio olika sidor. Konserter,
-> loppisar, hockey, barnaktiviteter, teater. Just nu ligger [X] event i
-> [ort]-trakten på kartan.
+> Jag har byggt vadkul.se — en karta där allt som händer i er stad och i
+> hela Sverige samlas på ett ställe, i stället för utspritt på tio olika
+> sidor. Konserter, loppisar, hockey, barnaktiviteter, teater.
 >
 > Nu finns den äntligen som riktig app för iPhone — sök på "vadkul" i
 > App Store. Android är på väg.
 >
 > Det är första versionen, byggd på kvällar och helger, så räkna med en och
-> annan bugg. Hittar du något som strular, eller ett event som saknas i
-> [ort], skriv här så fixar jag så fort jag kan. Gratis, och inget konto
+> annan bugg. Hittar du något som strular, eller ett event som saknas hos
+> er, skriv här så fixar jag så fort jag kan. Gratis, och inget konto
 > behövs för att titta.
 >
-> Vad saknas i [ort]? 👇
+> Vad saknas hos er? 👇
 
 Utan rader måste slutfrågan göra jobbet: "vad saknas?" ger tips i
 kommentarerna, och kommentarer ger räckvidd. Räkna med färre
 "vilket går ni på?"-trådar och fler "lägg till X" — det är bra för kartan.
 
-**Tre öppningar att rotera** (identisk text i många grupper flaggas av
-FB:s filter även utan länk):
+**Spamfiltret:** samma brödtext i många grupper från ett konto är det FB:s
+filter tittar på, med eller utan länk. Skyddet är takten — max 2–3 grupper
+om dagen, utspritt över dagen — inte omskrivningar. Blir ett inlägg stoppat
+med "liknande innehåll": vänta till nästa dag och byt första meningen
+("Hej [Ort]!" → "Ni som brukar fråga här vad som händer i helgen:").
 
-1. "Hej [Ort]! 👋 Jag har byggt vadkul.se — ..."
-2. "Ni som brukar fråga här vad som händer i helgen: jag har byggt en
-   karta för exakt det — vadkul.se, där allt som händer i hela Sverige
-   samlas på ett ställe. ..."
-3. "Litet hobbyprojekt som växt: vadkul.se, en karta över allt som
-   händer i Sverige — [X] event i [ort]-trakten just nu. ..."
-
-**Småort (under ~5 event i själva orten):** skriv inte ut antalet för
-"trakten" (Nykvarn-läxan). Byt antalsmeningen mot: "För [ort] är kartan
-tunn just nu — det är därför jag skriver här: vad borde vara med?" Det är
-Malå-formatet, och det fungerar bättre än en siffra som lokalborna
-genomskådar.
+**Valfritt lokalt ankare** när en grupp känns extra skeptisk: lägg till
+"Just nu ligger [X] event i [ort]-trakten på kartan" efter kategoriraden,
+med antalet från stadssidans rubrik. Inte för småorter (Nykvarn-läxan:
+radien ljuger) — där i stället "För [ort] är kartan tunn just nu, vad
+borde vara med?".
 
 **Karens:** maker-storyn postas en gång per grupp. I grupper där B redan
 gått (augusti) är appsläppet ett giltigt andra tillfälle, men håll tre
