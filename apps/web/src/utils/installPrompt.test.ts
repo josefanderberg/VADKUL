@@ -135,8 +135,8 @@ describe('appStoreLinkFor + storeNameFor (butiksbannern)', () => {
         expect(appStoreLinkFor('android', { ios: länkar.ios, android: null })).toBeNull();
     });
 
-    it('defaultlänkarna är AV tills släppet (båda null idag)', () => {
-        expect(appStoreLinkFor('ios-safari')).toBeNull();
+    it('defaultläget speglar släppen: iOS ute i App Store (22/10), Play inte än', () => {
+        expect(appStoreLinkFor('ios-safari')).toBe('https://apps.apple.com/se/app/id6820135961');
         expect(appStoreLinkFor('android')).toBeNull();
     });
 });
