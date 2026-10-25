@@ -4,6 +4,34 @@ _Utkast 24/10 2026. Appen ligger i App Store (`apps.apple.com/se/app/id682013596
 Android är på väg till Google Play. Systerdokument: `facebook-poster.md`
 (varianterna A–D), `facebook-grupper.md` (loggen + lärdomarna), `app-store-butik.md`._
 
+## Tidpunkt: grupperna väntar tills både App Store och Google Play är live
+
+Ägarbeslut 24/10 (Josefs fråga: "borde vi vänta?"). Ja, av fyra skäl:
+
+1. **Gruppen får ett skott.** Maker-storyn postas en gång, och karensen är
+   tre veckor. Går den upp med "Android på väg" bränns lanseringen för
+   ungefär fyra av tio läsare, och ett andra inlägg "nu även Android" i
+   samma grupp är ren reklam utan nyhetsvärde.
+2. **"På väg" är ett löfte vi inte styr över.** Plays granskning av en ny
+   app kan ta dagar eller veckor. Halkar den, åldras varje gruppinlägg
+   som redan ligger uppe.
+3. **Tråden ska handla om event, inte om "när kommer Android?"** Hälften
+   av kommentarerna blir annars den frågan.
+4. **Det kostar nästan inget att vänta.** Appen är sökbar i App Store, och
+   den varma publiken (medlemmarna, sidföljarna) kan få iPhone-nyheten nu
+   via sidinlägget och medlemsmejlet. Grupperna är den kalla publiken —
+   de får den färdiga nyheten.
+
+**Ordningen:**
+- Nu: sidinlägget på VADKUL-sidan + egna profilen (iPhone nu, Android
+  snart) och medlemsmejlet. Fyll i `APP_STORE_URL` i webben.
+- Dagarna emellan: laga det TestFlight- och App Store-användarna
+  rapporterar, så att första gruppvågen möter en bättre 1.0.x. Kolla att
+  "vadkul" ger appen överst i både App Store och Play.
+- När Play är live: fyll i `PLAY_STORE_URL`, byt appmeningen i variant R
+  till "för både iPhone och Android — sök på vadkul i App Store eller
+  Google Play", och börja med grupperna i 2–3-om-dagen-takten.
+
 ## Bedömningen
 
 En ren "nu finns appen i App Store"-nyhet är det mest reklamlika vi kan posta
