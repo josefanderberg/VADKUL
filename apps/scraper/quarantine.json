@@ -96,8 +96,8 @@
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-18",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-25",
+      "emptyRetries": 6
     },
     "staffanstorp": {
       "since": "2026-08-19",
@@ -123,11 +123,15 @@
     },
     "uppsala": {
       "since": "2026-10-16",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-25",
+      "emptyRetries": 1
     },
     "vallentuna-kommun": {
       "since": "2026-10-16",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-25",
+      "emptyRetries": 1
     }
   }
 }

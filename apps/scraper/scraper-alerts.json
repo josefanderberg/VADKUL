@@ -1,18 +1,11 @@
 {
-  "generatedAt": "2026-10-24T06:15:52.346Z",
+  "generatedAt": "2026-10-25T07:19:01.790Z",
   "counts": {
-    "fel": 1,
-    "varning": 47,
-    "nollkoordinatTotalt": 553
+    "fel": 0,
+    "varning": 44,
+    "nollkoordinatTotalt": 653
   },
   "alerts": [
-    {
-      "level": "fel",
-      "kind": "krasch",
-      "source": "bergmancenter",
-      "since": "2026-10-21",
-      "message": "senaste körningen gav 0 event och fel: engine threw: fetch failed"
-    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -30,20 +23,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Alseda församling",
-      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Artipelag",
       "message": "20 av 20 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Boxholms församling",
-      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "source": "Botkyrka Kommun",
+      "message": "13 av 16 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -60,32 +47,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Enskede-Årsta församling",
-      "message": "6 av 10 kommande event ligger 2026-10-28 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Fjälkinge församling",
       "message": "7 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Friluftsfrämjandet Järfälla",
-      "message": "7 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Götene pastorat",
-      "message": "21 av 32 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "message": "21 av 35 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Ronneby församling",
-      "message": "9 av 13 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "source": "Latinamerika i Fokus",
+      "message": "8 av 11 kommande event ligger 2026-10-25 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -96,14 +71,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Tollarps församling",
-      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Åtvids församling",
-      "message": "9 av 14 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "source": "Sundsvalls museum",
+      "message": "6 av 10 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -114,8 +83,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "553 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Tickster Norge 19, NBV 17, Söndrum-Vapnö församling 15, Förlösa-Kläckeberga församling 13, Studiefrämjandet 12"
+      "source": "653 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 20, Söndrum-Vapnö församling 20, Tickster Norge 18, Katrineholmsbygdens församling 16, Förlösa-Kläckeberga församling 15"
     },
     {
       "level": "varning",
@@ -126,38 +95,44 @@
     {
       "level": "varning",
       "kind": "invariant",
+      "source": "Botkyrka Kommun",
+      "message": "invariant-vakten larmar (1 av 16 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
       "source": "Götene pastorat",
-      "message": "invariant-vakten larmar (20 av 32 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (20 av 35 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Korpen Gävle",
-      "message": "invariant-vakten larmar (7 av 28 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 64 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Latinamerika i Fokus",
-      "message": "invariant-vakten larmar (2 av 20 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (2 av 11 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Ronneby församling",
-      "message": "invariant-vakten larmar (8 av 13 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 16 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (7 av 276 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 272 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 22 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 20 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
