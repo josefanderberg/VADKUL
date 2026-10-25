@@ -63,7 +63,13 @@ function FaceDot({ face }: { face: RsvpFace }) {
 
 // Lite större knappar sedan 7/10 (Josef: "de knapparna vara lite större, och
 // inte med emojis") - 🤔-emojin är borta, ikonerna (lucide) står kvar.
-const BTN = 'pointer-events-auto inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-black transition active:scale-95 border';
+// Under sm (telefon) är texten 12 px och sidoluften 10 px: det är vad som
+// krävs för att Intresserad · Kommer · Bjud med · ANMÄL med räknare ska rymmas
+// på EN rad i 375 px (ägarbeslut 25/10, se RsvpRow). Höjden (py-2) är samma.
+const BTN = 'pointer-events-auto inline-flex items-center gap-1.5 rounded-full px-2.5 sm:px-3.5 py-2 text-[12px] sm:text-[13px] font-black transition active:scale-95 border';
+// Textknapparna får krympa (texten klipps) innan raden bryts - appens
+// flexShrink/numberOfLines 1. Ikonknappen och ANMÄL håller sin bredd.
+const BTN_TEXT = 'min-w-0 shrink';
 const BTN_ON = 'bg-[#006AA7] text-white border-[#005590] shadow-md';
 const BTN_OFF = 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-border hover:bg-slate-50 dark:hover:bg-zinc-700';
 
@@ -128,23 +134,23 @@ function RsvpButtons({ myRsvp, goingCount, interestedCount, onSetRsvp, onInvite 
                 type="button"
                 aria-pressed={myRsvp === 'interested'}
                 onClick={() => onSetRsvp('interested')}
-                className={`${BTN} ${myRsvp === 'interested' ? BTN_ON : BTN_OFF}`}
+                className={`${BTN} ${BTN_TEXT} ${myRsvp === 'interested' ? BTN_ON : BTN_OFF}`}
             >
-                Intresserad
+                <span className="truncate">Intresserad</span>
                 {interestedCount !== null && interestedCount > 0 && (
-                    <span className={`tabular-nums ${myRsvp === 'interested' ? 'text-white/70' : 'text-slate-400'}`}>{interestedCount}</span>
+                    <span className={`shrink-0 tabular-nums ${myRsvp === 'interested' ? 'text-white/70' : 'text-slate-400'}`}>{interestedCount}</span>
                 )}
             </button>
             <button
                 type="button"
                 aria-pressed={myRsvp === 'going'}
                 onClick={() => onSetRsvp('going')}
-                className={`${BTN} ${myRsvp === 'going' ? BTN_ON : BTN_OFF}`}
+                className={`${BTN} ${BTN_TEXT} ${myRsvp === 'going' ? BTN_ON : BTN_OFF}`}
             >
-                <Check size={15} strokeWidth={3} aria-hidden />
-                Kommer
+                <Check size={15} strokeWidth={3} aria-hidden className="shrink-0" />
+                <span className="truncate">Kommer</span>
                 {goingCount !== null && goingCount > 0 && (
-                    <span className={`tabular-nums ${myRsvp === 'going' ? 'text-white/70' : 'text-slate-400'}`}>{goingCount}</span>
+                    <span className={`shrink-0 tabular-nums ${myRsvp === 'going' ? 'text-white/70' : 'text-slate-400'}`}>{goingCount}</span>
                 )}
             </button>
             <button
@@ -152,7 +158,7 @@ function RsvpButtons({ myRsvp, goingCount, interestedCount, onSetRsvp, onInvite 
                 onClick={onInvite}
                 aria-label="Bjud med någon - dela eventet"
                 title="Bjud med någon"
-                className={`${BTN} ${BTN_OFF}`}
+                className={`${BTN} shrink-0 ${BTN_OFF}`}
             >
                 {/* Ikon-bara sedan 7/10: ANMÄL/BOKA tog platsen i raden
                     (och delningen bor HÄR sedan dela-knappen i knappraden
@@ -173,7 +179,7 @@ function CtaPill({ cta, onVisitCta }: { cta: RsvpCta; onVisitCta?: () => void })
             target="_blank"
             rel="noopener noreferrer"
             onClick={onVisitCta}
-            className={`pointer-events-auto shrink-0 inline-flex items-center gap-1 rounded-full pl-3 pr-2 py-1.5 text-xs font-black uppercase tracking-wider shadow-md ring-1 ring-inset transition active:scale-95 ${
+            className={`pointer-events-auto shrink-0 whitespace-nowrap inline-flex items-center gap-1 rounded-full pl-2.5 pr-1.5 sm:pl-3 sm:pr-2 py-1.5 text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-md ring-1 ring-inset transition active:scale-95 ${
                 cta.gold
                     ? 'bg-gradient-to-r from-[#fbbf24] to-[#d97706] text-amber-950 ring-white/40 hover:from-[#fcd34d] hover:to-[#f59e0b]'
                     : 'bg-gradient-to-r from-[#0077BC] to-[#005590] text-white ring-white/25 hover:from-[#0083CE] hover:to-[#00619F]'
@@ -182,6 +188,48 @@ function CtaPill({ cta, onVisitCta }: { cta: RsvpCta; onVisitCta?: () => void })
             {cta.label}
             <ArrowRight size={13} aria-hidden />
         </a>
+    );
+}
+
+interface RsvpRowProps extends RsvpButtonsProps {
+    /** Avatarraden (bara raden i kortet; toppraden skickar ingen). */
+    faces?: RsvpFace[];
+    cta: RsvpCta | null;
+    onVisitCta?: () => void;
+}
+
+/**
+ * SVARSRADEN - ALLTID EN RAD (ägarbeslut 23/10 för appen, 25/10 för webben,
+ * Josef: "anmäl, kommer, intresserad. De ska aldrig vara på 2 rader. alltid
+ * på 1"): avatarer · Intresserad · Kommer · Bjud med · ANMÄL/BOKA, delad av
+ * raden i kortet och toppraden (appens SvarsRad). Ingen flex-wrap: blir det
+ * trångt krymper textknapparna (truncate) och ANMÄL står kvar - precis som
+ * appen. Under sm ger avatarraden vika när det finns en ANMÄL/BOKA-knapp
+ * (fyra knappar + räknare fyller 375 px); utan utlänk visas den även där.
+ * Ersätter 8/10-radbrytningen, som lät ANMÄL falla ner på en egen rad.
+ */
+function RsvpRow({ faces = [], cta, onVisitCta, ...buttons }: RsvpRowProps) {
+    return (
+        <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2">
+            {/* Avatarraden: de som kommer/är intresserade - överlappade
+                små profilbilder, anonyma som grå siluett. */}
+            {faces.length > 0 && (
+                <div
+                    className={`${cta ? 'hidden sm:flex' : 'flex'} items-center shrink-0 -space-x-2`}
+                    aria-label={`${faces.length} personer har svarat`}
+                >
+                    {faces.slice(0, 3).map(f => <FaceDot key={f.uid} face={f} />)}
+                    {faces.length > 3 && (
+                        <span className="w-6 h-6 rounded-full border-2 border-card bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-300 flex items-center justify-center text-[9px] font-black">
+                            +{faces.length - 3}
+                        </span>
+                    )}
+                </div>
+            )}
+            <div className="flex-1" />
+            <RsvpButtons {...buttons} />
+            {cta && <CtaPill cta={cta} onVisitCta={onVisitCta} />}
+        </div>
     );
 }
 
@@ -201,9 +249,10 @@ interface EventRsvpTopBarProps {
  * TOPPRADEN NÄR MAN SCROLLAT FÖRBI (ägarbeslut 7/10 kväll, Josef: "längst
  * uppe om man scrollat förbi ett eventkort. då ska fortfarande intresserad,
  * kommer, .... Alla de ska synas, samt emojin och titeln ska vara kvar"):
- * emoji + titel och ANMÄL/BOKA på första raden, Intresserad · Kommer ·
- * Bjud med på andra (alla fyra får plats på 375 px bara så - på en rad
- * trängs de ut av titeln). EventCard visar den när svarsraden i kortet
+ * emoji + titel på titelraden och under den SAMMA enradiga svarsrad som i
+ * kortet (RsvpRow) - Intresserad · Kommer · Bjud med · ANMÄL/BOKA. ANMÄL
+ * stod till 25/10 på titelraden med de andra under, det var "2 rader"
+ * (appen gjorde bytet 23/10). EventCard visar den när svarsraden i kortet
  * scrollat ut över överkanten och låter den stå kvar genom chatt,
  * arrangörsrad och listan. Ingen avatarrad och ingen inbjudningsbanner -
  * de bor kvar i raden i kortet.
@@ -227,28 +276,23 @@ export function EventRsvpTopBar({ event, myRsvp, onSetRsvp, onInvite, cta = null
             <div className="flex items-center gap-2 min-w-0">
                 <span aria-hidden className="shrink-0 text-xl leading-none">{eventEmoji(event)}</span>
                 <p className="flex-1 min-w-0 truncate text-sm font-black text-black dark:text-white">{event.title}</p>
-                {cta && (
-                    <>
-                        {/* Annons-märkningen följer provisionslänken även här
-                            (den långa texten bor i raden i kortet). */}
-                        {cta.affiliate && (
-                            <span title={AFFILIATE_DISCLOSURE} className="shrink-0 text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                                Annons
-                            </span>
-                        )}
-                        <CtaPill cta={cta} onVisitCta={onVisitCta} />
-                    </>
+                {/* Annons-märkningen följer provisionslänken även här (den
+                    långa texten bor i raden i kortet). */}
+                {cta?.affiliate && (
+                    <span title={AFFILIATE_DISCLOSURE} className="shrink-0 text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                        Annons
+                    </span>
                 )}
             </div>
-            <div className="flex items-center gap-2">
-                <RsvpButtons
-                    myRsvp={myRsvp}
-                    goingCount={goingCount}
-                    interestedCount={interestedCount}
-                    onSetRsvp={onSetRsvp}
-                    onInvite={onInvite}
-                />
-            </div>
+            <RsvpRow
+                myRsvp={myRsvp}
+                goingCount={goingCount}
+                interestedCount={interestedCount}
+                onSetRsvp={onSetRsvp}
+                onInvite={onInvite}
+                cta={cta}
+                onVisitCta={onVisitCta}
+            />
         </div>
     );
 }
@@ -394,35 +438,20 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
             )}
             {/* Själva footern: solid platta med border-t, som kortets övriga ytor. */}
             <div className="pointer-events-auto bg-card border-t border-border px-3 py-2 flex flex-col gap-1">
-            {/* flex-wrap: får inte allt plats (långa siffror + ANMÄL på
-                smal skärm) bryts ANMÄL/BOKA ner till en egen rad i stället
-                för att raden blir bredare än kortet och skjuter det i sidled
-                (Josef 8/10). */}
-            <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1.5">
-                {/* Avatarraden: de som kommer/är intresserade — överlappade
-                    små profilbilder, anonyma som grå siluett. */}
-                {faces.length > 0 && (
-                    <div className="flex items-center shrink-0 -space-x-2" aria-label={`${faces.length} personer har svarat`}>
-                        {faces.slice(0, 3).map(f => <FaceDot key={f.uid} face={f} />)}
-                        {faces.length > 3 && (
-                            <span className="w-6 h-6 rounded-full border-2 border-card bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-300 flex items-center justify-center text-[9px] font-black">
-                                +{faces.length - 3}
-                            </span>
-                        )}
-                    </div>
-                )}
-                <div className="flex-1" />
-                <div className="flex items-center gap-2 shrink-0">
-                <RsvpButtons
-                    myRsvp={myRsvp}
-                    goingCount={goingCount}
-                    interestedCount={interestedCount}
-                    onSetRsvp={onSetRsvp}
-                    onInvite={onInvite}
-                />
-                </div>
-                {cta && <CtaPill cta={cta} onVisitCta={onVisitCta} />}
-            </div>
+            {/* EN rad, aldrig två (25/10) - RsvpRow. 8/10-radbrytningen
+                (ANMÄL ner på egen rad hellre än att raden sköt kortet i
+                sidled) är ersatt: raden får inte bli bredare än kortet, så
+                textknapparna krymper och avatarerna ger vika i stället. */}
+            <RsvpRow
+                faces={faces}
+                myRsvp={myRsvp}
+                goingCount={goingCount}
+                interestedCount={interestedCount}
+                onSetRsvp={onSetRsvp}
+                onInvite={onInvite}
+                cta={cta}
+                onVisitCta={onVisitCta}
+            />
             {/* Annons-märkningen för provisionslänkar — följde med BOKA hit
                 när kortets breda CTA revs (7/10 kväll). */}
             {cta?.affiliate && (

@@ -337,37 +337,40 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                 kartkortets footer (hooks/useEventRsvp): ömsesidigt
                 uteslutande, inget konto krävs, inga emojis i knapparna
                 (footer-beslutet). Hosted-anmälan (riktiga platser) är kvar
-                som egen knapp längre ner. */}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+                som egen knapp längre ner. ALDRIG TVÅ RADER (25/10, Josef:
+                "de ska aldrig vara på 2 rader. alltid på 1"): ingen
+                flex-wrap - textknapparna krymper (truncate) innan något
+                bryts, ANMÄL står kvar, som kartkortets RsvpRow. */}
+            <div className="mt-3 flex flex-nowrap items-center gap-1.5 sm:gap-2">
                 <button
                     type="button"
                     aria-pressed={rsvp.my === 'interested'}
                     onClick={() => void rsvp.press('interested')}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
+                    className={`min-w-0 shrink inline-flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
                         rsvp.my === 'interested'
                             ? 'bg-[#006AA7] text-white border-[#005590] shadow-md'
                             : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40'
                     }`}
                 >
-                    Intresserad
+                    <span className="truncate">Intresserad</span>
                     {rsvp.interestedCount !== null && rsvp.interestedCount > 0 && (
-                        <span className={`tabular-nums ${rsvp.my === 'interested' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.interestedCount}</span>
+                        <span className={`shrink-0 tabular-nums ${rsvp.my === 'interested' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.interestedCount}</span>
                     )}
                 </button>
                 <button
                     type="button"
                     aria-pressed={rsvp.my === 'going'}
                     onClick={() => void handleGoingPress()}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
+                    className={`min-w-0 shrink inline-flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
                         rsvp.my === 'going'
                             ? 'bg-[#006AA7] text-white border-[#005590] shadow-md'
                             : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40'
                     }`}
                 >
-                    <Check size={14} strokeWidth={3} aria-hidden />
-                    Kommer
+                    <Check size={14} strokeWidth={3} aria-hidden className="shrink-0" />
+                    <span className="truncate">Kommer</span>
                     {rsvp.goingCount !== null && rsvp.goingCount > 0 && (
-                        <span className={`tabular-nums ${rsvp.my === 'going' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.goingCount}</span>
+                        <span className={`shrink-0 tabular-nums ${rsvp.my === 'going' ? 'text-white/70' : 'text-slate-400'}`}>{rsvp.goingCount}</span>
                     )}
                 </button>
                 <button
@@ -375,7 +378,7 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                     onClick={() => void handleInvite()}
                     aria-label="Bjud med någon — dela eventet"
                     title="Bjud med någon"
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40"
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black border transition active:scale-95 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-[#006AA7]/40"
                 >
                     <UserPlus size={14} strokeWidth={2.5} aria-hidden />
                     {/* Bara ikonen på mobil (som kartkortets footer): med
@@ -388,7 +391,7 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={trackOutlink}
-                        className={`group/anmal shrink-0 pl-3.5 pr-2.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest inline-flex items-center justify-center gap-1 shadow-md ring-1 ring-inset hover:shadow-lg active:scale-[0.97] transition-all ${ctaGradient}`}
+                        className={`group/anmal shrink-0 whitespace-nowrap pl-3 pr-2 sm:pl-3.5 sm:pr-2.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider sm:tracking-widest inline-flex items-center justify-center gap-1 shadow-md ring-1 ring-inset hover:shadow-lg active:scale-[0.97] transition-all ${ctaGradient}`}
                     >
                         {tm ? 'BOKA' : 'ANMÄL'}
                         <ArrowRight size={13} className="shrink-0 transition-transform group-hover/anmal:translate-x-0.5" />
