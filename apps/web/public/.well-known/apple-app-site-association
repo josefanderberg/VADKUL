@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "66D54NKWK7.se.vadkul.app",
+        "paths": ["NOT /__/auth/action/", "NOT /__/auth/handler/", "NOT /_/*", "/*"]
+      }
+    ]
+  }
+}

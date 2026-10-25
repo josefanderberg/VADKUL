@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "se.vadkul.app",
+      "sha256_cert_fingerprints": [
+        "0A:98:75:E8:99:61:5F:43:3D:BE:73:1E:3A:D4:ED:4F:EF:83:5D:59:48:C7:0A:EA:7B:6B:78:5F:80:3E:91:8D"
+      ]
+    }
+  }
+]

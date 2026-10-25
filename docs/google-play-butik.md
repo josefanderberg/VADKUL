@@ -102,8 +102,10 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 Upptäckt 16/10: `vadkul.se/.well-known/apple-app-site-association` och
 `assetlinks.json` svarar 200 men är **tomma** - universal links/app links ur
 vadkul.se-länkar öppnar alltså inte appen, trots `associatedDomains` i app.json.
-Hosting kör appAssociation i AUTO-läge och genererar filerna automatiskt ur
-Firebase-projektets appinställningar, så fixen är ren konsol - **ingen deploy**:
+Hosting körde appAssociation i AUTO-läge och genererade filerna automatiskt ur
+Firebase-projektets appinställningar, så första fixen var ren konsol - **ingen deploy**.
+Det räckte för iOS men inte för Android; sedan 25/10 ligger båda filerna
+statiskt i repot i stället (se posten "assetlinks.json statiskt" nedan):
 
 - [x] **iOS:** KLART (kollat 23/10 via Firebase Management API: App Store-ID 6820135961 + Team-ID 66D54NKWK7 ligger på iOS-appen, och AASA:n på vadkul.se listar `66D54NKWK7.se.vadkul.app`). Ursprunglig instruktion: Firebase Console → Projektinställningar → Allmänt → iOS-appen →
   fyll i **App Store-ID** och **Team-ID** (Apple Developer → Membership).
@@ -112,7 +114,10 @@ Firebase-projektets appinställningar, så fixen är ren konsol - **ingen deploy
   innan universal links slår igenom.
 - [x] **Android, uppladdningsnyckeln:** GJORT 23/10 via Firebase Management API (`POST firebase.googleapis.com/v1beta1/projects/vadkul-f2cb2/androidApps/1:888495806926:android:0576fefa5ae7eed361739f/sha` med firebase-tools-token). EAS-keystorens SHA-1 `91:55:72:1B:3A:3C:1A:75:DB:91:72:7F:03:E1:B9:C9:35:04:3B:35` och SHA-256 `0A:98:75:E8:99:61:5F:43:3D:BE:73:1E:3A:D4:ED:4F:EF:83:5D:59:48:C7:0A:EA:7B:6B:78:5F:80:3E:91:8D` (lästa med `keytool -printcert -jarfile build.aab`). Firebase skapade Android-OAuth-klienten automatiskt, så Google-inloggning funkar i byggen signerade med EAS-nyckeln (dev/preview/aab direkt). Appens google-services.json i repot saknar fortfarande den klienten - spelar ingen roll, RN Google Signin använder webClientId.
 - [ ] **Android, Play App Signing-nyckeln:** Play signerar OM butiksbyggena med Googles egen nyckel. Hämta dess SHA-1 + SHA-256 under Play Console → Setup → App signing (finns först när appen är skapad) och lägg till dem på samma sätt - annars ger Google-inloggningen DEVELOPER_ERROR i butiksversionen och app links faller.
-- [ ] assetlinks.json var fortfarande `[]` 23/10 21:50 trots SHA-256:an - Hosting kan behöva tid eller en ny deploy för att generera om. Kvittera igen; ligger den kvar tom får filen läggas statiskt i `apps/web/public/.well-known/`.
-- [ ] Kvittera efteråt: `curl https://vadkul.se/.well-known/apple-app-site-association`
-  ska visa bundle-id:t under `details`, och `assetlinks.json` ska lista
-  paketnamnet + fingeravtrycket.
+- [x] **assetlinks.json statiskt (25/10):** filen var fortfarande `[]` 25/10 trots SHA-256:an i Firebase och en ny deploy. Löst i repot i stället: `apps/web/public/.well-known/assetlinks.json` (paketnamnet + EAS-nyckelns SHA-256) och `apps/web/public/.well-known/apple-app-site-association` (exakt kopia av det Hosting genererade för iOS, JSON-jämförd mot produktionen) ligger som statiska filer, och `firebase.json` har `"appAssociation": "NONE"` plus `Content-Type: application/json` på båda sökvägarna (Firebases egen guide för app links gör precis så). Varför NONE: Hostings API beskriver AUTO som att filerna "skapas automatiskt ur projektets appar" och NONE som "ingen specialhantering" av sökvägarna, och dokumentationen lovar ingenstans att en deployad fil vinner över den genererade - så AUTO är avstängt för att det statiska innehållet ska gälla med säkerhet. Firebase-tools default-ignore `**/.*` stoppar INTE `.well-known/<fil>` (kollat mot `listFiles` i 14.18 och 15.22.4: bara filer vars eget namn börjar med punkt faller bort) och Next-adaptern kopierar hela `public/` till hosting-katalogen. Går ut med nästa push till main (deploy.yml bygger på firebase.json + apps/web).
+  **OBS Play App Signing:** när Googles signeringsnyckel finns (posten ovan) ska dess SHA-256 läggas till i `sha256_cert_fingerprints`-listan i samma statiska fil, inte bara i Firebase Console - Hosting genererar inte längre filen. Bygg aldrig om listan utan EAS-nyckeln: interna testbyggen och dev-klienter är signerade med den.
+- [ ] Kvittera efter deployen: `curl -sS https://vadkul.se/.well-known/assetlinks.json`
+  ska lista `se.vadkul.app` + fingeravtrycket, `curl -sSI https://vadkul.se/.well-known/apple-app-site-association`
+  ska ge `content-type: application/json` och kroppen bundle-id:t under `details`.
+  Googles egen kontroll: `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://vadkul.se&relation=delegate_permission/common.handle_all_urls`
+  ska svara med ett statement för paketet.
