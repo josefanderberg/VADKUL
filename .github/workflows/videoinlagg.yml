@@ -28,6 +28,11 @@
 # Första användningen: docs/social/ios-app-video/ (26/10 2026 kl 11).
 name: Videoinlägg (FB + IG)
 
+# Jobbet läser bara repot (checkout) — allt annat går mot Meta/Storage med
+# egna nycklar. GITHUB_TOKEN behöver inget mer (CodeQL-fynd på PR #139).
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
