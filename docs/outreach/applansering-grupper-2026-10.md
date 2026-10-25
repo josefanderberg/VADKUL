@@ -1,10 +1,10 @@
 # Appen i grupperna — lanseringsinlägget (okt 2026)
 
 _Utkast 24/10 2026. Appen ligger i App Store (`apps.apple.com/se/app/id6820135961`),
-Android är på väg till Google Play. Systerdokument: `facebook-poster.md`
+Android kommer senare i höst till Google Play. Systerdokument: `facebook-poster.md`
 (varianterna A–D), `facebook-grupper.md` (loggen + lärdomarna), `app-store-butik.md`._
 
-## Tidpunkt: grupperna väntar tills både App Store och Google Play är live
+## Tidpunkt: iPhone-vågen nu, Android via sidan och mejlet när Play är live
 
 Ägarbeslut 24/10 (Josefs fråga: "borde vi vänta?"). Ja, av fyra skäl:
 
@@ -37,8 +37,14 @@ några dagar, ibland längre. Sedan beror allt på kontotypen i Play Console:
 - **Organisationskonto (D-U-N-S):** inget 12-testarkrav. Verifiering →
   produktionsrelease → granskning. Realistiskt **1–2 veckor**.
 
-Vilket det är syns direkt i Play Console → Dashboard: är Produktion låst
-med en text om stängd testning är det personligt konto.
+**Facit 25/10** (`docs/google-play-butik.md` på main): kontot är
+**personligt**, skapat 9/10, id-verifieringen är inte klar och appen går
+inte ens att skapa i Play Console förrän den är det. Alltså den långa
+vägen: verifiering → skapa appen → internt test direkt → stängt test med
+12 testare i 14 dagar → produktionsansökan → releasegranskning. Räkna med
+**minst 3–4 veckor**, troligen mer. Därför gäller planen nedan för
+3–4 veckor: grupperna får iPhone-nyheten nu med "Android kommer senare i
+höst" (rekommendation 25/10 — Josef avgör).
 
 **Skriv aldrig "om några dagar"** — det är Googles klocka, inte vår. Blir
 det 1–2 veckor: vänta med grupperna (planen nedan). Blir det 3–4 veckor:
@@ -48,8 +54,9 @@ gruppinlägg. Vågen tar i sig 4+ veckor i 2–3-om-dagen-takt, så de sista
 grupperna skulle annars vänta två månader.
 
 **Ordningen:**
-- Nu: starta det stängda Android-testet oavsett kontotyp (riktiga enheter
-  hittar buggar, och klockan börjar ticka). Sidinlägget på VADKUL-sidan + egna profilen (iPhone nu, Android
+- Nu: id-verifieringen, sedan skapa appen i Play Console och starta det
+  stängda testet samma dag (klockan börjar ticka först då; värva 15–20
+  testare ur förturslistan). Sidinlägget på VADKUL-sidan + egna profilen (iPhone nu, Android
   snart) och medlemsmejlet. Fyll i `APP_STORE_URL` i webben.
 - Dagarna emellan: laga det TestFlight- och App Store-användarna
   rapporterar, så att första gruppvågen möter en bättre 1.0.x. Kolla att
@@ -116,7 +123,7 @@ skapar.
 > Allt kommer från vadkul.se — kartan där det som händer i hela Sverige samlas
 > på ett ställe i stället för utspritt på tio olika sidor. Jag har byggt den
 > själv på kvällar och helger, och nu finns den äntligen som riktig app för
-> iPhone (sök på "vadkul" i App Store — Android är på väg).
+> iPhone (sök på "vadkul" i App Store — Android kommer senare i höst).
 >
 > Det är första versionen, så räkna med en och annan bugg. Hittar du något
 > som strular, eller ett event som saknas i [ort], skriv här så fixar jag så
@@ -142,7 +149,7 @@ Sverige", "hos er".
 > sidor. Konserter, loppisar, hockey, barnaktiviteter, teater.
 >
 > Nu finns den äntligen som riktig app för iPhone — sök på "vadkul" i
-> App Store. Android är på väg.
+> App Store. Android kommer senare i höst.
 >
 > Det är första versionen, byggd på kvällar och helger, så räkna med en och
 > annan bugg. Hittar du något som strular, eller ett event som saknas hos
@@ -174,14 +181,14 @@ veckor sedan senaste inlägget som vanligt.
 ## Appstycket — tre formuleringar att rotera
 
 **1 (stommen ovan):** "...och nu finns den äntligen som riktig app för iPhone
-(sök på "vadkul" i App Store — Android är på väg)."
+(sök på "vadkul" i App Store — Android kommer senare i höst)."
 
 **2:** "Efter ett år som webbsida blev den i veckan en riktig app — VADKUL i
-App Store. Androidversionen är på väg. Jag bygger allt själv, så den är inte
+App Store. Androidversionen kommer senare i höst. Jag bygger allt själv, så den är inte
 felfri än; säg till vad som krånglar så lagar jag."
 
 **3:** "Nyhet för er med iPhone: kartan finns nu som app (sök på vadkul i App
-Store). Ni med Android får vänta några dagar till, den ligger hos Google. Och
+Store). Ni med Android får vänta lite till, den kommer senare i höst. Och
 ja — första versionen, så var snäll mot buggarna och skriv gärna vilka ni
 hittar."
 
@@ -221,7 +228,7 @@ Fortfarande ingen länk i grupperna.
 > Allt som händer nära dig — konserter, loppisar, hockey, barnaktiviteter,
 > teater — på en karta, dag för dag. Gratis, inget konto behövs.
 >
-> iPhone: finns i App Store nu. Android: på väg till Google Play.
+> iPhone: finns i App Store nu. Android: kommer senare i höst.
 >
 > Första versionen, byggd på kvällar och helger. Hittar du en bugg eller ett
 > event som saknas: skriv till mig, så lagar jag.
