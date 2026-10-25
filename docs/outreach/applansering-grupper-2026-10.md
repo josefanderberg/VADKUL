@@ -22,8 +22,34 @@ Android är på väg till Google Play. Systerdokument: `facebook-poster.md`
    via sidinlägget och medlemsmejlet. Grupperna är den kalla publiken —
    de får den färdiga nyheten.
 
+**Hur länge är "tills Play är live"?** (kollat 24/10 mot Googles hjälpsidor)
+Identitetsverifieringen har ingen publicerad handläggningstid — räkna med
+några dagar, ibland längre. Sedan beror allt på kontotypen i Play Console:
+
+- **Personligt konto skapat efter 13/11 2023:** produktion är låst tills
+  appen legat i ett **stängt test med minst 12 testare som varit opt-in
+  oavbrutet i 14 dagar**. Därefter ansöker man om produktionsåtkomst
+  (några dagars granskning) och sedan granskas själva releasen (vanligen
+  några dagar, upp till en vecka eller mer för en ny app). Realistiskt
+  **3–4 veckor** från nu. Faller testarna under 12 startar klockan om —
+  värva 15–20. Medlemmarna med förtur är den givna testarpoolen
+  ("Android-testare får appen först" passar oktobermejlets löfte).
+- **Organisationskonto (D-U-N-S):** inget 12-testarkrav. Verifiering →
+  produktionsrelease → granskning. Realistiskt **1–2 veckor**.
+
+Vilket det är syns direkt i Play Console → Dashboard: är Produktion låst
+med en text om stängd testning är det personligt konto.
+
+**Skriv aldrig "om några dagar"** — det är Googles klocka, inte vår. Blir
+det 1–2 veckor: vänta med grupperna (planen nedan). Blir det 3–4 veckor:
+kör iPhone-vågen i grupperna med "Android kommer senare i höst" och låt
+Android-nyheten gå via sidan och medlemsmejlet, inte som ett andra
+gruppinlägg. Vågen tar i sig 4+ veckor i 2–3-om-dagen-takt, så de sista
+grupperna skulle annars vänta två månader.
+
 **Ordningen:**
-- Nu: sidinlägget på VADKUL-sidan + egna profilen (iPhone nu, Android
+- Nu: starta det stängda Android-testet oavsett kontotyp (riktiga enheter
+  hittar buggar, och klockan börjar ticka). Sidinlägget på VADKUL-sidan + egna profilen (iPhone nu, Android
   snart) och medlemsmejlet. Fyll i `APP_STORE_URL` i webben.
 - Dagarna emellan: laga det TestFlight- och App Store-användarna
   rapporterar, så att första gruppvågen möter en bättre 1.0.x. Kolla att
