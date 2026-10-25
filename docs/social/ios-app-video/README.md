@@ -10,6 +10,7 @@ appen kommer till Android snart.
 | `vadkul-ios-app.mp4` | Filmen. H.264 + tyst AAC-spår, gjord ur originalexporten (HEVC utan ljudspår) med ffmpeg — Metas reels-spec kräver AAC-ljud och H.264 tar alla deras vägar utan diskussion. Bildinnehållet är orört (crf 18). |
 | `fb.txt` | Texten på Facebook-sidan (klickbar App Store-länk). |
 | `ig.txt` | Bildtexten på Instagram (ingen klickbar länk → "sök i App Store") + seriens hashtaggar. |
+| `bestallning.json` | Beställningen till workflown (se nedan): `lage`, `commit`, `klockan`, `nu`, `video`, `fb_text`, `ig_text`, `titel`. |
 
 Rösten är sidans "vi"/neutral (cityPostText.ts), inte maker-jaget. Avslutas
 med en fråga, ett utropstecken max, emoji som radmarkörer — reglerna i
@@ -20,6 +21,13 @@ med en fråga, ett utropstecken max, emoji som radmarkörer — reglerna i
 Workflown **Videoinlägg (FB + IG)** (`.github/workflows/videoinlagg.yml`,
 kör `apps/scraper/src/scripts/schedule-video-post.ts`). Nycklarna är
 GitHubs (samma probe som stadsinläggen); minin behövs inte.
+
+Den startas på två sätt: via Actions-fliken (`workflow_dispatch`, först
+när workflown ligger på main) eller genom att **pusha `bestallning.json`**
+på en annan branch än main — varje push som ändrar filen kör en gång med
+fältens värden. Så gjordes den första körningen, före merge. `commit: true`
+i filen är det enda som publicerar; main är undantagen så en merge aldrig
+kör om beställningen.
 
 1. **Facebook** schemaläggs hos Meta i förväg (`lage=fb`, `commit=true`,
    `klockan=2026-10-26 11:00`): videon laddas till Storage
