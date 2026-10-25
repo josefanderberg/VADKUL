@@ -25,6 +25,7 @@
     "fb-kommentarer": "ts-node src/scripts/fb-kommentarer.ts",
     "digest": "ts-node src/scripts/publish-digest.ts",
     "ig-ko": "ts-node src/scripts/publish-ig-queue.ts",
+    "video-inlagg": "ts-node src/scripts/schedule-video-post.ts",
     "scrape-fb": "ts-node src/scrapers/facebook.ts",
     "scrape-eventbrite": "ts-node src/scrapers/eventbrite.ts",
     "scrape-fb:local": "DB_TARGET=2 ts-node src/scrapers/facebook.ts",

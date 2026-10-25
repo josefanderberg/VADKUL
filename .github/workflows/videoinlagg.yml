@@ -1,0 +1,122 @@
+# Videoinlägg på Facebook-sidan + Instagram — körbart från molnet.
+#
+# Facebook schemaläggs hos Meta (scheduled_publish_time): kör lage=fb när
+# som helst i förväg, Meta publicerar vid utsatt tid. Instagram kan INTE
+# schemaläggas via API: kör lage=ig högst 45 min före klockslaget — jobbet
+# skapar reel-containern, sover fram till utsatt tid och publicerar
+# (apps/scraper/src/utils/videoPost.ts). lage=kolla publicerar inget:
+# visar tokenens scopes, IG-kontot och planen.
+#
+# Nycklar: FIREBASE_SERVICE_ACCOUNT (videon läggs i Storage — Meta hämtar
+# den från en publik https-URL) och FB-sidans token via samma probe som
+# stadsinlagg.yml. FB-video kräver scopet publish_video, IG-reel
+# instagram_content_publish — kolla-läget visar om de finns. Secreten
+# IG_USER_ID är valfri: saknas den slås kontot upp via Sidan.
+#
+# Första användningen: docs/social/ios-app-video/ (26/10 2026 kl 11).
+name: Videoinlägg (FB + IG)
+
+on:
+  workflow_dispatch:
+    inputs:
+      lage:
+        description: 'kolla = scopes + plan · fb = schemalägg hos Meta · ig = vänta till klockslaget och publicera reelen'
+        type: choice
+        options: [kolla, fb, ig]
+        default: kolla
+      commit:
+        description: 'Gör det på riktigt (false = dry-run, bara utskrift)'
+        type: boolean
+        default: false
+      klockan:
+        description: 'Publiceringstid i Stockholmstid: YYYY-MM-DD HH:MM'
+        default: ''
+      nu:
+        description: 'ig: publicera direkt, strunta i klockslaget'
+        type: boolean
+        default: false
+      video:
+        description: 'Videofil i repot (eller publik https-URL)'
+        default: 'docs/social/ios-app-video/vadkul-ios-app.mp4'
+      fb_text:
+        description: 'Facebook-text (fil i repot)'
+        default: 'docs/social/ios-app-video/fb.txt'
+      ig_text:
+        description: 'Instagram-text (fil i repot)'
+        default: 'docs/social/ios-app-video/ig.txt'
+      titel:
+        description: 'Videons titel i Sidans videobibliotek'
+        default: 'VADKUL: Event nära dig'
+
+concurrency:
+  group: videoinlagg-${{ inputs.lage }}
+  cancel-in-progress: false
+
+jobs:
+  posta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75   # ig: upp till 45 min väntan + Metas bearbetning
+    env:
+      TZ: Europe/Stockholm   # --klockan tolkas i lokal tid
+    defaults:
+      run:
+        working-directory: apps/scraper
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/scraper/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: '1'   # ingen skrapning här
+
+      - name: Skriv service-account.json
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # Probens secret-fallback läser apps/web/.env — samma fil som deployen
+      # skriver. FB_PAGE_ACCESS_TOKEN där mappas till FB_PAGE_TOKEN.
+      - name: Skriv apps/web/.env
+        run: printf '%s\n' "$WEB_ENV" > ../web/.env
+        env:
+          WEB_ENV: ${{ secrets.WEB_ENV }}
+
+      # Exporterar en verifierad sidtoken (FB_PAGE_ID/FB_PAGE_TOKEN) via
+      # $GITHUB_ENV. Failar bara vid commit=true.
+      - name: Hitta FB-nycklar (probe mot Graph API)
+        run: node scripts/fb-key-probe.js ${{ inputs.commit == true && '--require' || '' }}
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_SCRAPE_TOKEN: ${{ secrets.FB_SCRAPE_TOKEN }}
+
+      # FB_PAGE_ID/FB_PAGE_TOKEN kommer från probens $GITHUB_ENV-export —
+      # de får INTE stå i env-blocket här (tomma secrets skulle skugga dem).
+      - name: Videoinlägg
+        run: |
+          case "$VIDEO" in
+            https://*) ;;
+            *) VIDEO="$GITHUB_WORKSPACE/$VIDEO" ;;
+          esac
+          ARGS=(--lage="$LAGE" --video="$VIDEO" --fb-text="$GITHUB_WORKSPACE/$FB_TEXT" --ig-text="$GITHUB_WORKSPACE/$IG_TEXT" --titel="$TITEL")
+          [ -n "$KLOCKAN" ] && ARGS+=(--klockan="$KLOCKAN")
+          [ "$NU" = "true" ] && ARGS+=(--nu)
+          [ "$COMMIT" = "true" ] && ARGS+=(--commit)
+          echo "→ schedule-video-post ${ARGS[*]}"
+          npx ts-node src/scripts/schedule-video-post.ts "${ARGS[@]}"
+        env:
+          LAGE: ${{ inputs.lage }}
+          COMMIT: ${{ inputs.commit }}
+          NU: ${{ inputs.nu }}
+          KLOCKAN: ${{ inputs.klockan }}
+          VIDEO: ${{ inputs.video }}
+          FB_TEXT: ${{ inputs.fb_text }}
+          IG_TEXT: ${{ inputs.ig_text }}
+          TITEL: ${{ inputs.titel }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}

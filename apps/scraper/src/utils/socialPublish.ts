@@ -17,6 +17,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { formatDuration, formatStockholm } from './videoPost';
 
 const GRAPH = 'https://graph.facebook.com/v19.0';
 
@@ -244,7 +245,7 @@ export async function getFacebookPostPermalink(postId: string): Promise<string> 
 // ── Instagram ─────────────────────────────────────────────────────────────────
 
 /** Vänta tills en IG-container är FINISHED (Meta processar bilden 5–30 s). */
-async function waitForIgContainerReady(containerId: string, maxSec = 60): Promise<void> {
+async function waitForIgContainerReady(containerId: string, maxSec = 60, pollMs = 2000): Promise<void> {
     const FB_PAGE_TOKEN = fbPageToken();
     const start = Date.now();
     while ((Date.now() - start) / 1000 < maxSec) {
@@ -254,7 +255,7 @@ async function waitForIgContainerReady(containerId: string, maxSec = 60): Promis
         if (data.status_code === 'ERROR' || data.status_code === 'EXPIRED') {
             throw new Error(`IG container ${containerId} status=${data.status_code}: ${data.status || ''}`);
         }
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, pollMs));
     }
     throw new Error(`IG container ${containerId} timeout efter ${maxSec}s`);
 }
@@ -358,4 +359,148 @@ export async function postToInstagram(caption: IgCaption, imageUrls: string[], t
     const pData = await pRes.json() as any;
     if (pData.error) throw new Error(`IG carousel publish: ${pData.error.message}`);
     return pData.id as string;
+}
+
+// ── Video ─────────────────────────────────────────────────────────────────────
+//
+// Facebook: /videos med `file_url` — schemaläggs som bildinlägg (published:
+// false + scheduled_publish_time) men kräver dessutom scopet `publish_video`
+// på sidtoken. Instagram: reel via container (media_type REELS + video_url)
+// → FINISHED → media_publish. IG kan inte schemalägga, men containern får
+// skapas i förväg och publiceras när klockan slår (`publishAt`). Videon
+// måste ligga på en publik https-URL (utils/marketingVideo.ts).
+
+export interface FbVideoOptions extends FbPostOptions {
+    /** Titel i Sidans videobibliotek (syns inte som inläggstext). */
+    title?: string;
+}
+
+/**
+ * Publicera (eller schemalägg) en video på Facebook-sidan. Korta stående
+ * videor (9:16, < 90 s) visas som reels i flödet — det bestämmer Meta.
+ * Returnerar video-id:t; ett schemalagt syns i Business Suite → Planner.
+ */
+export async function postVideoToFacebook(
+    videoUrl: string,
+    description: string,
+    opts: FbVideoOptions = {},
+): Promise<string> {
+    const FB_PAGE_ID = fbPageId(), FB_PAGE_TOKEN = fbPageToken();
+    if (!videoUrl.startsWith('https://')) throw new Error('FB video: videoUrl måste vara en publik https-URL');
+    const { scheduledFor, title } = opts;
+    if (scheduledFor !== undefined) assertScheduleWindow(scheduledFor);
+
+    const body: Record<string, unknown> = { file_url: videoUrl, description, access_token: FB_PAGE_TOKEN };
+    if (title) body.title = title;
+    if (scheduledFor !== undefined) {
+        body.published = false;
+        body.scheduled_publish_time = Math.floor(scheduledFor / 1000);
+    }
+    const res = await fetch(`${GRAPH}/${FB_PAGE_ID}/videos`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const data = await res.json() as any;
+    if (data.error) throw new Error(`FB API ${data.error.code}: ${data.error.message}`);
+    return data.id as string;
+}
+
+/** Länken till en sidvideo — fungerar först när den är publicerad. */
+export function facebookVideoPermalink(pageId: string, videoId: string): string {
+    return `https://www.facebook.com/${pageId}/videos/${videoId}`;
+}
+
+/** Sov tills `ts`, i bitar om högst en minut så loggen visar att jobbet lever. */
+async function sleepUntil(ts: number): Promise<void> {
+    const total = ts - Date.now();
+    if (total <= 0) return;
+    console.log(`[IG] Väntar ${formatDuration(total)} till ${formatStockholm(ts)} …`);
+    for (;;) {
+        const left = ts - Date.now();
+        if (left <= 0) return;
+        await new Promise((r) => setTimeout(r, Math.min(left, 60_000)));
+    }
+}
+
+export interface IgReelOptions {
+    /** Visa reelen även i profilens rutnät (default true). */
+    shareToFeed?: boolean;
+    /**
+     * Epoch ms. Containern skapas och bearbetas direkt, men media_publish
+     * väntar till den här tidpunkten. Anroparen håller fönstret rimligt
+     * (reelTiming i utils/videoPost.ts) — en container lever 24 h.
+     */
+    publishAt?: number;
+    /** Hur länge Meta får bearbeta videon innan vi ger upp (default 300 s). */
+    maxWaitSec?: number;
+    /** Pollintervall för status (default 5 s — video tar längre än bild). */
+    pollMs?: number;
+}
+
+/**
+ * Publicera en reel på Instagram. `videoUrl` måste vara en publik https-URL
+ * (MP4/MOV, H.264/HEVC + AAC, 9:16). Returnerar media-id:t.
+ */
+export async function postReelToInstagram(
+    caption: string,
+    videoUrl: string,
+    opts: IgReelOptions = {},
+): Promise<string> {
+    const IG_USER_ID = igUserId(), FB_PAGE_TOKEN = fbPageToken();
+    if (!IG_USER_ID) throw new Error('IG: IG_USER_ID saknas');
+    if (!videoUrl.startsWith('https://')) throw new Error('IG reel: videoUrl måste vara en publik https-URL');
+
+    const cRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            media_type: 'REELS', video_url: videoUrl, caption,
+            share_to_feed: opts.shareToFeed ?? true, access_token: FB_PAGE_TOKEN,
+        }),
+    });
+    const cData = await cRes.json() as any;
+    if (cData.error) throw new Error(`IG reel container: ${cData.error.message}`);
+    console.log(`[IG] Reel-container skapad: ${cData.id}, väntar på FINISHED…`);
+    await waitForIgContainerReady(cData.id, opts.maxWaitSec ?? 300, opts.pollMs ?? 5000);
+
+    if (opts.publishAt !== undefined) await sleepUntil(opts.publishAt);
+
+    const pRes = await fetch(`${GRAPH}/${IG_USER_ID}/media_publish`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creation_id: cData.id, access_token: FB_PAGE_TOKEN }),
+    });
+    const pData = await pRes.json() as any;
+    if (pData.error) throw new Error(`IG reel publish: ${pData.error.message}`);
+    return pData.id as string;
+}
+
+/**
+ * Instagram-kontot som är kopplat till Sidan, enligt Meta. Vägen när
+ * IG_USER_ID inte finns i miljön (t.ex. GitHub Actions). Kräver
+ * instagram_basic — utan det svarar Meta utan fältet → null.
+ */
+export async function lookupInstagramUserId(): Promise<string | null> {
+    const FB_PAGE_ID = fbPageId(), FB_PAGE_TOKEN = fbPageToken();
+    const res = await fetch(`${GRAPH}/${FB_PAGE_ID}?fields=instagram_business_account&access_token=${FB_PAGE_TOKEN}`);
+    const data = await res.json() as any;
+    return (data.instagram_business_account?.id as string | undefined) ?? null;
+}
+
+export interface TokenInfo {
+    valid: boolean;
+    scopes: string[];
+    /** Epoch ms, eller null för en token som aldrig går ut. */
+    expiresAt: number | null;
+}
+
+/** Vad sidtoken faktiskt får göra (debug_token) — första felsökningssteget. */
+export async function getTokenScopes(): Promise<TokenInfo> {
+    const FB_PAGE_TOKEN = fbPageToken();
+    const res = await fetch(`${GRAPH}/debug_token?input_token=${FB_PAGE_TOKEN}&access_token=${FB_PAGE_TOKEN}`);
+    const data = await res.json() as any;
+    const d = data.data ?? {};
+    return {
+        valid: d.is_valid === true,
+        scopes: Array.isArray(d.scopes) ? d.scopes : [],
+        expiresAt: d.expires_at ? d.expires_at * 1000 : null,
+    };
 }
