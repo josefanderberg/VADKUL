@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-10-25T07:19:01.790Z",
+  "generatedAt": "2026-10-26T08:02:20.445Z",
   "counts": {
     "fel": 0,
-    "varning": 44,
-    "nollkoordinatTotalt": 653
+    "varning": 41,
+    "nollkoordinatTotalt": 621
   },
   "alerts": [
     {
       "level": "varning",
       "kind": "tyst",
-      "source": "sb-followmeguide-se",
-      "since": "2026-10-16",
-      "message": "gav 32 event 2026-10-13, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+      "source": "karlskrona",
+      "since": "2026-10-11",
+      "message": "gav 3 event 2026-10-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -30,7 +30,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Botkyrka Kommun",
-      "message": "13 av 16 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+      "message": "13 av 13 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -42,7 +42,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Destination Uppsala",
-      "message": "14 av 20 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
+      "message": "14 av 18 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -59,12 +59,6 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Latinamerika i Fokus",
-      "message": "8 av 11 kommande event ligger 2026-10-25 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Stiftelsen Läckö Slott",
       "message": "7 av 10 kommande event ligger 2026-10-29 — sajtvitt datum i stället för eventets?"
     },
@@ -72,7 +66,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Sundsvalls museum",
-      "message": "6 av 10 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+      "message": "7 av 11 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -83,8 +77,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "653 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: NBV 20, Söndrum-Vapnö församling 20, Tickster Norge 18, Katrineholmsbygdens församling 16, Förlösa-Kläckeberga församling 15"
+      "source": "621 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 19, NBV 18, Katrineholmsbygdens församling 16, Förlösa-Kläckeberga församling 15, Linde bergslags församling 15"
     },
     {
       "level": "varning",
@@ -95,26 +89,8 @@
     {
       "level": "varning",
       "kind": "invariant",
-      "source": "Botkyrka Kommun",
-      "message": "invariant-vakten larmar (1 av 16 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
       "source": "Götene pastorat",
       "message": "invariant-vakten larmar (20 av 35 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Korpen Gävle",
-      "message": "invariant-vakten larmar (7 av 64 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Latinamerika i Fokus",
-      "message": "invariant-vakten larmar (2 av 11 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -126,13 +102,13 @@
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 272 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 271 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 20 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 18 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -238,6 +214,13 @@
       "source": "rosendals-tradgard",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "sb-followmeguide-se",
+      "since": "2026-10-26",
+      "message": "i karantän sedan 2026-10-26: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",

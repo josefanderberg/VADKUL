@@ -21,7 +21,9 @@
     },
     "destination-uppsala": {
       "since": "2026-10-17",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-26",
+      "emptyRetries": 1
     },
     "elin-sundbergs-vanforening": {
       "since": "2026-10-13",
@@ -86,6 +88,10 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-10-24",
       "emptyRetries": 9
+    },
+    "sb-followmeguide-se": {
+      "since": "2026-10-26",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "sb-visitbastad-se": {
       "since": "2026-10-02",
