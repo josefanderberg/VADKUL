@@ -206,3 +206,151 @@ describe('postToInstagram — karusell med påfyllnad', () => {
         await expect(postToInstagram('x', urls(3), 10)).rejects.toThrow('minst 2');
     });
 });
+
+/* ── Video: FB /videos + IG reel ─────────────────────────────────────────── */
+
+import {
+    postVideoToFacebook, postReelToInstagram, lookupInstagramUserId, getTokenScopes, facebookVideoPermalink,
+} from './socialPublish';
+
+/**
+ * Fejkat Graph API för videovägarna. `igStatuses` spelas upp i ordning vid
+ * status-pollarna (sista värdet upprepas); `fbError` får /videos att svara fel.
+ */
+function installVideoMock(opts: { igStatuses?: string[]; fbError?: string; igLinked?: boolean } = {}) {
+    const statuses = [...(opts.igStatuses ?? ['FINISHED'])];
+    calls = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { body?: string }) => {
+        const body = init?.body ? JSON.parse(init.body) : undefined;
+        calls.push({ url, body });
+        if (url.includes('/PAGE/videos')) {
+            return jsonRes(opts.fbError ? { error: { code: 200, message: opts.fbError } } : { id: 'vid1' });
+        }
+        if (url.includes('fields=status_code')) {
+            const s = statuses.length > 1 ? statuses.shift()! : statuses[0];
+            return jsonRes({ status_code: s, status: s });
+        }
+        if (url.includes('/media_publish')) return jsonRes({ id: 'reel1' });
+        if (url.includes('/IGUSER/media')) return jsonRes({ id: 'rc1' });
+        if (url.includes('/PAGE?fields=instagram_business_account')) {
+            return jsonRes(opts.igLinked === false ? { id: 'PAGE' } : { instagram_business_account: { id: 'IG-FOUND' } });
+        }
+        if (url.includes('/debug_token')) {
+            return jsonRes({ data: { is_valid: true, scopes: ['pages_manage_posts', 'publish_video'], expires_at: 1800000000 } });
+        }
+        throw new Error(`Oväntad URL i test: ${url}`);
+    }));
+}
+
+const VIDEO = 'https://storage.googleapis.com/b/marketing-videos/klipp.mp4';
+
+describe('postVideoToFacebook', () => {
+    it('schemalägger via /videos med file_url, published:false och sekunder', async () => {
+        installVideoMock();
+        const when = Date.now() + 3 * 86_400_000;
+        const id = await postVideoToFacebook(VIDEO, 'texten', { title: 'Titeln', scheduledFor: when });
+        expect(id).toBe('vid1');
+        expect(calls).toHaveLength(1);
+        const v = calls[0];
+        expect(v.url).toContain('/PAGE/videos');
+        expect(v.body).toMatchObject({
+            file_url: VIDEO, description: 'texten', title: 'Titeln',
+            published: false, scheduled_publish_time: Math.floor(when / 1000), access_token: 'TOKEN',
+        });
+    });
+
+    it('publicerar direkt utan schemafält när scheduledFor saknas', async () => {
+        installVideoMock();
+        await postVideoToFacebook(VIDEO, 'texten');
+        expect(calls[0].body.published).toBeUndefined();
+        expect(calls[0].body.scheduled_publish_time).toBeUndefined();
+        expect(calls[0].body.title).toBeUndefined();
+    });
+
+    it('vägrar schemalägga utanför fönstret (10 min – 30 dygn)', async () => {
+        installVideoMock();
+        await expect(postVideoToFacebook(VIDEO, 'x', { scheduledFor: Date.now() + 60_000 })).rejects.toThrow(/minst 10 min/);
+        await expect(postVideoToFacebook(VIDEO, 'x', { scheduledFor: Date.now() + 31 * 86_400_000 })).rejects.toThrow(/30 dygn/);
+        expect(calls).toHaveLength(0);
+    });
+
+    it('kräver en publik https-URL och lyfter Metas fel som det är', async () => {
+        installVideoMock({ fbError: '(#200) Requires publish_video permission' });
+        await expect(postVideoToFacebook('/tmp/klipp.mp4', 'x')).rejects.toThrow(/https/);
+        expect(calls).toHaveLength(0);
+        await expect(postVideoToFacebook(VIDEO, 'x')).rejects.toThrow(/FB API 200: .*publish_video/);
+    });
+
+    it('bygger permalinken ur sid-id + video-id', () => {
+        expect(facebookVideoPermalink('PAGE', 'vid1')).toBe('https://www.facebook.com/PAGE/videos/vid1');
+    });
+});
+
+describe('postReelToInstagram', () => {
+    it('container (REELS + video_url) → FINISHED → media_publish', async () => {
+        installVideoMock();
+        const id = await postReelToInstagram('bildtext', VIDEO, { pollMs: 1 });
+        expect(id).toBe('reel1');
+        const create = calls.find(c => c.url.endsWith('/IGUSER/media'))!;
+        expect(create.body).toMatchObject({ media_type: 'REELS', video_url: VIDEO, caption: 'bildtext', share_to_feed: true });
+        const publish = calls.find(c => c.url.includes('/media_publish'))!;
+        expect(publish.body.creation_id).toBe('rc1');
+        // Ordningen: skapa → polla → publicera
+        expect(calls.map(c => c.url.includes('/media_publish') ? 'publish' : c.url.includes('status_code') ? 'poll' : 'create'))
+            .toEqual(['create', 'poll', 'publish']);
+    });
+
+    it('pollar tills Meta bearbetat videon', async () => {
+        installVideoMock({ igStatuses: ['IN_PROGRESS', 'IN_PROGRESS', 'FINISHED'] });
+        await postReelToInstagram('x', VIDEO, { pollMs: 1 });
+        expect(calls.filter(c => c.url.includes('status_code'))).toHaveLength(3);
+    });
+
+    it('ger upp när containern får ERROR — ingen publicering', async () => {
+        installVideoMock({ igStatuses: ['ERROR'] });
+        await expect(postReelToInstagram('x', VIDEO, { pollMs: 1 })).rejects.toThrow(/status=ERROR/);
+        expect(calls.some(c => c.url.includes('/media_publish'))).toBe(false);
+    });
+
+    it('väntar med media_publish till publishAt', async () => {
+        installVideoMock();
+        const publishAt = Date.now() + 250;
+        let publishedAt = 0;
+        const orig = fetch as unknown as (u: string, i?: any) => Promise<any>;
+        vi.stubGlobal('fetch', vi.fn(async (url: string, init?: any) => {
+            if (url.includes('/media_publish')) publishedAt = Date.now();
+            return orig(url, init);
+        }));
+        await postReelToInstagram('x', VIDEO, { pollMs: 1, publishAt });
+        expect(publishedAt).toBeGreaterThanOrEqual(publishAt);
+    });
+
+    it('publicerar direkt när publishAt redan passerat', async () => {
+        installVideoMock();
+        const t0 = Date.now();
+        await postReelToInstagram('x', VIDEO, { pollMs: 1, publishAt: t0 - 60_000 });
+        expect(Date.now() - t0).toBeLessThan(1000);
+    });
+
+    it('kräver https-URL', async () => {
+        installVideoMock();
+        await expect(postReelToInstagram('x', 'http://osäker/klipp.mp4')).rejects.toThrow(/https/);
+        expect(calls).toHaveLength(0);
+    });
+});
+
+describe('lookupInstagramUserId / getTokenScopes', () => {
+    it('hittar sidans kopplade IG-konto, eller null', async () => {
+        installVideoMock();
+        expect(await lookupInstagramUserId()).toBe('IG-FOUND');
+        installVideoMock({ igLinked: false });
+        expect(await lookupInstagramUserId()).toBeNull();
+    });
+
+    it('läser scopes och utgång ur debug_token', async () => {
+        installVideoMock();
+        expect(await getTokenScopes()).toEqual({
+            valid: true, scopes: ['pages_manage_posts', 'publish_video'], expiresAt: 1800000000 * 1000,
+        });
+    });
+});
