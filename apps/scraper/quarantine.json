@@ -10,8 +10,8 @@
     "bollebygd-kommun": {
       "since": "2026-10-09",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-18",
-      "emptyRetries": 1
+      "lastRetry": "2026-10-27",
+      "emptyRetries": 2
     },
     "dalhalla": {
       "since": "2026-08-19",
@@ -28,8 +28,8 @@
     "elin-sundbergs-vanforening": {
       "since": "2026-10-13",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-20",
-      "emptyRetries": 1
+      "lastRetry": "2026-10-27",
+      "emptyRetries": 2
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
@@ -108,8 +108,8 @@
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-20",
-      "emptyRetries": 8
+      "lastRetry": "2026-10-27",
+      "emptyRetries": 9
     },
     "storsjoyran": {
       "since": "2026-09-18",

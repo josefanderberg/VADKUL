@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-26T08:02:20.445Z",
+  "generatedAt": "2026-10-27T08:53:00.408Z",
   "counts": {
     "fel": 0,
-    "varning": 41,
-    "nollkoordinatTotalt": 621
+    "varning": 39,
+    "nollkoordinatTotalt": 670
   },
   "alerts": [
     {
@@ -29,32 +29,26 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Botkyrka Kommun",
-      "message": "13 av 13 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Dalheimers hus",
       "message": "7 av 11 kommande event ligger 2026-11-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Destination Uppsala",
-      "message": "14 av 18 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Fjälkinge församling",
-      "message": "7 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Götene pastorat",
       "message": "21 av 35 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Jazzimalmo",
+      "message": "53 av 55 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "S:t Peters klosters församling",
+      "message": "6 av 10 kommande event ligger 2026-11-04 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -70,15 +64,9 @@
     },
     {
       "level": "varning",
-      "kind": "datumkluster",
-      "source": "Örebro läns museum",
-      "message": "15 av 19 kommande event ligger 2026-10-26 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
       "kind": "nollkoordinat",
-      "source": "621 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 19, NBV 18, Katrineholmsbygdens församling 16, Förlösa-Kläckeberga församling 15, Linde bergslags församling 15"
+      "source": "670 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 23, Förlösa-Kläckeberga församling 19, NBV 17, Katrineholmsbygdens församling 17, Uu 14"
     },
     {
       "level": "varning",
@@ -102,13 +90,13 @@
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 271 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 269 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 18 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 17 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",

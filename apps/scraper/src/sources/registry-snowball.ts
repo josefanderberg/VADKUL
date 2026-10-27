@@ -1090,4 +1090,22 @@ export const SNOWBALL_SOURCES: Source[] = [
         notes: 'web-snöboll 2026-10-20: sitemap-text, smoke 20 event ok. Slug-gissning från arrangör "Latinamerika i Fokus" (12 event i DB).',
         lastVerified: '2026-10-20',
     },
+
+    {
+        id: 'sb-klubbdod-se',
+        hostName: 'Klubbdod',
+        region: 'national',
+        engine: 'wp-rest' as const,
+        config: { baseUrl: 'https://klubbdod.se', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5 },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://klubbdod.se',
+            date: '2026-10-27',
+            rawEventCount: 28,
+        },
+        notes: 'web-snöboll 2026-10-27: wp-v2, smoke 28 event ok. Hänvisad av 4 event i DB (t.ex. "Klubb DÖD: Pink Turns Blue + All Lost Joys").',
+        lastVerified: '2026-10-27',
+    },
 ];
