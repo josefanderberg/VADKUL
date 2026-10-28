@@ -397,7 +397,7 @@ export interface AppFeedPayload {
     updatedAt: string;
     /** Län-slug ur CITIES (cityUtils) — t.ex. 'stockholm', 'skane'. */
     region: string;
-    /** Flödets horisont i dagar (14 — samma fönster som kartan laddar). */
+    /** Flödets horisont i dagar (60 sedan 28/10, förr 14) — appens dagväljare når så långt. */
     days: number;
     events: AppFeedEvent[];
 }

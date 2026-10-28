@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { eventKey } from './eventKey';
-import { parseCities, nearestRegion, buildAppFeeds } from './appFeed';
+import { parseCities, nearestRegion, buildAppFeeds, APP_FEED_DAYS } from './appFeed';
 
 describe('parseCities mot RIKTIGA kontrakt/cities.ts', () => {
     const src = fs.readFileSync(path.resolve(__dirname, '../../../../packages/kontrakt/src/cities.ts'), 'utf-8');
@@ -42,13 +42,22 @@ describe('buildAppFeeds', () => {
         ...over,
     }) as Parameters<typeof buildAppFeeds>[0][number];
 
-    it('filtrerar horisonten: passerat och bortom 14 dagar åker ut', () => {
+    it('filtrerar horisonten: passerat och bortom horisonten åker ut', () => {
         const regions = buildAppFeeds([
             dest({ id: 'a', time: '2026-09-24T18:00:00.000Z' }),   // igår
             dest({ id: 'b' }),                                      // imorgon
-            dest({ id: 'c', time: '2026-10-15T18:00:00.000Z' }),   // bortom horisonten
-        ], [], CITIES, now);
+            dest({ id: 'c', time: '2026-10-15T18:00:00.000Z' }),   // bortom 14 dagar
+        ], [], CITIES, now, 14);
         expect(regions.get('stockholm')?.map(e => e.id)).toEqual(['b']);
+    });
+
+    it('standardhorisonten är 60 dagar (appens dagväljare når dit)', () => {
+        expect(APP_FEED_DAYS).toBe(60);
+        const regions = buildAppFeeds([
+            dest({ id: 'inom', time: '2026-11-22T18:00:00.000Z' }),  // dag 58
+            dest({ id: 'utom', time: '2026-11-25T18:00:00.000Z' }),  // dag 61
+        ], [], CITIES, now);
+        expect(regions.get('stockholm')?.map(e => e.id)).toEqual(['inom']);
     });
 
     it('hoppar null island och joinar bild via eventKey', () => {

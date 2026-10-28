@@ -9,8 +9,12 @@
  * huvudlagren. Ingen git-churn, inga workflow-ändringar: nattkedjans
  * ordinarie `npm run aggregate` bygger flödet.
  *
- * HORISONT 14 dagar — samma tidsfönster som kartan laddar (egress-trappan);
- * appens MVP speglar kartan. Beskrivningar ingår inte (hämtas per event vid
+ * HORISONT 60 dagar sedan 28/10 (Josef: "varför går det inte klicka sig
+ * längre fram än 10 november"). Förr 14 — kartans tidsfönster — för att hålla
+ * varje län under 200 kB brotli. Sedan 19/10 laddar appen ALLA län ändå, så
+ * det som räknas är summan: ~1,2 MB br vid 14 dagar, ~+60 % vid 60 (eventen
+ * bortom 60 dagar är bara ~2 % till). Appen läser `days` ur flödet och låter
+ * dagväljaren nå så långt. Beskrivningar ingår inte (hämtas per event vid
  * öppnat kort). Boost-flagga ingår inte i fas 1: aggregatet bär inte boost,
  * och nattens fil hade ändå missat dagens köp — appen får boost via API:t i
  * fas 3.
@@ -58,8 +62,8 @@ export interface AppFeedEvent {
     hostName?: string;
 }
 
-/** 14 dagar — samma fönster som kartans tidsfönster-laddning. */
-export const APP_FEED_DAYS = 14;
+/** 60 dagar — hur långt fram appens dagväljare når (se huvudkommentaren). */
+export const APP_FEED_DAYS = 60;
 
 /**
  * Läs CITIES ur kontraktets cities.ts som TEXT — samma regex-över-paketgränsen-
