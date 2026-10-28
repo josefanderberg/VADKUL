@@ -15,11 +15,10 @@ signaturen och sidfoten är orörda. Bara innehållsblocket är nytt.
 
 ## Innan utskick: tre luckor i HTML:en
 
-- **`GRUPPNAMN-HAR`** i knappen "Jag vill testa på Android": byt mot gruppens
-  riktiga adress, `https://groups.google.com/g/<gruppnamn>`. Josef skapar
-  gruppen på groups.google.com med "Vem kan gå med: alla" (annars måste varje
-  ansökan godkännas för hand). Samma gruppadress sätts som testlista i Play
-  Console → Testa och lansera → Sluten testning → Testare.
+- **Gruppen finns (28/10):** `https://groups.google.com/g/vadkul-android`, inlagd i
+  knappen. Gruppens e-postadress `vadkul-android@googlegroups.com` är testlistan i
+  Play Console → Sluten testning → Testare. Kontrollera att gruppen tillåter att
+  alla går med (annars måste varje ansökan godkännas för hand).
 - **Timing:** installationslänken fungerar först när den slutna testversionen
   är publicerad efter Googles granskning (några dagar för en ny app). Antingen
   skickas mejlet efter godkännandet, eller nu med gruppen som enda steg och ett
