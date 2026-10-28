@@ -4,8 +4,8 @@
     "bjorndammens-masugn": {
       "since": "2026-10-07",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-21",
-      "emptyRetries": 2
+      "lastRetry": "2026-10-28",
+      "emptyRetries": 3
     },
     "bollebygd-kommun": {
       "since": "2026-10-09",
@@ -57,13 +57,15 @@
     },
     "konserthuset-stockholm": {
       "since": "2026-10-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-28",
+      "emptyRetries": 1
     },
     "naturskyddsforeningen": {
       "since": "2026-09-30",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-21",
-      "emptyRetries": 3
+      "lastRetry": "2026-10-28",
+      "emptyRetries": 4
     },
     "nordmaling": {
       "since": "2026-08-19",

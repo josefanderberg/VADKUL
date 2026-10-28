@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-27T08:53:00.408Z",
+  "generatedAt": "2026-10-28T06:39:02.819Z",
   "counts": {
     "fel": 0,
-    "varning": 39,
-    "nollkoordinatTotalt": 670
+    "varning": 42,
+    "nollkoordinatTotalt": 624
   },
   "alerts": [
     {
@@ -22,6 +22,13 @@
     },
     {
       "level": "varning",
+      "kind": "tyst",
+      "source": "tickster-ort-linkoping-2",
+      "since": "2026-10-13",
+      "message": "gav 1 event 2026-10-06, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
       "kind": "datumkluster",
       "source": "Artipelag",
       "message": "20 av 20 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
@@ -35,14 +42,26 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Fjälkinge församling",
+      "message": "7 av 11 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Götene pastorat",
-      "message": "21 av 35 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "message": "21 av 32 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Jazzimalmo",
       "message": "53 av 55 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Ronneby församling",
+      "message": "9 av 15 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -65,8 +84,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "670 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 23, Förlösa-Kläckeberga församling 19, NBV 17, Katrineholmsbygdens församling 17, Uu 14"
+      "source": "624 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Klubbdod 32, Söndrum-Vapnö församling 21, NBV 16, Förlösa-Kläckeberga församling 15, Uu 14"
     },
     {
       "level": "varning",
@@ -78,13 +97,13 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Götene pastorat",
-      "message": "invariant-vakten larmar (20 av 35 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (20 av 32 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Ronneby församling",
-      "message": "invariant-vakten larmar (8 av 16 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 15 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -96,7 +115,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 17 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 16 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
