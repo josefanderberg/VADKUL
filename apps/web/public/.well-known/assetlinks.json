@@ -1,11 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "se.vadkul.app",
       "sha256_cert_fingerprints": [
-        "0A:98:75:E8:99:61:5F:43:3D:BE:73:1E:3A:D4:ED:4F:EF:83:5D:59:48:C7:0A:EA:7B:6B:78:5F:80:3E:91:8D"
+        "0A:98:75:E8:99:61:5F:43:3D:BE:73:1E:3A:D4:ED:4F:EF:83:5D:59:48:C7:0A:EA:7B:6B:78:5F:80:3E:91:8D",
+        "0A:12:43:1B:A9:98:23:6C:AC:2E:2E:B2:D3:30:15:C2:01:84:34:FD:31:E5:C5:65:5C:CF:77:EB:7C:BB:86:93"
       ]
     }
   }
