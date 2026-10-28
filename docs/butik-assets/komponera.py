@@ -6,7 +6,7 @@ gick förlorat: VADKUL-blå bakgrund, titel i Fredoka SemiBold med mörkblå hå
 skugga, telefonen nedskalad med rundade hörn och en mjuk slagskugga.
 
 Användning (kör med en Python som har Pillow):
-    python3 komponera.py ra/skarmbild-06-eventbild.png "Allt du behöver veta" 06-eventbild
+    python3 komponera.py ra/skarmbild-02-eventbild.png "Allt du behöver veta" 02-eventbild
 
 Skriver tre varianter:
     play/skarmbild-<namn>.png              1320x2640 (Google Play, exakt 2:1)
@@ -29,7 +29,8 @@ BG = (0, 106, 167)
 SKUGGFARG = (2, 30, 55)
 RA_STORLEK = (1320, 2868)
 
-# Uppmätt ur play/skarmbild-02-eventkort.png (1320x2640): telefonen 993x2158 vid
+# Uppmätt ur den ursprungliga play/skarmbild-02-eventkort.png (borttagen 28/10, finns i
+# commit 84514826; 1320x2640): telefonen 993x2158 vid
 # (163,332), hörnradie 60, slagskugga förskjuten (10,24), gaussisk oskärpa 50,
 # 60 % svart. Titelns vita glyfer börjar på y=171, centrerade på x=660.
 VARIANTER = {
