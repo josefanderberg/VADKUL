@@ -13,19 +13,22 @@ signaturen och sidfoten är orörda. Bara innehållsblocket är nytt.
 3. Testarna går med i en Google-grupp (testlistan i Play Console) och
    installerar via `play.google.com/apps/testing/se.vadkul.app`.
 
-## Innan utskick: tre luckor i HTML:en
+## Innan utskick: kollat 29/10
 
-- **Gruppen finns (28/10):** `https://groups.google.com/g/vadkul-android`, inlagd i
-  knappen. Gruppens e-postadress `vadkul-android@googlegroups.com` är testlistan i
-  Play Console → Sluten testning → Testare. Kontrollera att gruppen tillåter att
-  alla går med (annars måste varje ansökan godkännas för hand).
-- **Timing:** installationslänken fungerar först när den slutna testversionen
-  är publicerad efter Googles granskning (några dagar för en ny app). Antingen
-  skickas mejlet efter godkännandet, eller nu med gruppen som enda steg och ett
-  kort uppföljningsmejl när länken lever. Texten under "Bra att veta" täcker
-  båda fallen ("vaknar när Google släppt igenom").
-- **App Store-länken** `https://apps.apple.com/se/app/id6820135961` (Apple ID
-  ur App Store Connect) - kontrollera i telefonen att den öppnar VADKUL.
+- **Testet är godkänt och live** (Stängt test - Alpha, version 5, släppt 28/10 22:12),
+  så installationslänken fungerar och mejlet kan gå ut. Texten under "Bra att veta"
+  är omskriven: raden om att länken "vaknar" är borta, i stället "Gruppen först,
+  sedan länken". Steg 2 säger nu att man trycker **Bli testare** på testsidan - det
+  är det trycket som räknas mot Googles 12 testare.
+- **Gruppen** `https://groups.google.com/g/vadkul-android`: synlig för alla på webben,
+  "Alla på webben kan gå med" (ingen manuell godkänning). Gruppens e-post
+  `vadkul-android@googlegroups.com` är testlistan i Play Console.
+  Två inställningar står på Gruppmedlemmar och bör sättas till Gruppansvariga
+  innan utskick (Josefs beslut): **Vem kan göra inlägg** (annars kan varje testare
+  mejla alla andra testare) och **Vem kan visa medlemmar** (annars ser testarna
+  varandras namn).
+- **Länkarna** (curl 29/10): App Store-länken landar på "VADKUL: Event nära dig",
+  testsidan kräver Google-inloggning (väntat), gruppen svarar 200.
 
 ## Zoho Campaigns
 
