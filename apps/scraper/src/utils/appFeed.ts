@@ -15,7 +15,8 @@
  * det som räknas är summan: ~1,2 MB br vid 14 dagar, ~+60 % vid 60 (eventen
  * bortom 60 dagar är bara ~2 % till). Appen läser `days` ur flödet och låter
  * dagväljaren nå så långt. Beskrivningar ingår inte (hämtas per event vid
- * öppnat kort). Boost-flagga ingår inte i fas 1: aggregatet bär inte boost,
+ * öppnat kort), priset gör det sedan 29/10 (Josef: "på stadssidorna ser man
+ * inte ifall eventen kostar något"). Boost-flagga ingår inte i fas 1: aggregatet bär inte boost,
  * och nattens fil hade ändå missat dagens köp — appen får boost via API:t i
  * fas 3.
  *
@@ -60,6 +61,12 @@ export interface AppFeedEvent {
      * biljettplattformar, opt-in-källorna) håller flödena små.
      */
     hostName?: string;
+    /**
+     * Priset ur cards som källans råtext ("160:-", "Fri entré") - appen gör
+     * etiketten som webbens stadssidor (normalizePriceLabel). Utelämnas när
+     * källan inte angav något.
+     */
+    price?: string;
 }
 
 /** 60 dagar — hur långt fram appens dagväljare når (se huvudkommentaren). */
@@ -140,6 +147,7 @@ export interface AppFeedCardInput {
     coverImage?: string;
     url?: string;
     hostName?: string;
+    price?: string;
 }
 
 /**
@@ -161,10 +169,13 @@ export function buildAppFeeds(
     const imgByKey = new Map<string, string>();
     const urlByKey = new Map<string, string>();
     const hostByKey = new Map<string, string>();
+    const priceByKey = new Map<string, string>();
     for (const c of cards) {
         if (c.coverImage) imgByKey.set(c.h, c.coverImage);
         if (c.url) urlByKey.set(c.h, c.url);
         if (c.hostName) hostByKey.set(c.h, c.hostName);
+        const price = c.price?.trim();
+        if (price) priceByKey.set(c.h, price);
     }
 
     const regions = new Map<string, AppFeedEvent[]>();
@@ -191,6 +202,7 @@ export function buildAppFeeds(
             img: imgByKey.get(h),
             url: urlByKey.get(h),
             hostName: host && organizerPageSlug(host, d.id) ? host : undefined,
+            price: priceByKey.get(h),
         };
         const list = regions.get(region);
         if (list) list.push(ev); else regions.set(region, [ev]);

@@ -113,6 +113,25 @@ describe('buildAppFeeds', () => {
         expect(JSON.stringify(regions.get('stockholm')![0])).not.toContain('hostName');
     });
 
+    it('priset joinas ur cards som råtext, och utelämnas när det saknas', () => {
+        const medPris = 'https://ex.se/konsert';
+        const tomt = 'https://ex.se/blankt-pris';
+        const utan = 'https://ex.se/utan-pris';
+        const regions = buildAppFeeds([
+            dest({ id: medPris }),
+            dest({ id: tomt }),
+            dest({ id: utan }),
+        ], [
+            { h: eventKey(medPris), price: ' 160:- ' },
+            { h: eventKey(tomt), price: '   ' },
+            { h: eventKey(utan) },
+        ], CITIES, now);
+        const byId = new Map(regions.get('stockholm')!.map(e => [e.id, e]));
+        expect(byId.get(medPris)?.price).toBe('160:-');
+        expect(JSON.stringify(byId.get(tomt))).not.toContain('price');
+        expect(JSON.stringify(byId.get(utan))).not.toContain('price');
+    });
+
     it('tomma valfria fält utelämnas (bytes × tusentals event)', () => {
         const regions = buildAppFeeds([dest({ id: 'ren', emoji: '', endDate: '', locationName: '' })], [], CITIES, now);
         const ev = regions.get('stockholm')![0];

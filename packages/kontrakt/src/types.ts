@@ -390,6 +390,9 @@ export interface AppFeedEvent {
      * (organizerPageSlug ≠ null); grunden för appens arrangörsfilter.
      */
     hostName?: string;
+    /** Priset som källans råtext ("160:-", "Fri entré") - etiketten görs i
+     *  visningen, som webbens normalizePriceLabel. Saknas = okänt pris. */
+    price?: string;
 }
 
 /** Svarskroppen från /api/events/app-<region>. */

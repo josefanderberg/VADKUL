@@ -50,7 +50,7 @@ Hoppar man över syncen aggregerar man gammal data och undrar var de nya eventen
 
 `aggregate` bygger även APPENS per-region-flöde: `utils/appFeed.ts` delar upp
 destinations per län (region = närmaste stadens län ur webbens CITIES, som
-regex-läses ur `cityUtils.ts`), joinar bilder ur cards via eventKey och laddar
+regex-läses ur `cityUtils.ts`), joinar bilder och pris (sedan 29/10) ur cards via eventKey och laddar
 upp som blobbar (`app-<region>`) + metadatadok. 60-dagarshorisont sedan 28/10
 (förr 14, kartans fönster) — appen läser `days` och låter dagväljaren nå dit. Serveras BLOB-ONLY av `/api/events/app-<region>`; utan
 blob svarar routen 503 och nästa nattaggregat läker. Ändras fälten MÅSTE
