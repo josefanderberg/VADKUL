@@ -16,8 +16,8 @@
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-20",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-29",
+      "emptyRetries": 8
     },
     "destination-uppsala": {
       "since": "2026-10-17",
@@ -46,14 +46,14 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-22",
-      "emptyRetries": 9
+      "lastRetry": "2026-10-29",
+      "emptyRetries": 10
     },
     "jonkoping": {
       "since": "2026-10-11",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-20",
-      "emptyRetries": 1
+      "lastRetry": "2026-10-29",
+      "emptyRetries": 2
     },
     "konserthuset-stockholm": {
       "since": "2026-10-19",
@@ -76,8 +76,8 @@
     "nybro": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-22",
-      "emptyRetries": 9
+      "lastRetry": "2026-10-29",
+      "emptyRetries": 10
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -98,8 +98,8 @@
     "sb-visitbastad-se": {
       "since": "2026-10-02",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-20",
-      "emptyRetries": 2
+      "lastRetry": "2026-10-29",
+      "emptyRetries": 3
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",

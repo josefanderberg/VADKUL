@@ -1,17 +1,31 @@
 {
-  "generatedAt": "2026-10-28T06:39:02.819Z",
+  "generatedAt": "2026-10-29T08:07:06.156Z",
   "counts": {
     "fel": 0,
-    "varning": 42,
-    "nollkoordinatTotalt": 624
+    "varning": 50,
+    "nollkoordinatTotalt": 558
   },
   "alerts": [
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "folkets-hus-trollhattan",
+      "since": "2026-10-22",
+      "message": "gav 66 event 2026-10-19, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
     {
       "level": "varning",
       "kind": "tyst",
       "source": "karlskrona",
       "since": "2026-10-11",
       "message": "gav 3 event 2026-10-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "sb-vemdalen-se",
+      "since": "2026-10-22",
+      "message": "gav 115 event 2026-10-19, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -29,9 +43,28 @@
     },
     {
       "level": "varning",
+      "kind": "tyst",
+      "source": "tickster-ort-ostersund-2",
+      "since": "2026-10-14",
+      "message": "gav 1 event 2026-10-07, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Alseda församling",
+      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
       "kind": "datumkluster",
       "source": "Artipelag",
       "message": "20 av 20 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Boxholms församling",
+      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -49,7 +82,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Götene pastorat",
-      "message": "21 av 32 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "message": "21 av 29 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -60,14 +93,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Ronneby församling",
-      "message": "9 av 15 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "source": "Karlshamn Kommun",
+      "message": "16 av 26 kommande event ligger 2026-10-29 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "S:t Peters klosters församling",
-      "message": "6 av 10 kommande event ligger 2026-11-04 — sajtvitt datum i stället för eventets?"
+      "source": "Lycksele församling",
+      "message": "6 av 10 kommande event ligger 2026-11-03 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Ronneby församling",
+      "message": "9 av 14 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -78,14 +117,26 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Stora Kopparbergs församling",
+      "message": "6 av 10 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Sundsvalls museum",
       "message": "7 av 11 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
+      "kind": "datumkluster",
+      "source": "Visit Vemdalen",
+      "message": "15 av 23 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
       "kind": "nollkoordinat",
-      "source": "624 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Klubbdod 32, Söndrum-Vapnö församling 21, NBV 16, Förlösa-Kläckeberga församling 15, Uu 14"
+      "source": "558 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Klubbdod 31, Söndrum-Vapnö församling 16, NBV 15, Uu 13, Mcf 12"
     },
     {
       "level": "varning",
@@ -97,13 +148,13 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Götene pastorat",
-      "message": "invariant-vakten larmar (20 av 32 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (20 av 29 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Ronneby församling",
-      "message": "invariant-vakten larmar (8 av 15 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 14 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
