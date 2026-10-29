@@ -4,6 +4,7 @@ import {
     storeNameFor,
     detectInstallPlatform,
     installGuide,
+    isInAppOpenedPage,
     shouldOfferInstall,
     INSTALL_SNOOZE_MS,
     type InstallPlatform,
@@ -125,9 +126,10 @@ describe('appStoreLinkFor + storeNameFor (butiksbannern)', () => {
         expect(storeNameFor('android')).toBe('Google Play');
     });
 
-    it('desktop har ingen butik', () => {
-        expect(appStoreLinkFor('desktop', länkar)).toBeNull();
-        expect(storeNameFor('desktop')).toBeNull();
+    it('desktop får App Store-sidan (iPhone-appen), aldrig Play', () => {
+        expect(appStoreLinkFor('desktop', länkar)).toBe(länkar.ios);
+        expect(storeNameFor('desktop')).toBe('App Store');
+        expect(appStoreLinkFor('desktop', { ios: null, android: länkar.android })).toBeNull();
     });
 
     it('osläppt butik (null-länk) ger ingen banner på den plattformen', () => {
@@ -135,8 +137,26 @@ describe('appStoreLinkFor + storeNameFor (butiksbannern)', () => {
         expect(appStoreLinkFor('android', { ios: länkar.ios, android: null })).toBeNull();
     });
 
-    it('defaultlänkarna är AV tills släppet (båda null idag)', () => {
-        expect(appStoreLinkFor('ios-safari')).toBeNull();
+    it('defaultlänkarna: App Store släppt 23/10, Play inte än', () => {
+        expect(appStoreLinkFor('ios-safari')).toBe('https://apps.apple.com/se/app/id6820135961');
+        expect(appStoreLinkFor('desktop')).toBe('https://apps.apple.com/se/app/id6820135961');
         expect(appStoreLinkFor('android')).toBeNull();
+    });
+});
+
+// Villkoren och integriteten öppnas i nativa appens inbyggda webbläsare -
+// där ska ingen "skaffa appen"-ruta dyka upp.
+describe('isInAppOpenedPage', () => {
+    it('villkor och integritet (även med ankare-sökväg) räknas', () => {
+        expect(isInAppOpenedPage('/villkor')).toBe(true);
+        expect(isInAppOpenedPage('/integritet')).toBe(true);
+        expect(isInAppOpenedPage('/integritet/')).toBe(true);
+    });
+
+    it('kartan och övriga sidor räknas inte', () => {
+        expect(isInAppOpenedPage('/')).toBe(false);
+        expect(isInAppOpenedPage('/e/abc')).toBe(false);
+        expect(isInAppOpenedPage('/villkorlig')).toBe(false);
+        expect(isInAppOpenedPage('/evenemang/vaxjo')).toBe(false);
     });
 });

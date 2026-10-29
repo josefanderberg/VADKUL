@@ -48,12 +48,12 @@ export function detectInstallPlatform(ua: string, maxTouchPoints = 0): InstallPl
 // Butikslänkarna sätts NÄR APPEN SLÄPPS i respektive butik - null = inte
 // släppt där än, och då visas ingen butiksbanner på den plattformen (PWA-
 // erbjudandet gäller som förut). Finns länken tar butiksbannern över: en
-// riktig app slår "lägg till på hemskärmen". Vid släpp, fyll i:
-//   iOS:     'https://apps.apple.com/se/app/id6820135961'
-//            (ascAppId i vadkul-app/eas.json; sidan finns först när Josef
-//            tryckt release i App Store Connect - fyll aldrig i före det)
-//   Android: 'https://play.google.com/store/apps/details?id=se.vadkul.app'
-export const APP_STORE_URL: string | null = null;
+// riktig app slår "lägg till på hemskärmen".
+//   iOS:     släppt 23/10 2026 (ascAppId i vadkul-app/eas.json).
+//   Android: fyll i 'https://play.google.com/store/apps/details?id=se.vadkul.app'
+//            när appen är släppt i Google Play - aldrig före, då blir det
+//            en död butikssida. Till dess säger Android-kortet "kommer snart".
+export const APP_STORE_URL: string | null = 'https://apps.apple.com/se/app/id6820135961';
 export const PLAY_STORE_URL: string | null = null;
 
 export interface StoreLinks {
@@ -61,25 +61,33 @@ export interface StoreLinks {
     android: string | null;
 }
 
-/** Butiksnamnet för knappen, per plattform. */
-export function storeNameFor(platform: InstallPlatform): 'App Store' | 'Google Play' | null {
-    if (platform.startsWith('ios')) return 'App Store';
+/** Butiksnamnet för knappen, per plattform. Desktop pekar på iPhone-appen. */
+export function storeNameFor(platform: InstallPlatform): 'App Store' | 'Google Play' {
     if (platform.startsWith('android')) return 'Google Play';
-    return null;
+    return 'App Store';
 }
 
 /**
- * Butikslänken för plattformen - null = ingen butik (desktop, eller appen
- * inte släppt där än). In-app-webbvyer (ios-other/Instagram) får länken
- * också: butikslänkar öppnar App Store/Play från alla webbvyer.
+ * Butikslänken för plattformen - null = appen inte släppt där än.
+ * In-app-webbvyer (ios-other/Instagram) får länken också: butikslänkar
+ * öppnar App Store/Play från alla webbvyer. Desktop får App Store-sidan:
+ * datorn har ingen egen app, men besökaren har ofta en iPhone bredvid.
  */
 export function appStoreLinkFor(
     platform: InstallPlatform,
     links: StoreLinks = { ios: APP_STORE_URL, android: PLAY_STORE_URL },
 ): string | null {
-    if (platform.startsWith('ios')) return links.ios;
     if (platform.startsWith('android')) return links.android;
-    return null;
+    return links.ios;
+}
+
+/**
+ * Sidor som nativa appen öppnar i sin inbyggda webbläsare (villkoren och
+ * integriteten från profilen). Där sitter man redan i appen - inget
+ * erbjudande om att skaffa den eller lägga webben på hemskärmen.
+ */
+export function isInAppOpenedPage(pathname: string): boolean {
+    return /^\/(villkor|integritet)(\/|$)/.test(pathname);
 }
 
 export interface InstallGuide {
