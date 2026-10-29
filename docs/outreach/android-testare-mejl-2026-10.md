@@ -23,10 +23,9 @@ signaturen och sidfoten är orörda. Bara innehållsblocket är nytt.
 - **Gruppen** `https://groups.google.com/g/vadkul-android`: synlig för alla på webben,
   "Alla på webben kan gå med" (ingen manuell godkänning). Gruppens e-post
   `vadkul-android@googlegroups.com` är testlistan i Play Console.
-  Två inställningar står på Gruppmedlemmar och bör sättas till Gruppansvariga
-  innan utskick (Josefs beslut): **Vem kan göra inlägg** (annars kan varje testare
-  mejla alla andra testare) och **Vem kan visa medlemmar** (annars ser testarna
-  varandras namn).
+  **Vem kan göra inlägg** och **Vem kan visa medlemmar** ändrades 29/10 från
+  Gruppmedlemmar till Gruppansvariga (Josef: "Ja, ändra båda"), så testarna kan
+  inte mejla alla andra testare eller se varandras namn.
 - **Länkarna** (curl 29/10): App Store-länken landar på "VADKUL: Event nära dig",
   testsidan kräver Google-inloggning (väntat), gruppen svarar 200.
 
