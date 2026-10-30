@@ -34,14 +34,14 @@
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-23",
-      "emptyRetries": 9
+      "lastRetry": "2026-10-30",
+      "emptyRetries": 10
     },
     "folk-goteborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-21",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-30",
+      "emptyRetries": 8
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
@@ -70,8 +70,8 @@
     "nordmaling": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-21",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-30",
+      "emptyRetries": 8
     },
     "nybro": {
       "since": "2026-08-19",
@@ -116,18 +116,20 @@
     "storsjoyran": {
       "since": "2026-09-18",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-23",
-      "emptyRetries": 5
+      "lastRetry": "2026-10-30",
+      "emptyRetries": 6
     },
     "tickster-ort-eskilstuna-2": {
       "since": "2026-10-23",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-10-30",
+      "emptyRetries": 1
     },
     "tingsryd": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-21",
-      "emptyRetries": 7
+      "lastRetry": "2026-10-30",
+      "emptyRetries": 8
     },
     "uppsala": {
       "since": "2026-10-16",
