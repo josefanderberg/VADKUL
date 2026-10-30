@@ -1,8 +1,12 @@
 # Medlemsmejl: appen på App Store och Android-testare (oktober 2026)
 
 Utkast skrivet 2026-10-28. HTML: `android-testare-mejl-2026-10.html`, byggd ur
-oktobermallen (`release-mejl-2026-10.html`): samma blå bakgrund, pixelloggan,
-signaturen och sidfoten är orörda. Bara innehållsblocket är nytt.
+oktobermallen (`release-mejl-2026-10.html`): samma blå bakgrund och sidfot.
+**Inga bilder alls sedan 30/10 (Josefs beslut):** pixelmolnet i toppen och
+loggan i signaturen är borttagna ("för pixligt"). Toppen är ordmärket VADKUL i
+text med gul linje, signaturen är namn, titel och vadkul.se. En riktig bild
+övervägdes men valdes bort, eftersom Outlook blockerar den tills mottagaren
+trycker "visa bilder".
 
 ## Budskapet
 
@@ -45,9 +49,9 @@ signaturen och sidfoten är orörda. Bara innehållsblocket är nytt.
   signatur, sidfot)
 - Taggar: `$[FNAME|där]$` och i sidfoten `$[LI:UNSUBSCRIBE]$` + `$[LI:SUB_PREF]$`
   (får aldrig tas bort). `$[UD:CITY]$` används inte i det här mejlet.
-- Storlek ~45 kB, under Gmails 102 kB-klipp.
+- Storlek ~14 kB, långt under Gmails 102 kB-klipp.
 - Som i oktober: testutskick maskerar taggformatet, verifiera med skarpt
-  utskick till en enmanslista (klonad kampanj) och bedöm pixelloggan i
+  utskick till en enmanslista (klonad kampanj) och titta på mejlet i
   telefonen före utskick.
 
 ## Efter utskicket
