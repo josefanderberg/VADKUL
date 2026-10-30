@@ -28,6 +28,12 @@ trycker "visa bilder".
   Steg 1 med knappen "1. Gå med i testgruppen" (pulsen), Steg 2 med knappen
   "2. Bli testare och installera" (testsidan), Steg 3 utan knapp. Ingen knapp
   ligger längre efter alla steg.
+- **Länka ALLTID till `/about`** (upptäckt 30/10): gruppens huvudsida
+  `groups.google.com/g/vadkul-android` visar konversationerna, som bara medlemmar
+  får se, så den som inte är medlem får "Du har inte behörighet att få åtkomst
+  till det här innehållet". Om-sidan `groups.google.com/g/vadkul-android/about`
+  visar "Alla på webben kan gå med i gruppen" och knappen. Mejlets båda
+  grupplänkar pekar dit.
 - **Gruppen** `https://groups.google.com/g/vadkul-android`: synlig för alla på webben,
   "Alla på webben kan gå med" (ingen manuell godkänning). Gruppens e-post
   `vadkul-android@googlegroups.com` är testlistan i Play Console.
