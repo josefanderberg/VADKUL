@@ -20,6 +20,10 @@ signaturen och sidfoten är orörda. Bara innehållsblocket är nytt.
   är omskriven: raden om att länken "vaknar" är borta, i stället "Gruppen först,
   sedan länken". Steg 2 säger nu att man trycker **Bli testare** på testsidan - det
   är det trycket som räknas mot Googles 12 testare.
+- **Android-rutan i ordning (30/10, Josef: "bättre att den är i rätt ordning"):**
+  Steg 1 med knappen "1. Gå med i testgruppen" (pulsen), Steg 2 med knappen
+  "2. Bli testare och installera" (testsidan), Steg 3 utan knapp. Ingen knapp
+  ligger längre efter alla steg.
 - **Gruppen** `https://groups.google.com/g/vadkul-android`: synlig för alla på webben,
   "Alla på webben kan gå med" (ingen manuell godkänning). Gruppens e-post
   `vadkul-android@googlegroups.com` är testlistan i Play Console.
