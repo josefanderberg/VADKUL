@@ -34,6 +34,9 @@ trycker "visa bilder".
   till det här innehållet". Om-sidan `groups.google.com/g/vadkul-android/about`
   visar "Alla på webben kan gå med i gruppen" och knappen. Mejlets båda
   grupplänkar pekar dit.
+  **Utloggad syns ingen gå med-knapp** (Josefs skärmbild 30/10): Om-sidan visar
+  då bara "Logga in" uppe till höger. Steg 1 säger därför: logga in med samma
+  Google-konto som i Play Butik, tryck sedan "Gå med i gruppen" överst.
 - **Gruppen** `https://groups.google.com/g/vadkul-android`: synlig för alla på webben,
   "Alla på webben kan gå med" (ingen manuell godkänning). Gruppens e-post
   `vadkul-android@googlegroups.com` är testlistan i Play Console.
