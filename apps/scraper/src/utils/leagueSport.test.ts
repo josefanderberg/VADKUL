@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLeagueSport, leagueHostSports, leagueSiteHost, leagueSportForUrl } from './leagueSport';
+import { isLeagueSport, leagueHostSports, leagueMatchAudit, leagueSiteHost, leagueSportForUrl } from './leagueSport';
 
 const SOURCES = [
     { engine: 'sportality', config: { baseUrl: 'https://www.ssl.se', sport: 'innebandy' } },
@@ -49,5 +49,15 @@ describe('leagueSiteHost + isLeagueSport', () => {
         expect(isLeagueSport('innebandy')).toBe(true);
         expect(isLeagueSport('toString')).toBe(false);
         expect(isLeagueSport(undefined)).toBe(false);
+    });
+});
+
+describe('leagueMatchAudit', () => {
+    it('ligamatchen granskas utan LLM: ok, sport, sportens emoji, inget pris', () => {
+        expect(leagueMatchAudit('innebandy')).toMatchObject({
+            verdict: 'ok', confidence: 'high', inSweden: true,
+            category: 'sport', categoryConfidence: 'high', emoji: '🏑', price: null,
+        });
+        expect(leagueMatchAudit('ishockey').emoji).toBe('🏒');
     });
 });

@@ -12,14 +12,19 @@ import { SOURCES } from '../sources/registry';
 
 let hostSports: Map<string, LeagueSport> | null = null;
 
+/** Sporten när url:en är en match på en ligas egen sajt (mot riktiga registryt), annars null. */
+export function leagueSportFor(url: string | null | undefined): LeagueSport | null {
+    if (!hostSports) hostSports = leagueHostSports(SOURCES);
+    return leagueSportForUrl(url, hostSports);
+}
+
 export function ruleEmojiFor(
     title: string | null | undefined,
     venueName: string | null | undefined,
     url?: string | null,
 ): string | null {
     if (looksLikeCinema(title, venueName)) return CINEMA_EMOJI;
-    if (!hostSports) hostSports = leagueHostSports(SOURCES);
-    const sport = leagueSportForUrl(url, hostSports);
+    const sport = leagueSportFor(url);
     if (sport) return LEAGUE_SPORTS[sport].emoji;
     return activityEmojiFor(title);
 }

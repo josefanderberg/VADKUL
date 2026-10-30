@@ -63,3 +63,22 @@ export function leagueSportForUrl(url: string | null | undefined, hostSports: Ma
     const host = hostOf(url);
     return (host && hostSports.get(host)) || null;
 }
+
+/**
+ * Audit-daemonens svar för en ligamatch, utan LLM (30/10): källan är ligans
+ * egen sajt, så matchen är äkta och i Sverige, kategorin sport och emojin
+ * sportens. qwen3 klarade ändå inte dem - svaret klipptes vid 🏑 - och
+ * ~2 000 swehockey-matcher låg i kön och väntade på ett anrop i taget.
+ */
+export function leagueMatchAudit(sport: LeagueSport) {
+    return {
+        verdict: 'ok' as const,
+        confidence: 'high' as const,
+        reason: `${LEAGUE_SPORTS[sport].match} från ligans egen sajt`,
+        inSweden: true,
+        category: 'sport',
+        categoryConfidence: 'high' as const,
+        emoji: LEAGUE_SPORTS[sport].emoji,
+        price: null,
+    };
+}

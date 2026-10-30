@@ -20,6 +20,7 @@
 import { normalizeCategory } from './categoryNormalize';
 
 import { OLLAMA_TIMEOUT_MS } from './ollamaPool';
+import { parseLlmJson } from './llmJson';
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_AUDIT_MODEL ?? process.env.OLLAMA_MODEL ?? 'qwen3:8b';
@@ -158,15 +159,9 @@ Bedöm:
 
 Svara BARA med JSON, inga extra tecken: {"verdict":"ok|suspect|junk","confidence":"high|medium|low","inSweden":true|false,"reason":"...","category":"music|stage|art|sport|food|market|party|social|course|family|other","categoryConfidence":"high|medium|low","emoji":"<en emoji>","price":"<pris eller null>"}`;
 
+/** Första {...}-blocket - avklippta svar räddas fält för fält (utils/llmJson). */
 function parseJson(raw: string): Partial<AuditResult> | null {
-    // Plocka första {...}-blocket
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (!m) return null;
-    try {
-        return JSON.parse(m[0]);
-    } catch {
-        return null;
-    }
+    return parseLlmJson(raw) as Partial<AuditResult> | null;
 }
 
 const FALLBACK_RESULT: AuditResult = {

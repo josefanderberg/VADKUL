@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ruleEmojiFor } from './emojiRules';
+import { leagueSportFor, ruleEmojiFor } from './emojiRules';
 
 describe('ruleEmojiFor', () => {
     it('bio vinner över allt', () => {
@@ -20,5 +20,15 @@ describe('ruleEmojiFor', () => {
     });
     it('utan url faller den tillbaka på titelreglerna', () => {
         expect(ruleEmojiFor('Växjö Vipers – Team Thorengruppen', 'Fortnox Arena')).toBeNull();
+    });
+});
+
+describe('leagueSportFor', () => {
+    it('kön 30/10: swehockey och SSL är ligamatcher, Korpen och kyrkan inte', () => {
+        expect(leagueSportFor('https://stats.swehockey.se/ScheduleAndResults/Schedule/20961?game=1')).toBe('ishockey');
+        expect(leagueSportFor('https://www.ssl.se/match/hranaa8o6c')).toBe('innebandy');
+        expect(leagueSportFor('https://korpenumea.zoezi.se/schema#pass-36698')).toBeNull();
+        expect(leagueSportFor('https://www.svenskakyrkan.se/kalender?event=722056')).toBeNull();
+        expect(leagueSportFor(null)).toBeNull();
     });
 });

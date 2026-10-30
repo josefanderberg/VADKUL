@@ -12,7 +12,10 @@
  *
  * Idempotens: `emoji` sätts alltid vid lyckad audit, så samma event plockas
  * aldrig om — inga oändliga om-auditeringar (även genuina 'other' får emoji).
- * Transienta Ollama-fel skrivs INTE (event retrias nästa varv).
+ * Transienta Ollama-fel skrivs INTE - eventet hamnar i vänteläge (30 min,
+ * 2 h, 8 h, högst ett dygn; utils/auditBackoff) så det inte står först i kön
+ * för evigt. Ligamatcher (utils/leagueSport) granskas utan LLM. Båda sedan
+ * 30/10, när ~27 innebandymatcher som qwen3 inte klarade blockerade kön.
  *
  * Körning:
  *   npm run audit-daemon                     # kör för evigt
@@ -27,7 +30,9 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { auditEvent, ollamaIsAvailable } from '../utils/llmAudit';
 import { looksLikeCinema } from '../utils/cinema';
-import { ruleEmojiFor } from '../utils/emojiRules';
+import { leagueSportFor, ruleEmojiFor } from '../utils/emojiRules';
+import { leagueMatchAudit } from '../utils/leagueSport';
+import { AuditBackoff } from '../utils/auditBackoff';
 import { isTrustedTicketSource } from '../utils/ticketSources';
 import { setEventAuditWithCategory, setHidden } from '../utils/sqliteHelper';
 import { db as firestoreDb } from '../config/firebase';
@@ -67,6 +72,7 @@ interface Row {
 }
 
 let running = true;
+const backoff = new AuditBackoff();
 
 function log(msg: string): void {
     console.log(`${new Date().toISOString()} ${msg}`);
@@ -82,18 +88,19 @@ function sleep(ms: number): Promise<void> {
     });
 }
 
-function fetchBatch(): Row[] {
+/** De `limit` tidigaste ogranskade eventen - vänteläget filtreras i main. */
+function fetchBatch(limit: number): Row[] {
     const rdb = new Database(DB_PATH, { readonly: true });
     try {
-        return rdb.prepare<[], Row>(`
+        return rdb.prepare<[number], Row>(`
             SELECT url, firestoreId, title, locationName, extractedAddress, description, hostName
             FROM link_events
             WHERE time >= datetime('now')
               AND hidden = 0
               AND (aiVerdict IS NULL OR emoji IS NULL)
             ORDER BY time ASC
-            LIMIT ${BATCH_SIZE}
-        `).all();
+            LIMIT ?
+        `).all(limit);
     } finally {
         rdb.close();
     }
@@ -105,7 +112,9 @@ async function processBatch(rows: Row[]): Promise<number> {
     for (let i = 0; i < rows.length && running; i++) {
         const r = rows[i];
         try {
-            const result = await auditEvent({
+            // Ligamatch (ligans egen sajt): sporten är känd, ingen LLM behövs.
+            const league = leagueSportFor(r.url);
+            const result = league ? leagueMatchAudit(league) : await auditEvent({
                 title:            r.title,
                 locationName:     r.locationName  ?? undefined,
                 extractedAddress: r.extractedAddress ?? undefined,
@@ -114,11 +123,13 @@ async function processBatch(rows: Row[]): Promise<number> {
                 url:              r.url,
             });
 
-            // Transient LLM-fel: skriv inte, låt eventet ligga kvar till nästa varv.
+            // Transient LLM-fel: skriv inte, vänta med nästa försök.
             if (TRANSIENT_REASONS.has(result.reason)) {
-                log(`  [${i + 1}/${total}] ⏳ skippar (LLM-fel) | ${(r.title || '').slice(0, 45)}`);
+                const min = Math.round(backoff.failed(r.url, Date.now()) / 60_000);
+                log(`  [${i + 1}/${total}] ⏳ skippar (LLM-fel, nytt försök om ${min} min) | ${(r.title || '').slice(0, 45)}`);
                 continue;
             }
+            backoff.succeeded(r.url);
 
             // Biovisning → scen oavsett LLM:ens val (utils/cinema, samma regel som audit-events);
             // regel-emoji (🎬 bio, 🥏 discgolf …) går före LLM:ens val (utils/emojiRules).
@@ -166,6 +177,7 @@ async function processBatch(rows: Row[]): Promise<number> {
                 updated++;
             }
         } catch (err) {
+            backoff.failed(r.url, Date.now());
             log(`  [${i + 1}/${total}] ❌ FEL: ${(err as Error).message} | ${(r.title || '').slice(0, 50)}`);
             // fortsätt — daemon dör aldrig på ett enskilt event
         }
@@ -184,15 +196,18 @@ async function main(): Promise<void> {
             continue;
         }
 
-        const rows = fetchBatch();
+        // Hämta så många extra som väntar, så batchen fylls med nästa i tur.
+        const now = Date.now();
+        const väntar = backoff.waitingCount(now);
+        const rows = backoff.pick(fetchBatch(BATCH_SIZE + väntar), BATCH_SIZE, now);
         if (rows.length === 0) {
-            log(`💤 Inga events att audita — sover ${IDLE_SLEEP_MS / 1000}s.`);
+            log(`💤 Inga events att audita${väntar ? ` (${väntar} i vänteläge)` : ''} — sover ${IDLE_SLEEP_MS / 1000}s.`);
             batchNo++;
             await sleep(IDLE_SLEEP_MS);
             continue;
         }
 
-        log(`📦 Batch ${batchNo + 1}: ${rows.length} events`);
+        log(`📦 Batch ${batchNo + 1}: ${rows.length} events${väntar ? ` (${väntar} i vänteläge)` : ''}`);
         const started = Date.now();
         const updated = await processBatch(rows);
         const secs = ((Date.now() - started) / 1000).toFixed(1);
