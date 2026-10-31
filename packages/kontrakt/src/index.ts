@@ -6,7 +6,8 @@
  *  - kategori-nycklarna, som aggregat och filter refererar med sträng (categories.ts)
  *  - ren, miljöfri logik som MÅSTE räkna lika överallt (eventShareSlug.ts,
  *    organizer.ts = arrangörssidornas /arrangor/-adresser, trophies.ts =
- *    troféerna och deras utdelning)
+ *    troféerna och deras utdelning, search.ts + cityPoints.ts = eventsöket
+ *    och dess 291 orter, 21/10 2026)
  *
  * REGLER: paketet får aldrig bero på firebase, react eller node-API:er —
  * det ska gå att importera oförändrat i Next, Cloud Functions och React
@@ -20,3 +21,5 @@ export * from './organizer';
 export * from './konto';
 export * from './chattfilter';
 export * from './trophies';
+export * from './cityPoints';
+export * from './search';

@@ -23,7 +23,7 @@ import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease, releaseVelocity } from '@/utils/sheetSnap';
 import { SIDE_PANEL_QUERY, SIDE_PANEL_W } from '@/utils/sidePanel';
-import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM } from '@/utils/eventSearch';
+import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM, parseCategoryQuery, isFilterQuery, searchEvents, sortNearestFirst } from '@/utils/eventSearch';
 import type { CityPoint } from '@/utils/cityPoints';
 import type { CityHit } from './SearchResults';
 import { ArrowRight, ArrowLeft, ChevronRight, ChevronDown, CalendarDays, MapPin, Sun, LocateFixed, Clock, Ticket, Users, Image as ImageIcon, ImageOff, Heart, List, ZoomOut, SearchX } from 'lucide-react';
@@ -84,7 +84,10 @@ const formatDistanceKm = (km: number): string => {
 // "Inom 3h" / "Inom 5h" om eventet ligger nära i tid — annars klocktid eller
 // veckodag+tid om det är en annan dag. Returnerar tom sträng för Pågår/Snart;
 // då säger statusbadgen redan vad som behöver sägas.
-const formatTimeHint = (time: Date, now: number, hasSpecificTime = true): string => {
+// `dated` (fria sökets rankade lista, 21/10): ingen dagrubrik ovanför, så
+// en annan dag får datumet ("imorgon 19:00", "ons 12 nov 19:00") i stället
+// för bara veckodagen.
+const formatTimeHint = (time: Date, now: number, hasSpecificTime = true, dated = false): string => {
     // Visa ALLTID klockslaget — även för "Snart"/pågående event. Tidigare gav
     // <1h en tom sträng, så just de eventen saknade tid (det användaren såg).
     // UNDANTAG: event utan riktigt klockslag (midnatt = bara datum från källan)
@@ -102,6 +105,12 @@ const formatTimeHint = (time: Date, now: number, hasSpecificTime = true): string
     }
     const hhmm = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     if (sameDay) return `kl ${hhmm}`;
+    if (dated) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        if (time.toDateString() === tomorrow.toDateString()) return `imorgon ${hhmm}`;
+        return `${time.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })} ${hhmm}`;
+    }
     const weekday = time.toLocaleDateString('sv-SE', { weekday: 'short' });
     return `${weekday} ${hhmm}`;
 };
@@ -246,6 +255,10 @@ interface NearbyEventsListProps {
     /** Aktiva flikens dagar, redan kapade till synligt antal rader. `ring`
      *  = listans zoomring (8/10): > 0 = kom in när kartan zoomade ut. */
     days?: { dayOffset: number; ring?: number; fromToday?: true; rows: NearbyItem[] }[];
+    /** FRITT SÖK (21/10): satt = aktiva flikens träffar RANKADE (utils/
+     *  eventSearch), redan kapade till synligt antal - en lista utan
+     *  dagrubriker där raderna bär datumet; `days` används inte då. */
+    rankedRows?: NearbyItem[];
     /** Antal event per avsnitt (zoomring / Från idag, nyckel =
      *  listSegmentKey) i aktiva fliken - avdelarnas "N fler". */
     segmentCounts?: ReadonlyMap<number, number>;
@@ -585,8 +598,10 @@ function NearbyDupList({ dups, repTitle, onSelect, className }: {
     );
 }
 
-function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false, dups, saved = false, onToggleSave }: {
+function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWithoutImage = false, dups, saved = false, onToggleSave, dated = false }: {
     evt: LinkEvent;
+    /** Datum i tidsangivelsen - rader utan dagrubrik (fria sökets lista). */
+    dated?: boolean;
     distanceKm: number | null;
     now: number;
     onSelect: (evt: LinkEvent) => void;
@@ -605,7 +620,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     dups?: NearbyItem['dups'];
 }) {
     const status = getEventStatus(evt.time, now, evt.hasSpecificTime !== false);
-    const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false);
+    const timeHint = formatTimeHint(evt.time, now, evt.hasSpecificTime !== false, dated);
     const priceLabel = normalizePriceLabel(evt.price);
     const attendees = evt.attendees ?? 0;
     // Trasig bildlänk (Josef 29/9: "eventen i listan hoppar runt igen" -
@@ -789,7 +804,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], segmentCounts, fromToday, listZoom, daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], rankedRows, segmentCounts, fromToday, listZoom, daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // Kategoriraden utfälld under flikraden (filtersymbolen, 7/10 sent).
     const [chipsOpen, setChipsOpen] = useState(false);
@@ -862,7 +877,9 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                         {([
                             // "Närmsta månaden" fick inte plats bredvid Populärt
                             // + bildknappen på mobil (173 px) — slutraden säger det.
-                            ['all', 'Månaden', allCount],
+                            // Fria söket rankar alla kommande träffar, inte
+                            // bara månaden (21/10).
+                            ['all', rankedRows ? 'Träffar' : 'Månaden', allCount],
                             ['popular', '🔥 Populärt', popularCount],
                         ] as const).map(([key, label, count]) => (
                             <button
@@ -951,7 +968,34 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
             )}
             </div>
 
-            {onTabChange ? (
+            {onTabChange && rankedRows ? (
+                <>
+                    {/* FRITT SÖK = RANKAD LISTA (21/10, utils/eventSearch):
+                        titel → plats/arrangör → kategori, närområdet först
+                        inom varje nivå. Ingen dagrubrik - raden bär datumet. */}
+                    {rankedRows.length === 0 && (
+                        <p className="px-4 md:px-6 py-6 text-center text-xs font-bold text-slate-500">
+                            Inga populära bland träffarna.
+                        </p>
+                    )}
+                    <ul className="divide-y divide-border">
+                        {rankedRows.map(({ evt, distanceKm, dups }, i) => (
+                            <Fragment key={evt.id}>
+                                <NearbyRow evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} hideWithoutImage={imagesOnly} dups={dups} saved={!!savedIds?.has(evt.id)} onToggleSave={onToggleSave ? () => onToggleSave(evt.id) : undefined} dated />
+                                {i === 3 && coachMarkerRef && (
+                                    <li ref={coachMarkerRef} aria-hidden className="h-px" />
+                                )}
+                            </Fragment>
+                        ))}
+                    </ul>
+                    {daysHasMore && onLoadMoreDays && <AutoLoadMore onLoadMore={onLoadMoreDays} />}
+                    {!daysHasMore && rankedRows.length > 0 && (
+                        <p className="px-4 md:px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-t border-border">
+                            Det var alla träffar
+                        </p>
+                    )}
+                </>
+            ) : onTabChange ? (
                 <>
                     {days.length === 0 && (
                         <p className="px-4 md:px-6 py-6 text-center text-xs font-bold text-slate-500">
@@ -1354,9 +1398,16 @@ interface EventCardProps {
      *  träfflistan, klick flyger kartan dit (handlern tömmer sökningen). */
     cityHits?: CityHit[];
     onPickCity?: (city: CityPoint) => void;
+    /** Varifrån söket räknar "nära" (20-21/10): filterlistans närmast
+     *  först inom dagen och fria sökets närområde. Sidan väljer sökets ort,
+     *  ens position i kartans ruta eller rutans mitt; kortet väljer läget. */
+    listOrigin?: { lat: number; lng: number } | null;
+    /** "Visar allt inom Konst - sökordet går före filtret." - sökets
+     *  kategoriord ersätter ett kartfilter som säger något annat (20/10). */
+    searchFilterNote?: string | null;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet, onSearchChange, cityHits, onPickCity }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet, onSearchChange, cityHits, onPickCity, listOrigin = null, searchFilterNote = null }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -2509,11 +2560,26 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // Eventdelen av termen ("jazz" i "jazz göteborg") - highlight och ?q=
     // till stadssidan ska inte bära ortnamnet.
     const cardSearchText = cardQNorm ? cardSearchParsed.text : '';
+    // SÖKETS TVÅ LÄGEN (20-21/10, utils/eventSearch): FILTERLISTA = inget
+    // fritt sökord (bara chips i sökarket, kategoriord och/eller en ort) -
+    // dag för dag med det närmaste först; FRITT SÖK = rankad lista utan
+    // dagrubriker, närområdet först inom varje nivå. Utan sökning och
+    // utanför sökarket är listan "vad händer där jag tittar" i tidsordning.
+    const cardFilterQuery = useMemo(() => {
+        if (!cardQNorm) return false;
+        const { city, text } = cardSearchParsed;
+        return isFilterQuery(city, text, parseCategoryQuery(text));
+    }, [cardQNorm, cardSearchParsed]);
+    const rankedSearch = !!cardQNorm && !cardFilterQuery;
+    const nearestFirstFrom = (cardQNorm ? cardFilterQuery : searchOnly && cardFilterOn) ? listOrigin : null;
     const matchesCardSearch = useMemo(() => {
         if (!cardQNorm) return null;
         const { city, text } = cardSearchParsed;
+        // Bara kategoriord ("konst växjö", 20/10): sidan filtrerar redan
+        // underlaget på sökets kategorier (matchesFilter) - kvar är orten.
+        const categorySearch = parseCategoryQuery(text).size > 0;
         return (e: LinkEvent) =>
-            (!text || eventSearchTier(e, text) >= 0)
+            (!text || categorySearch || eventSearchTier(e, text) >= 0)
             && (!city || (hasValidCoords(e)
                 && haversineKm(city.lat, city.lng, e.lat, e.lng) <= CITY_SEARCH_RADIUS_KM));
     }, [cardQNorm, cardSearchParsed]);
@@ -2669,18 +2735,37 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // `earlier` = antal event i de dagarna (valets "Från idag · N").
     const shownDay = Math.max(0, dayOffset);
     const tabDays = useMemo(() => {
-        const empty = { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0, earlier: 0 };
+        const empty = { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0, earlier: 0, rows: undefined as NearbyItem[] | undefined };
         if (!viewEvents) return { all: empty, popular: empty };
         const nowDate = new Date(now);
         const from = userPos ?? (selectedEvent && hasValidCoords(selectedEvent) ? { lat: selectedEvent.lat, lng: selectedEvent.lng } : null);
+        const withDistance = (evt: LinkEvent) => ({
+            evt,
+            distanceKm: from && hasValidCoords(evt) ? haversineKm(from.lat, from.lng, evt.lat, evt.lng) : null,
+        });
+        if (rankedSearch) {
+            // FRITT SÖK (21/10): alla kommande träffar från IDAG (inte från
+            // kartans dag - man letar efter en sak), rankade med samma kod
+            // som appen. Dubbletter samma dag blir en rad som förut.
+            const ranked = searchEvents(
+                viewEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id && !isEventPast(e, now)),
+                cardSearchQ,
+                listOrigin,
+            );
+            const buildRanked = (include?: (e: LinkEvent) => boolean) => {
+                const items = (include ? ranked.filter(include) : ranked).map(withDistance);
+                const shown = imagesOnlyList ? items.filter(n => !!n.evt.coverImage) : items;
+                return { days: [], count: shown.length, earlier: 0, rows: groupNearby(shown).rows };
+            };
+            return { all: buildRanked(), popular: buildRanked(e => isPopularListed(e, now)) };
+        }
         const kept = viewEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id
             && (!matchesCardSearch || matchesCardSearch(e)));
         const build = (include?: (e: LinkEvent) => boolean) => {
             const days = eventDays(kept, 0, nowDate, e => isEventPast(e, now), include).map(day => {
-                const items = day.events.map(evt => ({
-                    evt,
-                    distanceKm: from && hasValidCoords(evt) ? haversineKm(from.lat, from.lng, evt.lat, evt.lng) : null,
-                }));
+                // Filterlistan (20/10): närmast först inom dagen.
+                const ordered = nearestFirstFrom ? sortNearestFirst(day.events, nearestFirstFrom) : day.events;
+                const items = ordered.map(withDistance);
                 return {
                     dayOffset: day.dayOffset,
                     rows: groupNearby(imagesOnlyList ? items.filter(n => !!n.evt.coverImage) : items).rows,
@@ -2690,11 +2775,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             }).filter(day => day.rows.length > 0 && day.dayOffset < LIST_HORIZON_DAYS);
             const sum = (ds: typeof days) => ds.reduce((n, d) => n + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0), 0);
             const earlier = sum(days.filter(d => d.dayOffset < shownDay));
-            return { days, count: sum(days) - (listTodayAt === null ? earlier : 0), earlier };
+            return { days, count: sum(days) - (listTodayAt === null ? earlier : 0), earlier, rows: undefined };
         };
         return { all: build(), popular: build(e => isPopularListed(e, now)) };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewEvents, discardedEventIds, selectedEvent, shownDay, listTodayAt, now, userPos, imagesOnlyList, matchesCardSearch]);
+    }, [viewEvents, discardedEventIds, selectedEvent, shownDay, listTodayAt, now, userPos, imagesOnlyList, matchesCardSearch, rankedSearch, cardSearchQ, listOrigin, nearestFirstFrom]);
+    const rankedTabRows = tabDays[listTab].rows;
     const activeTabDays = tabDays[listTab].days;
     // Zoomringarna (8/10): det som fanns före varje utzoomning står kvar
     // överst, de nya under sin avdelare - dag för dag från den visade dagen.
@@ -4268,6 +4354,14 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         när det definitiva beskedet säger att inget finns nära.
                         Samma rad står också tills kortlagret landat (cardsReady),
                         så listan ritas EN gång med rätt innehåll. */}
+                    {/* SÖKORDET GÅR FÖRE FILTRET (20/10): kategoriord i
+                        söket ersätter ett kartfilter som säger något annat -
+                        chipsen lyser fortfarande, så säg varför. */}
+                    {listVisible && !!cardQNorm && !!searchFilterNote && (
+                        <p className="px-4 md:px-6 pt-1 pb-2 text-xs text-slate-500 dark:text-zinc-400">
+                            {searchFilterNote}
+                        </p>
+                    )}
                     {/* STADSTRÄFFAR överst i sökningen (11/10) - gamla
                         sökpanelens stadsrader, nu i kortets/arkets lista. */}
                     {listVisible && !!cardQNorm && !!onPickCity && (cityHits?.length ?? 0) > 0 && (
@@ -4301,10 +4395,11 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             allCount={tabDays.all.count}
                             popularCount={tabDays.popular.count}
                             days={visibleTabDays}
+                            rankedRows={rankedTabRows?.slice(0, daysVisibleCount)}
                             segmentCounts={segmentCounts}
                             fromToday={fromTodayChoice}
                             listZoom={listZoomEnd}
-                            daysHasMore={daysVisibleCount < activeTabRowTotal}
+                            daysHasMore={daysVisibleCount < (rankedTabRows ? rankedTabRows.length : activeTabRowTotal)}
                             onLoadMoreDays={() => setDaysVisibleCount(c => c + NEARBY_PAGE_SIZE)}
                             // Bara tidsfönstret inne → listans botten hämtar resten
                             // (bara för den som faktiskt scrollar dit — egress).
