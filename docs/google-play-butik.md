@@ -48,8 +48,8 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 - Appikon 512x512: `play-ikon-512.png` (platt blå bakgrund, ingen alfa)
 - Funktionsbild 1024x500: `play-feature-grafik-1024x500.png`
 - Skärmbilder till Play: `play/skarmbild-*.png` (1320x2640 = exakt 2:1, Plays tak; komponerade presentationsbilder med rubrik på blå platta)
-- Kompositionsskript: `komponera.py` (Pillow; `python3 komponera.py ra/<råbild>.png "<titel>" <namn>` skriver alla tre varianterna)
-- Skärmbilder till App Store: `skarmbild-*.png` (1320x2868, "iPhone med Dynamic Island (stor skärm)") och `app-store-mellan/skarmbild-*.png` (1206x2622, "iPhone med Dynamic Island (mellanstor skärm)" - den storleken KRÄVS av Connect sedan hösten 2026) - samma kompositioner i iOS-måtten
+- Kompositionsskript: `komponera.py` (Pillow; `python3 komponera.py --alla` gör om alla fem med rubrikerna i skriptets BILDER-tabell, `python3 komponera.py ra/<råbild>.png "<titel>" <namn>` en bild - alltid i alla mått)
+- Skärmbilder till App Store, samma kompositioner i varje iPhone-mått Connect tar emot (31/10, Josef: "lika bra att ha alla typer av screenshots tillgängliga"): `skarmbild-*.png` 1320x2868 (6,9", "iPhone med Dynamic Island (stor skärm)" - den som KRÄVS), `app-store-6-5/` 1284x2778 (6,5"), `app-store-mellan/` 1206x2622 (6,3", "mellanstor skärm"), `app-store-6-1/` 1170x2532 (6,1"), `app-store-5-5/` 1242x2208 (5,5", hemknapps-iPhone) och `app-store-4-7/` 750x1334 (4,7", iPhone SE). Varje mått renderas direkt (inte nedskalat). Ingen iPad: appen är bara för iPhone (supportsTablet saknas i app.json)
 - Råa simulatordumpar som underlag: `ra/skarmbild-*.png` (laddas inte upp). Alla fem togs om 29/10 med appens nya utseende (systemsymboler för tid/plats/profil, ingen dev-bubbla i bild - ingen retusch behövs); de retuscherade 12-13/10-originalen ligger i c4cd8162
 
 ---
