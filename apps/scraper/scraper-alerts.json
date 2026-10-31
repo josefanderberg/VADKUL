@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-30T07:28:02.753Z",
+  "generatedAt": "2026-10-31T06:54:28.833Z",
   "counts": {
     "fel": 0,
-    "varning": 47,
-    "nollkoordinatTotalt": 646
+    "varning": 45,
+    "nollkoordinatTotalt": 593
   },
   "alerts": [
     {
@@ -26,13 +26,6 @@
       "source": "sb-vemdalen-se",
       "since": "2026-10-22",
       "message": "gav 115 event 2026-10-19, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "skordefest",
-      "since": "2026-10-09",
-      "message": "gav 1 event 2026-10-02, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -75,8 +68,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Mariebergsskogen AB",
-      "message": "6 av 10 kommande event ligger 2026-10-30 — sajtvitt datum i stället för eventets?"
+      "source": "Mölndal Kommun",
+      "message": "6 av 10 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -93,26 +86,26 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Visit Kristianstad",
+      "message": "7 av 10 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Visit Vemdalen",
-      "message": "15 av 21 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
+      "message": "15 av 18 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Wisby Strand",
-      "message": "32 av 33 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
+      "message": "32 av 34 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "646 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Klubbdod 29, Studiefrämjandet 18, Förlösa-Kläckeberga församling 18, Söndrum-Vapnö församling 18, NBV 15"
-    },
-    {
-      "level": "varning",
-      "kind": "utlandskoordinat",
-      "source": "3 event",
-      "message": "koordinater utanför Norden, syns på kartan — felgeokodat eller utländskt innehåll: Billetto 3"
+      "source": "593 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Klubbdod 30, NBV 18, Söndrum-Vapnö församling 18, Förlösa-Kläckeberga församling 17, Studiefrämjandet 16"
     },
     {
       "level": "varning",
@@ -123,32 +116,20 @@
     {
       "level": "varning",
       "kind": "invariant",
-      "source": "Götene pastorat",
-      "message": "invariant-vakten larmar (20 av 38 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Ronneby församling",
-      "message": "invariant-vakten larmar (8 av 20 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 263 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 262 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 16 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 15 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Wisby Strand",
-      "message": "invariant-vakten larmar (8 av 33 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 34 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -268,6 +249,13 @@
       "source": "sb-visitbastad-se",
       "since": "2026-10-02",
       "message": "i karantän sedan 2026-10-02: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "skordefest",
+      "since": "2026-10-31",
+      "message": "i karantän sedan 2026-10-31: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",

@@ -82,14 +82,14 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-24",
-      "emptyRetries": 9
+      "lastRetry": "2026-10-31",
+      "emptyRetries": 10
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-24",
-      "emptyRetries": 9
+      "lastRetry": "2026-10-31",
+      "emptyRetries": 10
     },
     "sb-followmeguide-se": {
       "since": "2026-10-26",
@@ -100,6 +100,10 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-10-29",
       "emptyRetries": 3
+    },
+    "skordefest": {
+      "since": "2026-10-31",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
