@@ -18,8 +18,10 @@ typer av screenshots tillgängliga"):
     app-store-6-1/         1170x2532 (App Store 6,1")
     app-store-5-5/         1242x2208 (App Store 5,5", hemknapps-iPhone)
     app-store-4-7/         750x1334  (App Store 4,7", iPhone SE)
-Appen är bara för iPhone (supportsTablet saknas i app.json), så Connect har
-inga iPad-platser.
+    app-store-iphone-duo/  2007x2853 (App Store iPhone Duo, ny i Connect 31/10)
+    app-store-ipad-13/     2064x2752 (App Store iPad 13" - appen är bara för
+                                      iPhone (supportsTablet saknas), så de
+                                      används först om iPad-stöd slås på)
 
 Typsnittet läses ur webbens byggutdata (next/font självhostar Fredoka som
 variabel woff2). Finns inte apps/web/.next, bygg webben först eller peka
@@ -59,6 +61,8 @@ VARIANTER = {
     "app-store-6-1": (1170, 2532),
     "app-store-5-5": (1242, 2208),
     "app-store-4-7": (750, 1334),
+    "app-store-iphone-duo": (2007, 2853),
+    "app-store-ipad-13": (2064, 2752),
 }
 
 # Råbild i ra/, rubrik (29/10), namn - ordningen i butikerna.
