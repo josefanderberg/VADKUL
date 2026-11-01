@@ -43,6 +43,10 @@
       "lastRetry": "2026-10-30",
       "emptyRetries": 8
     },
+    "folkets-hus-trollhattan": {
+      "since": "2026-11-01",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -95,6 +99,10 @@
       "since": "2026-10-26",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
+    "sb-vemdalen-se": {
+      "since": "2026-11-01",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "sb-visitbastad-se": {
       "since": "2026-10-02",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -108,8 +116,8 @@
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-25",
-      "emptyRetries": 6
+      "lastRetry": "2026-11-01",
+      "emptyRetries": 7
     },
     "staffanstorp": {
       "since": "2026-08-19",

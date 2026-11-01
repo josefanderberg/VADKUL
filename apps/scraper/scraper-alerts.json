@@ -1,31 +1,17 @@
 {
-  "generatedAt": "2026-10-31T06:54:28.833Z",
+  "generatedAt": "2026-11-01T07:45:05.969Z",
   "counts": {
     "fel": 0,
-    "varning": 45,
-    "nollkoordinatTotalt": 593
+    "varning": 42,
+    "nollkoordinatTotalt": 727
   },
   "alerts": [
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "folkets-hus-trollhattan",
-      "since": "2026-10-22",
-      "message": "gav 66 event 2026-10-19, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
     {
       "level": "varning",
       "kind": "tyst",
       "source": "karlskrona",
       "since": "2026-10-11",
       "message": "gav 3 event 2026-10-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "sb-vemdalen-se",
-      "since": "2026-10-22",
-      "message": "gav 115 event 2026-10-19, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -44,20 +30,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Artipelag",
-      "message": "20 av 20 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Dalheimers hus",
       "message": "7 av 10 kommande event ligger 2026-11-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Friluftsfrämjandet Järfälla",
-      "message": "7 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+      "source": "Göteborg & Co",
+      "message": "13 av 20 kommande event ligger 2026-11-01 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -68,14 +48,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Mölndal Kommun",
-      "message": "6 av 10 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Norra Mo församling",
-      "message": "6 av 10 kommande event ligger 2026-11-03 — sajtvitt datum i stället för eventets?"
+      "source": "S:t Peters klosters församling",
+      "message": "7 av 10 kommande event ligger 2026-11-04 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -86,50 +60,44 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Visit Kristianstad",
-      "message": "7 av 10 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Visit Vemdalen",
-      "message": "15 av 18 kommande event ligger 2026-10-31 — sajtvitt datum i stället för eventets?"
+      "source": "Superettan",
+      "message": "8 av 11 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Wisby Strand",
-      "message": "32 av 34 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
+      "message": "32 av 33 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "593 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Klubbdod 30, NBV 18, Söndrum-Vapnö församling 18, Förlösa-Kläckeberga församling 17, Studiefrämjandet 16"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Artipelag",
-      "message": "invariant-vakten larmar (20 av 20 event på samma tidsstämpel) — se nattloggen"
+      "source": "727 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 28, Klubbdod 28, Förlösa-Kläckeberga församling 26, Katrineholmsbygdens församling 18, NBV 17"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 262 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 255 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 15 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 11 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Visit Skellefteå",
+      "message": "invariant-vakten larmar (8 av 127 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Wisby Strand",
-      "message": "invariant-vakten larmar (8 av 34 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 33 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -179,6 +147,13 @@
       "source": "folk-goteborg",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "folkets-hus-trollhattan",
+      "since": "2026-11-01",
+      "message": "i karantän sedan 2026-11-01: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
@@ -242,6 +217,13 @@
       "source": "sb-followmeguide-se",
       "since": "2026-10-26",
       "message": "i karantän sedan 2026-10-26: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "sb-vemdalen-se",
+      "since": "2026-11-01",
+      "message": "i karantän sedan 2026-11-01: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
