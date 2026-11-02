@@ -2044,12 +2044,23 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // gör") — 2/9-beslutet "kortet står still, listan scrollar" är
             // ERSATT: chooser-undantaget som stod här är borta.
             dragsSheet = !sideModeRef.current && heightVhRef.current < maxVhRef.current - 5;
-            const row = (e.target as HTMLElement).closest('[data-hscroll]') as HTMLElement | null;
-            inHScroll = !!row && row.scrollWidth > row.clientWidth + 1;
+            const target = e.target as HTMLElement;
+            const row = target.closest('[data-hscroll]') as HTMLElement | null;
+            // TEXTFÄLTEN ÄR DRAGYTA PÅ TOUCH (2/11, Josef: "när man klickar på
+            // ett event så kan man inte swipa på mobilen på den sökrutan
+            // längst upp ... det är oftast i det området man swipar"): ett
+            // enradigt <input> (kortsöket, chattfältet) har ingen egen lodrät
+            // gest på touch (markera text = långtryck), så det avgörs som i
+            // de sidledsrullande raderna: vågrätt → webbläsaren (rullar
+            // texten i fältet), lodrätt → kortet dras / innehållet scrollar.
+            // onPointerDown släpper fältet på samma villkor. textarea/select
+            // lämnas helt (en textarea scrollar sitt eget innehåll lodrätt).
+            const field = target.closest('input');
+            inHScroll = (!!row && row.scrollWidth > row.clientWidth + 1) || !!field;
             hscrollDecided = false;
             hscrollOwns = false;
             touchStartX = e.touches[0].clientX;
-            // BARA textfälten lämnas åt webbläsaren (markera text, flytta
+            // BARA textareor/select lämnas åt webbläsaren (markera text, flytta
             // markören) — knappar/länkar är DRAGYTA, samma filosofi som
             // onPointerDown (Josef 31/8). 'button' låg tidigare i exkluderingen
             // och då fanns i väljarlistan (enbart knapprader) ingen yta alls
@@ -2058,10 +2069,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             // 1/9). Ett rent tapp gör ingen touchmove-preventDefault, så
             // radklicken lever som vanligt; ett riktigt drag sväljs ändå av
             // didDragRef i sheet-rotens onClickCapture.
-            const target = e.target as HTMLElement;
             // < 1: scrollTop kan vara bråkdel nära toppen (Firefox/iOS).
             startedAtTop = sc.scrollTop < 1
-                && !target.closest('input, textarea, select');
+                && !target.closest('textarea, select');
             touchStartY = e.touches[0].clientY;
             pullingRef.current = false;
         };
@@ -3096,7 +3106,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const target = e.target as HTMLElement;
         // Textfält behåller sina egna pekgester (markera text, flytta
         // markören) — kortet ska inte börja åka för att man drar i chattfältet.
-        if (target.closest('input, textarea, select')) {
+        // SEDAN 2/11 GÄLLER DET <input> BARA MED MUS (dra = markera text).
+        // På touch har ett enradigt fält ingen egen lodrät gest (markera =
+        // långtryck), och kortsöket sitter precis där man helst sveper
+        // (Josef: "det är oftast i det området man swipar") - så fältet är
+        // dragyta som knapparna: capturen sätts på FÄLTET självt (ett rent
+        // tapp når det som klick och fokuserar som vanligt), och tappen
+        // togglar inte höjden. Touch-lyssnaren avgör vågrätt/lodrätt (se
+        // onTouchStart). textarea/select lämnas helt.
+        const field = target.closest('input') as HTMLElement | null;
+        if (target.closest('textarea, select') || (field && e.pointerType === 'mouse')) {
             return;
         }
         // KNAPPAR OCH LÄNKAR ÄR OCKSÅ DRAGYTA (Josef 31/8: "det måste man
@@ -3124,7 +3143,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // direkt på texten"). Hela raden räknas som interaktiv (tap-toggeln
         // hoppar över den) och tablistens onClick routar kantklick till
         // närmaste flik.
-        const interactive = target.closest('button, a, summary, [data-cover-zone], [data-tab-zone]') as HTMLElement | null;
+        const interactive = (target.closest('button, a, summary, [data-cover-zone], [data-tab-zone]') as HTMLElement | null) ?? field;
 
         // SIDLEDSRULLANDE RADER (HScrollRow, 16/9): tid/plats-raden och
         // värdnamnet rullar i sidled inne i kortet. Med MUS drar raden sig
@@ -3673,7 +3692,16 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             onClick={e => e.stopPropagation()}
             className="flex-1 min-w-0 max-w-xs flex items-center gap-1.5"
         >
-            <div className="flex-1 min-w-0 flex items-center gap-2 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 border border-border focus-within:border-[#006AA7] px-3 transition-colors">
+            <div
+                className="flex-1 min-w-0 flex items-center gap-2 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 border border-border focus-within:border-[#006AA7] px-3 transition-colors"
+                // Sökarkets fasta huvud ligger UTANFÖR scrollcontainern och
+                // dess touch-lyssnare: pan-x gör att ett lodrätt svep i fältet
+                // aldrig tas av webbläsaren utan når kortets pointer-handlers
+                // och drar arket (2/11). I kortet styr containerns pan-y +
+                // touch-lyssnaren som förut - där ska svep uppåt på taket
+                // scrolla innehållet.
+                style={searchOnly ? { touchAction: 'pan-x' } : undefined}
+            >
                 <Search size={14} className="shrink-0 text-slate-400" aria-hidden />
                 <input
                     ref={cardSearchInputRef}
