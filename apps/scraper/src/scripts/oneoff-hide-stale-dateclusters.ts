@@ -27,6 +27,8 @@
  *   - soderkoping-guide: "Fler filmvisningar"-kortens "ons 14 okt" gav
  *                        passerade filmer datumet 2026-10-14.
  *
+ * Påfyllt 1/11 (sb-jazzimalmo-com 23/11, wisby-strand 26/11 — se CLUSTERS).
+ *
  * Klusterdagar som redan passerat hoppas över (kartan visar dem inte, och
  * dagens riktiga event ska inte döljas).
  *
@@ -54,6 +56,11 @@ const CLUSTERS: { sourceId: string; hostName: string; badDay: string; configOver
     // maxUrls över sitemapens ~284 event-URL:er: ett giltigt event utanför
     // nattens cap (220) får inte tolkas som "returneras inte" och döljas.
     { sourceId: 'soderkoping-guide', hostName: 'Söderköpingsguiden', badDay: '2026-10-14', configOverride: { maxUrls: 600 } },
+    // 1/11 2026: Jazzimalmo — detaljsidans sajtvida "nästa konsert"-ruta
+    // ("När: 2026-11-23 18:30") daterade 53 av 55 inlägg till 23/11; Wisby
+    // Strand — eventlistan FÖRE artikeln gav 32 av 33 event första kortets dag.
+    { sourceId: 'sb-jazzimalmo-com', hostName: 'Jazzimalmo', badDay: '2026-11-23' },
+    { sourceId: 'wisby-strand', hostName: 'Wisby Strand', badDay: '2026-11-26' },
 ];
 
 const norm = (u: string) => u.replace(/\/+$/, '');

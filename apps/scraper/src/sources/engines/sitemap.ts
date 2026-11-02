@@ -36,7 +36,7 @@ import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText, rangeToStartText } from '../../utils/swedishDate';
 import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
-import { extractStreetAddress, placeFromLines } from '../../utils/swedishAddress';
+import { extractStreetAddress, placeFromLines, postalTown } from '../../utils/swedishAddress';
 import { isInNordic } from '../../utils/venueCoordinates';
 
 const gunzip = promisify(zlib.gunzip);
@@ -237,6 +237,32 @@ export interface SitemapConfig {
      * fönstret, samma medvetna begränsning som för övriga museikällor.
      */
     detailDateRangeStart?: boolean;
+    /**
+     * Regex-variant av detailDateSelector för datum som bara finns i sidans
+     * inbäddade data (Next.js RSC-ström, SvelteKit-devalue) och inte i DOM:en.
+     * CAPTURE-GRUPP 1 = texten med eventdatumet. En ISO-tidsstämpel med zon
+     * ("2026-11-29T15:00:00.000Z") tolkas exakt; annars fritext som i
+     * dateFromDetailSelector (flera tillfällen i gruppen → första kommande).
+     * Ingen träff ⇒ sidan hoppas över — hellre bortfall än sidfotens datum.
+     * Trollhättans Folkets Hus (startUtc i RSC-strömmen) och Vemdalen
+     * (occurrences-listan) 1/11 2026.
+     */
+    detailDateRegex?: RegExp;
+    /**
+     * Regex-variant av detailPlaceSelector: venue och adress ur CAPTURE-GRUPP 1,
+     * koordinater ur grupp 1 (lat) + 2 (lng) — för platsblock som bara finns i
+     * sidans inbäddade data. Postorten i adressen slår defaultCity. Vemdalens
+     * placeName/addressLines/mapLat 1/11 2026.
+     */
+    detailPlaceRegex?: { venue?: RegExp; address?: RegExp; coords?: RegExp };
+    /**
+     * Katalogen hämtas med POST (Episerver-block som Konserthusets
+     * /CalendarSlideBlock/LoadMore/ — GET ger 405). Kroppen skickas som
+     * application/x-www-form-urlencoded; `{{today}}` byts mot dagens lokala
+     * YYYY-MM-DD så "från och med idag" följer med. Gäller bara katalog-fetchen
+     * (sitemapUrl); detaljsidorna hämtas som vanligt.
+     */
+    catalogPost?: string;
 }
 
 /**
@@ -286,6 +312,79 @@ export function dateFromDetailSelector(
     );
     const date = findFirstDateInText(opts.rangeStart ? rangeToStartText(numeric) : numeric, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
+}
+
+/**
+ * POST-kroppen för en katalog (SitemapConfig.catalogPost): `{{today}}` →
+ * dagens LOKALA YYYY-MM-DD. Exporterad för test.
+ */
+export function catalogPostBody(template: string, now: Date = new Date()): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    return template.replace(/\{\{today\}\}/g, today);
+}
+
+/**
+ * Datumet ur sidans inbäddade data (SitemapConfig.detailDateRegex): capture-
+ * grupp 1 i första träffen. En ISO-tidsstämpel med zon tolkas exakt (UTC →
+ * rätt lokal tid); annars städas JSON-/devalue-skal, citattecken och
+ * etiketter ("date:", "Tid:") bort och fritexten går samma väg som
+ * dateFromDetailSelector — med flera tillfällen i gruppen ("1 november 2026 …
+ * 8 november 2026") vinner första kommande. null utan träff eller datum.
+ */
+export function dateFromDetailRegex(
+    html: string, re: RegExp, now: Date = new Date(),
+    opts: { rangeStart?: boolean } = {},
+): { date: Date; hasTime: boolean } | null {
+    const m = html.match(re);
+    if (!m?.[1]) return null;
+    const raw = m[1].trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/.test(raw)) {
+        const d = new Date(raw);
+        return isNaN(d.getTime()) ? null : { date: d, hasTime: true };
+    }
+    const text = decodeHtmlEntities(raw.replace(/<[^>]+>/g, ' '))
+        .replace(/\$R\[\d+\]=/g, ' ')                                   // devalue-referenser
+        .replace(/\\?["'{}[\]]/g, ' ')                                   // JSON-/devalue-skal
+        .replace(/\b(?:date|time|datum|tid(?:er)?)\s*:\s*/gi, ' ')     // etiketter
+        .replace(/,/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!text) return null;
+    const date = findFirstDateInText(opts.rangeStart ? rangeToStartText(text) : text, now);
+    return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
+}
+
+/**
+ * Platsen ur sidans inbäddade data (SitemapConfig.detailPlaceRegex). Venue och
+ * adress = grupp 1 (citattecken/array-skal städas: '"Gatan 4","846 71 Vemdalen"'
+ * → "Gatan 4, 846 71 Vemdalen"), koordinater = grupp 1+2 (bara nordiska).
+ * Postorten i adressen slår defaultCity. Muterar ev; true när något fält träffade.
+ */
+export function applyDetailPlaceRegex(
+    html: string, rx: { venue?: RegExp; address?: RegExp; coords?: RegExp }, ev: RawEvent,
+): boolean {
+    const grab = (re?: RegExp): string | undefined => {
+        const m = re ? html.match(re) : null;
+        if (!m?.[1]) return undefined;
+        const v = decodeHtmlEntities(m[1].replace(/<[^>]+>/g, ' '))
+            .replace(/"\s*,\s*"/g, ', ').replace(/["[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+        return v || undefined;
+    };
+    let hit = false;
+    const venue = grab(rx.venue);
+    if (venue && venue.length <= 80) { ev.venueName = venue; hit = true; }
+    const address = grab(rx.address);
+    if (address) {
+        ev.address = address; hit = true;
+        const town = postalTown(address);
+        if (town) ev.city = town;
+    }
+    const cm = rx.coords ? html.match(rx.coords) : null;
+    const lat = cm ? parseFloat(cm[1]) : NaN;
+    const lng = cm ? parseFloat(cm[2]) : NaN;
+    if (Number.isFinite(lat) && Number.isFinite(lng) && isInNordic(lat, lng)) { ev.coords = [lat, lng]; hit = true; }
+    return hit;
 }
 
 /**
@@ -507,7 +606,11 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
     const isGzUrl = url.toLowerCase().endsWith('.gz');
     await domainLimiter.wait(url);
     try {
+        // POST-katalog (SitemapConfig.catalogPost) — bara själva katalog-fetchen.
+        const postBody = cfg.catalogPost !== undefined && url === cfg.sitemapUrl
+            ? catalogPostBody(cfg.catalogPost) : null;
         const res = await fetchWithRetry(url, {
+            ...(postBody !== null ? { method: 'POST', body: postBody } : {}),
             headers: {
                 'User-Agent': cfg.userAgent ?? DEFAULT_UA,
                 // OBS: */* måste vara med — utan den ger Studiefrämjandet 406.
@@ -516,8 +619,9 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
                 // JSON-kataloger (Studiefrämjandets kurssök) content-förhandlar
                 // på XHR-headern: med den svarar samma URL med JSON i stället
                 // för HTML-skalet. Sätts bara för själva katalog-fetchen.
-                ...(cfg.isJsonCatalog && url === cfg.sitemapUrl
+                ...((cfg.isJsonCatalog || postBody !== null) && url === cfg.sitemapUrl
                     ? { 'X-Requested-With': 'XMLHttpRequest' } : {}),
+                ...(postBody !== null ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
             },
             redirect: 'follow',
         }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? DEFAULT_TIMEOUT, label: url });
@@ -572,6 +676,13 @@ export function extractCatalogDates(
             .replace(
                 /(?<![\d-])(\d{1,2})(\s+[a-zåäö]{3,9}\.?)?\s*[-–]\s*\d{1,2}(\s+[a-zåäö]{3,9}\.?)/gi,
                 (_m, day: string, startMonth: string | undefined, endMonth: string) => `${day}${startMonth ?? endMonth}`,
+            )
+            // Månad-FÖRST i datumbrickan ("nov 1" — Tingsryds c-datebadge 1/11):
+            // vänd till svensk ordning. Bara när ingen dag står före och talet
+            // inte är ett klockslag (samma vakter som dateFromDetailSelector).
+            .replace(
+                /(?<!\d\s*)\b(jan(?:uari)?|feb(?:ruari)?|mars?|apr(?:il)?|maj|juni?|juli?|aug(?:usti)?|sep(?:t(?:ember)?)?|okt(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+(\d{1,2})\b(?![.:]\d)/i,
+                '$2 $1',
             );
         if (!href || !text) return;
         const d = findFirstDateInText(text);
@@ -670,7 +781,9 @@ function extractLinksFromHtml(html: string, baseUrl: string): SitemapEntry[] {
 export function extractJsonCatalogUrls(text: string, baseUrl: string): SitemapEntry[] {
     const out: SitemapEntry[] = [];
     const seen = new Set<string>();
-    const unescaped = text.replace(/\\\//g, '/');
+    // \/ och \" avkodas: HTML inbäddad i en JSON-sträng (Konserthusets
+    // {"html": "<li … href=\"/program…\">"}) bär annars inga läsbara URL:er.
+    const unescaped = text.replace(/\\\//g, '/').replace(/\\"/g, '"');
     for (const m of unescaped.matchAll(/"((?:https?:\/\/|\/)[^"\\\s]{4,300})"/g)) {
         let href = m[1];
         try { href = new URL(href, baseUrl).toString(); } catch { continue; }
@@ -1500,12 +1613,16 @@ export const sitemapEngine = async (
             const html = await detailFetch(entry.url);
             fetched++;
             if (!html) { failed++; events.push(null); continue; }
-            // Sidans eget datumfält är sanningen — ingen fritext-fallback.
+            // Sidans eget datumfält (selektor eller regex) är sanningen — ingen fritext-fallback.
             const own = config.detailDateSelector
                 ? dateFromDetailSelector(html, config.detailDateSelector, new Date(), { rangeStart: config.detailDateRangeStart })
-                : null;
-            if (config.detailDateSelector && !own) { noEvent++; events.push(null); continue; }
-            const ev = extractFromHtml(html, entry.url, config.defaultCity, own?.date);
+                : config.detailDateRegex
+                    ? dateFromDetailRegex(html, config.detailDateRegex, new Date(), { rangeStart: config.detailDateRangeStart })
+                    : null;
+            if ((config.detailDateSelector || config.detailDateRegex) && !own) { noEvent++; events.push(null); continue; }
+            // Kortdatumet (catalogDates) räddar detaljsidor HELT utan datum
+            // (Tingsryd 1/11) — annars gav fallbacken null innan kortet hann vinna.
+            const ev = extractFromHtml(html, entry.url, config.defaultCity, own?.date ?? entry.catalogDate);
             if (!ev) { noEvent++; events.push(null); continue; }
             ev.url = key;
             if (own) {
@@ -1526,6 +1643,7 @@ export const sitemapEngine = async (
                 if (v && v.length <= 80) ev.venueName = v;
             }
             if (config.detailPlaceSelector) applyDetailPlace(html, config.detailPlaceSelector, ev);
+            if (config.detailPlaceRegex) applyDetailPlaceRegex(html, config.detailPlaceRegex, ev);
             if (config.detailDescSelector) {
                 const d = descFromDetailSelector(html, config.detailDescSelector, config.detailDescStrip);
                 if (d) ev.description = d;

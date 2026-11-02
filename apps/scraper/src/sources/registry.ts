@@ -1420,14 +1420,18 @@ export const SOURCES: Source[] = [
         region: 'uppsala',
         engine: 'wp-rest',
         config: {
-            baseUrl: 'https://www.destinationuppsala.se',
+            // 1/11: www. 301:ar till apex-domänen UTAN sökväg (BunnyCDN) — alla
+            // www-anrop gav startsidan → 0 event sedan 9/10. Apex-domänen direkt.
+            baseUrl: 'https://destinationuppsala.se',
             variant: 'wp-v2',
             defaultCity: 'Uppsala',
             fetchDetailPage: true,
             maxPages: 6,  // 300 events max — annars tar fetch-loopen 30+ min
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06: 1217 events totalt. fetchDetailPage cap=300 för rimlig körtid. API:t (wp/v2) har TOMT excerpt/content/featuredmedia — bild hämtas via detalj-sidans og:image (event-specifik). Beskrivning saknas helt på sidorna (ingen og:description/JSON-LD).',
+        lastVerified: '2026-11-01',
+        notes: 'Probe 2026-06: 1217 events totalt. fetchDetailPage cap=300 för rimlig körtid. API:t (wp/v2) har TOMT excerpt/content/featuredmedia — bild hämtas via detalj-sidans og:image (event-specifik). Beskrivning saknas helt på sidorna (ingen og:description/JSON-LD). '
+            + '1/11: www-hosten tappade sökvägen i redirecten → apex-domän (se config).',
     },
     {
         id: 'helsingborg',
@@ -1731,15 +1735,24 @@ export const SOURCES: Source[] = [
         id: 'tingsryd',
         hostName: 'Tingsryds Kommun',
         region: 'tingsryd',
-        engine: 'wp-rest',
+        engine: 'sitemap',
         config: {
-            baseUrl: 'https://www.tingsryd.se',
-            variant: 'wp-v2',
+            // 1/11: wp/v2/event finns inte längre (posttypen heter "evenemang",
+            // utan datumfält i REST, och detaljsidan skriver inte ut datumet alls).
+            // Datumet står bara i arkivets datumbricka (c-datebadge: "nov" + "1")
+            // → html-katalog med catalogDates. Arkivet är sorterat på eventstart.
+            sitemapUrl: 'https://tingsryd.se/evenemang/',
+            isHtmlCatalog: true,
+            urlPatterns: [/^https:\/\/tingsryd\.se\/evenemang\/[a-z0-9-]{3,}\/?$/i],
+            urlBlacklist: [/\/evenemang\/feed\/?$/i],
+            catalogDates: { itemSelector: '.js-async-posts > .c-element', linkSelector: 'a.c-card', dateSelector: '.c-datebadge__container' },
             defaultCity: 'Tingsryd',
-            fetchDetailPage: true,
+            maxUrls: 40,
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe 2026-06: 15 events. fetchDetailPage.',
+        lastVerified: '2026-11-01',
+        notes: 'Probe 2026-06: 15 events. fetchDetailPage. '
+            + '1/11: REST-rutten borta, datum bara i arkivbrickan → sitemap/html-katalog + catalogDates.',
     },
     {
         id: 'sater',
@@ -2513,15 +2526,19 @@ export const SOURCES: Source[] = [
         id: 'jonkoping',
         hostName: 'Jönköping Kommun',
         region: 'jonkoping',
-        engine: 'sitemap',
+        engine: 'sitevision',
         config: {
-                    sitemapUrl: 'https://www.jonkoping.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
-                    defaultCity: 'Jönköping',
-                },
+            // 1/11: sitemap.xml är borta (SiteVisions sitemap kräver inloggning)
+            // och kalendern renderas i JS → Puppeteer på kalendersidan.
+            urls: ['https://www.jonkoping.se/evenemangskalender/evenemangskalender'],
+            defaultCity: 'Jönköping',
+            useBrowser: true,
+            dropMunicipalMeetings: true,
+        },
         updateFrequency: 'every-3d',
-        notes: 'Probe-sitemap 2026-06-04: 925 event-URLs (evenemang-mönster).',
-        lastVerified: '2026-06-04',
+        notes: 'Probe-sitemap 2026-06-04: 925 event-URLs (evenemang-mönster). '
+            + '1/11: sitemapen borta → sitevision + useBrowser på evenemangskalendern.',
+        lastVerified: '2026-11-01',
     },
     {
         id: 'mora',
@@ -3762,17 +3779,25 @@ export const SOURCES: Source[] = [
     },
     {
         id: 'nybro',
-        hostName: 'Nybro Kommun',
+        hostName: 'Upplev Nybro',
         region: 'nybro',
-        engine: 'sitemap',
+        engine: 'wp-rest',
         config: {
-                    sitemapUrl: 'https://www.nybro.se/sitemap.xml',
-                    urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
-                    defaultCity: 'Nybro',
-                },
-        updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 5 event-URLs (evenemang-mönster).',
-        lastVerified: '2026-06-04',
+            // 1/11: nybro.se har inte längre någon event-posttyp — kommunens
+            // evenemang bor på upplevnybro.se (WP, CPT "evenemang" utan datumfält
+            // i REST; detaljsidan har <time datetime='2026-11-01'> + klockslag).
+            baseUrl: 'https://upplevnybro.se',
+            variant: 'wp-v2',
+            endpoint: '/wp-json/wp/v2/evenemang',
+            defaultCity: 'Nybro',
+            fetchDetailPage: true,
+            detailDateRegex: /(<time datetime='\d{4}-\d{2}-\d{2}'>[^<]+<\/time>(?:[\s\S]{0,400}?<time datetime='\d{2}:\d{2}'>[^<]+<\/time>)?)/,
+            maxPages: 3,
+        },
+        updateFrequency: 'every-3d',
+        notes: 'Probe-sitemap 2026-06-04: 5 event-URLs (evenemang-mönster). '
+            + '1/11: flyttad till upplevnybro.se (wp-v2, endpoint evenemang, datum ur detaljsidans <time>).',
+        lastVerified: '2026-11-01',
     },
     {
         id: 'soderhamn',
@@ -3927,8 +3952,10 @@ export const SOURCES: Source[] = [
                     defaultCity: 'Karlskrona',
                 },
         updateFrequency: 'weekly',
-        notes: 'Probe-sitemap 2026-06-04: 3 event-URLs (aktivitet-mönster).',
-        lastVerified: '2026-06-04',
+        status: 'dead',
+        notes: 'Probe-sitemap 2026-06-04: 3 event-URLs (aktivitet-mönster). '
+            + '1/11: DÖD — WAF svarar 403 "Åtkomst nekad" på sitemap, startsida och evenemangssida oavsett UA; sajten blockerar botar medvetet och det respekteras.',
+        lastVerified: '2026-11-01',
     },
     {
         id: 'partille',
@@ -4674,7 +4701,13 @@ export const SOURCES: Source[] = [
         region: 'stockholm',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.konserthuset.se/sv/sitemap.xml',
+            // 1/11: sitemapen är INAKTUELL — 9 133 kalender-URL:er men inget efter
+            // oktober 2026 fast kalendern är full → 0 hittade sedan 12/10. Kalenderns
+            // "Visa fler" är ett Episerver-block som bara svarar på POST (JSON med
+            // HTML-listan, data-fulldate per rad). take=200 ≈ fyra månader framåt.
+            sitemapUrl: 'https://www.konserthuset.se/CalendarSlideBlock/LoadMore/',
+            isJsonCatalog: true,
+            catalogPost: 'date={{today}}&skip=0&take=200&lang=sv&viewType=normal&currentBlockId=0&contentGuid=7734c4c5-5c58-4872-a98b-6b5501531aca',
             // Sajten byggdes om: 9 133 kalender-URLs med datum+tid sist i
             // sökvägen (/kalender/<serie>/<år>/<slug>/20260906-1900/). Det
             // gamla /konsert/-mönstret matchade inget → 0 hittade i månader.
@@ -4686,8 +4719,9 @@ export const SOURCES: Source[] = [
             maxUrls: 300,
         },
         updateFrequency: 'every-3d',
-        notes: 'Probe-venues 2026-06-09: 12 event-URLs (konsert-mönster). OMPROBAD 2026-09-04 efter 0 hittade: ny URL-struktur, ingen JSON-LD → cheerio-fallback läser "Söndag 6 september 2026 kl 19.00" ur sidtexten.',
-        lastVerified: '2026-09-04',
+        notes: 'Probe-venues 2026-06-09: 12 event-URLs (konsert-mönster). OMPROBAD 2026-09-04 efter 0 hittade: ny URL-struktur, ingen JSON-LD → cheerio-fallback läser "Söndag 6 september 2026 kl 19.00" ur sidtexten. '
+            + '1/11: sitemapen slutade uppdateras → kalenderns LoadMore-endpoint (POST, catalogPost).',
+        lastVerified: '2026-11-01',
     },
     {
         id: 'helsingborgs-konserthus',
@@ -5405,7 +5439,9 @@ export const SOURCES: Source[] = [
         region: 'uppsala',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://www.destinationuppsala.se/sitemap_index.xml',
+            // 1/11: www. 301:ar till apex-domänen utan sökväg — sitemapen hämtades
+            // som startsidan → 0 event sedan 10/10. Apex-domänen direkt.
+            sitemapUrl: 'https://destinationuppsala.se/sitemap_index.xml',
             urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i],
             urlBlacklist: [/\/en\//],
             defaultCity: 'Uppsala',
@@ -5413,8 +5449,9 @@ export const SOURCES: Source[] = [
         },
         updateFrequency: 'every-3d',
         status: 'active',
-        lastVerified: '2026-06-09',
-        notes: 'Probe-venues 2026-06-09: 1907 event-URLs (event-mönster) — regional turism. Verifierad: 24 spridda datum, 91% bild. urlBlacklist /en/ tillagd (engelska dubbletter); 22 äldre /en/-rader kan dedupas senare.',
+        lastVerified: '2026-11-01',
+        notes: 'Probe-venues 2026-06-09: 1907 event-URLs (event-mönster) — regional turism. Verifierad: 24 spridda datum, 91% bild. urlBlacklist /en/ tillagd (engelska dubbletter); 22 äldre /en/-rader kan dedupas senare. '
+            + '1/11: www-hosten tappade sökvägen i redirecten → apex-domän (se config).',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.destinationuppsala.se/sitemap_index.xml', date: '2026-06-09' },
     },
 
@@ -5460,10 +5497,23 @@ export const SOURCES: Source[] = [
         hostName: 'Wisby Strand',
         region: 'gotland',
         engine: 'sitemap',
-        config: { sitemapUrl: 'https://www.wisbystrand.se/sitemap_index.xml', urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i], defaultCity: 'Visby' },
+        config: {
+            sitemapUrl: 'https://www.wisbystrand.se/sitemap_index.xml',
+            urlPatterns: [/\/(?:sv\/)?event\/[^/]+\/?$/i],
+            // 1/11: sidan (645 kB) listar ALLA andra event FÖRE artikeln, så
+            // fritext-skanningen tog första listkortets datum — 32 av 33 event
+            // låg på 2026-11-26. Artikeln bär eventets eget datum ("Datum: 14
+            // november", "den 14 november kliver …").
+            detailDateSelector: 'article.js-progress-bar__article',
+            defaultCity: 'Visby',
+        },
         updateFrequency: 'every-3d',
         status: 'experimental',
-        notes: 'Probe-venues 2026-06-09: 48 event-URLs (event-mönster) — kongress/konsert (Gotland). Körd: 0/33 (allt framåt). Kolla senare.',
+        lastVerified: '2026-11-01',
+        // Engångssvep: kända event får artikelns datum i stället för listans.
+        contentSweep: '2026-11-01',
+        notes: 'Probe-venues 2026-06-09: 48 event-URLs (event-mönster) — kongress/konsert (Gotland). Körd: 0/33 (allt framåt). Kolla senare. '
+            + '1/11: datumkluster (listan före artikeln) → detailDateSelector på artikeln + contentSweep.',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.wisbystrand.se/sitemap_index.xml', date: '2026-06-09' },
     },
     {
@@ -5629,16 +5679,26 @@ export const SOURCES: Source[] = [
         region: 'nordmaling',
         engine: 'sitemap',
         config: {
-            sitemapUrl: 'https://visitnordmaling.se/wp-sitemap-posts-event-1.xml',
-            urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
+            // 1/11: visitnordmaling.se bytte WordPress → SiteVision; wp-sitemapen
+            // är borta. Kalenderlistan är server-renderad och detaljsidans datum
+            // står i rutan .lp-event-date ("2 november 2026"; #Evenemangsdatum intill är en tom platshållare).
+            sitemapUrl: 'https://visitnordmaling.se/besoka-och-uppleva/evenemang/',
+            isHtmlCatalog: true,
+            urlPatterns: [/\/besoka-och-uppleva\/evenemang\/kalender\/\d{4}-\d{2}-\d{2}-[a-z0-9-]+/i],
+            detailDateSelector: '.lp-event-date',
+            // Servern skickar bara löv-certet (mellancertet Sectigo DV R36 saknas) →
+            // node-fetch faller på UNABLE_TO_VERIFY_LEAF_SIGNATURE medan webbläsare
+            // hämtar mellancertet själva (AIA). Puppeteer tills de lagar kedjan.
+            useBrowser: true,
             defaultCity: 'Nordmaling',
-            maxUrls: 200,
+            maxUrls: 60,
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://visitnordmaling.se/wp-sitemap-posts-event-1.xml', date: '2026-06-11' },
-        notes: 'Bulk-probe 2026-06-11: sitemap-text, ~17 event upptäckta. Första vågen (lägre tröskel) — verifiera vid behov.',
-        lastVerified: '2026-06-11',
+        notes: 'Bulk-probe 2026-06-11: sitemap-text, ~17 event upptäckta. Första vågen (lägre tröskel) — verifiera vid behov. '
+            + '1/11: ny SiteVision-sajt — html-katalog på evenemangslistan + .lp-event-date; useBrowser p.g.a. deras ofullständiga TLS-kedja.',
+        lastVerified: '2026-11-01',
     },
     {
         id: 'oskarshamn',
@@ -7253,16 +7313,20 @@ export const SOURCES: Source[] = [
         id: 'vallentuna-kommun',
         hostName: 'Vallentuna Kommun',
         region: 'vallentuna',
-        engine: 'optimizely-events',
+        engine: 'sitevision',
         config: {
-            baseUrl: 'https://www.vallentuna.se',
-            currentPageId: 'c36b6e1a-5da0-4719-9b5e-c586df601ec6',
+            // 1/11: kommunen bytte Optimizely → SiteVision; /api/v1/eventsselection
+            // ger 404. Kalendern laddar korten i JS (3 "fästa" i HTML:n) → Puppeteer.
+            urls: ['https://www.vallentuna.se/uppleva-och-gora/evenemang-och-motesplatser/evenemang'],
             defaultCity: 'Vallentuna',
+            useBrowser: true,
+            dropMunicipalMeetings: true,
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
-        notes: 'Optimizely-kommunens egen /api/v1/eventsselection — 82 event i ETT anrop, ingen paginering. FÄLLA: toppnivåns StartDate är null för återkommande event, datumen ligger bara i Dates[].',
-        lastVerified: '2026-08-26',
+        notes: 'Optimizely-kommunens egen /api/v1/eventsselection — 82 event i ETT anrop, ingen paginering. FÄLLA: toppnivåns StartDate är null för återkommande event, datumen ligger bara i Dates[]. '
+            + '1/11: Optimizely-API:t borta (SiteVision nu) → sitevision + useBrowser.',
+        lastVerified: '2026-11-01',
         discovery: { method: 'probe-xhr', probeUrl: 'https://www.vallentuna.se/api/v1/eventsselection?CurrentPageId=c36b6e1a-5da0-4719-9b5e-c586df601ec6', date: '2026-08-26', rawEventCount: 82, notes: 'CurrentPageId sniffat med apps/scraper/scout/deep-scout.cjs. Prova samma endpoint på andra Optimizely-kommuner.' },
     },
     {
@@ -7453,16 +7517,15 @@ export const SOURCES: Source[] = [
         region: 'trollhattan',
         engine: 'sitemap',
         config: {
-            // Trollhättans huvudscen (Hebeteatern, Kulturbaren, Ritz).
-            // WordPress + The Events Calendar, men tribe-REST är avstängt —
-            // Yoasts event-sitemap är vägen in. Sitemapen blandar in husets
-            // INFO-sidor (catering, hitta hit, kulturkortet …) som samma
-            // posttyp; de filtreras med urlBlacklist nedan.
-            sitemapUrl: 'https://www.trollhattan.fh.se/event-sitemap.xml',
-            urlPatterns: [/\/events\/event\/[a-z0-9-]{3,}/i],
-            urlBlacklist: [
-                /\/events\/event\/(catering|kulturkortet|ritz-teatercafe|hitta-hit|festmiddag|bibliotek|planskisser|nyhetsbrev|folkets-hus-kulturhuset-ar-kontantfritt|lankar|kontakta-oss|dagens-lunch)\/?$/i,
-            ],
+            // 1/11: sajten byggdes om (DatoCMS + Next.js). event-sitemap.xml är
+            // borta och den nya sitemapen listar bara /en/-URL:er. Den svenska
+            // listsidan /sv/events bär alla kommande (61 st 1/11); datumet finns
+            // bara i RSC-strömmen (Tickster-objektets startUtc) — inte i DOM:en
+            // utöver "29 november" utan år.
+            sitemapUrl: 'https://www.trollhattan.fh.se/sv/events',
+            isHtmlCatalog: true,
+            urlPatterns: [/^https:\/\/www\.trollhattan\.fh\.se\/sv\/events\/[a-z0-9-]{3,}\/?$/i],
+            detailDateRegex: /\\"startUtc\\":\\"\$D(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\\"/,
             defaultCity: 'Trollhättan',
             defaultVenue: 'Folkets Hus Kulturhuset',
             maxUrls: 120,
@@ -7473,8 +7536,9 @@ export const SOURCES: Source[] = [
         // fönstret (30 d) hade 48 av 70 event kastats EFTER att sidorna redan
         // hämtats — fönstret filtrerar först vid sparning, så bredden är gratis.
         windowDays: 180,
-        notes: 'Yoast-JSON-LD:n är WebPage-graf UTAN Event-nod — datumet kommer ur textfallbacken ("23 oktober, KL 19:30"). OBS sidhuvudet skriver ut DAGENS datum ("Måndag 7 September 2026"); kontrollera vid nästa verifiering att inte alla event daterats till körningsdagen (Kulturbolaget-buggen).',
-        lastVerified: '2026-09-07',
+        notes: 'Yoast-JSON-LD:n är WebPage-graf UTAN Event-nod — datumet kommer ur textfallbacken ("23 oktober, KL 19:30"). OBS sidhuvudet skriver ut DAGENS datum ("Måndag 7 September 2026"); kontrollera vid nästa verifiering att inte alla event daterats till körningsdagen (Kulturbolaget-buggen). '
+            + '1/11: ny sajt (DatoCMS/Next.js) — listsidan /sv/events + startUtc ur RSC-strömmen (detailDateRegex), exakt klockslag.',
+        lastVerified: '2026-11-01',
         discovery: { method: 'manual', probeUrl: 'https://www.trollhattan.fh.se/event-sitemap.xml', date: '2026-09-07', rawEventCount: 72, notes: 'Trollhättan saknade helt lokala scener — 84 event i stan på en vecka men 3 från lokala arrangörer.' },
     },
     {
@@ -7656,11 +7720,12 @@ export const SOURCES: Source[] = [
         hostName: 'Bollebygds Kommun',
         region: 'bollebygd',
         engine: 'sitevision',
-        config: { urls: ['https://www.bollebygd.se/upplevaochgora/evenemangskalender.4.17a5ac7215f413283d8601e2.html'], defaultCity: 'Bollebygd', useBrowser: true, dropMunicipalMeetings: true, maxItems: 100 },
+        config: { urls: ['https://www.bollebygd.se/arkiv/evenemang'], defaultCity: 'Bollebygd', useBrowser: true, dropMunicipalMeetings: true, maxItems: 100 },
         updateFrequency: 'every-3d',
         status: 'experimental',
-        notes: 'JS-renderad kalender, hämtas via Puppeteer. TUNN — 2 event i fönstret vid upptäckt. Auto-karantänen triggar inte på tomma fönster (found>0), men kolla källan om den ligger på noll i månader.',
-        lastVerified: '2026-08-26',
+        notes: 'JS-renderad kalender, hämtas via Puppeteer. TUNN — 2 event i fönstret vid upptäckt. Auto-karantänen triggar inte på tomma fönster (found>0), men kolla källan om den ligger på noll i månader. '
+            + '1/11: gamla kalender-URL:en 404 → /arkiv/evenemang (soleil eventListing, server-renderad).',
+        lastVerified: '2026-11-01',
         discovery: { method: 'probe-sitevision', probeUrl: 'https://www.bollebygd.se/upplevaochgora/evenemangskalender.4.17a5ac7215f413283d8601e2.html', date: '2026-08-26', rawEventCount: 2 },
     },
     {

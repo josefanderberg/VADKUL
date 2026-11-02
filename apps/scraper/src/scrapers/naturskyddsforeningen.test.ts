@@ -40,6 +40,16 @@ describe('mapNsfEvent', () => {
         expect(mapNsfEvent({ ...baseResult, url: '/kalender/standig-utstallning/' })).toBeNull();
     });
 
+    // 1/11 2026: sajten lägger ett numeriskt id efter datumet i slugen och
+    // flyttade kalendern under /engagera-dig/ — regexen krävde datumet SIST
+    // och 291 av 291 event föll bort (källan låg i karantän en månad).
+    it('slug med id-suffix efter datumet (…-2026-09-09-97344/) ger datumet ändå', () => {
+        const e = mapNsfEvent({ ...baseResult, url: '/engagera-dig/kalender/kalmar-sygrupp-lappa-laga-2026-09-09-97344/' })!;
+        expect(e).not.toBeNull();
+        expect([e.startDate.getFullYear(), e.startDate.getMonth(), e.startDate.getDate()]).toEqual([2026, 8, 9]);
+        expect(e.url).toBe('https://www.naturskyddsforeningen.se/engagera-dig/kalender/kalmar-sygrupp-lappa-laga-2026-09-09-97344/');
+    });
+
     it('utan timeString blir starttiden 00:00 (runnerns heldags-heuristik tar över)', () => {
         const e = mapNsfEvent({ ...baseResult, timeString: '' })!;
         expect(e.startDate.getHours()).toBe(0);

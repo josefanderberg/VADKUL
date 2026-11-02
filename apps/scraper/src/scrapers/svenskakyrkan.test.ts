@@ -84,6 +84,18 @@ describe('mapSvkEvent', () => {
         expect(deriveTown('Göteborgs Vasa')).toBe('Göteborg');
     });
 
+    it('deriveTown: -bygden-församlingar ger orten före suffixet', () => {
+        expect(deriveTown('Katrineholmsbygdens')).toBe('Katrineholm');
+        expect(deriveTown('Hudiksvallsbygdens')).toBe('Hudiksvall');
+        expect(deriveTown('Herrljungabygdens')).toBe('Herrljunga');
+        expect(deriveTown('Degerforsbygden')).toBe('Degerfors');   // äkta -s bevaras
+    });
+
+    it('deriveTown: bindestrecks-församlingar gissas INTE (Nora-Skogs ≠ Nora)', () => {
+        expect(deriveTown('Nora-Skogs')).toBe('Nora-Skog');          // gamla best-effort-beteendet, ingen känd stad
+        expect(deriveTown('Söndrum-Vapnö')).toBe('Söndrum-Vapnö');
+    });
+
     it('SKUT-församlingar utomlands hoppas över (Sverige-only)', () => {
         expect(mapSvkEvent({ ...baseEvent, owner: { name: 'Svenska kyrkan i London', type: 'Utlandet' } })).toBeNull();
     });

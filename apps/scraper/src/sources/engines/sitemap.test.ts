@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -826,5 +826,97 @@ describe('applyDetailPlace (NBV:s eventkort, 12/10)', () => {
         const g = ev();
         applyDetailPlace('<p class="plats"><span>Källgatan 11</span><span>826 30 Söderhamn</span></p>', '.plats', g);
         expect(g).toMatchObject({ venueName: 'Källgatan 11', city: 'Söderhamn' });
+    });
+});
+
+// 1/11 2026: datum och plats som bara finns i sidans inbäddade data.
+describe('dateFromDetailRegex — datum ur inbäddad data', () => {
+    const NOW = new Date(2026, 10, 1, 12, 0);   // sön 1 nov 2026
+
+    it('Trollhättans RSC-ström: ISO med Z tolkas exakt (UTC → lokal tid)', () => {
+        const html = 'x{\\"ticksterEvent\\":{\\"id\\":\\"7z\\",\\"startUtc\\":\\"$D2026-11-29T15:00:00.000Z\\",\\"endUtc\\":\\"$D2026-11-29T17:00:00.000Z\\"}}';
+        const re = /\\"startUtc\\":\\"\$D(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\\"/;
+        const r = dateFromDetailRegex(html, re, NOW)!;
+        expect(r.date.toISOString()).toBe('2026-11-29T15:00:00.000Z');
+        expect(r.hasTime).toBe(true);
+    });
+
+    it('Vemdalens occurrences: flera tillfällen → första kommande, med klockslag', () => {
+        const html = 'occurrences:$R[109]=[$R[110]={date:"25 oktober 2026",time:"17:00–20:00"},$R[111]={date:"8 november 2026",time:"17:00–20:00"},$R[112]={date:"15 november 2026",time:"17:00–20:00"}],organizer:$R[115]={name:"Björns Kök"}';
+        const r = dateFromDetailRegex(html, /occurrences:\$R\[\d+\]=\[((?:\$R\[\d+\]|[^\]])*)\]/, NOW)!;
+        expect([r.date.getFullYear(), r.date.getMonth(), r.date.getDate(), r.date.getHours()]).toEqual([2026, 10, 8, 17]);
+        expect(r.hasTime).toBe(true);
+    });
+
+    it('intervall utan klockslag ("27 november–28 november 2026") → startdagen, hasTime false', () => {
+        const html = 'occurrences:$R[109]=[$R[110]={date:"27 november–28 november 2026"}],organizer:$R[111]={}';
+        const r = dateFromDetailRegex(html, /occurrences:\$R\[\d+\]=\[((?:\$R\[\d+\]|[^\]])*)\]/, NOW, { rangeStart: true })!;
+        expect([r.date.getMonth(), r.date.getDate()]).toEqual([10, 27]);
+        expect(r.hasTime).toBe(false);
+    });
+
+    it('ingen träff eller inget datum i gruppen → null', () => {
+        expect(dateFromDetailRegex('<p>inget</p>', /occurrences:\[([^\]]*)\]/, NOW)).toBeNull();
+        expect(dateFromDetailRegex('occurrences:[{foo:"bar"}]', /occurrences:\[([^\]]*)\]/, NOW)).toBeNull();
+    });
+});
+
+describe('applyDetailPlaceRegex — plats ur inbäddad data (Vemdalen)', () => {
+    const html = 'placeName:"Björns Kök",addressLines:$R[117]=["Åsgatan 4","846 71 Vemdalen"],mapLat:62.4495666,mapLng:13.8607021}}';
+    const rx = {
+        venue: /placeName:"([^"]+)"/,
+        address: /addressLines:\$R\[\d+\]=\[([^\]]+)\]/,
+        coords: /mapLat:(-?\d{1,2}\.\d+),mapLng:(-?\d{1,3}\.\d+)/,
+    };
+    const base = (): RawEvent => ({ title: 'Söndagsmiddag', startDate: new Date(2026, 10, 8), url: 'https://vemdalen.se/evenemang/x', city: 'Vemdalen' });
+
+    it('venue, adress utan citattecken, postort och koordinater', () => {
+        const ev = base();
+        expect(applyDetailPlaceRegex(html, rx, ev)).toBe(true);
+        expect(ev.venueName).toBe('Björns Kök');
+        expect(ev.address).toBe('Åsgatan 4, 846 71 Vemdalen');
+        expect(ev.city).toBe('Vemdalen');
+        expect(ev.coords).toEqual([62.4495666, 13.8607021]);
+    });
+
+    it('koordinater utanför Norden ignoreras, inget block → false och orört', () => {
+        const ev = base();
+        expect(applyDetailPlaceRegex('mapLat:40.7,mapLng:-74.0', { coords: rx.coords }, ev)).toBe(false);
+        expect(ev.coords).toBeUndefined();
+        expect(ev.venueName).toBeUndefined();
+    });
+});
+
+describe('catalogPostBody — {{today}} i POST-kroppen (Konserthuset)', () => {
+    it('byter platshållaren mot lokalt YYYY-MM-DD', () => {
+        expect(catalogPostBody('date={{today}}&skip=0&take=200', new Date(2026, 10, 1, 23, 30)))
+            .toBe('date=2026-11-01&skip=0&take=200');
+    });
+});
+
+describe('extractJsonCatalogUrls — HTML inbäddad i JSON-sträng', () => {
+    it('Konserthusets {"html": "…href=\\"…\\"…"}: escapade citattecken och snedstreck avkodas', () => {
+        const json = '{"html":"<li><a href=\\"https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2026/x/20261108-1930/\\">x</a><a href=\\"\\/program-och-biljetter\\/kalender\\/konsert\\/2026\\/y\\/20261110-2000\\/\\">y</a></li>"}';
+        const urls = extractJsonCatalogUrls(json, 'https://www.konserthuset.se/CalendarSlideBlock/LoadMore/').map((e) => e.url);
+        expect(urls).toContain('https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2026/x/20261108-1930/');
+        expect(urls).toContain('https://www.konserthuset.se/program-och-biljetter/kalender/konsert/2026/y/20261110-2000/');
+    });
+});
+
+describe('extractCatalogDates — datumbricka med månaden först (Tingsryd)', () => {
+    it('"nov 1" i brickan ger 1 november', () => {
+        const html = `<div class="js-async-posts">
+  <div class="c-element"><a class="c-card" href="https://tingsryd.se/evenemang/bio-i-konga/">
+    <div class="c-datebadge__container"><span class="c-datebadge__month"> nov </span><span class="c-datebadge__date"> 1 </span></div>
+    <h2>BIO i Konga</h2></a></div>
+  <div class="c-element"><a class="c-card" href="https://tingsryd.se/evenemang/hostfest/">
+    <div class="c-datebadge__container"><span class="c-datebadge__month"> dec </span><span class="c-datebadge__date"> 12 </span></div>
+    <h2>Höstfest</h2></a></div>
+</div>`;
+        const dates = extractCatalogDates(html, 'https://tingsryd.se/evenemang/', { itemSelector: '.js-async-posts > .c-element', linkSelector: 'a.c-card', dateSelector: '.c-datebadge__container' });
+        const a = dates.get('https://tingsryd.se/evenemang/bio-i-konga')!;
+        const b = dates.get('https://tingsryd.se/evenemang/hostfest')!;
+        expect([a.getMonth(), a.getDate()]).toEqual([10, 1]);
+        expect([b.getMonth(), b.getDate()]).toEqual([11, 12]);
     });
 });

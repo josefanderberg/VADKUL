@@ -48,10 +48,21 @@ const NATIVE_S_TOWNS = new Set([
  * Höganäs/Alingsås bevaras (kända orter eller NATIVE_S_TOWNS), medan
  * "Halmstads"→Halmstad, "Sundbybergs"→Sundbyberg normaliseras. Flerords-namn
  * ("Göteborgs Vasa") faller tillbaka på första ordet om det är en känd ort.
+ *
+ * 1/11 2026 (366 församlingsevent på null-ön): "-bygden"-församlingar ger orten
+ * före suffixet ("Katrineholmsbygdens"→Katrineholm) — bygden ÄR trakten kring
+ * den orten. Bindestrecks-församlingar ("Söndrum-Vapnö", "Mosjö-Täby",
+ * "Nora-Skogs") lämnas medvetet: leden är småorter som Nominatim löser till fel
+ * landsände (Mosjö → Ångermanland, Nora-Skogs ≠ Nora), och API:t ger ingen
+ * adress att disambiguera med. Hellre null-ön än fel nål.
  */
 export function deriveTown(parishBase: string): string {
-    const base = (parishBase || '').trim();
+    let base = (parishBase || '').trim();
     if (!base) return '';
+    // 0. "Katrineholmsbygdens"/"Herrljungabygdens" → "Katrineholms"/"Herrljunga";
+    //    genitiv-s:et hanteras sedan av steg 1–4 som för alla andra namn.
+    const bygd = base.match(/^(.{3,}?)bygdens?$/i);
+    if (bygd) base = bygd[1];
     // 1. Redan en känd ort (skyddar Västerås/Borås m.fl. mot genitiv-strip)
     const direct = knownGeoCity(base);
     if (direct) return direct;

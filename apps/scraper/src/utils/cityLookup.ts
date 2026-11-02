@@ -1,11 +1,18 @@
 /**
  * cityLookup.ts — slå upp orter i WEBBENS ortlistor från scraper-sidan.
  *
- * Webben äger två listor som scrapern behöver men inte kan importera över
- * paketgränsen (olika tsconfig, olika bundling): `cityPoints.ts` (291 orter
- * med koordinater) och `cityData.ts` (`CITIES` — orterna som har stadssida
- * och därmed en slug). Båda är uniforma objektliteraler, så de läses med
- * regex i stället för att kopieras hit och hamna ur synk.
+ * Två listor som scrapern behöver men inte kan importera över paketgränsen
+ * (olika tsconfig, olika bundling): `cityPoints.ts` (291 sökorter med
+ * koordinater — sedan 21/10 2026 i `packages/kontrakt/src`; webbens fil är
+ * bara en shim som re-exporterar) och webbens `cityData.ts` (`CITIES` —
+ * orterna som har stadssida och därmed en slug). Båda är uniforma
+ * objektliteraler, så de läses med regex i stället för att kopieras hit och
+ * hamna ur synk.
+ *
+ * Regression 1/11 2026: shimmen innehöll inga literaler → 0 orter → PRO-
+ * kommuner utan åäö ("Malmo", "Saffle"), lookupCityPoint alltid null.
+ * Därför läses kontrakt-filen först (webbens bara som reserv), och en tom
+ * lista varnar högt i loggen i stället för att tyst ge 0 träffar.
  *
  * Låg bytes: filerna cachas efter första läsningen — flera uppslag i samma
  * körning (schedule-city-posts går igenom 20+ orter) läser inte om disken.
@@ -22,15 +29,26 @@ export interface CityPoint {
 }
 
 const WEB_SRC = path.resolve(__dirname, '../../../web/src');
+const KONTRAKT_SRC = path.resolve(__dirname, '../../../../packages/kontrakt/src');
+
+/** Ortlistans källa: kontraktet först, webbens (numera shim) som reserv. */
+function cityPointsFile(): string {
+    const kontrakt = path.join(KONTRAKT_SRC, 'cityPoints.ts');
+    return fs.existsSync(kontrakt) ? kontrakt : path.join(WEB_SRC, 'utils/cityPoints.ts');
+}
 
 let pointsCache: CityPoint[] | null = null;
 let slugCache: { name: string; slug: string }[] | null = null;
 
 function allCityPoints(): CityPoint[] {
     if (pointsCache) return pointsCache;
-    const src = fs.readFileSync(path.join(WEB_SRC, 'utils/cityPoints.ts'), 'utf-8');
+    const file = cityPointsFile();
+    const src = fs.readFileSync(file, 'utf-8');
     pointsCache = [...src.matchAll(/\{ name: '([^']+)', lat: ([\d.]+), lng: ([\d.]+)/g)]
         .map(m => ({ name: m[1], lat: Number(m[2]), lng: Number(m[3]) }));
+    if (pointsCache.length === 0) {
+        console.warn(`⚠️  cityLookup: inga orter hittades i ${file} — har listan flyttat eller bytt format?`);
+    }
     return pointsCache;
 }
 
