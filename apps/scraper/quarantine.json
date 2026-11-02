@@ -7,12 +7,6 @@
       "lastRetry": "2026-10-28",
       "emptyRetries": 3
     },
-    "bollebygd-kommun": {
-      "since": "2026-10-09",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-27",
-      "emptyRetries": 2
-    },
     "dalhalla": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -20,10 +14,8 @@
       "emptyRetries": 8
     },
     "destination-uppsala": {
-      "since": "2026-10-17",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-26",
-      "emptyRetries": 1
+      "since": "2026-11-02",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "elin-sundbergs-vanforening": {
       "since": "2026-10-13",
@@ -44,7 +36,7 @@
       "emptyRetries": 8
     },
     "folkets-hus-trollhattan": {
-      "since": "2026-11-01",
+      "since": "2026-11-02",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "gotska-sandons-hembygdsforening": {
@@ -54,34 +46,12 @@
       "emptyRetries": 10
     },
     "jonkoping": {
-      "since": "2026-10-11",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-29",
-      "emptyRetries": 2
+      "since": "2026-11-02",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "konserthuset-stockholm": {
-      "since": "2026-10-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-28",
-      "emptyRetries": 1
-    },
-    "naturskyddsforeningen": {
-      "since": "2026-09-30",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-28",
-      "emptyRetries": 4
-    },
-    "nordmaling": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-30",
-      "emptyRetries": 8
-    },
-    "nybro": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-29",
-      "emptyRetries": 10
+      "since": "2026-11-02",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -95,19 +65,9 @@
       "lastRetry": "2026-10-31",
       "emptyRetries": 10
     },
-    "sb-followmeguide-se": {
-      "since": "2026-10-26",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
     "sb-vemdalen-se": {
-      "since": "2026-11-01",
+      "since": "2026-11-02",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
-    "sb-visitbastad-se": {
-      "since": "2026-10-02",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-29",
-      "emptyRetries": 3
     },
     "skordefest": {
       "since": "2026-10-31",
@@ -137,23 +97,13 @@
       "lastRetry": "2026-10-30",
       "emptyRetries": 1
     },
-    "tingsryd": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-30",
-      "emptyRetries": 8
-    },
     "uppsala": {
-      "since": "2026-10-16",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-25",
-      "emptyRetries": 1
+      "since": "2026-11-02",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "vallentuna-kommun": {
-      "since": "2026-10-16",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-25",
-      "emptyRetries": 1
+      "since": "2026-11-02",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
 }

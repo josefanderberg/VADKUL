@@ -1,18 +1,11 @@
 {
-  "generatedAt": "2026-11-01T07:45:05.969Z",
+  "generatedAt": "2026-11-02T06:28:52.258Z",
   "counts": {
     "fel": 0,
-    "varning": 42,
-    "nollkoordinatTotalt": 727
+    "varning": 33,
+    "nollkoordinatTotalt": 708
   },
   "alerts": [
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "karlskrona",
-      "since": "2026-10-11",
-      "message": "gav 3 event 2026-10-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -36,8 +29,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Göteborg & Co",
-      "message": "13 av 20 kommande event ligger 2026-11-01 — sajtvitt datum i stället för eventets?"
+      "source": "Friluftsfrämjandet Järfälla",
+      "message": "7 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -55,49 +48,43 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Sundsvalls museum",
-      "message": "7 av 11 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+      "message": "8 av 12 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Superettan",
-      "message": "8 av 11 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+      "message": "8 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Wisby Strand",
-      "message": "32 av 33 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
+      "message": "29 av 31 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "727 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 28, Klubbdod 28, Förlösa-Kläckeberga församling 26, Katrineholmsbygdens församling 18, NBV 17"
+      "source": "708 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 28, Förlösa-Kläckeberga församling 26, Klubbdod 26, Katrineholmsbygdens församling 18, Barnarp-Ödestugu församling 17"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 255 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 254 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 11 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 10 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
-      "source": "Visit Skellefteå",
-      "message": "invariant-vakten larmar (8 av 127 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Wisby Strand",
-      "message": "invariant-vakten larmar (8 av 33 event på samma tidsstämpel) — se nattloggen"
+      "source": "Visit Ängelholm",
+      "message": "invariant-vakten larmar (8 av 142 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -105,13 +92,6 @@
       "source": "bjorndammens-masugn",
       "since": "2026-10-07",
       "message": "i karantän sedan 2026-10-07: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "bollebygd-kommun",
-      "since": "2026-10-09",
-      "message": "i karantän sedan 2026-10-09: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
@@ -124,8 +104,8 @@
       "level": "varning",
       "kind": "karantan",
       "source": "destination-uppsala",
-      "since": "2026-10-17",
-      "message": "i karantän sedan 2026-10-17: 4 raka tomma körningar (found=0, inga skips)"
+      "since": "2026-11-02",
+      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
@@ -152,8 +132,8 @@
       "level": "varning",
       "kind": "karantan",
       "source": "folkets-hus-trollhattan",
-      "since": "2026-11-01",
-      "message": "i karantän sedan 2026-11-01: 4 raka tomma körningar (found=0, inga skips)"
+      "since": "2026-11-02",
+      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
@@ -166,36 +146,15 @@
       "level": "varning",
       "kind": "karantan",
       "source": "jonkoping",
-      "since": "2026-10-11",
-      "message": "i karantän sedan 2026-10-11: 4 raka tomma körningar (found=0, inga skips)"
+      "since": "2026-11-02",
+      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
       "kind": "karantan",
       "source": "konserthuset-stockholm",
-      "since": "2026-10-19",
-      "message": "i karantän sedan 2026-10-19: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "naturskyddsforeningen",
-      "since": "2026-09-30",
-      "message": "i karantän sedan 2026-09-30: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "nordmaling",
-      "since": "2026-08-19",
-      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "nybro",
-      "since": "2026-08-19",
-      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+      "since": "2026-11-02",
+      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
@@ -214,23 +173,9 @@
     {
       "level": "varning",
       "kind": "karantan",
-      "source": "sb-followmeguide-se",
-      "since": "2026-10-26",
-      "message": "i karantän sedan 2026-10-26: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
       "source": "sb-vemdalen-se",
-      "since": "2026-11-01",
-      "message": "i karantän sedan 2026-11-01: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "sb-visitbastad-se",
-      "since": "2026-10-02",
-      "message": "i karantän sedan 2026-10-02: 4 raka tomma körningar (found=0, inga skips)"
+      "since": "2026-11-02",
+      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
@@ -270,23 +215,16 @@
     {
       "level": "varning",
       "kind": "karantan",
-      "source": "tingsryd",
-      "since": "2026-08-19",
-      "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
       "source": "uppsala",
-      "since": "2026-10-16",
-      "message": "i karantän sedan 2026-10-16: 4 raka tomma körningar (found=0, inga skips)"
+      "since": "2026-11-02",
+      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
       "kind": "karantan",
       "source": "vallentuna-kommun",
-      "since": "2026-10-16",
-      "message": "i karantän sedan 2026-10-16: 4 raka tomma körningar (found=0, inga skips)"
+      "since": "2026-11-02",
+      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     }
   ]
 }

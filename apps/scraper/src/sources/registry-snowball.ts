@@ -438,15 +438,16 @@ export const SNOWBALL_SOURCES: Source[] = [
         engine: 'wp-rest' as const,
         config: { baseUrl: 'https://visitbastad.se', variant: 'tribe', defaultCity: 'Båstad', fetchDetailPage: false, maxPages: 4 },
         updateFrequency: 'every-3d' as const,
-        status: 'experimental' as const,
+        status: 'dead' as const,
         discovery: {
             method: 'hint' as const,
             probeUrl: 'https://visitbastad.se',
             date: '2026-08-23',
             rawEventCount: 17,
         },
-        notes: 'web-snöboll 2026-08-23: tribe, smoke 17 event ok. Manuell kandidatlista (stads-svep).',
-        lastVerified: '2026-08-23',
+        notes: 'web-snöboll 2026-08-23: tribe, smoke 17 event ok. Manuell kandidatlista (stads-svep). '
+            + '1/11: DÖD — visitbastad.se 301:ar till bastad.com/visit; tribe-API:t är borta och orten täcks redan av källan "bastad".',
+        lastVerified: '2026-11-01',
     },
     {
         id: 'sb-visitkristianstad-se',
@@ -627,23 +628,30 @@ export const SNOWBALL_SOURCES: Source[] = [
         id: 'sb-vemdalen-se',
         hostName: 'Visit Vemdalen',
         region: 'harjedalen',
-        engine: 'wp-rest' as const,
+        engine: 'sitemap' as const,
         config: {
-            baseUrl: 'https://www.vemdalen.se', variant: 'wp-v2', defaultCity: 'Vemdalen', fetchDetailPage: true, maxPages: 5,
-            // "Kommande tillfällen" (Adeprimo-blocket) — första framtida datumet i listan. Helsides-
-            // skanningen tog annars "Fler aktuella evenemang"-kortens datum: passerade event
-            // (midsommar, sommarbufféer) återuppstod på nästa kommande dag (14/10 i torrkörningen 13/10).
-            detailDateRegex: /wp-block-adeprimo-event-dates">([\s\S]*?)<\/div>/,
-            // Detaljsidans platsblock (Adeprimo): venue, adress med postort och kartans koordinater.
-            detailPlace: {
-                venue: /class="event-location-title">([^<]+)</,
-                address: /class="event-location-address">([^<]+)</,
-                coords: /class="event-location-map"[^>]*?[?;&]q=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,
+            // 1/11: vemdalen.se lämnade WordPress (REST 404) för en SvelteKit-sajt.
+            // sitemap.xml listar /evenemang/<slug>; sidan saknar JSON-LD och datum-
+            // element — datum, plats och koordinater ligger i den inbäddade
+            // devalue-datan: occurrences:[{date:"1 november 2026",time:"17:00–20:00"},…],
+            // placeName, addressLines:["Gatan 4","846 71 Vemdalen"], mapLat/mapLng.
+            // Flera tillfällen → första kommande (dateFromDetailRegex).
+            sitemapUrl: 'https://www.vemdalen.se/sitemap.xml',
+            urlPatterns: [/^https:\/\/(?:www\.)?vemdalen\.se\/evenemang\/[a-z0-9-]+\/?$/i],
+            detailDateRegex: /occurrences:\$R\[\d+\]=\[((?:\$R\[\d+\]|[^\]])*)\]/,
+            // Intervall ('27 november–28 november 2026') → startdagen, inte slutdagen.
+            detailDateRangeStart: true,
+            detailPlaceRegex: {
+                venue: /placeName:"([^"]+)"/,
+                address: /addressLines:\$R\[\d+\]=\[([^\]]+)\]/,
+                coords: /mapLat:(-?\d{1,2}\.\d+),mapLng:(-?\d{1,3}\.\d+)/,
             },
+            defaultCity: 'Vemdalen',
+            maxUrls: 60,
         },
         updateFrequency: 'every-3d' as const,
-        // Engångssvep: kända event på null-ön får platsblockets koordinater.
-        contentSweep: '2026-10-13',
+        // Engångssvep 1/11: nya sajten — kända event får devalue-datans datum och plats.
+        contentSweep: '2026-11-01',
         status: 'experimental' as const,
         discovery: {
             method: 'hint' as const,
@@ -653,8 +661,9 @@ export const SNOWBALL_SOURCES: Source[] = [
         },
         notes: 'web-snöboll 2026-08-23: wp-v2, smoke 46 event ok. Manuell kandidatlista (stads-svep). '
             + '12/10: platsen fanns bara i detaljsidans event-location-block (REST-texten saknar den) → '
-            + 'detailPlace + defaultCity Vemdalen; 28 event låg på null-ön som "Sverige".',
-        lastVerified: '2026-08-23',
+            + 'detailPlace + defaultCity Vemdalen; 28 event låg på null-ön som "Sverige". '
+            + '1/11: WordPress borta (REST 404, 0 event sedan 22/10) → sitemap + regex mot devalue-datan.',
+        lastVerified: '2026-11-01',
     },
 
     {
@@ -736,15 +745,16 @@ export const SNOWBALL_SOURCES: Source[] = [
         engine: 'wp-rest' as const,
         config: { baseUrl: 'https://followmeguide.se', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5 },
         updateFrequency: 'every-3d' as const,
-        status: 'experimental' as const,
+        status: 'dead' as const,
         discovery: {
             method: 'hint' as const,
             probeUrl: 'https://followmeguide.se',
             date: '2026-09-01',
             rawEventCount: 10,
         },
-        notes: 'web-snöboll 2026-09-01: wp-v2, smoke 10 event ok. Hänvisad av 2 event i DB (t.ex. "Guidad vandring: Konsten i centrum").',
-        lastVerified: '2026-09-01',
+        notes: 'web-snöboll 2026-09-01: wp-v2, smoke 10 event ok. Hänvisad av 2 event i DB (t.ex. "Guidad vandring: Konsten i centrum"). '
+            + '1/11: DÖD — servern (Varnish, "vary: x-is-ai-bot") svarar 200 med TOM kropp på alla sidor för icke-webbläsare; sajten spärrar botar medvetet och det respekteras.',
+        lastVerified: '2026-11-01',
     },
     {
         id: 'sb-alphasverige-se',
@@ -768,17 +778,28 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Jazzimalmo',
         region: 'national',
         engine: 'wp-rest' as const,
-        config: { baseUrl: 'https://jazzimalmo.com', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5 },
+        config: {
+            baseUrl: 'https://jazzimalmo.com', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5,
+            // 1/11: 53 av 55 event låg på 2026-11-23 — detaljsidans sajtvida
+            // "nästa konsert"-ruta ("När: 2026-11-23 18:30") vann för alla inlägg
+            // utan datum i brödtexten. Inläggen är klistrade pressutskick med
+            // antingen en fet "Datum :"-etikett eller "<veckodag>[en] [den] <dag> <månad>"
+            // i löptexten; bara de räknas (contentDateRegex = enda datumkällan).
+            contentDateRegex: /(?:<b>\s*Datum\s*<\/b>\s*:?\s*|(?=(?:måndag|tisdag|onsdag|torsdag|fredag|lördag|söndag)(?:en)?\s+(?:den\s+)?\d{1,2}\s+(?:januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\b))([^<]+)/i,
+        },
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
+        // Engångssvep: kända event får brödtextens datum i stället för rutans.
+        contentSweep: '2026-11-01',
         discovery: {
             method: 'hint' as const,
             probeUrl: 'https://jazzimalmo.com',
             date: '2026-09-01',
             rawEventCount: 15,
         },
-        notes: 'web-snöboll 2026-09-01: wp-v2, smoke 15 event ok. Hänvisad av 2 event i DB (t.ex. "Emma Denward Transformation/Jazz i Malmö").',
-        lastVerified: '2026-09-01',
+        notes: 'web-snöboll 2026-09-01: wp-v2, smoke 15 event ok. Hänvisad av 2 event i DB (t.ex. "Emma Denward Transformation/Jazz i Malmö"). '
+            + '1/11: datumkluster 23/11 (sajtvid "nästa konsert"-ruta) → contentDateRegex på brödtextens eget datum.',
+        lastVerified: '2026-11-01',
     },
 
     {
@@ -1095,9 +1116,18 @@ export const SNOWBALL_SOURCES: Source[] = [
         id: 'sb-klubbdod-se',
         hostName: 'Klubbdod',
         region: 'national',
-        engine: 'wp-rest' as const,
-        config: { baseUrl: 'https://klubbdod.se', variant: 'wp-v2', defaultCity: '', fetchDetailPage: true, maxPages: 5 },
+        engine: 'sitemap' as const,
+        config: {
+            sitemapUrl: 'https://klubbdod.se/event-sitemap.xml',
+            urlPatterns: [/^https:\/\/klubbdod\.se\/event\/[a-z0-9-]+\/?$/i],
+            // Scenen står bara i info-raden: "25 november // kl. 19:00 // 2026 // Geronimo's FGT".
+            detailPlaceRegex: { venue: /class="event-info-text">[^<]*\/\/\s*([^<\/]+?)\s*<\/p>/ },
+            defaultCity: 'Stockholm',
+            maxUrls: 80,
+        },
         updateFrequency: 'every-3d' as const,
+        // Engångssvep: 28 kända event låg på null-ön med posttidens datum.
+        contentSweep: '2026-11-01',
         status: 'experimental' as const,
         discovery: {
             method: 'hint' as const,
@@ -1105,7 +1135,8 @@ export const SNOWBALL_SOURCES: Source[] = [
             date: '2026-10-27',
             rawEventCount: 28,
         },
-        notes: 'web-snöboll 2026-10-27: wp-v2, smoke 28 event ok. Hänvisad av 4 event i DB (t.ex. "Klubb DÖD: Pink Turns Blue + All Lost Joys").',
-        lastVerified: '2026-10-27',
+        notes: 'web-snöboll 2026-10-27: wp-v2, smoke 28 event ok. Hänvisad av 4 event i DB (t.ex. "Klubb DÖD: Pink Turns Blue + All Lost Joys"). '
+            + '1/11: wp-v2 gav posttidens datum och 28/28 på null-ön ("Sverige") — bytt till event-sitemap.xml (406 URL:er, lastmod) där varje sida har JSON-LD Event med starttid och gatuadress+postort (Stockholm).',
+        lastVerified: '2026-11-01',
     },
 ];
