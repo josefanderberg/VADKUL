@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      VADKUL: dagsinlägget - ett inlägg om dagen på Facebook-sidan och
+      Instagram (ägarbeslut 3/11 2026, docs/social/dagsinlagg.md).
+
+      07:00: följer upp gårdagen (spelvinnare/quizsvar som kommentar,
+      insikter efter 48 h), bygger dagens inlägg ur temahjulet och
+      kartdatan, förhandsvisar i Telegram och väntar på klartecken.
+      09:00 publiceras det om Josef inte svarat "nej" (tyst godkännande).
+      Söndagar skickas veckorapporten efteråt.
+
+      Inte eventlistor: temana är siffror, spelet, Grok-filmer ur inkorgen,
+      helgen i en stad, quiz och budskap. Det automatiska morgoninlägget
+      som avvecklades 13/9 (digest-daily) återuppstår alltså INTE här.
+
+      Processen tar /tmp/vadkul-dagsinlagg.lock så Telegram-boten
+      (se.vadkul.bot-daemon) lämnar pollen till den under vetofönstret;
+      botens /stopp skickar SIGTERM som markerar dagens inlägg vetat.
+
+      Installeras av run-daily.sh:s launchd-synk (whitelist) vid nästa
+      nattliga git pull på minin, eller för hand enligt README.md.
+    -->
+    <key>Label</key>
+    <string>se.vadkul.dagsinlagg</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>cd /Users/ai/Repos/VADKUL/apps/scraper &amp;&amp; /usr/local/bin/npx ts-node src/scripts/dagsinlagg.ts --kör</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/ai</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/ai/Library/Logs/vadkul-scraper/dagsinlagg.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/ai/Library/Logs/vadkul-scraper/dagsinlagg-err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

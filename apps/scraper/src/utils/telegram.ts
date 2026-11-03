@@ -132,6 +132,72 @@ export async function sendMediaGroup(photoUrls: string[], caption: string): Prom
     }
 }
 
+export async function sendVideo(videoUrl: string, caption: string): Promise<number | null> {
+    if (!isTelegramConfigured()) return null;
+    try {
+        const r = await fetch(`${API()}/sendVideo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TG_CHAT(),
+                video: videoUrl,
+                caption,
+                parse_mode: 'HTML',
+                supports_streaming: true,
+            }),
+        });
+        const d: any = await r.json();
+        if (!d.ok) {
+            console.error('[Telegram] sendVideo API-fel:', d.description);
+            return sendMessage(`${caption}\n\n🎬 ${videoUrl}`);
+        }
+        return d.result.message_id;
+    } catch (e) {
+        console.error('[Telegram] sendVideo failed:', (e as Error).message);
+        return null;
+    }
+}
+
+/** Telegram låter en bot hämta filer upp till 20 MB. */
+export const TG_FIL_MAX = 20 * 1024 * 1024;
+
+/** Video eller dokument som skickats till chatten (dagsinläggets inkorg). */
+export interface InkommandeMedia {
+    fileId: string;
+    fileName?: string;
+    mimeType?: string;
+    fileSize?: number;
+    /** Bildtexten på filen - temat ("ikväll", "helg Växjö"). */
+    caption?: string;
+}
+
+export interface InkommandeMeddelande {
+    messageId: number;
+    text?: string;
+    media?: InkommandeMedia;
+}
+
+/**
+ * Hämta en fil boten fått (getFile + nedladdning) till `malSokvag`.
+ * Kastar vid fel, inklusive filer över 20 MB (Telegrams gräns för botar).
+ */
+export async function hamtaFil(fileId: string, malSokvag: string): Promise<void> {
+    if (!isTelegramConfigured()) throw new Error('Telegram ej konfigurerat');
+    const r = await fetch(`${API()}/getFile?file_id=${encodeURIComponent(fileId)}`);
+    const d: any = await r.json();
+    if (!d.ok) throw new Error(`getFile: ${d.description ?? 'okänt fel'} (filer över 20 MB kan boten inte hämta)`);
+    const filePath: string = d.result.file_path;
+    const fileSize: number | undefined = d.result.file_size;
+    if (fileSize && fileSize > TG_FIL_MAX) throw new Error(`filen är ${(fileSize / 1e6).toFixed(1)} MB, boten kan hämta högst 20 MB`);
+    const res = await fetch(`https://api.telegram.org/file/bot${TG_TOKEN()}/${filePath}`);
+    if (!res.ok) throw new Error(`nedladdning misslyckades: HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    const fs = await import('fs');
+    const path = await import('path');
+    fs.mkdirSync(path.dirname(malSokvag), { recursive: true });
+    fs.writeFileSync(malSokvag, buf);
+}
+
 // State för long-polling — undvik att läsa samma meddelande två gånger
 let lastUpdateId = 0;
 
@@ -147,11 +213,29 @@ export async function flushPendingUpdates(): Promise<void> {
     } catch { /* ignore */ }
 }
 
+/** Plocka text eller media ur ett Telegram-meddelande; null om inget av det. */
+export function tolkaMeddelande(msg: any): InkommandeMeddelande | null {
+    if (!msg) return null;
+    const ut: InkommandeMeddelande = { messageId: msg.message_id };
+    if (typeof msg.text === 'string') ut.text = msg.text.trim();
+    const m = msg.video ?? msg.document;
+    if (m && m.file_id) {
+        ut.media = {
+            fileId: m.file_id,
+            fileName: m.file_name,
+            mimeType: m.mime_type,
+            fileSize: m.file_size,
+            caption: typeof msg.caption === 'string' ? msg.caption.trim() : undefined,
+        };
+    }
+    return ut.text !== undefined || ut.media ? ut : null;
+}
+
 /**
- * Vänta på svar från användaren (long-polling).
- * Returnerar svars-texten eller null vid timeout.
+ * Vänta på nästa meddelande från användaren (long-polling): text eller en
+ * fil (video/dokument). Returnerar null vid timeout.
  */
-export async function waitForReply(timeoutMs: number): Promise<string | null> {
+export async function waitForMessage(timeoutMs: number): Promise<InkommandeMeddelande | null> {
     if (!isTelegramConfigured()) return null;
     const deadline = Date.now() + timeoutMs;
     const pollSeconds = 25; // Telegram tillåter upp till 50
@@ -174,15 +258,30 @@ export async function waitForReply(timeoutMs: number): Promise<string | null> {
             for (const u of d.result) {
                 lastUpdateId = Math.max(lastUpdateId, u.update_id);
                 const msg = u.message;
-                if (!msg || !msg.text) continue;
                 // Filtrera: bara meddelanden från konfigurerat chat-id
-                if (String(msg.chat?.id) !== TG_CHAT()) continue;
-                return msg.text.trim();
+                if (!msg || String(msg.chat?.id) !== TG_CHAT()) continue;
+                const tolkat = tolkaMeddelande(msg);
+                if (tolkat) return tolkat;
             }
         } catch (e) {
             // Network/timeout — fortsätt poll-loop
             await new Promise((r) => setTimeout(r, 2000));
         }
+    }
+    return null;
+}
+
+/**
+ * Vänta på ett TEXTSVAR från användaren (long-polling). Filer som kommer
+ * under tiden hoppas över (de flöden som använder den här bryr sig bara om
+ * svar). Returnerar texten eller null vid timeout.
+ */
+export async function waitForReply(timeoutMs: number): Promise<string | null> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        const m = await waitForMessage(deadline - Date.now());
+        if (!m) return null;
+        if (m.text !== undefined) return m.text;
     }
     return null;
 }

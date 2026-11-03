@@ -25,6 +25,8 @@
     "fb-kommentarer": "ts-node src/scripts/fb-kommentarer.ts",
     "digest": "ts-node src/scripts/publish-digest.ts",
     "ig-ko": "ts-node src/scripts/publish-ig-queue.ts",
+    "dagsinlagg": "ts-node src/scripts/dagsinlagg.ts",
+    "klipp-till-minin": "bash scripts/klipp-till-minin.sh",
     "scrape-fb": "ts-node src/scrapers/facebook.ts",
     "scrape-eventbrite": "ts-node src/scrapers/eventbrite.ts",
     "scrape-fb:local": "DB_TARGET=2 ts-node src/scrapers/facebook.ts",
@@ -100,6 +102,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@twemoji/svg": "^15.0.0",
     "@vadkul/kontrakt": "file:../../packages/kontrakt",
     "better-sqlite3": "^12.10.0",
     "cheerio": "^1.2.0",
@@ -108,7 +112,8 @@
     "firebase-admin": "^13.6.1",
     "geofire-common": "^6.0.0",
     "probe-image-size": "^7.3.0",
-    "puppeteer": "^25.8.0"
+    "puppeteer": "^25.8.0",
+    "satori": "^0.12.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

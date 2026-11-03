@@ -21,6 +21,19 @@ bara byter innehållet.** Allt är skrivet för att kopieras rakt in i Grok.
 | 02 | [Allt på ett ställe](avsnitt/02-allt-pa-ett-stalle.md) | Problemet: affischer och flöden överallt. Lösningen: en karta. |
 | 03 | [[Stad] i helgen](avsnitt/03-stad-i-helgen.md) | Mall per stad, med veckans riktiga antal event. |
 | 04 | [Vad ska vi hitta på?](avsnitt/04-vad-ska-vi-hitta-pa.md) | Vardagsfrågan i soffan, molnet kommer med svaret. |
+| 05 | [Fredag. Vad händer?](avsnitt/05-fredag.md) | Fredagskänslan: skymning, stadens prickar tänds, musik, mat, scen. |
+| 06 | [Bjud med en vän](avsnitt/06-bjud-med.md) | Två figurer, en bricka mellan dem, molnet knuffar ihop dem. |
+| 07 | [Regnig dag?](avsnitt/07-regnig-dag.md) | Regn och paraply, lamporna tänds inomhus: bio, museum, kurs, café. |
+| 08 | [Lägg upp ditt eget](avsnitt/08-skapa-eget.md) | En figur sätter en gul prick på kartan, grannarna vänder sig om. |
+
+## Klippen till dagsinlägget
+
+Sedan 3/11 2026 går klippen in i [dagsinlägget](../dagsinlagg.md), som bränner
+in texterna, lägger på slutkortet och publicerar. Du behöver inte klippa i
+CapCut: skicka klippet som **fil** till Telegram-boten med temat som bildtext
+("ikväll", "fredag", "bjud med", "regnig", "skapa eget", "allt", "hitta på",
+"helg Växjö"). Max 20 MB per fil; större klipp via `npm run klipp-till-minin`
+(se dagsinlagg.md). Steg 4-6 nedan gäller bara när du gör en film för hand.
 
 ## Så kör du ett avsnitt
 
@@ -90,7 +103,6 @@ aldrig på.
 ## Öppna frågor
 
 - **Seriens musikspår** är inte valt (BAS avsnitt 7).
-- **Två nästan lika paletter:** de statiska inläggen
-  ([../inlagg-plan.md](../inlagg-plan.md)) kör `#04395E → #006AA7` och gult
-  `#FECC02`, studion och den här serien kör `#08304A → #0A5077` och `#FDE047`.
-  Serien följer studion eftersom slutbilden kommer därifrån. Bör samordnas.
+- **Paletten är samordnad sedan 3/11 2026:** allt nytt (serien, de statiska
+  inläggen i [../inlagg-plan.md](../inlagg-plan.md), dagsinläggets kort och
+  slutkort) kör `#08304A` till `#0A5077`, gult `#FDE047`, ljusblått `#BAE6FD`.

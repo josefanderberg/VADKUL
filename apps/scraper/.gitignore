@@ -23,3 +23,10 @@ ig-queue.json
 fb-kommentarer*.csv
 fb-kommentarer-lankar.txt
 fb-reject-memory.json
+
+# Dagsinlägget (src/utils/dagsinlagg): loggen och arbetsmappen (inkorg, utkast,
+# rutor, slutkort) är maskin-lokala. Snedstrecket först: bara paketroten,
+# inte src/utils/dagsinlagg/.
+/dagsinlagg-logg.json
+/dagsinlagg-logg.json.*.tmp
+/dagsinlagg/

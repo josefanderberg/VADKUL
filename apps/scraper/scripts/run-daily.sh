@@ -103,7 +103,7 @@ fi
 # + bootout på minin — återinför inte utan att fråga); ig-queue fick
 # FB-schema-importen 2026-09-10.
 if [ "$JOB_NAME" = "nightly" ]; then
-    for PLIST_NAME in se.vadkul.ig-queue; do
+    for PLIST_NAME in se.vadkul.ig-queue se.vadkul.dagsinlagg; do
         PLIST_SRC="$REPO_ROOT/infra/launchd/$PLIST_NAME.plist"
         PLIST_DST="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
         if [ -f "$PLIST_SRC" ] && ! cmp -s "$PLIST_SRC" "$PLIST_DST" 2>/dev/null; then

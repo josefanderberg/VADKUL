@@ -1,5 +1,9 @@
 # Planerbara inlägg — Facebook & Instagram
 
+> Sedan 3/11 2026 går ett inlägg om dagen ut automatiskt enligt
+> [dagsinlagg.md](dagsinlagg.md) (temahjul, regler, veckorutin). Det här
+> dokumentet är kvar som stilguide och för de tre eviga inläggen nedan.
+
 Tre **eviga** inlägg (inga datum, inga namngivna event) som kan schemaläggas
 veckor framåt utan att bli inaktuella. Färskvaruregeln i
 [../outreach/facebook-poster.md](../outreach/facebook-poster.md) gäller bara
@@ -17,10 +21,13 @@ privata kontot).
 
 | Roll | Värde | Används till |
 |---|---|---|
-| Bas | `#04395E` → `#006AA7` (mjuk gradient, mörkast uppe till vänster) | bakgrund, alltid |
-| Accent | `#FECC02` | siffror, event-prickar, EN sak per bild |
+| Bas | `#08304A` → `#0A5077` (mjuk gradient, mörkast upptill) | bakgrund, alltid |
+| Accent | `#FDE047` | siffror, event-prickar, EN sak per bild |
 | Vit | `#FFFFFF` | logga, rubriktext, emoji-brickor, CTA-pillen |
-| Ljusblå | `#8FC7E8` | underrubrik/brödtext på mörk botten |
+| Ljusblå | `#BAE6FD` | underrubrik/brödtext på mörk botten |
+
+Samma palett som Grok-serien, studion och dagsinläggets kort (samordnat
+3/11 2026; tidigare `#04395E`/`#006AA7`/`#FECC02`/`#8FC7E8`).
 
 Inga andra färger. Ingen lila, ingen orange, inga gradientfilter över foton.
 Regeln: **mörkblå natt + gult ljus**. Gult = "något händer här".
@@ -93,9 +100,9 @@ ExtraBold med vidgad teckenspärr.
 ### Bildbrief (till AI:n, engelska)
 
 > Square 1080×1080 illustration. Night-time Swedish small-town street seen from
-> above at a slight angle, drawn flat and friendly, deep blue palette (#04395E
-> to #006AA7), rounded shapes, no photorealism, no people's faces. Scattered
-> across the map are small warm yellow glowing dots (#FECC02) — but they are all
+> above at a slight angle, drawn flat and friendly, deep blue palette (#08304A
+> to #0A5077), rounded shapes, no photorealism, no people's faces. Scattered
+> across the map are small warm yellow glowing dots (#FDE047) — but they are all
 > fading out, dimming, as if the evening already happened. One single white
 > circular tile with a 🎪 emoji is still glowing brightly in the corner. Soft
 > glow, subtle grain, calm and a little wistful but not sad. Leave the top-left
@@ -145,8 +152,8 @@ Plus logga + pill.
 ### Bildbrief
 
 > Square 1080×1080. Stylised night map of Sweden, deep blue background gradient
-> (#04395E to #006AA7), the country's silhouette formed entirely out of hundreds
-> of small glowing yellow dots (#FECC02) — dense around the cities, sparse in the
+> (#08304A to #0A5077), the country's silhouette formed entirely out of hundreds
+> of small glowing yellow dots (#FDE047) — dense around the cities, sparse in the
 > north. Four white circular tiles with a soft drop shadow float on the map, each
 > containing exactly one emoji: 🎸 ☕ ⚽ 🎨. Gentle glow around each tile, clean
 > flat vector look, rounded, joyful, no clutter, no confetti. Keep the entire
@@ -196,7 +203,7 @@ idag."* + i ljusblått *"Varje gul prick är något som händer."* + logga + pil
 
 ### Bildbrief
 
-> Square 1080×1080, deep blue night background (#04395E to #006AA7), same flat
+> Square 1080×1080, deep blue night background (#08304A to #0A5077), same flat
 > rounded style. Centre: one large white circular tile with a soft glow and a
 > gold star ⭐ resting on its upper edge, and inside the tile a single 🎪 emoji.
 > Around it, three or four smaller white tiles with emoji (🎻 🍰 🏃) float at

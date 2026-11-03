@@ -8,7 +8,7 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 - `apps/scraper` — event-pipelinen: skrapning → Firestore (`linkEvents`) → lokal SQLite-spegel (`events.db`) → aggregat-JSON:er i `apps/web/public/`.
 - `apps/functions` — Cloud Functions (boost, notiser, digest). `index.ts` är bara exports — logiken bor i en modul per område (`boost.ts`, `stars.ts`, …) med delat fundament i `shared.ts`. Bygget bundlar med esbuild (inte tsc-emit): `@vadkul/kontrakt` bakas in i `lib/`, eftersom Cloud Build aldrig kan lösa workspace-deps.
 - `packages/kontrakt` — det delade kontraktet (`@vadkul/kontrakt`): typer, kategori-nycklarna och ren logik som `eventShareSlug`. Får ALDRIG bero på firebase/react/node — ska importeras oförändrat i web, functions och appen. Webben når det via shims i `src/types/` och `src/utils/`.
-- `infra/launchd` — schemalagda jobb (nattkedjan 00:30, digest 07:00, audit-daemon).
+- `infra/launchd` — schemalagda jobb (nattkedjan 00:30, dagsinlägget 07:00, ig-kön, audit-daemon).
 - `docs/` — arbetsdokument per område.
 - `vadkulyt/` — Vad kul-studion, lokalt klippverktyg för marknadsföringsvideor. **Eget git-repo** (`github.com/josefanderberg/vadkulyt`) som det här repot ignorerar; ingår inte i deploy eller CI. Jobba i den mappen med dess egen `CLAUDE.md` och `README.md`.
 

@@ -111,6 +111,25 @@ sig själv efter 24 h.
 not have permission for this action` och inget går ut på Instagram — se
 `docs/outreach/instagram-behorigheter.md`.
 
+## se.vadkul.dagsinlagg - dagsinlägget (07:00, från nov 2026)
+
+Ett inlägg om dagen på Facebook-sidan och Instagram, enligt
+[docs/social/dagsinlagg.md](../../docs/social/dagsinlagg.md). Jobbet kör
+`dagsinlagg.ts --kör` 07:00: följer upp gårdagen (spelvinnare och quizsvar
+som kommentar, insikter efter 48 h), bygger dagens inlägg ur temahjulet och
+kartdatan, förhandsvisar i Telegram och publicerar 09:00 om Josef inte svarat
+"nej" (tyst godkännande). Söndagar skickas veckorapporten. Processen tar
+`/tmp/vadkul-dagsinlagg.lock` så bot-daemon lämnar Telegram-pollen till den.
+
+Ägarbeslut 3/11 2026: automatiska inlägg är tillbaka, men bara temainlägg
+(siffror, spelet, Grok-filmer, helgen i en stad, quiz, budskap), aldrig
+eventlistor. Avsnittet om digest-daily ovan gäller alltså fortfarande:
+den sortens inlägg återinförs inte.
+
+Plisten ligger i whitelisten i `run-daily.sh` och installeras av nattkedjan.
+Slå på den först när 5-7 inlägg gått ut för hand (`--planera` + `--publicera`).
+Loggar: `~/Library/Logs/vadkul-scraper/dagsinlagg.log` och `dagsinlagg-err.log`.
+
 ## se.vadkul.audit-pending
 
 Kontinuerlig daemon som auditerar dagens-och-framåt events som ännu inte

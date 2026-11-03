@@ -52,11 +52,23 @@ function allCityPoints(): CityPoint[] {
     return pointsCache;
 }
 
+/** Stadssidornas lista: sedan 2/9 2026 i utils/cityPages.ts (cityData.ts är
+ *  bara en re-export, så regexen hittade 0 städer där). Läs cityPages först,
+ *  cityData som reserv, och varna högt vid 0 träffar. */
+function citySlugsFile(): string {
+    const pages = path.join(WEB_SRC, 'utils/cityPages.ts');
+    return fs.existsSync(pages) ? pages : path.join(WEB_SRC, 'app/(v1)/evenemang/cityData.ts');
+}
+
 function allCitySlugs(): { name: string; slug: string }[] {
     if (slugCache) return slugCache;
-    const src = fs.readFileSync(path.join(WEB_SRC, 'app/(v1)/evenemang/cityData.ts'), 'utf-8');
+    const file = citySlugsFile();
+    const src = fs.readFileSync(file, 'utf-8');
     slugCache = [...src.matchAll(/\{ name: '([^']+)', slug: '([a-z-]+)'/g)]
         .map(m => ({ name: m[1], slug: m[2] }));
+    if (slugCache.length === 0) {
+        console.warn(`⚠️  cityLookup: inga stadssidor hittades i ${file} — har listan flyttat eller bytt format?`);
+    }
     return slugCache;
 }
 
