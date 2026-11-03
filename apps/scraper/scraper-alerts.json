@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-02T06:28:52.258Z",
+  "generatedAt": "2026-11-03T08:29:05.997Z",
   "counts": {
     "fel": 0,
-    "varning": 33,
-    "nollkoordinatTotalt": 708
+    "varning": 34,
+    "nollkoordinatTotalt": 697
   },
   "alerts": [
     {
@@ -19,6 +19,13 @@
       "source": "tickster-ort-ostersund-2",
       "since": "2026-10-14",
       "message": "gav 1 event 2026-10-07, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "tickster-ort-uppsala-4",
+      "since": "2026-10-19",
+      "message": "gav 4 event 2026-10-12, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -41,6 +48,12 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Kulturhuset Bergsjön",
+      "message": "59 av 97 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "S:t Peters klosters församling",
       "message": "7 av 10 kommande event ligger 2026-11-04 — sajtvitt datum i stället för eventets?"
     },
@@ -53,38 +66,32 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Superettan",
-      "message": "8 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Wisby Strand",
       "message": "29 av 31 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "708 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 28, Förlösa-Kläckeberga församling 26, Klubbdod 26, Katrineholmsbygdens församling 18, Barnarp-Ödestugu församling 17"
+      "source": "697 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 24, Förlösa-Kläckeberga församling 24, NBV 17, Katrineholmsbygdens församling 16, Barnarp-Ödestugu församling 15"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Regionteatern Blekinge Kronoberg",
+      "message": "invariant-vakten larmar (2 av 22 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 254 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Superettan",
-      "message": "invariant-vakten larmar (8 av 10 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 253 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Visit Ängelholm",
-      "message": "invariant-vakten larmar (8 av 142 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 141 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
