@@ -141,14 +141,22 @@ Gratis, hela Sverige ✨ / Länk i bion ☁️ / Vad blir det?".
 
 ## Granskaren (AI-steget för klippen)
 
-Sex bildrutor ur klippet (start, var tredje sekund, landningen) och
-BAS-reglerna går till en bildmodell som svarar med tema, betyg 0-100, brott,
-två förslag på textrader och en motivering. Betyg under 70, eller text/logga
-i bild, realistiska ansikten eller flimmer, avvisar klippet (motiveringen
-syns i Telegram). Standard är Claude (`ANTHROPIC_API_KEY` i
-`~/.vadkul-secrets/env`, kostar ören per klipp); `DAGSINLAGG_GRANSKARE=ollama`
-använder `qwen3-vl:4b` på minin gratis; `ingen` godkänner allt (provkörning
-eller när du litar på dina egna klipp). Siffror får modellen aldrig hitta på:
+Bildrutor ur klippet (start, var tredje sekund, landningen: 6 för 15 s, 11
+för 30 s, 540x960) och BAS-reglerna går till en bildmodell som svarar med
+tema, betyg 0-100, brott, två förslag på textrader och en motivering. Betyg
+under 70, eller text/logga i bild, realistiska ansikten eller flimmer,
+avvisar klippet (motiveringen syns i Telegram). Varje klipp granskas en gång.
+
+Standard är Claude Sonnet 5.5 (`ANTHROPIC_API_KEY` i `~/.vadkul-secrets/env`):
+runt 7 000 tokens in och 1 000 ut per klipp, 20-30 öre, alltså några kronor i
+månaden med 2-3 klipp i veckan. Loggen skriver kostnaden för varje anrop.
+Sätt ett månadstak i Anthropic Console så kan det aldrig skena.
+`DAGSINLAGG_CLAUDE_MODEL=claude-haiku-5-5` gör det runt 1 öre per klipp med
+svagare omdöme. `DAGSINLAGG_GRANSKARE=ollama` använder `qwen3-vl:4b` på minin
+gratis (en liten modell, missar lätt text i bild och dålig landning);
+`ingen` godkänner allt (provkörning eller när du litar på dina egna klipp).
+Texterna i inläggen skrivs av mallarna, inte av någon AI, så utan klipp
+kostar dagsinlägget ingenting. Siffror får modellen aldrig hitta på:
 textrader med siffror som inte finns i data stryks.
 
 ## Så kör du
