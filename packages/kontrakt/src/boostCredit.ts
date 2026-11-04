@@ -5,13 +5,17 @@
  * ... tänk på att man inte kan utnyttja det. Eventet måste vara slut innan
  * man får kreditdagar").
  *
- * Ren logik, testad utan Firebase (boostCredit.test.ts). Själva avräkningen
- * och saldot (boostCredits/{uid}) bor i boost.ts (settleBoostCredits,
- * applyBoostCredit).
+ * Ren logik, testad utan Firebase (boostCredit.test.ts). Bor i kontraktet
+ * så webbens serverdel (apps/web/src/server/boostCredit.ts, där avräkningen
+ * och saldot boostCredits/{uid} sköts med Admin SDK:t) och functions räknar
+ * lika. Bodde i apps/functions/src/utils t.o.m. 4/11 - avräkningen flyttade
+ * till webbens API-routes samma dag eftersom nya Cloud Functions inte fick
+ * anropsrättighet från deploy-kontot.
  *
  *  - localDayAfter: första millisekunden av nästa SVENSKA dygn efter en
- *    tidpunkt. Cloud Functions kör i UTC - dygnsgränsen måste vara
- *    Stockholms, annars räknas ett lördagsevent kl 23 som söndag.
+ *    tidpunkt (servrarna kör i UTC - dygnsgränsen måste vara Stockholms,
+ *    annars räknas ett lördagsevent kl 23 som söndag). Intl.DateTimeFormat
+ *    med timeZone - finns i Node och i moderna Hermes; appen kallar den inte.
  *  - creditDaysFor: kreditdagarna för ETT kvitto när eventet varit. Boost-
  *    fönstret [from, until] jämförs med dygnet EFTER eventets sista dag:
  *    hela dagar som ligger efter det räknas, minus avgiften (CREDIT_FEE_DAYS:
@@ -21,12 +25,12 @@
  *    sista tillfälle (speglar webbens utils/weeklySeries seriesEndDate).
  *    En "tills vidare"-serie tar aldrig slut och ger ingen kredit.
  *
- * Exploateringsskydd (bor här och i boost.ts): kredit först när eventet
- * varit (dygnet efter sista dagen), minst en dags avgift per avräkning,
- * avräkningen stämplas på kvittot (en gång), och den avräknade boosten
- * klipps (featuredUntil = nu) så ett ägarredigerat datum aldrig kan väcka
- * den igen. En kredit-boost kan själv ge kredit igen - med avgiften varje
- * varv krymper den, aldrig växer.
+ * Exploateringsskydd (här och i serverdelen): kredit först när eventet varit
+ * (dygnet efter sista dagen), minst en dags avgift per avräkning, avräkningen
+ * stämplas på kvittot (en gång), och den avräknade boosten klipps
+ * (featuredUntil = nu) så ett ägarredigerat datum aldrig kan väcka den igen.
+ * En kredit-boost kan själv ge kredit igen - med avgiften varje varv krymper
+ * den, aldrig växer.
  */
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
