@@ -8,6 +8,8 @@ import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { nearestCityPoint } from '@/utils/cityPoints';
 import { getDayLabel } from './FloatingNavbar';
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
+import { isFeaturedNow } from '@/utils/featured';
+import BoostStar from '../ui/BoostStar';
 
 // ── Gruppväljaren i EVENTKORTET ─────────────────────────────────────────────
 // Ersätter multi-event-listan som svävade över kartan (V2MapGroupList,
@@ -163,6 +165,8 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect, mo
                         {infoRow(ev, isPast, isSel)}
                     </span>
                     <ChevronRight size={16} className={`shrink-0 ${isSel ? 'text-white' : 'text-slate-400'}`} />
+                    {/* Boost-stjärnan i bildfyrkantens övre vänstra hörn (4/11). */}
+                    {!isPast && isFeaturedNow(ev.featuredUntil) && <BoostStar small className="absolute top-1.5 left-2.5" />}
                 </button>
             </li>
         );

@@ -1,8 +1,10 @@
-/** Event-boost (Stripe): createBoostCheckout, confirmBoost, applyEventBoost. */
+/** Event-boost (Stripe): createBoostCheckout, confirmBoost, applyEventBoost -
+ *  och kreditdagarna (4/11): settleBoostCredits, applyBoostCredit. */
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import { db, region, isScrapedEventId } from './shared';
 import { eventShareSlug } from '@vadkul/kontrakt';
+import { creditDaysFor, DAY_MS, eventEndsAtMs } from './utils/boostCredit';
 
 // ==============================
 // EVENT-BOOST (Stripe)
@@ -74,25 +76,51 @@ const boostTargetRef = (eventId: string) =>
         : db.collection('linkEvents').doc(eventId);
 
 /**
- * Finns det skrapade eventet i aggregatens destinations-lager? Kollas innan
- * checkout skapas — ingen ska betala för ett id som inte pekar på något.
- * Destinations är antingen ett doc med events-array eller ett index-doc med
- * shardCount + destinations_N-shards; några få admin-reads, och boost-köp är
- * sällsynta, så kostnaden är försumbar.
+ * Det skrapade eventet ur aggregatens destinations-lager (null = finns inte).
+ * Kollas innan checkout skapas — ingen ska betala för ett id som inte pekar
+ * på något — och ger eventets tid till kvittot (kreditdagarna behöver veta
+ * när eventet varit). Destinations är antingen ett doc med events-array
+ * eller ett index-doc med shardCount + destinations_N-shards; några få
+ * admin-reads, och boost-köp är sällsynta, så kostnaden är försumbar.
  */
-async function scrapedEventExists(eventId: string): Promise<boolean> {
+async function findScrapedEvent(eventId: string): Promise<{ time?: unknown } | null> {
     const index = await db.collection('aggregatedEvents').doc('destinations').get();
-    if (!index.exists) return false;
+    if (!index.exists) return null;
     const data = index.data() || {};
-    const inArr = (events: unknown) =>
-        Array.isArray(events) && events.some((e: any) => e?.id === eventId);
-    if (inArr(data.events)) return true;
+    const find = (events: unknown): { time?: unknown } | null =>
+        (Array.isArray(events) ? events.find((e: any) => e?.id === eventId) : undefined) ?? null;
+    const hit = find(data.events);
+    if (hit) return hit;
     const shardCount = typeof data.shardCount === 'number' ? data.shardCount : 0;
     for (let i = 0; i < shardCount; i++) {
         const shard = await db.collection('aggregatedEvents').doc(`destinations_${i}`).get();
-        if (inArr(shard.data()?.events)) return true;
+        const h = find(shard.data()?.events);
+        if (h) return h;
     }
-    return false;
+    return null;
+}
+
+/** Eventets tid som ISO ur ett destinations-/linkEvents-värde, annars null. */
+const timeIso = (v: unknown): string | null => {
+    if (v instanceof admin.firestore.Timestamp) return v.toDate().toISOString();
+    if (typeof v === 'string' && !Number.isNaN(Date.parse(v))) return new Date(v).toISOString();
+    return null;
+};
+
+/**
+ * Kontrollera att eventet går att boosta (finns) och ge dess tid (ISO) till
+ * kvittot. Delas av checkouten och kreditvägen - samma villkor för betalda
+ * och kreditfinansierade boostar.
+ */
+async function boostableEventTime(eventId: string): Promise<string | null> {
+    if (isScrapedEventId(eventId)) {
+        const found = await findScrapedEvent(eventId);
+        if (!found) throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
+        return timeIso(found.time);
+    }
+    const eventSnap = await db.collection('linkEvents').doc(eventId).get();
+    if (!eventSnap.exists) throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
+    return timeIso(eventSnap.data()?.time);
 }
 
 export const createBoostCheckout = functions
@@ -142,17 +170,9 @@ export const createBoostCheckout = functions
 
         // Finns eventet inte ska ingen betala heller. Användarskapade valideras
         // mot linkEvents (dit boosten skrivs); skrapade mot aggregatens
-        // destinations-lager (boosten hamnar i eventBoosts-overlayn).
-        if (isScrapedEventId(eventId)) {
-            if (!(await scrapedEventExists(eventId))) {
-                throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
-            }
-        } else {
-            const eventSnap = await db.collection('linkEvents').doc(eventId).get();
-            if (!eventSnap.exists) {
-                throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
-            }
-        }
+        // destinations-lager (boosten hamnar i eventBoosts-overlayn). Tiden
+        // följer med som metadata → kvittot (kreditdagarna, 4/11).
+        const eventTime = await boostableEventTime(eventId);
 
         const returnUrl = safeReturnUrl(data?.returnUrl);
         // Stripe ersätter {CHECKOUT_SESSION_ID} i success_url. Klammrarna får INTE
@@ -207,7 +227,7 @@ export const createBoostCheckout = functions
 
         // Samma metadata på både sessionen och payment_intent: extensionens
         // payments-dokument speglar payment_intent, och det är den `applyEventBoost` läser.
-        const metadata = { eventId, boostDays: String(boostDays), firebaseUID: uid };
+        const metadata = { eventId, boostDays: String(boostDays), firebaseUID: uid, ...(eventTime ? { eventTime } : {}) };
 
         try {
             const session = await stripe.checkout.sessions.create({
@@ -308,10 +328,17 @@ export const confirmBoost = functions
             const now = Date.now();
             const currentUntilMs =
                 evtData.featuredUntil instanceof admin.firestore.Timestamp ? evtData.featuredUntil.toMillis() : 0;
-            const until = new Date(Math.max(now, currentUntilMs) + boostDays * 24 * 60 * 60 * 1000);
+            const base = Math.max(now, currentUntilMs);
+            const until = new Date(base + boostDays * 24 * 60 * 60 * 1000);
+            // from/until/eventTime = kvittots boostfönster för kreditdagarna
+            // (4/11, settleBoostCredits): äldre kvitton utan fälten faller
+            // tillbaka på appliedAt + eventets featuredUntil.
             tx.set(receiptRef, {
                 uid, eventId, boostDays, paymentId, sessionId,
                 appliedAt: admin.firestore.FieldValue.serverTimestamp(),
+                from: admin.firestore.Timestamp.fromMillis(base),
+                until: admin.firestore.Timestamp.fromDate(until),
+                eventTime: metadata.eventTime ?? null,
             });
             if (scraped) {
                 // eventId med i dokumentet: slug-hashen är enkelriktad och
@@ -436,4 +463,191 @@ export const applyEventBoost = region.firestore
             console.error('[boost] Kunde inte applicera boost:', err);
         }
         return null;
+    });
+
+// ==============================
+// KREDITDAGAR (4/11)
+// ==============================
+//
+// Ägarbeslut 4/11 2026 (Josef): "de dagar man inte förbrukar ... ska man ha
+// återstående tid som man kan lägga på en annan event när det eventet
+// försvinner. Men man kan minst förlora en dag. Och tänk på att man inte kan
+// utnyttja det. Eventet måste vara slut innan man får kreditdagar."
+//
+// Saldot bor i boostCredits/{uid} { days, updatedAt } - INGEN match i
+// firestore.rules = stängd för klienten; bara de här funktionerna (admin-
+// SDK) rör den. Regeln själv (dygnet efter eventet, hela dagar, minus en
+// dag) bor i utils/boostCredit.ts och är testad.
+//
+// Flödet: klienten anropar settleBoostCredits när boost-väljaren eller
+// profilen öppnas → kvitton (boostPayments, uid == anroparen) vars event
+// hunnit vara avräknas EN gång (creditSettledAt), saldot höjs och den gamla
+// boosten klipps (featuredUntil = nu, så ett ägarredigerat datum inte kan
+// väcka den). applyBoostCredit lägger hela saldot på ett annat event utan
+// Stripe - samma skrivning som confirmBoost, med ett kredit-kvitto som i
+// sin tur kan avräknas (krymper med avgiften varje varv, kan aldrig växa).
+
+const creditRef = (uid: string) => db.collection('boostCredits').doc(uid);
+
+const toMs = (v: unknown): number | null =>
+    v instanceof admin.firestore.Timestamp ? v.toMillis() : null;
+
+const requireAccount = (context: functions.https.CallableContext): string => {
+    if (!context.auth || context.auth.token?.firebase?.sign_in_provider === 'anonymous') {
+        throw new functions.https.HttpsError('unauthenticated', 'Du måste vara inloggad.');
+    }
+    return context.auth.uid;
+};
+
+/**
+ * När eventet bakom ett kvitto är slut (ms). null = vet inte / tar aldrig
+ * slut (tills vidare-serie, skrapat event som försvunnit ur aggregaten) -
+ * då avräknas inget. Raderat eget event = 0: boosten går inte att använda
+ * men eventet har inte VARIT, så ingen kredit (ägarbeslutets villkor).
+ */
+async function receiptEventEndsMs(eventId: string, receiptEventTime: unknown): Promise<number | null | 'deleted'> {
+    if (isScrapedEventId(eventId)) {
+        const iso = typeof receiptEventTime === 'string' ? receiptEventTime : timeIso((await findScrapedEvent(eventId))?.time);
+        const ms = iso ? Date.parse(iso) : NaN;
+        return Number.isFinite(ms) ? ms : null;
+    }
+    const snap = await db.collection('linkEvents').doc(eventId).get();
+    if (!snap.exists) return 'deleted';
+    const d = snap.data() || {};
+    const timeMs = toMs(d.time) ?? (typeof d.time === 'string' ? Date.parse(d.time) : NaN);
+    if (!Number.isFinite(timeMs)) return null;
+    return eventEndsAtMs({
+        timeMs,
+        repeatWeekly: d.repeatWeekly,
+        repeatWeeks: d.repeatWeeks,
+        repeatIntervalWeeks: d.repeatIntervalWeeks,
+        repeatDays: d.repeatDays,
+        seriesEndsAtMs: toMs(d.seriesEndsAt),
+    });
+}
+
+export const settleBoostCredits = functions
+    .runWith({ invoker: 'public' })
+    .region('europe-west1')
+    .https.onCall(async (_data: any, context: functions.https.CallableContext) => {
+        const uid = requireAccount(context);
+        const now = Date.now();
+        // Egna kvitton (samma fråga som profilens "Mina boostar"); de redan
+        // avräknade bär creditSettledAt och hoppas över.
+        const snap = await db.collection('boostPayments').where('uid', '==', uid).limit(200).get();
+        let settled = 0;
+        for (const doc of snap.docs) {
+            const r = doc.data() || {};
+            if (r.creditSettledAt || typeof r.eventId !== 'string' || !r.eventId) continue;
+            const eventId: string = r.eventId;
+            const ends = await receiptEventEndsMs(eventId, r.eventTime);
+            if (ends === null) continue;
+            const targetRef = boostTargetRef(eventId);
+            try {
+                const granted = await db.runTransaction(async (tx) => {
+                    const [fresh, target] = await Promise.all([tx.get(doc.ref), tx.get(targetRef)]);
+                    const fd = fresh.data() || {};
+                    if (!fresh.exists || fd.creditSettledAt) return null;
+                    const t = target.exists ? (target.data() || {}) : {};
+                    const targetUntil = toMs(t.featuredUntil);
+                    let days = 0;
+                    let cutBoost = false;
+                    if (ends !== 'deleted') {
+                        const fromMs = toMs(fd.from) ?? toMs(fd.appliedAt);
+                        const untilMs = toMs(fd.until) ?? targetUntil;
+                        if (fromMs === null || untilMs === null) days = 0;
+                        else {
+                            const c = creditDaysFor({ fromMs, untilMs }, ends, now);
+                            if (c === null) return null; // eventet har inte varit än
+                            days = c;
+                            // Klipp den avräknade boosten om kvittot är dess
+                            // sista fönster - annars kunde ett redigerat
+                            // datum tända samma dagar igen.
+                            cutBoost = targetUntil !== null && targetUntil > now && untilMs >= targetUntil;
+                        }
+                    }
+                    tx.update(doc.ref, {
+                        creditSettledAt: admin.firestore.FieldValue.serverTimestamp(),
+                        creditDays: days,
+                    });
+                    if (days > 0) {
+                        tx.set(creditRef(uid), {
+                            days: admin.firestore.FieldValue.increment(days),
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                        }, { merge: true });
+                    }
+                    if (cutBoost && target.exists) {
+                        tx.update(targetRef, { featuredUntil: admin.firestore.Timestamp.fromMillis(now) });
+                    }
+                    return days;
+                });
+                if (granted !== null) {
+                    settled++;
+                    console.log(`[boost] Kvitto ${doc.id} (event ${eventId}, user ${uid}) avräknat: ${granted} kreditdagar.`);
+                }
+            } catch (err) {
+                // Ett trasigt kvitto ska inte stoppa de andra - det avräknas nästa gång.
+                console.error(`[boost] Kunde inte avräkna kvitto ${doc.id}:`, err);
+            }
+        }
+        const credit = await creditRef(uid).get();
+        const days = Math.max(0, Math.floor(Number(credit.data()?.days ?? 0)) || 0);
+        return { days, settled };
+    });
+
+export const applyBoostCredit = functions
+    .runWith({ invoker: 'public' })
+    .region('europe-west1')
+    .https.onCall(async (data: any, context: functions.https.CallableContext) => {
+        const uid = requireAccount(context);
+        const rawEventId = typeof data?.eventId === 'string' ? data.eventId.trim() : '';
+        if (!rawEventId) throw new functions.https.HttpsError('invalid-argument', 'Inget event angivet.');
+        // Serietillfälle → seriens dokument (samma avskalning som checkouten).
+        const eventId = isScrapedEventId(rawEventId) ? rawEventId : rawEventId.split('__')[0];
+        const eventTime = await boostableEventTime(eventId);
+
+        const scraped = isScrapedEventId(eventId);
+        const targetRef = boostTargetRef(eventId);
+        const now = Date.now();
+        const receiptId = `credit_${uid}_${now}`;
+        const receiptRef = db.collection('boostPayments').doc(receiptId);
+
+        const result = await db.runTransaction(async (tx) => {
+            const [credit, target] = await Promise.all([tx.get(creditRef(uid)), tx.get(targetRef)]);
+            // Hela saldot läggs på, taket är samma som en betald boost (90 d).
+            const days = Math.min(90, Math.max(0, Math.floor(Number(credit.data()?.days ?? 0)) || 0));
+            if (days < 1) throw new functions.https.HttpsError('failed-precondition', 'Du har inga kreditdagar att lägga på.');
+            if (!scraped && !target.exists) throw new functions.https.HttpsError('not-found', 'Eventet finns inte längre.');
+            const t = target.exists ? (target.data() || {}) : {};
+            const base = Math.max(now, toMs(t.featuredUntil) ?? 0);
+            const until = new Date(base + days * DAY_MS);
+            const paymentId = receiptId;
+            if (scraped) {
+                tx.set(targetRef, {
+                    eventId,
+                    featuredUntil: admin.firestore.Timestamp.fromDate(until),
+                    featuredPaymentId: paymentId,
+                }, { merge: true });
+            } else {
+                tx.update(targetRef, {
+                    featuredUntil: admin.firestore.Timestamp.fromDate(until),
+                    featuredPaymentId: paymentId,
+                });
+            }
+            tx.set(receiptRef, {
+                uid, eventId, boostDays: days, paymentId, sessionId: receiptId,
+                credit: true,
+                appliedAt: admin.firestore.FieldValue.serverTimestamp(),
+                from: admin.firestore.Timestamp.fromMillis(base),
+                until: admin.firestore.Timestamp.fromDate(until),
+                eventTime,
+            });
+            tx.set(creditRef(uid), {
+                days: admin.firestore.FieldValue.increment(-days),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            return { applied: true, until: until.toISOString(), days, daysLeft: 0 };
+        });
+        console.log(`[boost] Event ${eventId} boostat ${result.days} kreditdagar (user ${uid}).`);
+        return result;
     });

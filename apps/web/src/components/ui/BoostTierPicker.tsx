@@ -9,6 +9,10 @@ interface Props {
     isExtension?: boolean;
     onSelect: (tier: BoostTier) => void;
     onClose: () => void;
+    /** KREDITDAGAR (4/11): kontots saldo - över noll visas en gratis rad
+     *  överst som lägger alla dagarna på eventet. null = inte hämtat än. */
+    creditDays?: number | null;
+    onUseCredit?: () => void;
 }
 
 /**
@@ -26,7 +30,8 @@ interface Props {
  * för fixed-ättlingar, så utan portalen skulle overlayn spänna över sheeten i
  * stället för viewporten och modalen klippas av sheetens box.
  */
-export default function BoostTierPicker({ isExtension = false, onSelect, onClose }: Props) {
+export default function BoostTierPicker({ isExtension = false, onSelect, onClose, creditDays = null, onUseCredit }: Props) {
+    const hasCredit = typeof creditDays === 'number' && creditDays > 0 && !!onUseCredit;
     return createPortal(
         <div
             className="fixed inset-0 z-[1300] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-6"
@@ -60,6 +65,31 @@ export default function BoostTierPicker({ isExtension = false, onSelect, onClose
                 </p>
 
                 <div className="flex flex-col gap-2.5">
+                    {/* KREDITDAGAR FÖRST (4/11): dagar som blev över från en
+                        tidigare boost när eventet hann vara - läggs på direkt,
+                        utan betalning. Backend äger saldot och avräkningen. */}
+                    {hasCredit && (
+                        <button
+                            type="button"
+                            onClick={onUseCredit}
+                            className="w-full text-left rounded-2xl border-2 border-emerald-400 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 p-3.5 transition-all active:scale-[0.98]"
+                        >
+                            <div className="flex items-center justify-between gap-3 mb-0.5">
+                                <span className="flex items-center gap-2 text-sm font-black text-black dark:text-white">
+                                    Använd dina kreditdagar
+                                    <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500 text-white">
+                                        {creditDays} {creditDays === 1 ? 'dag' : 'dagar'}
+                                    </span>
+                                </span>
+                                <span className="text-sm font-black text-black dark:text-white whitespace-nowrap tabular-nums">
+                                    0 kr
+                                </span>
+                            </div>
+                            <p className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 leading-snug">
+                                Dagar som blev över när ett tidigare boostat event hann vara — läggs på det här eventet direkt.
+                            </p>
+                        </button>
+                    )}
                     {BOOST_TIERS.map(({ tier, label, priceLabel, pitch }) => (
                         <button
                             key={tier}
@@ -96,6 +126,12 @@ export default function BoostTierPicker({ isExtension = false, onSelect, onClose
 
                 <p className="mt-4 text-[10px] font-semibold text-slate-400 text-center">
                     Betalningen sker tryggt via Stripe — boosten aktiveras direkt efter köpet.
+                </p>
+                {/* Kreditlöftet (4/11): hinner eventet vara innan boosten tar
+                    slut blir resten kreditdagar - minus en dag - att lägga på
+                    ett annat event. */}
+                <p className="mt-1.5 text-[10px] font-semibold text-slate-400 text-center">
+                    Hinner eventet vara innan boosten tar slut blir dagarna som är kvar kreditdagar (minus en dag) som du kan lägga på ett annat event.
                 </p>
             </div>
         </div>,

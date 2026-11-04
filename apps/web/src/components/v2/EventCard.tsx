@@ -12,13 +12,15 @@ import { recordEventClick } from '@/services/eventStatsService';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { dupKey, groupListDuplicates } from '../../utils/groupDups';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
-import { type BoostTier } from '../../services/boostService';
+import { type BoostChoice } from '../../services/boostService';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
 import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, LIST_HORIZON_DAYS, takeRows } from '@/utils/popularList';
+import { featuredFirst, isFeaturedAt } from '@/utils/featured';
+import BoostStar from '../ui/BoostStar';
 import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease, releaseVelocity } from '@/utils/sheetSnap';
@@ -259,6 +261,13 @@ interface NearbyEventsListProps {
      *  eventSearch), redan kapade till synligt antal - en lista utan
      *  dagrubriker där raderna bär datumet; `days` används inte då. */
     rankedRows?: NearbyItem[];
+    /** BOOSTADE HÖGST UPP (Josef 4/11, andra betalande kunden: "Den ska
+     *  även visas högst upp"): de aktivt boostade eventen i kartans ruta
+     *  pinnade ÖVERST i listan under en egen "⭐ Boostat"-rubrik, i
+     *  tidsordning och med datum på raden, oavsett dag, flik och bildflöde
+     *  (en boostad rad utan bild visas ändå). De står kvar på sin dag också,
+     *  med stjärnan - pinningen är annonsplatsen, dagraden tidslinjen. */
+    boostedRows?: NearbyItem[];
     /** Antal event per avsnitt (zoomring / Från idag, nyckel =
      *  listSegmentKey) i aktiva fliken - avdelarnas "N fler". */
     segmentCounts?: ReadonlyMap<number, number>;
@@ -643,6 +652,9 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     };
     const hasImage = showImages && !!evt.coverImage && imgFailed !== 'fallback';
     if (hideWithoutImage && !hasImage) return null;
+    // Boost-stjärnan uppe till vänster på raden (4/11) - på bilden, eller på
+    // emoji-cirkeln i den kompakta layouten. Samma regel som kortet/kartan.
+    const boosted = isFeaturedAt(evt.featuredUntil, now);
 
     // EN inforad (avstånd, plats, klocka, pris, kommer) — delas av båda
     // layouterna; platsnamnet är det enda som trunkeras när det blir trångt.
@@ -750,6 +762,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                     </div>
                 </button>
                 {heartBtn(true)}
+                {boosted && <BoostStar className="absolute top-2 left-2.5 z-[5]" />}
                 {dups && dups.length > 0 && (
                     <NearbyDupList dups={dups} repTitle={evt.title} onSelect={onSelect} className="px-4 md:px-6 pb-2.5 -mt-0.5" />
                 )}
@@ -767,7 +780,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                 className={`w-full text-left pl-4 md:pl-6 py-2.5 flex items-center gap-3 hover:bg-white dark:hover:bg-zinc-800/60 transition-colors ${onToggleSave ? 'pr-11 md:pr-12' : 'pr-4 md:pr-6'}`}
             >
                 <span
-                    className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
+                    className={`relative shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
                         isVadkulHostedEvent(evt)
                             ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-400/80'
                             : 'bg-slate-100 dark:bg-zinc-800'
@@ -775,6 +788,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
                     aria-hidden
                 >
                     {eventEmoji(evt)}
+                    {boosted && <BoostStar small className="absolute -top-1 -left-1.5" />}
                 </span>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -804,7 +818,7 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
-function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], rankedRows, segmentCounts, fromToday, listZoom, daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
+function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], rankedRows, boostedRows, segmentCounts, fromToday, listZoom, daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // Kategoriraden utfälld under flikraden (filtersymbolen, 7/10 sent).
     const [chipsOpen, setChipsOpen] = useState(false);
@@ -997,6 +1011,24 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                 </>
             ) : onTabChange ? (
                 <>
+                    {/* BOOSTADE HÖGST UPP (4/11): guldrubrik + de boostade
+                        raderna före dagarna, samma formspråk som dagrubriken
+                        men guld. Inte klistrad - blocket ligger ändå överst.
+                        Raderna bär datumet (dated) eftersom de står utanför
+                        sin dag, och visas även utan bild i bildflödet. */}
+                    {boostedRows && boostedRows.length > 0 && (
+                        <section data-boosted-rows>
+                            <h3 className="bg-amber-50 dark:bg-amber-950/30 px-4 md:px-6 pt-3 pb-2 border-b border-amber-200/70 dark:border-amber-900/50 flex items-center gap-2">
+                                <span aria-hidden className="shrink-0 -ml-3 h-4 w-1 rounded-full bg-[#fbbf24]" />
+                                <span className="text-sm font-black text-slate-900 dark:text-zinc-100">⭐ Boostat</span>
+                            </h3>
+                            <ul className="divide-y divide-border">
+                                {boostedRows.map(({ evt, distanceKm, dups }) => (
+                                    <NearbyRow key={`boost:${evt.id}`} evt={evt} distanceKm={distanceKm} now={now} onSelect={onSelect} showImages={effectiveShowImages} dups={dups} saved={!!savedIds?.has(evt.id)} onToggleSave={onToggleSave ? () => onToggleSave(evt.id) : undefined} dated />
+                                ))}
+                            </ul>
+                        </section>
+                    )}
                     {days.length === 0 && (
                         <p className="px-4 md:px-6 py-6 text-center text-xs font-bold text-slate-500">
                             {tab === 'popular'
@@ -1317,8 +1349,9 @@ interface EventCardProps {
     /** Redigera sitt eget event — öppnar skapa-formuläret förifyllt (6/9). */
     onEditOwnEvent?: (evt: LinkEvent) => void;
     /** Boosta (featura) ett event — startar Stripe Checkout på vald nivå
-     *  (nivåerna ägs av BOOST_TIERS; väljs i kortets BoostTierPicker). */
-    onBoostOwnEvent?: (eventId: string, tier: BoostTier) => void;
+     *  (nivåerna ägs av BOOST_TIERS; väljs i kortets BoostTierPicker), eller
+     *  lägger kontots kreditdagar på eventet ('credit', 4/11). */
+    onBoostOwnEvent?: (eventId: string, choice: BoostChoice) => void;
     /** Värdnamnet i kortet filtrerar kartan till arrangörens event (29/9). */
     onSelectOrganizer?: (slug: string, name: string) => void;
     /** Göm "Inga event den här dagen"-rutan (arrangörsläget, 30/9). */
@@ -2745,7 +2778,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // `earlier` = antal event i de dagarna (valets "Från idag · N").
     const shownDay = Math.max(0, dayOffset);
     const tabDays = useMemo(() => {
-        const empty = { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0, earlier: 0, rows: undefined as NearbyItem[] | undefined };
+        const empty = { days: [] as { dayOffset: number; rows: NearbyItem[] }[], count: 0, earlier: 0, rows: undefined as NearbyItem[] | undefined, boosted: [] as NearbyItem[] };
         if (!viewEvents) return { all: empty, popular: empty };
         const nowDate = new Date(now);
         const from = userPos ?? (selectedEvent && hasValidCoords(selectedEvent) ? { lat: selectedEvent.lat, lng: selectedEvent.lng } : null);
@@ -2765,16 +2798,29 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             const buildRanked = (include?: (e: LinkEvent) => boolean) => {
                 const items = (include ? ranked.filter(include) : ranked).map(withDistance);
                 const shown = imagesOnlyList ? items.filter(n => !!n.evt.coverImage) : items;
-                return { days: [], count: shown.length, earlier: 0, rows: groupNearby(shown).rows };
+                return { days: [], count: shown.length, earlier: 0, rows: groupNearby(shown).rows, boosted: [] as NearbyItem[] };
             };
             return { all: buildRanked(), popular: buildRanked(e => isPopularListed(e, now)) };
         }
         const kept = viewEvents.filter(e => !discardedEventIds.has(e.id) && e.id !== selectedEvent?.id
             && (!matchesCardSearch || matchesCardSearch(e)));
+        // BOOSTADE HÖGST UPP (Josef 4/11): de aktivt boostade i rutan pinnas
+        // överst i listan (NearbyEventsList boostedRows) - i tidsordning,
+        // oavsett dag och UTAN bildfiltret (en boostad rad utan bild ska
+        // ändå synas). Samma i båda flikarna (boostad räknas som populär).
+        const boosted = groupNearby(
+            kept.filter(e => isFeaturedAt(e.featuredUntil, now) && !isEventPast(e, now))
+                .sort((a, b) => a.time.getTime() - b.time.getTime())
+                .map(withDistance),
+        ).rows;
         const build = (include?: (e: LinkEvent) => boolean) => {
             const days = eventDays(kept, 0, nowDate, e => isEventPast(e, now), include).map(day => {
-                // Filterlistan (20/10): närmast först inom dagen.
-                const ordered = nearestFirstFrom ? sortNearestFirst(day.events, nearestFirstFrom) : day.events;
+                // Filterlistan (20/10): närmast först inom dagen. Boostade
+                // först inom dagen (4/11), därefter den vanliga ordningen.
+                const ordered = featuredFirst(
+                    nearestFirstFrom ? sortNearestFirst(day.events, nearestFirstFrom) : day.events,
+                    e => isFeaturedAt(e.featuredUntil, now),
+                );
                 const items = ordered.map(withDistance);
                 return {
                     dayOffset: day.dayOffset,
@@ -2785,7 +2831,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             }).filter(day => day.rows.length > 0 && day.dayOffset < LIST_HORIZON_DAYS);
             const sum = (ds: typeof days) => ds.reduce((n, d) => n + d.rows.reduce((m, r) => m + 1 + (r.dups?.length ?? 0), 0), 0);
             const earlier = sum(days.filter(d => d.dayOffset < shownDay));
-            return { days, count: sum(days) - (listTodayAt === null ? earlier : 0), earlier, rows: undefined };
+            return { days, count: sum(days) - (listTodayAt === null ? earlier : 0), earlier, rows: undefined, boosted };
         };
         return { all: build(), popular: build(e => isPopularListed(e, now)) };
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4268,7 +4314,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // (5/8) OCH skrapade (18/8: featuredUntil för skrapade bor i
                         // eventBoosts-overlayn, se createBoostCheckout/boostTargetRef).
                         // Nivån väljs i kortets BoostTierPicker (ägs av BOOST_TIERS).
-                        onBoost={onBoostOwnEvent ? (tier) => onBoostOwnEvent(selectedEvent.id, tier) : undefined}
+                        onBoost={onBoostOwnEvent ? (choice) => onBoostOwnEvent(selectedEvent.id, choice) : undefined}
                         onSelectOrganizer={onSelectOrganizer}
                         // Chatt-knappen i knappraden BORTTAGEN (Josef 21/8) —
                         // chatten nås genom att scrolla ner i kortet, den
@@ -4424,6 +4470,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             popularCount={tabDays.popular.count}
                             days={visibleTabDays}
                             rankedRows={rankedTabRows?.slice(0, daysVisibleCount)}
+                            boostedRows={tabDays[listTab].boosted}
                             segmentCounts={segmentCounts}
                             fromToday={fromTodayChoice}
                             listZoom={listZoomEnd}

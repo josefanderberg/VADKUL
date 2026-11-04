@@ -18,6 +18,7 @@ import { useEventRsvp } from '@/hooks/useEventRsvp';
 import { inviteUrl } from '@/utils/rsvpTransition';
 import EventChatPanel from '@/components/v2/EventChatPanel';
 import HScrollRow from '@/components/ui/HScrollRow';
+import LinkedText from '@/components/ui/LinkedText';
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import type { ListedEvent } from './DayFilteredList';
 import { organizerHref } from '@/utils/organizerPages';
@@ -435,10 +436,12 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                 </div>
             )}
 
+            {/* Länkarna i beskrivningen är klickbara (4/11) - samma LinkedText
+                som kartans eventkort. */}
             <p className="mt-3 text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
                 {descriptionPending
                     ? <span className="loading-blink text-slate-500 dark:text-zinc-400">{text}</span>
-                    : text}
+                    : description ? <LinkedText text={text} /> : text}
             </p>
 
             {/* (Den BREDA ANMÄL-CTA:n som stod här är RIVEN 7/10 kväll —

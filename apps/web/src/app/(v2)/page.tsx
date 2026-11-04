@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { EventWish, LinkEvent, type EventRsvpStatus } from '@/types';
 import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS, WISH_POLL_MS } from '@/services/wishService';
-import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
+import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, applyBoostCreditDays, type BoostChoice } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CreateEventButton from '@/components/v2/CreateEventButton';
 import CategoryChipRow, { SOURCE_EMOJI } from '@/components/v2/CategoryChipRow';
@@ -2153,12 +2153,34 @@ export default function HomePage() {
     // först av backend efter genomförd betalning — aldrig härifrån.
     // Nivån (1 dag/vecka/månad) väljs i kortets BoostTierPicker — hit kommer
     // bara det färdiga valet; priset ägs av Stripe/backend (tier → belopp).
-    const handleBoostOwnEvent = useCallback(async (eventId: string, tier: BoostTier) => {
+    const handleBoostOwnEvent = useCallback(async (eventId: string, choice: BoostChoice) => {
         // Utloggad (eller anonym tips-session — `user` är null då) → inloggnings-
         // modalen, inte ett rött fel. Köpet måste knytas till ett konto man kan
         // komma tillbaka till, men den som just tryckt "Boosta" är den mest
         // köpbenägna personen på sajten — hen ska inte mötas av en återvändsgränd.
         if (!user) { openLogin('Logga in för att boosta eventet'); return; }
+        // KREDITDAGAR (4/11): ingen Stripe - backend lägger alla kontots
+        // kreditdagar på eventet och svarar direkt. Användareventen + boost-
+        // overlayn hämtas om så guldet syns utan att vänta på nästa poll.
+        if (choice === 'credit') {
+            const t = toast.loading('Lägger på kreditdagarna…');
+            try {
+                const res = await applyBoostCreditDays(eventId);
+                toast.dismiss(t);
+                if (res.applied) {
+                    toast.success(`Boostat med ${res.days} kreditdag${res.days === 1 ? '' : 'ar'}! Eventet lyfts fram på kartan. 🚀`);
+                    linkEventService.refreshUserEvents();
+                } else {
+                    toast.error('Inga kreditdagar att lägga på.');
+                }
+            } catch (err) {
+                toast.dismiss(t);
+                console.error(err);
+                toast.error(err instanceof Error ? err.message : 'Kunde inte lägga på kreditdagarna.');
+            }
+            return;
+        }
+        const tier = choice;
         try {
             const t = toast.loading('Öppnar betalning…');
             await startEventBoostCheckout(eventId, tier); // redirectar vid succé
