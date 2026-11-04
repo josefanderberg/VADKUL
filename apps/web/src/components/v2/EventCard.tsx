@@ -4277,6 +4277,9 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         isAdmin={false}
                         distance={distanceFromUserKm}
                         showFullAddress
+                        // Kommer = Anmäl dig på värdade event (4/11).
+                        myRsvp={myRsvp}
+                        onSetRsvp={onSetRsvp ? (status) => onSetRsvp(selectedEvent, status) : undefined}
                         // Djuplänksöppningen (DEEPLINK_HEIGHT_VH) startar med ALLT
                         // uppfällt — ett nästan-fullhöjdskort med bara headern vore
                         // mest tomyta. Läses vid mount; nonce-förbrukningen (ref-

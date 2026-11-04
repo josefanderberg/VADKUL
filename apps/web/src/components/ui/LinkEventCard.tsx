@@ -1,7 +1,8 @@
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { Trash2, Clock, MapPin, Ticket, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, Star, MessageCircle, List, Pencil, X, Image as ImageIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { isVadkulHostedEvent, type LinkEvent } from '../../types';
+import { isVadkulHostedEvent, type LinkEvent, type EventRsvpStatus } from '../../types';
+import { hostedRegisterAction } from '../../utils/rsvpTransition';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { hostLabelFor } from '../../utils/hostLabel';
@@ -104,6 +105,11 @@ interface LinkEventCardProps {
     /** Rad direkt under knappraden (kategorichipsen när sökningen är igång). */
     belowToolbar?: ReactNode;
     /** Stjärn-gåvan ⭐: eventet har redan (någons) stjärna → guld-indikator. */
+    /** KOMMER = ANMÄL DIG (4/11): kortets eget svar + svarsknappen, så
+     *  ANMÄL DIG-knappen kan slå Kommer (och Kommer slår anmälan i sidans
+     *  handleSetRsvp). Utelämnade = anmälan sköts lokalt som förut. */
+    myRsvp?: EventRsvpStatus | null;
+    onSetRsvp?: (status: EventRsvpStatus) => void;
     hasStar?: boolean;
     /** Inloggad + oanvänd stjärna (och eventet inte passerat) → ⭐-knappen är
      *  klickbar och placerar stjärnan (bekräftelsedialog, går inte att ångra). */
@@ -111,7 +117,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, searchField, belowToolbar, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, searchField, belowToolbar, hasStar = false, canPlaceStar = false, onPlaceStar, myRsvp = null, onSetRsvp }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
@@ -200,6 +206,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         e.preventDefault();
         e.stopPropagation();
         if (!user) { toast('Logga in för att anmäla dig.', { icon: '🔑' }); return; }
+        // Samma verkan som Kommer (4/11): ska svaret byta trycks Kommer-
+        // knappen, som skriver anmälan på köpet; annars bara anmälan.
+        if (onSetRsvp && hostedRegisterAction(isAttending, myRsvp) === 'press') {
+            onSetRsvp('going');
+            return;
+        }
         setRsvpBusy(true);
         try {
             if (isAttending) {

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { eventShareSlug } from './eventShareSlug';
-import { inviteUrl, nextRsvp, rsvpCountDeltas, rsvpShareId } from './rsvpTransition';
+import { inviteUrl, nextRsvp, rsvpCountDeltas, rsvpShareId, hostedAttendeeAction, hostedRegisterAction } from './rsvpTransition';
 
 describe('nextRsvp', () => {
     it('tomt läge + tryck = valet', () => {
@@ -52,5 +52,32 @@ describe('inviteUrl', () => {
     });
     it('bjuder på seriens dokument för veckoserietillfällen', () => {
         expect(inviteUrl('o', 'doc1__2026-09-18', true, null)).toBe(`o/e/${eventShareSlug('doc1')}?inb=1`);
+    });
+});
+
+describe('hostedAttendeeAction (Kommer = Anmäl dig på värdade event, 4/11)', () => {
+    it('Kommer på → anmäl; Kommer av eller byte till Intresserad → avanmäl', () => {
+        expect(hostedAttendeeAction(null, 'going')).toBe('register');
+        expect(hostedAttendeeAction('interested', 'going')).toBe('register');
+        expect(hostedAttendeeAction('going', null)).toBe('cancel');
+        expect(hostedAttendeeAction('going', 'interested')).toBe('cancel');
+    });
+    it('Intresserad fram och tillbaka rör inte anmälan', () => {
+        expect(hostedAttendeeAction(null, 'interested')).toBeNull();
+        expect(hostedAttendeeAction('interested', null)).toBeNull();
+        expect(hostedAttendeeAction('going', 'going')).toBeNull();
+    });
+});
+
+describe('hostedRegisterAction (ANMÄL DIG-knappen)', () => {
+    it('inte anmäld: trycker Kommer när svaret inte är Kommer, annars bara anmälan', () => {
+        expect(hostedRegisterAction(false, null)).toBe('press');
+        expect(hostedRegisterAction(false, 'interested')).toBe('press');
+        expect(hostedRegisterAction(false, 'going')).toBe('register');
+    });
+    it('anmäld: släpper Kommer när svaret är Kommer, annars bara avanmälan', () => {
+        expect(hostedRegisterAction(true, 'going')).toBe('press');
+        expect(hostedRegisterAction(true, null)).toBe('cancel');
+        expect(hostedRegisterAction(true, 'interested')).toBe('cancel');
     });
 });

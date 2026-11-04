@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, Check, Lock, MapPin, Map as MapIcon, MessageCircle, Share2, Ticket, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { LinkEvent } from '@/types';
+import type { LinkEvent, EventRsvpStatus } from '@/types';
 import { fetchDeepLinkEvent } from '@/utils/eventSeed';
 import { eventShareSlug } from '@/utils/eventShareSlug';
 import { isTicketmasterEvent } from '@/utils/ticketmasterEvent';
@@ -15,7 +15,7 @@ import { recordEventClick } from '@/services/eventStatsService';
 import { linkEventService, type RsvpAttendee } from '@/services/linkEventService';
 import { useAuth } from '@/context/AuthContext';
 import { useEventRsvp } from '@/hooks/useEventRsvp';
-import { inviteUrl } from '@/utils/rsvpTransition';
+import { hostedAttendeeAction, hostedRegisterAction, inviteUrl, nextRsvp } from '@/utils/rsvpTransition';
 import EventChatPanel from '@/components/v2/EventChatPanel';
 import HScrollRow from '@/components/ui/HScrollRow';
 import LinkedText from '@/components/ui/LinkedText';
@@ -98,8 +98,24 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
         return () => unsub();
     }, [e.id, hosted]);
     const isAttending = !!user && attendees.some(a => a.uid === user.uid);
+    /** Anmälan rakt mot lagret (idempotent) - delas av ANMÄL DIG-knappen och
+     *  Kommer-trycket (Kommer = Anmäl dig på värdade event, 4/11). */
+    const writeAttendee = async (action: 'register' | 'cancel') => {
+        if (!user) return;
+        if (action === 'cancel') await linkEventService.cancelRsvp(e.id, user.uid);
+        else await linkEventService.rsvp(e.id, {
+            uid: user.uid,
+            name: user.displayName || user.email || 'VADKUL-användare',
+            photoURL: user.photoURL,
+        });
+    };
     const handleRsvpToggle = async () => {
         if (!user) { setAuthOpen('Logga in för att anmäla dig'); return; }
+        // Ska svaret byta trycks Kommer (pressRsvp skriver anmälan på köpet).
+        if (hosted && hostedRegisterAction(isAttending, rsvp.my) === 'press') {
+            await pressRsvp('going');
+            return;
+        }
         setRsvpBusy(true);
         try {
             if (isAttending) {
@@ -179,6 +195,18 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
     // localStorage-nyckel, samma eventRsvps/eventStats-skrivningar, inget
     // konto krävs (anonym session). Skilt från hosted-ANMÄLAN ovan.
     const rsvp = useEventRsvp(e.id, hosted);
+    // Kommer/Intresserad-tryck: på ett värdat event följer anmälan med (4/11,
+    // "de ska ha samma verkan") - kräver konto som anmälan alltid gjort.
+    const pressRsvp = async (status: EventRsvpStatus) => {
+        const prev = rsvp.my;
+        const next = nextRsvp(prev, status);
+        await rsvp.press(status);
+        if (!hosted || !user) return;
+        const action = hostedAttendeeAction(prev, next);
+        if (!action) return;
+        try { await writeAttendee(action); }
+        catch (err) { console.error('Anmälan misslyckades:', err); toast.error('Kunde inte uppdatera anmälan. Försök igen.'); }
+    };
 
     // BJUD MED (7/10 kväll, Josef: "vi behöver de intresserad, kommer, anmäl
     // och bjud inne på stadssidorna"): samma flöde som kartkortets footer -
@@ -191,7 +219,7 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
     const handleGoingPress = async () => {
         const turningOn = rsvp.my !== 'going';
         setInviteNudge(turningOn);
-        await rsvp.press('going');
+        await pressRsvp('going');
     };
 
     const handleInvite = async () => {
@@ -346,7 +374,7 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                 <button
                     type="button"
                     aria-pressed={rsvp.my === 'interested'}
-                    onClick={() => void rsvp.press('interested')}
+                    onClick={() => void pressRsvp('interested')}
                     className={`min-w-0 shrink inline-flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
                         rsvp.my === 'interested'
                             ? 'bg-[#006AA7] text-white border-[#005590] shadow-md'

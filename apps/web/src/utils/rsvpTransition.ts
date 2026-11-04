@@ -62,3 +62,38 @@ export function parseRsvpLocal(raw: string | null): { going: string[]; intereste
     const { going, interested } = obj as Record<string, unknown>;
     return { going: list(going), interested: list(interested) };
 }
+
+/**
+ * VADKUL-VÄRDADE EVENT: KOMMER OCH ANMÄL DIG ÄR SAMMA SVAR (ägarbeslut 4/11,
+ * Josef: "man ska väl kunna klicka på någon av dem ... de ska ha samma
+ * verkan"). Två lager finns kvar - svaret (eventRsvps + eventStats, inget
+ * konto krävs) och anmälan (linkEvents/{id}/attendees med namn, konto krävs)
+ * - men ett tryck på den ena slår båda. Delas av kartkortet, stadssidornas
+ * utfällda event och (som port, lib/rsvp.ts) appen.
+ */
+
+/** Kommer/Intresserad-trycket (prev → next) på ett värdat event: vad ska
+ *  hända med anmälan? Idempotent mot lagret (set/delete), så anroparen
+ *  behöver inte veta om man redan står i listan. */
+export function hostedAttendeeAction(
+    prev: EventRsvpStatus | null,
+    next: EventRsvpStatus | null,
+): 'register' | 'cancel' | null {
+    if (next === 'going' && prev !== 'going') return 'register';
+    if (prev === 'going' && next !== 'going') return 'cancel';
+    return null;
+}
+
+/**
+ * ANMÄL DIG-knappen: 'press' = tryck Kommer-knappen (svaret byter och
+ * anmälan följer med via hostedAttendeeAction); 'register'/'cancel' = bara
+ * anmälan, svaret står redan rätt (anmäld på en annan enhet, eller svar
+ * utan anmälan från tiden före kopplingen).
+ */
+export function hostedRegisterAction(
+    isAttending: boolean,
+    myRsvp: EventRsvpStatus | null,
+): 'press' | 'register' | 'cancel' {
+    if (!isAttending) return myRsvp !== 'going' ? 'press' : 'register';
+    return myRsvp === 'going' ? 'press' : 'cancel';
+}

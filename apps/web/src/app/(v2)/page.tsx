@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { EventWish, LinkEvent, type EventRsvpStatus } from '@/types';
+import { EventWish, LinkEvent, isVadkulHostedEvent, type EventRsvpStatus } from '@/types';
 import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS, WISH_POLL_MS } from '@/services/wishService';
 import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, applyBoostCreditDays, type BoostChoice } from '@/services/boostService';
@@ -21,7 +21,7 @@ import { acceptFriendInvite, fetchUserLite, recordInviteLanding } from '@/servic
 import { storageService } from '@/services/storageService';
 import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
 import { setRsvpStatus } from '@/services/rsvpService';
-import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY } from '@/utils/rsvpTransition';
+import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY, hostedAttendeeAction } from '@/utils/rsvpTransition';
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus, ListFilter as FilterIcon } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
@@ -3471,6 +3471,22 @@ export default function HomePage() {
         // Räknaren på SERIENS dokument för veckoserietillfällen — samma id
         // som svarsdokumentet och delningslänken (rsvpShareId).
         recordEventRsvpCount(rsvpShareId(evt.id, evt.userCreated), rsvpCountDeltas(prev, next));
+        // KOMMER = ANMÄL DIG PÅ VÄRDADE EVENT (ägarbeslut 4/11, Josef: "de ska
+        // ha samma verkan"): Kommer på → anmälan (namn i listan), Kommer av →
+        // avanmälan. Kräver konto som anmälan alltid gjort; utloggad/anonym
+        // får bara svaret. Idempotent mot attendees-lagret.
+        if (user && isVadkulHostedEvent(evt)) {
+            const action = hostedAttendeeAction(prev, next);
+            if (action === 'register') {
+                linkEventService.rsvp(evt.id, {
+                    uid: user.uid,
+                    name: user.displayName || user.email || 'VADKUL-användare',
+                    photoURL: user.photoURL,
+                }).catch(err => console.warn('Kunde inte anmäla:', err));
+            } else if (action === 'cancel') {
+                linkEventService.cancelRsvp(evt.id, user.uid).catch(err => console.warn('Kunde inte avanmäla:', err));
+            }
+        }
         try {
             const uid = await ensureTipIdentity();
             await setRsvpStatus(evt.id, evt.userCreated, uid, next, {
