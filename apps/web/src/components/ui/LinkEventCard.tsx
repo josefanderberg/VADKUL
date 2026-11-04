@@ -1,7 +1,8 @@
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { Trash2, Clock, MapPin, Ticket, Heart, Navigation, Sparkles, Users, Check, Rocket, ArrowRight, Star, MessageCircle, List, Pencil, X, Image as ImageIcon } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { isVadkulHostedEvent, type LinkEvent } from '../../types';
+import { isVadkulHostedEvent, type LinkEvent, type EventRsvpStatus } from '../../types';
+import { hostedRegisterAction } from '../../utils/rsvpTransition';
 import { formatEventDateSpan } from '../../utils/dateUtils';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { hostLabelFor } from '../../utils/hostLabel';
@@ -14,8 +15,10 @@ import { eventShareSlug } from '../../utils/eventShareSlug';
 // Radbrytnings-återställningen + värd-faviconen delas med stadssidornas utfällda event (2/9).
 import { hostFaviconUrl, withRecoveredLineBreaks } from '../../utils/eventExpand';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
-import { type BoostTier } from '../../services/boostService';
+import { fetchBoostCredit, type BoostChoice } from '../../services/boostService';
 import BoostTierPicker from './BoostTierPicker';
+import BoostStar from './BoostStar';
+import LinkedText from './LinkedText';
 import { getEventLikes } from '../../services/eventStatsService';
 import { displayedLikeCount } from '../../utils/likeCount';
 import { feedbackService } from '../../services/feedbackService';
@@ -78,8 +81,9 @@ interface LinkEventCardProps {
     canEdit?: boolean;
     onEditOwn?: () => void;
     /** Ägaren får boosta sitt event (Stripe Checkout). Visas bredvid "Ta bort".
-     *  Nivån (1 dag/vecka/månad) väljs i BoostTierPicker innan callbacken fyras. */
-    onBoost?: (tier: BoostTier) => void;
+     *  Nivån (1 dag/vecka/månad) väljs i BoostTierPicker innan callbacken fyras;
+     *  'credit' = lägg kontots kreditdagar på eventet (4/11, ingen betalning). */
+    onBoost?: (choice: BoostChoice) => void;
     /** Värdnamnet tryckt (29/9): kartan filtreras till arrangörens event.
      *  Utan callback leder namnet till arrangörssidan i stället. */
     onSelectOrganizer?: (slug: string, name: string) => void;
@@ -101,6 +105,11 @@ interface LinkEventCardProps {
     /** Rad direkt under knappraden (kategorichipsen när sökningen är igång). */
     belowToolbar?: ReactNode;
     /** Stjärn-gåvan ⭐: eventet har redan (någons) stjärna → guld-indikator. */
+    /** KOMMER = ANMÄL DIG (4/11): kortets eget svar + svarsknappen, så
+     *  ANMÄL DIG-knappen kan slå Kommer (och Kommer slår anmälan i sidans
+     *  handleSetRsvp). Utelämnade = anmälan sköts lokalt som förut. */
+    myRsvp?: EventRsvpStatus | null;
+    onSetRsvp?: (status: EventRsvpStatus) => void;
     hasStar?: boolean;
     /** Inloggad + oanvänd stjärna (och eventet inte passerat) → ⭐-knappen är
      *  klickbar och placerar stjärnan (bekräftelsedialog, går inte att ångra). */
@@ -108,7 +117,7 @@ interface LinkEventCardProps {
     onPlaceStar?: () => void;
 }
 
-export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, searchField, belowToolbar, hasStar = false, canPlaceStar = false, onPlaceStar }: LinkEventCardProps) {
+export default function LinkEventCard({ linkEvent, isAdmin = false, distance, onDelete, isPanelMode = false, showFullAddress = false, onRevealStepChange, initialRevealStep = 0, alwaysExpanded = false, onContentTap, saved = false, onToggleSave, canDelete = false, onDeleteOwn, canEdit = false, onEditOwn, onBoost, onSelectOrganizer, activityView = false, onToggleActivityView, nearbyView = false, onToggleNearbyView, searchField, belowToolbar, hasStar = false, canPlaceStar = false, onPlaceStar, myRsvp = null, onSetRsvp }: LinkEventCardProps) {
     const { user } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [internalRevealStep, setInternalRevealStep] = useState<number>(initialRevealStep); // 0: header, 1: +img/truncated, 2: +full
@@ -132,8 +141,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         [linkEvent.id],
     );
     const [descReleasedId, setDescReleasedId] = useState<string | null>(null);
+    const descriptionRaw = (linkEvent as { description?: string }).description;
     const descriptionsPending = !linkEvent.userCreated
-        && !(linkEvent as { description?: string }).description
+        && !descriptionRaw
         && !descAlreadySettled
         && descReleasedId !== linkEvent.id;
     // Kortlagret (bild/värd/pris/affiliate-länk) är också lazy - tills det
@@ -196,6 +206,12 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
         e.preventDefault();
         e.stopPropagation();
         if (!user) { toast('Logga in för att anmäla dig.', { icon: '🔑' }); return; }
+        // Samma verkan som Kommer (4/11): ska svaret byta trycks Kommer-
+        // knappen, som skriver anmälan på köpet; annars bara anmälan.
+        if (onSetRsvp && hostedRegisterAction(isAttending, myRsvp) === 'press') {
+            onSetRsvp('going');
+            return;
+        }
         setRsvpBusy(true);
         try {
             if (isAttending) {
@@ -265,6 +281,19 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // aldrig hänger kvar över fel event.
     const [boostPickerOpen, setBoostPickerOpen] = useState(false);
     useEffect(() => { setBoostPickerOpen(false); }, [linkEvent.id]);
+    // KREDITDAGAR (4/11): saldot hämtas när väljaren öppnas - anropet
+    // avräknar samtidigt kvitton vars event hunnit vara (backend). null tills
+    // svaret kommit (nollas i knappens klick, inte i effekten); utloggad/fel
+    // → 0 (raden visas inte).
+    const [creditDays, setCreditDays] = useState<number | null>(null);
+    useEffect(() => {
+        if (!boostPickerOpen) return;
+        let stale = false;
+        fetchBoostCredit()
+            .then(r => { if (!stale) setCreditDays(r.days); })
+            .catch(() => { if (!stale) setCreditDays(0); });
+        return () => { stale = true; };
+    }, [boostPickerOpen]);
     const handleReport = async (e: React.MouseEvent, reason: string) => {
         e.preventDefault();
         e.stopPropagation();
@@ -407,6 +436,9 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     const hostSlug = linkEvent.userCreated ? null : organizerPageSlug(linkEvent.hostName, linkEvent.id);
     // "Varannan lördag · t.o.m. 31 okt." — null för allt som inte är en serie.
     const seriesText = seriesLabel(linkEvent);
+    // Aktiv boost → guldstjärnan uppe till vänster (4/11). Samma regel som
+    // kartan (isEventFeatured): passerad boost = ingen stjärna.
+    const boosted = isEventFeatured(linkEvent);
 
     // Eventets emoji (samma logik som kartnålen/EventCard): per-event-emoji, annars
     // kategori-fallback. Visas i början av titeln.
@@ -452,9 +484,17 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     direkt under. Fältet ligger kvar i SAMMA position i trädet
                     så inputen aldrig remountas (tangentbordet ska inte
                     stängas när första tecknet växlar vy). */}
-                {!nearbyView && (vadkulHosted || isTip || seriesText) && (
+                {/* BOOST-STJÄRNAN LÄNGST TILL VÄNSTER (Josef 4/11, andra
+                    betalande kunden: "ha en stjärna längst upp åt vänster på
+                    eventkortet") - guldpillen "⭐ Boostat" före härkomst-
+                    badgen, också på skrapade event (raden renderas då bara
+                    för stjärnan). Samma kvitto som kartbrickans ⭐. */}
+                {!nearbyView && (boosted || vadkulHosted || isTip || seriesText) && (
                     <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+                            {boosted && (
+                                <BoostStar pill title={linkEvent.featuredUntil ? `Boostat t.o.m. ${boostedUntilLabel(linkEvent.featuredUntil)}` : 'Boostat event'} />
+                            )}
                             {vadkulHosted && (
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
                                     <Sparkles size={11} className="shrink-0" />
@@ -820,9 +860,13 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         className={`p-4 md:p-8 bg-slate-50 dark:bg-zinc-900/50 border-t border-border ${alwaysExpanded ? '' : 'cursor-pointer'}`}
                         onClick={handleContentClick}
                     >
+                        {/* Länkarna i texten är KLICKBARA (Josef 4/11: "Den har ju
+                            2 Spotify-länkar bland annat") - LinkedText delar texten
+                            med kontraktets textLinks, samma som appen. */}
                         <p data-event-description className="text-sm text-slate-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
-                            {withRecoveredLineBreaks((linkEvent as any).description)
-                                || (descriptionsPending
+                            {descriptionRaw
+                                ? <LinkedText text={withRecoveredLineBreaks(descriptionRaw)} />
+                                : (descriptionsPending
                                     ? <span className="loading-blink text-slate-500 dark:text-zinc-400">Hämtar beskrivning…</span>
                                     : 'Ingen beskrivning tillgänglig.')}
                         </p>
@@ -928,6 +972,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
+                                                setCreditDays(null);
                                                 setBoostPickerOpen(true);
                                             }}
                                             className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 py-1.5 transition-colors"
@@ -975,6 +1020,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     onSelect={(tier) => {
                         setBoostPickerOpen(false);
                         onBoost(tier);
+                    }}
+                    creditDays={creditDays}
+                    onUseCredit={() => {
+                        setBoostPickerOpen(false);
+                        onBoost('credit');
                     }}
                 />
             )}

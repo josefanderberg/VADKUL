@@ -57,7 +57,7 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 ## Checklista - det bara Josef kan göra i konsolerna
 
 ### App Store Connect (iOS)
-- [ ] **App Privacy-formuläret**: uppdatera innan appen skickas till granskning. Svaren står i `app-store-butik.md` under "App Privacy" (utkast 12/10). Nytt mot 9/10: Diagnostik → Kraschdata och Annan diagnostikdata (Crashlytics, från build 7), plus konto- och användarinnehållet som 9/10-utkastet saknade (namn, foton, chatt, vänner, profilfält). Plats tas bort - koordinaterna lämnar aldrig telefonen. Ingen spårning, inga annonser.
+- [ ] **App Privacy-formuläret**: uppdatera innan appen skickas till granskning. Svaren står i `app-store-butik.md` under "App Privacy" (utkast 12/10). Nytt mot 9/10: Diagnostik → Kraschdata och Annan diagnostikdata (Crashlytics, från build 7), plus konto- och användarinnehållet som 9/10-utkastet saknade (namn, foton, chatt, vänner, profilfält). Plats tas bort - koordinaterna lämnar aldrig telefonen. Ingen spårning, inga annonser. Nytt 4/11: Användningsdata → Produktinteraktion (Google Analytics för Firebase) - raden står i samma tabell.
 - [ ] **Åldersklassningen**: svara på enkäten utifrån innehållet - med eventchatten
   och användarinnehållet (modererat; anmäl + blockera finns sedan build 8) landar
   den troligen på 13+ i Apples nya nivåer (4+/9+/13+/16+/18+). Registrera INTE
@@ -103,7 +103,8 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
   - Kontakter: vänlistan i appen. Appfunktioner.
   - Appaktivitet → Annat användargenererat innehåll: event man skapar eller tipsar om, önskningar, svar, rapporter. Appfunktioner.
   - **Appinformation och prestanda → Kraschloggar + Diagnostik** (NYTT i build 7): Crashlytics-rapporter med stackspår, enhetsmodell och Android-version. Obligatoriskt (går inte att stänga av i appen). Syfte: Analys och Appfunktioner. Kopplas till uid när man är inloggad, annars till ett installations-ID.
-  - Enhets-ID eller andra ID: FCM-token för push och Crashlytics installations-ID (Google räknar Firebase-installations-ID hit). Syfte: Appfunktioner och Analys.
+  - **Appaktivitet → Appinteraktioner** (NYTT 4/11, analytics): Google Analytics för Firebase - skärmvisningar och handlingar i appen (öppnat kort, Anmäl-klick, gilla, svar, skapat event, önskan, stjärna, delad inbjudan, introvalen) med event-slug/kategori/status. Obligatoriskt (ingen avstängning i appen). Syfte: Analys. Kopplas inte till kontot - inget användar-id sätts, bara app-instans-id:t nedan.
+  - Enhets-ID eller andra ID: FCM-token för push, Crashlytics installations-ID och (4/11) Analytics app-instans-id (Google räknar Firebase-installations-ID hit). Syfte: Appfunktioner och Analys.
   - Plats: deklareras INTE - positionen används bara på enheten och skickas aldrig till servern, så den räknas inte som insamlad (förra utkastet listade den).
   - Annonser: inga. Ingen spårning.
   - Dataradering: användaren raderar kontot inifrån appen (Profil → Radera konto), då försvinner kontodatan. Kraschrapporter rensas automatiskt efter 90 dagar.
@@ -118,6 +119,32 @@ _(Skillnad mot App Store-beskrivningen: "eller Apple" borttaget ur kontomeningen
 - [ ] **Play-skärmbilderna** (ordning beslutad 25/10, Josef: "inte bara listor, event med bilder också"; 28/10: den nya eventbilden ERSÄTTER gamla 02, vars filer är borttagna - finns i git-historiken, 84514826): **01 karta, 02 eventbild, 03 bildflöde, 04 sök, 05 stadssida** (29/10, Josef om App Store-bilderna: "3/5 är typ bara en lista" - alla fem togs om i simulatorn "iPhone 16 Pro Max VADKUL-butik" med appens nya utseende): 02 = Streetstar Showcase på Berwaldhallen, kortet utfällt med stor omslagsbild; 03 `skarmbild-03-bildflode` ERSÄTTER 03-lista = kortets Populärt-lista med stora bilder under eventet; 04 = kortets sök "jazz" med Visa bilder på; 05 = Göteborgs stadssida med kartbilden överst (Stockholms hade en blodig skräckaffisch i Skapade på VADKUL just då). Alla kompositioner görs med `docs/butik-assets/komponera.py` (receptet uppmätt ur originalen: Fredoka SemiBold 75 px ur webbens .next-bygge, hörnradie 60, slagskugga 10/24/50/60 %) ur en råbild i `ra/` (1320x2868) och skrivs till `play/` (1320x2640), roten (1320x2868) och `app-store-mellan/` (1206x2622). Använd `play/`-varianterna
 - [x] **Produktions-aab:en**: build 5 FÄRDIG 23/10 21:59 (versionCode 5, EAS-bygge 3492edc4, artefakt https://expo.dev/artifacts/eas/g2YgM6rD-tKY5CYkd31M4glPG3UX9mRqus2m9eZcCSs.aab - giltig 30 dagar, commit ce525fb i vadkul-app, fingeravtryck cb8aab9d = dagens kod). Byggd från en REN git-worktree på HEAD (`git worktree add --detach <tmp> HEAD` + `cp -Rc node_modules <tmp>/node_modules`), eftersom checkouten hade okommitterade intro-/startval-ändringar från en annan session och EAS packar arbetsträdet. Androids byggkvot var inte slut (bara iOS-kvoten). Laddas upp till intern testning när inloggningen är klar. Build 2 (9/10) är förbrukad.
 - [ ] **App access-deklarationen**: chatten, vänner och Kommer kräver konto, så välj "vissa funktioner är begränsade" och ange demokontot från App Store Connect-inskicket (lösenordet har bara Josef).
+
+### Firebase Console (analytics - gäller BÅDA plattformarna)
+
+Upptäckt 4/11 2026 (Josef: "det känns inte som vi har analytics uppe för
+Android- och iOS-appen"): vadkul-app hade `@react-native-firebase/crashlytics`
+men ALDRIG `@react-native-firebase/analytics`, så Google Analytics startade
+inte i apparna och konsolen hade ingen plattformsstatistik att visa. Fixat i
+vadkul-app d28ab17 (PR #4, mergad 4/11: `data/matning`, `lib/matning`, `withoutAdIdSupport` i app.json) -
+**kräver nytt native-bygge för iOS och Android**, OTA räcker inte.
+
+- [ ] **Dataströmmarna:** när första bygget med analytics kört på en telefon ska
+  Firebase Console → Analytics → Dashboard kunna filtreras på iOS och Android
+  (realtidsvyn direkt, rapporterna inom ett dygn). Saknas en plattform helt:
+  Projektinställningar → Integrationer → Google Analytics ska vara länkat
+  (det är det - webben har measurementId) och i GA4 → Admin → Dataströmmar
+  ska `se.vadkul.app` finnas för båda plattformarna; annars lägg till dem där.
+- [ ] **Kvittera live:** Analytics → Realtime med TestFlight-/interntestbygget
+  öppet: `screen_view` (screen_class `/` för kartan) och `event_view` när ett
+  kort öppnas. DebugView: Android via `adb shell setprop debug.firebase.analytics.app se.vadkul.app`
+  (funkar på alla byggen med telefonen i adb); iOS kräver Xcode-startargumentet
+  `-FIRDebugEnabled` och går därför inte på TestFlight - realtidsvyn räcker.
+- [ ] `GoogleService-Info.plist` i vadkul-app har `IS_ANALYTICS_ENABLED=false` -
+  en äldre nyckel som dagens iOS-SDK inte styr insamlingen med (den styrs av
+  `IS_MEASUREMENT_ENABLED`/`FIREBASE_ANALYTICS_COLLECTION_ENABLED`, som saknas =
+  på, plus `setAnalyticsCollectionEnabled` i appen). Ladda gärna ner plisten på
+  nytt från konsolen vid tillfälle, men det blockerar inget.
 
 ### Firebase Console (djuplänkarna - gäller BÅDA plattformarna)
 

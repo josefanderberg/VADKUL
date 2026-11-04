@@ -1,4 +1,8 @@
-/** Event-boost (Stripe): createBoostCheckout, confirmBoost, applyEventBoost. */
+/** Event-boost (Stripe): createBoostCheckout, confirmBoost, applyEventBoost.
+ *  Kvittona bär from/until/eventTime sedan 4/11 för KREDITDAGARNA - själva
+ *  avräkningen bor i webbens serverdel (apps/web/src/server/boostCredit.ts,
+ *  regeln i @vadkul/kontrakt boostCredit.ts): nya callables här fick ingen
+ *  anropsrättighet från deploy-kontot (IAM), API-routes behöver ingen. */
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import { db, region, isScrapedEventId } from './shared';
@@ -74,25 +78,51 @@ const boostTargetRef = (eventId: string) =>
         : db.collection('linkEvents').doc(eventId);
 
 /**
- * Finns det skrapade eventet i aggregatens destinations-lager? Kollas innan
- * checkout skapas — ingen ska betala för ett id som inte pekar på något.
- * Destinations är antingen ett doc med events-array eller ett index-doc med
- * shardCount + destinations_N-shards; några få admin-reads, och boost-köp är
- * sällsynta, så kostnaden är försumbar.
+ * Det skrapade eventet ur aggregatens destinations-lager (null = finns inte).
+ * Kollas innan checkout skapas — ingen ska betala för ett id som inte pekar
+ * på något — och ger eventets tid till kvittot (kreditdagarna behöver veta
+ * när eventet varit). Destinations är antingen ett doc med events-array
+ * eller ett index-doc med shardCount + destinations_N-shards; några få
+ * admin-reads, och boost-köp är sällsynta, så kostnaden är försumbar.
  */
-async function scrapedEventExists(eventId: string): Promise<boolean> {
+async function findScrapedEvent(eventId: string): Promise<{ time?: unknown } | null> {
     const index = await db.collection('aggregatedEvents').doc('destinations').get();
-    if (!index.exists) return false;
+    if (!index.exists) return null;
     const data = index.data() || {};
-    const inArr = (events: unknown) =>
-        Array.isArray(events) && events.some((e: any) => e?.id === eventId);
-    if (inArr(data.events)) return true;
+    const find = (events: unknown): { time?: unknown } | null =>
+        (Array.isArray(events) ? events.find((e: any) => e?.id === eventId) : undefined) ?? null;
+    const hit = find(data.events);
+    if (hit) return hit;
     const shardCount = typeof data.shardCount === 'number' ? data.shardCount : 0;
     for (let i = 0; i < shardCount; i++) {
         const shard = await db.collection('aggregatedEvents').doc(`destinations_${i}`).get();
-        if (inArr(shard.data()?.events)) return true;
+        const h = find(shard.data()?.events);
+        if (h) return h;
     }
-    return false;
+    return null;
+}
+
+/** Eventets tid som ISO ur ett destinations-/linkEvents-värde, annars null. */
+const timeIso = (v: unknown): string | null => {
+    if (v instanceof admin.firestore.Timestamp) return v.toDate().toISOString();
+    if (typeof v === 'string' && !Number.isNaN(Date.parse(v))) return new Date(v).toISOString();
+    return null;
+};
+
+/**
+ * Kontrollera att eventet går att boosta (finns) och ge dess tid (ISO) till
+ * kvittot. Delas av checkouten och kreditvägen - samma villkor för betalda
+ * och kreditfinansierade boostar.
+ */
+async function boostableEventTime(eventId: string): Promise<string | null> {
+    if (isScrapedEventId(eventId)) {
+        const found = await findScrapedEvent(eventId);
+        if (!found) throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
+        return timeIso(found.time);
+    }
+    const eventSnap = await db.collection('linkEvents').doc(eventId).get();
+    if (!eventSnap.exists) throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
+    return timeIso(eventSnap.data()?.time);
 }
 
 export const createBoostCheckout = functions
@@ -142,17 +172,9 @@ export const createBoostCheckout = functions
 
         // Finns eventet inte ska ingen betala heller. Användarskapade valideras
         // mot linkEvents (dit boosten skrivs); skrapade mot aggregatens
-        // destinations-lager (boosten hamnar i eventBoosts-overlayn).
-        if (isScrapedEventId(eventId)) {
-            if (!(await scrapedEventExists(eventId))) {
-                throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
-            }
-        } else {
-            const eventSnap = await db.collection('linkEvents').doc(eventId).get();
-            if (!eventSnap.exists) {
-                throw new functions.https.HttpsError('not-found', 'Eventet går inte att boosta.');
-            }
-        }
+        // destinations-lager (boosten hamnar i eventBoosts-overlayn). Tiden
+        // följer med som metadata → kvittot (kreditdagarna, 4/11).
+        const eventTime = await boostableEventTime(eventId);
 
         const returnUrl = safeReturnUrl(data?.returnUrl);
         // Stripe ersätter {CHECKOUT_SESSION_ID} i success_url. Klammrarna får INTE
@@ -207,7 +229,7 @@ export const createBoostCheckout = functions
 
         // Samma metadata på både sessionen och payment_intent: extensionens
         // payments-dokument speglar payment_intent, och det är den `applyEventBoost` läser.
-        const metadata = { eventId, boostDays: String(boostDays), firebaseUID: uid };
+        const metadata = { eventId, boostDays: String(boostDays), firebaseUID: uid, ...(eventTime ? { eventTime } : {}) };
 
         try {
             const session = await stripe.checkout.sessions.create({
@@ -308,10 +330,17 @@ export const confirmBoost = functions
             const now = Date.now();
             const currentUntilMs =
                 evtData.featuredUntil instanceof admin.firestore.Timestamp ? evtData.featuredUntil.toMillis() : 0;
-            const until = new Date(Math.max(now, currentUntilMs) + boostDays * 24 * 60 * 60 * 1000);
+            const base = Math.max(now, currentUntilMs);
+            const until = new Date(base + boostDays * 24 * 60 * 60 * 1000);
+            // from/until/eventTime = kvittots boostfönster för kreditdagarna
+            // (4/11, webbens /api/boost/credit): äldre kvitton utan fälten
+            // faller tillbaka på appliedAt + eventets featuredUntil.
             tx.set(receiptRef, {
                 uid, eventId, boostDays, paymentId, sessionId,
                 appliedAt: admin.firestore.FieldValue.serverTimestamp(),
+                from: admin.firestore.Timestamp.fromMillis(base),
+                until: admin.firestore.Timestamp.fromDate(until),
+                eventTime: metadata.eventTime ?? null,
             });
             if (scraped) {
                 // eventId med i dokumentet: slug-hashen är enkelriktad och

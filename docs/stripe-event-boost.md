@@ -187,3 +187,57 @@ igenom; `permission-denied` att sessionen tillhör ett annat konto.
   behöver ändras.
 - **Återbetalning** tar inte bort boosten automatiskt – lägg vid behov till en
   trigger på `payment_intent` refund som nollar `featuredUntil`.
+
+## Kreditdagar (4/11 2026)
+
+Ägarbeslut (Josef 4/11, efter andra betalande kunden): "de dagar man inte
+förbrukar ... ska man ha återstående tid som man kan lägga på en annan event
+när det eventet försvinner. Men man kan minst förlora en dag. Och tänk på att
+man inte kan utnyttja det. Eventet måste vara slut innan man får kreditdagar."
+
+**Regeln** (`apps/functions/src/utils/boostCredit.ts`, testad): när eventet
+bakom ett kvitto har VARIT (dygnet efter eventets sista dag, svensk tid)
+räknas de hela dagar av kvittots boostfönster `[from, until]` som ligger
+efter det dygnet, minus en dags avgift. En veckoboost köpt onsdag 12:00 för ett
+lördagsevent ger alltså 3,5 → 3 → **2 kreditdagar**; en månadsboost för ett
+event dagen efter köpet ger 27. Serier: sista tillfället gäller
+(`eventEndsAtMs`, speglar webbens `seriesEndDate`); en tills vidare-serie tar
+aldrig slut och ger ingen kredit. Raderat eget event = 0 (det har inte varit).
+
+**Regeln** bor i `packages/kontrakt/src/boostCredit.ts` (testad där) -
+samma kod på alla ytor.
+
+**Var det körs:** i WEBBENS SERVERDEL, `apps/web/src/server/boostCredit.ts`
+bakom `POST /api/boost/credit/settle` och `POST /api/boost/credit/apply`
+(Admin SDK:t i hosting-backendens SSR-funktion, `lib/firestore-admin`;
+Bearer-token verifieras med `verifyIdToken`, anonyma sessioner nekas).
+Byggdes först som två callables i functions (4/11) men deploy-kontot i
+`deploy-functions.yml` får inte sätta anropsrättigheten (IAM invoker) på
+NYA Gen1-funktioner, så de svarade 403 - API-routes behöver ingen sådan
+rättighet och deployas med hosting.
+
+**Flödet:**
+
+- `settle` anropas av klienten när boost-väljaren (`BoostTierPicker` via
+  `LinkEventCard`) eller profilen öppnas. Den går igenom anroparens kvitton i
+  `boostPayments`, avräknar dem vars event hunnit vara (stämplar
+  `creditSettledAt` + `creditDays` på kvittot - en gång), höjer saldot i
+  **`boostCredits/{uid}`** (`days`) och KLIPPER den avräknade boosten
+  (`featuredUntil = nu`) så ett ägarredigerat datum aldrig kan väcka samma dagar
+  igen. Svarar `{ days, settled }`.
+- `apply { eventId }` lägger HELA saldot (tak 90 d) på eventet utan Stripe:
+  samma skrivning som `confirmBoost` (featuredUntil/featuredPaymentId =
+  `credit_<uid>_<ms>`), ett kredit-kvitto i `boostPayments` (`credit: true`)
+  som i sin tur kan avräknas när det eventet varit - avgiften gör att saldot
+  bara kan krympa per varv, aldrig växa.
+- Kvitton bär sedan 4/11 `from`, `until` och `eventTime` (functions
+  `confirmBoost`, via Checkout-metadatan); äldre kvitton faller tillbaka på
+  `appliedAt` + eventets `featuredUntil`.
+- Klienten: `fetchBoostCredit`/`applyBoostCreditDays` i `boostService.ts`
+  (fetch med `getAuthHeaders`); väljaren visar raden "Använd dina kreditdagar
+  · 0 kr" när saldot > 0; profilens "Mina boostar" visar saldot. Efter
+  kreditboosten hämtas användarevent + overlayn om
+  (`linkEventService.refreshUserEvents`).
+
+**Säkerhet:** `boostCredits` har ingen match i `firestore.rules` = stängd för
+klienter; saldot ändras bara av serverdelen. Inga regeländringar behövdes.

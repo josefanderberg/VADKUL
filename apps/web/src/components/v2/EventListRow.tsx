@@ -5,6 +5,8 @@ import { isVadkulHostedEvent, LinkEvent } from '@/types';
 import { EVENT_CATEGORIES, EventCategoryType } from '@/utils/categories';
 import { formatEventDate } from '@/utils/dateUtils';
 import { highlightSegments } from '@/utils/eventSearch';
+import { isFeaturedNow } from '@/utils/featured';
+import BoostStar from '../ui/BoostStar';
 import { Clock, MapPin } from 'lucide-react';
 
 /** Samma emoji-logik som kartnålarna: AI:ns per-event-emoji, annars kategorins. */
@@ -39,7 +41,7 @@ export default function EventListRow({ evt, onPick, right, dimmed = false, highl
                 className="flex-1 min-w-0 text-left px-4 py-3 flex items-center gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
             >
                 <span
-                    className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
+                    className={`relative shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg leading-none ${
                         isVadkulHostedEvent(evt)
                             ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-400/80'
                             : 'bg-slate-100 dark:bg-slate-800'
@@ -47,6 +49,8 @@ export default function EventListRow({ evt, onPick, right, dimmed = false, highl
                     aria-hidden
                 >
                     {eventEmoji(evt)}
+                    {/* Boost-stjärnan på emoji-cirkeln (4/11) - samma som listan under kortet. */}
+                    {isFeaturedNow(evt.featuredUntil) && <BoostStar small className="absolute -top-1 -left-1.5" />}
                 </span>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

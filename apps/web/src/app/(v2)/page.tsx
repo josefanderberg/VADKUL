@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { EventWish, LinkEvent, type EventRsvpStatus } from '@/types';
+import { EventWish, LinkEvent, isVadkulHostedEvent, type EventRsvpStatus } from '@/types';
 import { linkEventService, isBoostShownEveryDay } from '@/services/linkEventService';
 import { wishService, WISH_LIFETIME_DAYS, WISH_POLL_MS } from '@/services/wishService';
-import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, type BoostTier } from '@/services/boostService';
+import { startEventBoostCheckout, confirmEventBoost, logBoostPurchase, applyBoostCreditDays, type BoostChoice } from '@/services/boostService';
 import FloatingNavbar, { getDayLabel } from '@/components/v2/FloatingNavbar';
 import CreateEventButton from '@/components/v2/CreateEventButton';
 import CategoryChipRow, { SOURCE_EMOJI } from '@/components/v2/CategoryChipRow';
@@ -21,7 +21,7 @@ import { acceptFriendInvite, fetchUserLite, recordInviteLanding } from '@/servic
 import { storageService } from '@/services/storageService';
 import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
 import { setRsvpStatus } from '@/services/rsvpService';
-import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY } from '@/utils/rsvpTransition';
+import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY, hostedAttendeeAction } from '@/utils/rsvpTransition';
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus, ListFilter as FilterIcon } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
@@ -2153,12 +2153,34 @@ export default function HomePage() {
     // först av backend efter genomförd betalning — aldrig härifrån.
     // Nivån (1 dag/vecka/månad) väljs i kortets BoostTierPicker — hit kommer
     // bara det färdiga valet; priset ägs av Stripe/backend (tier → belopp).
-    const handleBoostOwnEvent = useCallback(async (eventId: string, tier: BoostTier) => {
+    const handleBoostOwnEvent = useCallback(async (eventId: string, choice: BoostChoice) => {
         // Utloggad (eller anonym tips-session — `user` är null då) → inloggnings-
         // modalen, inte ett rött fel. Köpet måste knytas till ett konto man kan
         // komma tillbaka till, men den som just tryckt "Boosta" är den mest
         // köpbenägna personen på sajten — hen ska inte mötas av en återvändsgränd.
         if (!user) { openLogin('Logga in för att boosta eventet'); return; }
+        // KREDITDAGAR (4/11): ingen Stripe - backend lägger alla kontots
+        // kreditdagar på eventet och svarar direkt. Användareventen + boost-
+        // overlayn hämtas om så guldet syns utan att vänta på nästa poll.
+        if (choice === 'credit') {
+            const t = toast.loading('Lägger på kreditdagarna…');
+            try {
+                const res = await applyBoostCreditDays(eventId);
+                toast.dismiss(t);
+                if (res.applied) {
+                    toast.success(`Boostat med ${res.days} kreditdag${res.days === 1 ? '' : 'ar'}! Eventet lyfts fram på kartan. 🚀`);
+                    linkEventService.refreshUserEvents();
+                } else {
+                    toast.error('Inga kreditdagar att lägga på.');
+                }
+            } catch (err) {
+                toast.dismiss(t);
+                console.error(err);
+                toast.error(err instanceof Error ? err.message : 'Kunde inte lägga på kreditdagarna.');
+            }
+            return;
+        }
+        const tier = choice;
         try {
             const t = toast.loading('Öppnar betalning…');
             await startEventBoostCheckout(eventId, tier); // redirectar vid succé
@@ -3449,6 +3471,22 @@ export default function HomePage() {
         // Räknaren på SERIENS dokument för veckoserietillfällen — samma id
         // som svarsdokumentet och delningslänken (rsvpShareId).
         recordEventRsvpCount(rsvpShareId(evt.id, evt.userCreated), rsvpCountDeltas(prev, next));
+        // KOMMER = ANMÄL DIG PÅ VÄRDADE EVENT (ägarbeslut 4/11, Josef: "de ska
+        // ha samma verkan"): Kommer på → anmälan (namn i listan), Kommer av →
+        // avanmälan. Kräver konto som anmälan alltid gjort; utloggad/anonym
+        // får bara svaret. Idempotent mot attendees-lagret.
+        if (user && isVadkulHostedEvent(evt)) {
+            const action = hostedAttendeeAction(prev, next);
+            if (action === 'register') {
+                linkEventService.rsvp(evt.id, {
+                    uid: user.uid,
+                    name: user.displayName || user.email || 'VADKUL-användare',
+                    photoURL: user.photoURL,
+                }).catch(err => console.warn('Kunde inte anmäla:', err));
+            } else if (action === 'cancel') {
+                linkEventService.cancelRsvp(evt.id, user.uid).catch(err => console.warn('Kunde inte avanmäla:', err));
+            }
+        }
         try {
             const uid = await ensureTipIdentity();
             await setRsvpStatus(evt.id, evt.userCreated, uid, next, {

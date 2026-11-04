@@ -75,9 +75,12 @@ export default function IntegritetPage() {
         {
             title: 'Analys och kakor',
             body: (
-                <>Vi använder Google Analytics och Hotjar för att förstå hur appen används
+                <>Vi använder Google Analytics och Hotjar för att förstå hur vadkul.se används
                 (t.ex. vilka funktioner som används och var det skaver). Dessa verktyg använder
-                kakor/lokal lagring och samlar inte in ditt namn eller din e-post.</>
+                kakor/lokal lagring och samlar inte in ditt namn eller din e-post. Mobilappen
+                använder Google Analytics för Firebase på samma sätt: vilka skärmar och
+                funktioner som används, knutet till ett slumpat app-id - aldrig till ditt
+                namn, din e-post eller något annons-id.</>
             ),
         },
         {
