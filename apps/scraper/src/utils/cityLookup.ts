@@ -39,6 +39,9 @@ function cityPointsFile(): string {
 
 let pointsCache: CityPoint[] | null = null;
 let slugCache: { name: string; slug: string }[] | null = null;
+/** Stadssidan som den står i cityPages.ts: mitten kartbilden ritades kring + folkmängd. */
+export interface CityPage { name: string; slug: string; lat: number; lng: number; population?: number }
+let pageCache: CityPage[] = [];
 
 function allCityPoints(): CityPoint[] {
     if (pointsCache) return pointsCache;
@@ -66,6 +69,8 @@ function allCitySlugs(): { name: string; slug: string }[] {
     const src = fs.readFileSync(file, 'utf-8');
     slugCache = [...src.matchAll(/\{ name: '([^']+)', slug: '([a-z-]+)'/g)]
         .map(m => ({ name: m[1], slug: m[2] }));
+    pageCache = [...src.matchAll(/\{ name: '([^']+)', slug: '([a-z-]+)', lat: ([\d.]+), lng: ([\d.]+)(?:, population: (\d+))?/g)]
+        .map(m => ({ name: m[1], slug: m[2], lat: Number(m[3]), lng: Number(m[4]), population: m[5] ? Number(m[5]) : undefined }));
     if (slugCache.length === 0) {
         console.warn(`⚠️  cityLookup: inga stadssidor hittades i ${file} — har listan flyttat eller bytt format?`);
     }
@@ -135,4 +140,18 @@ export function cityAdImageUrl(
     });
     if (days) p.set('dagar', String(days));
     return `https://vadkul.se/api/marketing/ad-plats?${p.toString()}`;
+}
+
+/**
+ * Alla stadssidor med cityPages.ts egna koordinater (kartbilderna i
+ * apps/web/public/kartbilder är centrerade på EXAKT dessa, inte på
+ * ortlistans) och folkmängd.
+ */
+export function cityPages(): CityPage[] {
+    allCitySlugs();
+    return pageCache;
+}
+
+export function cityPageFor(name: string): CityPage | null {
+    return cityPages().find(c => c.name.toLowerCase() === name.toLowerCase()) ?? null;
 }

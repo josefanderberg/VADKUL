@@ -78,6 +78,12 @@ describe('valjTema', () => {
             .toMatchObject({ tema: 'siffra', form: 'bild', variant: 'helg', reserv: true });
     });
 
+    it('tisdagens reserv följer budskapsrotationen: söndagens skapa-eget blir inte två gånger på tre dagar', () => {
+        const son = { id: '2026-11-01', tema: 'budskap' as const, variant: 'skapa-eget', status: 'publicerad' as const };
+        expect(valjTema(TIS, { klipp: [], tidigare: [son] }))
+            .toMatchObject({ tema: 'budskap', form: 'bild', variant: 'appen', reserv: true });
+    });
+
     it('aldrig samma tema som i går', () => {
         const tidigare = [{ id: MAN, tema: 'gissa' as const, status: 'publicerad' as const }];
         // Tisdag utan klipp skulle bli budskap; måndag var gissa, så budskap går bra.

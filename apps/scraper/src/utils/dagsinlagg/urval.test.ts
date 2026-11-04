@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-    avgorVinnare, emojiFor, gissaData, gissaKandidater, helgStad, iDygnet, iFonstret, poang, quizForStad,
-    quizKommentar, siffror, stadssidor, vinnarKommentar,
+    avgorVinnare, emojiFor, gissaData, gissaKandidater, helgensEvent, helgStad, iDygnet, iFonstret, kategorier, poang, quizForStad,
+    quizKommentar, siffror, stadsduell, stadssidor, veckansEvent, vinnarKommentar,
 } from './urval';
 import type { DestEvent } from './typer';
 import { stockholmTid } from './tid';
@@ -197,3 +197,84 @@ describe('titelDuger', () => {
         expect(titelDuger('En alldeles för lång titel som inte får plats på en bricka alls')).toBe(false);
     });
 });
+
+describe('helgStad: kategorierna och brickorna', () => {
+    it('de tre största kategorierna (inte övrigt) i data och texten, stadens event med', () => {
+        const events: DestEvent[] = [];
+        for (let i = 0; i < 8; i++) events.push(vid(ORTER[0], { datum: '2026-11-07', klockan: '19:00', title: `Konsert ${i}`, category: 'music' }));
+        for (let i = 0; i < 5; i++) events.push(vid(ORTER[0], { datum: '2026-11-07', klockan: '13:00', title: `Match ${i}`, category: 'sport' }));
+        for (let i = 0; i < 3; i++) events.push(vid(ORTER[0], { datum: '2026-11-08', klockan: '11:00', title: `Teater ${i}`, category: 'stage' }));
+        for (let i = 0; i < 9; i++) events.push(vid(ORTER[0], { datum: '2026-11-08', klockan: '11:00', title: `Annat ${i}`, category: 'other' }));
+        const h = helgStad(events, [ORTER[0]], NU)!;
+        expect(h.kategorier).toEqual([{ kategori: 'music', antal: 8 }, { kategori: 'sport', antal: 5 }, { kategori: 'stage', antal: 3 }]);
+        expect(h.egna).toHaveLength(25);
+        expect(h.data).toMatchObject({ kat1: 'musik', kat2: 'sport', kat3: 'scen', kat1Emoji: '🎵' });
+        const t = byggText({ tema: 'helg', stad: 'Växjö', data: h.data, fro: '2026-11-05' });
+        expect(t.fb).toContain('Mest musik, sedan sport och scen 🎵');
+        expect(t.fb).not.toContain('Bland annat');
+        expect(kontrollera(t.fb, h.data, 'fb')).toEqual([]);
+        expect(kontrollera(t.ig, h.data, 'ig')).toEqual([]);
+    });
+
+    it('kategorier räknar inte övrigt och bryter lika på nyckeln', () => {
+        const e = (category: string): DestEvent => ev({ datum: '2026-11-07', category });
+        expect(kategorier([e('sport'), e('music'), e('other'), e('other')], 3)).toEqual([{ kategori: 'music', antal: 1 }, { kategori: 'sport', antal: 1 }]);
+    });
+});
+
+describe('veckans och helgens event', () => {
+    it('veckan = i dag och sex dagar framåt, helgen = fredag kväll till söndag; opt-in räknas aldrig', () => {
+        const a = ev({ datum: '2026-11-03', klockan: '19:00' });
+        const b = ev({ datum: '2026-11-09', klockan: '19:00' });
+        const c = ev({ datum: '2026-11-10', klockan: '19:00' });
+        const d = ev({ datum: '2026-11-07', klockan: '12:00' });
+        const kyrkan = ev({ datum: '2026-11-07', klockan: '12:00', id: 'https://www.svenskakyrkan.se/vaxjo/kalender/1' });
+        expect(veckansEvent([a, b, c, d], NU).map(e => e.id)).toEqual([a.id, b.id, d.id]);
+        expect(helgensEvent([a, b, c, d], NU).map(e => e.id)).toEqual([d.id]);
+        expect(veckansEvent([kyrkan], NU)).toEqual([]);
+    });
+});
+
+describe('stadsduell', () => {
+    // Tre stora som hoppas över, sedan tre jämnstora och en för liten.
+    const STADER = [
+        { name: 'Stockholm', lat: 59.33, lng: 18.06, population: 990000 },
+        { name: 'Göteborg', lat: 57.71, lng: 11.97, population: 600000 },
+        { name: 'Malmö', lat: 55.6, lng: 13.0, population: 366000 },
+        { name: 'Uppsala', lat: 59.86, lng: 17.64, population: 242000 },
+        { name: 'Linköping', lat: 58.41, lng: 15.62, population: 167000 },
+        { name: 'Örebro', lat: 59.27, lng: 15.21, population: 159000 },
+        { name: 'Ystad', lat: 55.43, lng: 13.82, population: 30000 },
+    ];
+    const helg = (stad: { lat: number; lng: number }, antal: number): DestEvent[] =>
+        Array.from({ length: antal }, (_, i) => vid(stad, { datum: '2026-11-07', klockan: '19:00', title: `E ${i}` }));
+
+    it('tre jämnstora städer, inte de tre största, tydlig vinnare, alternativen i bokstavsordning', () => {
+        const events = [...helg(STADER[0], 500), ...helg(STADER[3], 30), ...helg(STADER[4], 40), ...helg(STADER[5], 20), ...helg(STADER[6], 90)];
+        const q = stadsduell(events, STADER, NU)!;
+        expect(q.alternativ).toEqual(['Linköping', 'Uppsala', 'Örebro']);
+        expect(q.svar).toBe('Linköping');
+        expect(q.alternativ[q.ratt]).toBe('Linköping');
+        expect(q.fraga).toBe('Vilken av de här städerna har flest event i helgen?');
+        expect(quizKommentar(q)).toBe('Rätt svar: 1️⃣ Linköping, 40+ event i helgen enligt kartan ☁️ Nytt quiz på lördag.');
+        const t = byggText({ tema: 'quiz', variant: 'duell', data: q.data, fro: '2026-11-07' });
+        expect(kontrollera(t.fb, q.data, 'fb')).toEqual([]);
+        expect(kontrollera(t.ig, q.data, 'ig')).toEqual([]);
+        // Utan stad: hashtaggen får inte avslöja svaret.
+        expect(t.ig).not.toContain('#linköping');
+        expect(t.fb).toContain('Vilken stad tippar du på?');
+    });
+
+    it('ingen duell när vinnaren inte vinner tydligt eller en stad har för lite', () => {
+        const jamnt = [...helg(STADER[3], 30), ...helg(STADER[4], 32), ...helg(STADER[5], 29)];
+        expect(stadsduell(jamnt, STADER, NU)).toBeNull();
+        const forLite = [...helg(STADER[3], 30), ...helg(STADER[4], 60), ...helg(STADER[5], 5)];
+        expect(stadsduell(forLite, STADER, NU)).toBeNull();
+    });
+
+    it('vilande städer får inte vara med', () => {
+        const events = [...helg(STADER[3], 30), ...helg(STADER[4], 40), ...helg(STADER[5], 20)];
+        expect(stadsduell(events, STADER, NU, ['Uppsala'])).toBeNull();
+    });
+});
+

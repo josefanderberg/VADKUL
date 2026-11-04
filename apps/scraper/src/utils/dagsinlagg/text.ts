@@ -167,21 +167,21 @@ export function mallrader(tema: Tema, variant: string | undefined, data: TextDat
                     `${s(data, 'helgGolv')} event i helgen, i hela landet 🗓️`,
                     `I helgen: ${s(data, 'helgGolv')} event från norr till söder 🗓️`,
                 ], fro),
-                `Flest i ${s(data, 'toppStad')} 📍`,
+                'Varje prick på bilden är en plats där något händer 📍',
                 `Allt på en karta, gratis ✨`,
                 '{länk}',
                 variera(['Vad gör du i helgen?', 'Vad blir det i helgen?'], fro),
             ];
             return [
                 variera([
-                    `${s(data, 'idagGolv')} event i Sverige bara i dag 🗓️`,
-                    `Bara i dag: ${s(data, 'idagGolv')} event runt om i Sverige 🗓️`,
+                    `${s(data, 'veckaGolv')} event i Sverige den här veckan 🗓️`,
+                    `Den här veckan: ${s(data, 'veckaGolv')} event runt om i Sverige 🗓️`,
                 ], fro),
-                `${s(data, 'veckaGolv')} den här veckan 📍`,
                 `${s(data, 'nyaGolv')} nya på kartan sedan förra veckan ✨`,
-                `Flest just nu: ${s(data, 'toppKategori')} ${s(data, 'toppEmoji')}`,
+                `Mest ${s(data, 'toppKategori')} ${s(data, 'toppEmoji')}`,
+                'Varje prick på bilden är en plats där något händer 📍',
                 '{länk}',
-                variera(['Vad ska du på?', 'Vad lockar dig den här veckan?'], fro),
+                variera(['Vad ska du på?', 'Vad lockar dig den här veckan?', 'Hittar du din stad på bilden?'], fro),
             ];
         case 'gissa':
             return [
@@ -201,7 +201,8 @@ export function mallrader(tema: Tema, variant: string | undefined, data: TextDat
         case 'helg':
             return [
                 `${s(data, 'antalGolv')} event i ${s(data, 'stad')} i helgen 🗓️`,
-                `Bland annat ${s(data, 'topp1')}, ${s(data, 'topp2')} och ${s(data, 'topp3')} ✨`,
+                ...(data.kat1 ? [kategoriRad(data)] : []),
+                data.topp1 ? `Ett tips: ${s(data, 'topp1')} ✨` : 'Allt på en karta, gratis ✨',
                 'Hela helgen på kartan 📍',
                 '{länk}',
                 variera(['Vad blir det för dig?', `Vad ska du på i ${s(data, 'stad')}?`], fro),
@@ -213,14 +214,23 @@ export function mallrader(tema: Tema, variant: string | undefined, data: TextDat
                 `1️⃣ ${s(data, 'alt1')}`,
                 `2️⃣ ${s(data, 'alt2')}`,
                 `3️⃣ ${s(data, 'alt3')}`,
-                'Svaret kommer i morgon ☁️',
-                'Vad tror du?',
+                variant === 'duell' ? 'Svaret kommer i morgon här i kommentarerna ☁️' : 'Svaret kommer i morgon ☁️',
+                variant === 'duell' ? 'Vilken stad tippar du på?' : 'Vad tror du?',
             ];
         case 'budskap':
             return budskapsrader(variant ?? 'skapa-eget', data, fro);
         case 'video':
             return videorader((variant ?? 'okant') as KlippTema, data, fro);
     }
+}
+
+/** "Mest musik, sedan sport och scen 🎵" ur kat1..kat3 (urval.helgStad). */
+function kategoriRad(data: TextData): string {
+    const k = [data.kat1, data.kat2, data.kat3].filter((v): v is string => typeof v === 'string' && v.length > 0);
+    const emoji = s(data, 'kat1Emoji');
+    if (k.length >= 3) return `Mest ${k[0]}, sedan ${k[1]} och ${k[2]} ${emoji}`;
+    if (k.length === 2) return `Mest ${k[0]}, sedan ${k[1]} ${emoji}`;
+    return `Mest ${k[0]} ${emoji}`;
 }
 
 function budskapsrader(variant: string, data: TextData, fro: string): string[] {

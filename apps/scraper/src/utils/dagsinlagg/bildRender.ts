@@ -10,9 +10,10 @@
 
 import fs from 'fs';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import satori, { type Font } from 'satori';
 import { Resvg } from '@resvg/resvg-js';
-import { kortSpec, textOverlay, type Element, type SiffraKort, type BrickorKort, type RubrikKort, type TextOverlay } from './bild';
+import { kortSpec, textOverlay, type Element, type SiffraKort, type BrickorKort, type RubrikKort, type KartKort, type PrickKort, type TextOverlay } from './bild';
 
 const FONT_DIR = path.resolve(__dirname, '../../../assets/fonts');
 const TWEMOJI_DIR = path.dirname(require.resolve('@twemoji/svg/package.json'));
@@ -72,8 +73,10 @@ export async function renderaElement(element: Element, bredd: number, hojd: numb
 export async function renderaKort(typ: 'siffra', data: SiffraKort, utfil: string): Promise<string>;
 export async function renderaKort(typ: 'brickor', data: BrickorKort, utfil: string): Promise<string>;
 export async function renderaKort(typ: 'rubrik', data: RubrikKort, utfil: string): Promise<string>;
+export async function renderaKort(typ: 'karta', data: KartKort, utfil: string): Promise<string>;
+export async function renderaKort(typ: 'prickar', data: PrickKort, utfil: string): Promise<string>;
 export async function renderaKort(typ: 'slutkort', data: { ikonDataUri?: string } | undefined, utfil: string): Promise<string>;
-export async function renderaKort(typ: 'siffra' | 'brickor' | 'rubrik' | 'slutkort', data: any, utfil: string): Promise<string> {
+export async function renderaKort(typ: 'siffra' | 'brickor' | 'rubrik' | 'karta' | 'prickar' | 'slutkort', data: any, utfil: string): Promise<string> {
     const spec = typ === 'slutkort' ? kortSpec('slutkort', data) : kortSpec(typ as 'siffra', data);
     const png = await renderaElement(spec.element, spec.bredd, spec.hojd);
     fs.mkdirSync(path.dirname(utfil), { recursive: true });
@@ -94,4 +97,29 @@ export function molnIkon(): string | undefined {
     const fil = path.resolve(__dirname, '../../../../web/public/pwa-icon-bla-512.png');
     if (!fs.existsSync(fil)) return undefined;
     return `data:image/png;base64,${fs.readFileSync(fil).toString('base64')}`;
+}
+
+const KARTBILDER = path.resolve(__dirname, '../../../../web/public/kartbilder');
+const KARTBILD_CACHE = path.resolve(__dirname, '../../../dagsinlagg/cache/kartbilder');
+
+/**
+ * Stadssidans förrenderade kartbild som PNG-data-URI, eller null om staden
+ * saknar bild. WebP måste bli PNG först: satori tappar WebP TYST (bilden
+ * blir bara tom). sips finns på båda Macarna; PNG:en cachas tills WebP:en
+ * byts ut.
+ */
+export function kartbildDataUri(slug: string): string | null {
+    const kalla = path.join(KARTBILDER, `${slug}.webp`);
+    if (!fs.existsSync(kalla)) return null;
+    const png = path.join(KARTBILD_CACHE, `${slug}.png`);
+    if (!fs.existsSync(png) || fs.statSync(png).mtimeMs < fs.statSync(kalla).mtimeMs) {
+        fs.mkdirSync(KARTBILD_CACHE, { recursive: true });
+        execFileSync('sips', ['-s', 'format', 'png', kalla, '--out', png], { stdio: 'ignore' });
+    }
+    return `data:image/png;base64,${fs.readFileSync(png).toString('base64')}`;
+}
+
+/** En SVG-sträng som data-URI (prickkartan). */
+export function svgDataUri(svg: string): string {
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }

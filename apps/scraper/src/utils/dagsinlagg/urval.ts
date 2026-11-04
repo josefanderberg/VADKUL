@@ -44,6 +44,12 @@ export const KATEGORI_TEXT: Record<string, string> = {
     family: 'familj', other: 'övrigt',
 };
 
+/** Kategorinamn som får plats i en uppräkning ("mest musik, sedan sport och scen"). */
+export const KATEGORI_KORT: Record<string, string> = {
+    music: 'musik', stage: 'scen', art: 'konst', sport: 'sport', food: 'mat och dryck',
+    market: 'marknader', party: 'fest', social: 'häng', course: 'kurser', family: 'familj', other: 'övrigt',
+};
+
 export const STANDARD_EMOJI: Record<string, string> = {
     music: '🎵', stage: '🎭', art: '🎨', sport: '⚽', food: '🍽️', market: '🛍️', party: '🎉',
     social: '☕', course: '🎓', family: '🧸', other: '📍',
@@ -89,6 +95,31 @@ export function iDygnet(events: DestEvent[], datum: string): DestEvent[] {
 
 export function iStaden(events: DestEvent[], stad: TownPoint, radieKm = STAD_RADIE_KM): DestEvent[] {
     return events.filter(e => distanceKm(e.lat, e.lng, stad.lat, stad.lng) <= radieKm);
+}
+
+/** De största kategorierna (inte 'other'), störst först; lika bryts på nyckeln. */
+export function kategorier(events: DestEvent[], max = 3): { kategori: string; antal: number }[] {
+    const antal = new Map<string, number>();
+    for (const e of events) {
+        if (e.category === 'other' || !e.category) continue;
+        antal.set(e.category, (antal.get(e.category) ?? 0) + 1);
+    }
+    return [...antal.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, max)
+        .map(([kategori, n]) => ({ kategori, antal: n }));
+}
+
+/** Veckans event (i dag och sex dagar framåt), utan opt-in. Sverigekortet. */
+export function veckansEvent(alla: DestEvent[], nu: Date | number): DestEvent[] {
+    const datum = stockholmDatum(nu);
+    return iFonstret(utanOptIn(alla), dygnet(datum).start, dygnet(plusDagar(datum, 6)).slut);
+}
+
+/** Helgens event (fredag kväll till söndag), utan opt-in. Sverigekortet. */
+export function helgensEvent(alla: DestEvent[], nu: Date | number): DestEvent[] {
+    const h = helgen(nu);
+    return iFonstret(utanOptIn(alla), h.start, h.slut);
 }
 
 function toppKategori(events: DestEvent[]): { kategori: string; antal: number } {
@@ -245,6 +276,10 @@ export interface HelgStad {
     antal: number;
     fredag: string;
     topp: { titel: string; emoji: string; dag: string }[];
+    /** De tre största kategorierna i helgen (kortets underrad och texten). */
+    kategorier: { kategori: string; antal: number }[];
+    /** Stadens helgevent (brickorna på kartkortet). */
+    egna: DestEvent[];
     data: Record<string, string | number>;
 }
 
@@ -280,11 +315,17 @@ export function helgStad(alla: DestEvent[], kandidatStader: TownPoint[], nu: Dat
             topp.push({ titel, emoji: emojiFor(e), dag });
         }
     }
+    const kat = kategorier(basta.egna);
     const data: Record<string, string | number> = {
         stad: basta.stad.name, antal: basta.egna.length, antalGolv: talMedPlus(basta.egna.length),
         topp1: topp[0]?.titel ?? '', topp2: topp[1]?.titel ?? '', topp3: topp[2]?.titel ?? '',
     };
-    return { stad: basta.stad.name, antal: basta.egna.length, fredag: h.fredag, topp, data };
+    kat.forEach((k, i) => {
+        data[`kat${i + 1}`] = KATEGORI_KORT[k.kategori] ?? k.kategori;
+        data[`kat${i + 1}Golv`] = talMedPlus(k.antal);
+        data[`kat${i + 1}Emoji`] = STANDARD_EMOJI[k.kategori] ?? '📍';
+    });
+    return { stad: basta.stad.name, antal: basta.egna.length, fredag: h.fredag, topp, kategorier: kat, egna: basta.egna, data };
 }
 
 // --- Quizet -------------------------------------------------------------------------
@@ -296,6 +337,8 @@ export interface Quiz {
     ratt: number;
     svar: string;
     antal: number;
+    /** Färdig svarskommentar (duellen); annars bygger quizKommentar den. */
+    kommentar?: string;
     data: Record<string, string | number>;
 }
 
@@ -331,8 +374,63 @@ export function quizForStad(alla: DestEvent[], kandidatStader: TownPoint[], orte
     };
 }
 
-export function quizKommentar(q: Pick<Quiz, 'ratt' | 'svar' | 'stad'>): string {
+export function quizKommentar(q: Pick<Quiz, 'ratt' | 'svar' | 'stad'> & { kommentar?: string }): string {
+    if (q.kommentar) return q.kommentar;
     return `Rätt svar: ${NR_EMOJI[q.ratt]} ${q.svar}. Lugnast i ${q.stad} enligt kartan just nu ☁️ Nytt quiz på lördag.`;
+}
+
+export interface DuellStad extends TownPoint { population?: number }
+
+/** Duellen hoppar över de tre största: där är svaret alltid givet. */
+export const DUELL_HOPPA_OVER = 3;
+/** Städerna i en duell ska vara jämnstora (största/minsta folkmängd). */
+export const DUELL_MAX_KVOT = 1.6;
+/** Vinnaren ska vinna tydligt: minst så här mycket fler än tvåan. */
+export const DUELL_MARGINAL = 1.2;
+
+/**
+ * Stadsduellen: "Vilken av de här städerna har flest event i helgen?" Tre
+ * jämnstora städer (stadssidor med folkmängd, inte de tre största), alla med
+ * minst HELG_MIN event, en tydlig vinnare. Svaret är INTE givet på förhand,
+ * och lokalpatriotism ger kommentarer. Bland giltiga trior vinner den med
+ * flest invånare totalt (störst publik); vilande städer får inte vara med.
+ * Alternativen står i bokstavsordning så rätt svar inte alltid är 1.
+ */
+export function stadsduell(alla: DestEvent[], stader: DuellStad[], nu: Date | number, vilande: string[] = []): Quiz | null {
+    const h = helgen(nu);
+    const events = iFonstret(utanOptIn(alla), h.start, h.slut);
+    const vila = new Set(vilande.map(s => s.toLowerCase()));
+    const medFolk = stader
+        .filter((s): s is DuellStad & { population: number } => typeof s.population === 'number' && s.population > 0)
+        .sort((a, b) => b.population - a.population || a.name.localeCompare(b.name, 'sv'))
+        .slice(DUELL_HOPPA_OVER)
+        .filter(s => !vila.has(s.name.toLowerCase()))
+        .map(s => ({ stad: s, antal: iStaden(events, s).length }))
+        .filter(x => x.antal >= HELG_MIN);
+    let basta: { trio: typeof medFolk; folk: number } | null = null;
+    for (let i = 0; i + 2 < medFolk.length; i++) {
+        const trio = medFolk.slice(i, i + 3);
+        const folk = trio.map(t => t.stad.population);
+        if (Math.max(...folk) / Math.min(...folk) > DUELL_MAX_KVOT) continue;
+        const sorterade = [...trio].sort((a, b) => b.antal - a.antal);
+        if (sorterade[0].antal < sorterade[1].antal * DUELL_MARGINAL) continue;
+        const summa = folk.reduce((a, b) => a + b, 0);
+        if (!basta || summa > basta.folk) basta = { trio, folk: summa };
+    }
+    if (!basta) return null;
+    const alternativ = [...basta.trio].sort((a, b) => a.stad.name.localeCompare(b.stad.name, 'sv'));
+    const vinnare = [...alternativ].sort((a, b) => b.antal - a.antal)[0];
+    const ratt = alternativ.indexOf(vinnare);
+    const fraga = 'Vilken av de här städerna har flest event i helgen?';
+    const kommentar = `Rätt svar: ${NR_EMOJI[ratt]} ${vinnare.stad.name}, ${talMedPlus(vinnare.antal)} event i helgen enligt kartan ☁️ Nytt quiz på lördag.`;
+    return {
+        stad: vinnare.stad.name, fraga, alternativ: alternativ.map(a => a.stad.name), ratt, svar: vinnare.stad.name,
+        antal: vinnare.antal, kommentar,
+        data: {
+            stad: vinnare.stad.name, fraga, alt1: alternativ[0].stad.name, alt2: alternativ[1].stad.name, alt3: alternativ[2].stad.name,
+            antal: vinnare.antal, antalGolv: talMedPlus(vinnare.antal),
+        },
+    };
 }
 
 /** Städer med stadssida ur ortlistan (de kan få helg- och quizinlägg). */

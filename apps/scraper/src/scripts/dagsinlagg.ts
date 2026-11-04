@@ -32,7 +32,7 @@ import fs from 'fs';
 import path from 'path';
 import { eventKey } from '../utils/eventKey';
 import { eventShareSlug } from '../utils/eventShareSlug';
-import { cityPoints, citySlugFor } from '../utils/cityLookup';
+import { cityPageFor, cityPages, cityPoints, citySlugFor } from '../utils/cityLookup';
 import {
     commentOnFacebookPost, commentOnInstagramMedia, fetchFacebookPostInsights, fetchInstagramMediaInsights,
     getFacebookPostPermalink, getTokenScopes, isFacebookConfigured, isInstagramConfigured, loadSocialSecrets,
@@ -49,11 +49,14 @@ import {
 } from '../utils/dagsinlagg/logg';
 import { INKORG_PATH, listaInkorg, sparaInkommetKlipp } from '../utils/dagsinlagg/inkorg';
 import {
-    avgorVinnare, gissaData, gissaKandidater, helgStad, quizForStad, quizKommentar, siffror, stadssidor, vinnarKommentar,
-    type GissaKandidat,
+    avgorVinnare, emojiFor, gissaData, gissaKandidater, helgensEvent, helgStad, iStaden, quizForStad, quizKommentar, siffror,
+    stadsduell, stadssidor, veckansEvent, vinnarKommentar, KATEGORI_KORT, STANDARD_EMOJI,
+    type GissaKandidat, type Quiz,
 } from '../utils/dagsinlagg/urval';
 import { byggText, kontrollera, kontrolleraTextrad, talMedPlus, textraderFor, type TextData } from '../utils/dagsinlagg/text';
-import { molnIkon, renderaKort, renderaTextOverlay } from '../utils/dagsinlagg/bildRender';
+import { kartbildDataUri, molnIkon, renderaKort, renderaTextOverlay, svgDataUri } from '../utils/dagsinlagg/bildRender';
+import { KORT_BREDD, type KartKort, type PrickKort } from '../utils/dagsinlagg/bild';
+import { ledigPlats, prickar, prickSvg, sverigeProportion, sverigePunkt, tackande, valjBrickor } from '../utils/dagsinlagg/karta';
 import { bildrutor, kontrolleraKlipp, probe, renderaVideo, standardTider, RUBRIK_PX, UNDERRAD_PX, TEXT_Y, FARG_LJUSBLA } from '../utils/dagsinlagg/video';
 import { beskrivOmdome, granskningsprompt, tolkaOmdome, valjBasta, type Granskad } from '../utils/dagsinlagg/granskare';
 import { fragaGranskaren, valdProvider, type Provider } from '../utils/dagsinlagg/granskareProvider';
@@ -110,6 +113,62 @@ function laddaAggregat(): Kontext {
         stadssidor: stadssidor(orter, namn => citySlugFor(namn) !== null),
         aggregatAlder: Date.now() - new Date(dest.updatedAt).getTime(),
     };
+}
+
+// --- Kartorna i korten ------------------------------------------------------------
+
+/** Kartytans höjd överst i stadskortet. */
+const KART_YTA_HOJD = 770;
+
+/**
+ * Stadskortet: stadssidans kartbild med de populäraste eventen som brickor.
+ * null när staden saknar stadssida eller kartbild (då blir det rubrikkortet).
+ */
+function stadsKarta(stad: string, events: DestEvent[], text: Omit<KartKort, 'kartbild' | 'ytaHojd' | 'bildBredd' | 'bildHojd' | 'brickor'>, markera?: string): KartKort | null {
+    const sida = cityPageFor(stad);
+    const kartbild = sida ? kartbildDataUri(sida.slug) : null;
+    if (!sida || !kartbild) return null;
+    const skala = tackande(KORT_BREDD, KART_YTA_HOJD);
+    const ruta = { lat: sida.lat, lng: sida.lng, bredd: KORT_BREDD, hojd: KART_YTA_HOJD, skala };
+    const brickor = valjBrickor(events, ruta, { max: markera ? 7 : 13, minAvstand: 100, marginal: 56, topp: 150, botten: 120, emojiFor });
+    const kort: KartKort = {
+        ...text, kartbild, ytaHojd: KART_YTA_HOJD, bildBredd: Math.round(1260 * skala), bildHojd: Math.round(636 * skala), brickor,
+    };
+    // Den gula brickan (spets, kropp) och etiketten till höger om den ska stå fritt.
+    // Brickorna räknas som spets + kropp (kroppen sitter ~60 px ovanför spetsen).
+    if (markera) {
+        const upptaget = brickor.flatMap(b => [{ x: b.x, y: b.y }, { x: b.x, y: b.y - 60 }]);
+        kort.markera = { ...ledigPlats(upptaget, { x0: 140, y0: 380, x1: 680, y1: 640 }, 10, [{ dx: 0, dy: 0 }, { dx: 0, dy: -70 }, { dx: 140, dy: -110 }, { dx: 300, dy: -110 }]), text: markera };
+    }
+    return kort;
+}
+
+/** Städerna som får en riktig bricka på Sverigekortet (deras populäraste event). */
+const PRICK_BRICK_STADER = ['Stockholm', 'Göteborg', 'Malmö', 'Umeå'];
+
+/** Sverigekortet: varje plats med event som en gul prick, och en bricka i
+ *  fyra städer med stadens populäraste event (emoji + kategorifärg). */
+function sverigePrickar(events: DestEvent[], text: Omit<PrickKort, 'prickBild' | 'bredd' | 'hojd' | 'brickor'>): PrickKort {
+    const hojd = 1260;
+    const bredd = Math.round(hojd / sverigeProportion());
+    const brickor = PRICK_BRICK_STADER.flatMap(namn => {
+        const sida = cityPageFor(namn);
+        if (!sida) return [];
+        const basta = iStaden(events, sida)
+            .filter(e => e.category !== 'other')
+            .sort((a, b) => (b.ps ?? 0) - (a.ps ?? 0) || a.id.localeCompare(b.id))[0];
+        const p = basta ? sverigePunkt(sida.lat, sida.lng, bredd, hojd) : null;
+        return basta && p ? [{ id: basta.id, emoji: emojiFor(basta), kategori: basta.category, x: Math.round(p.x), y: Math.round(p.y) }] : [];
+    });
+    return { ...text, prickBild: svgDataUri(prickSvg(prickar(events, bredd, hojd), bredd, hojd)), bredd, hojd, brickor };
+}
+
+/** Budskapskortets stad: de största stadssidorna med kartbild, en per dag i tur och ordning. */
+function budskapsStad(fro: string): string {
+    const stora = cityPages().filter(c => c.population).sort((a, b) => (b.population ?? 0) - (a.population ?? 0)).slice(0, 12);
+    let h = 0;
+    for (const c of fro) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return stora[h % stora.length]?.name ?? 'Växjö';
 }
 
 function kortFor(e: DestEvent, ctx: Kontext): CardEvent | undefined {
@@ -276,8 +335,8 @@ async function byggUtkast(logg: Logg, ctx: Kontext, val: ByggVal): Promise<{ log
             const text = byggText({ tema: 'siffra', variant, data: s.data, fro });
             const brott = kontrolleraBada(text, s.data); if (brott.length) throw new Error(brott.join('; '));
             const media = variant === 'helg'
-                ? await renderaKort('siffra', { tal: String(s.data.helgGolv), rad: 'event i helgen, i hela Sverige', under: `Flest i ${s.toppStad}` }, path.join(UTKAST, 'bild.png'))
-                : await renderaKort('siffra', { tal: String(s.data.veckaGolv), rad: 'event i Sverige den här veckan', under: `${s.data.idagGolv} bara i dag` }, path.join(UTKAST, 'bild.png'));
+                ? await renderaKort('prickar', sverigePrickar(helgensEvent(ctx.events, nu), { tal: String(s.data.helgGolv), rad: 'event i Sverige i helgen', under: 'Varje prick är en plats där något händer' }), path.join(UTKAST, 'bild.png'))
+                : await renderaKort('prickar', sverigePrickar(veckansEvent(ctx.events, nu), { tal: String(s.data.veckaGolv), rad: 'event i Sverige den här veckan', under: 'Varje prick är en plats där något händer' }), path.join(UTKAST, 'bild.png'));
             skrivUtkast('text-fb.txt', text.fb); skrivUtkast('text-ig.txt', text.ig);
             return { logg, utkast: { inlagg: nyttInlagg({ ...temaVal, variant }, text, s.data, { typ: 'bild', fil: media }), media } };
         }
@@ -302,7 +361,7 @@ async function byggUtkast(logg: Logg, ctx: Kontext, val: ByggVal): Promise<{ log
                 const s = siffror(ctx.events, nu, ctx.orter);
                 const text = byggText({ tema: 'siffra', variant: 'helg', data: s.data, fro });
                 const brott = kontrolleraBada(text, s.data); if (brott.length) throw new Error(brott.join('; '));
-                const media = await renderaKort('siffra', { tal: String(s.data.helgGolv), rad: 'event i helgen, i hela Sverige' }, path.join(UTKAST, 'bild.png'));
+                const media = await renderaKort('prickar', sverigePrickar(helgensEvent(ctx.events, nu), { tal: String(s.data.helgGolv), rad: 'event i Sverige i helgen', under: 'Varje prick är en plats där något händer' }), path.join(UTKAST, 'bild.png'));
                 skrivUtkast('text-fb.txt', text.fb); skrivUtkast('text-ig.txt', text.ig);
                 return { logg, utkast: { inlagg: nyttInlagg({ ...temaVal, tema: 'siffra', variant: 'helg', reserv: true }, text, s.data, { typ: 'bild', fil: media }), media } };
             }
@@ -318,25 +377,39 @@ async function byggUtkast(logg: Logg, ctx: Kontext, val: ByggVal): Promise<{ log
             }
             const text = byggText({ tema: 'helg', data: h.data, fro, stad: h.stad, lank });
             const brott = kontrolleraBada(text, h.data); if (brott.length) throw new Error(brott.join('; '));
-            const media = await renderaKort('rubrik', {
-                tal: talMedPlus(h.antal), rubrik: `event i ${h.stad} i helgen`,
-                under: h.topp.map(t => `${t.emoji} ${t.titel}`).join('  ·  '),
-            }, path.join(UTKAST, 'bild.png'));
+            const under = h.kategorier.map(k => `${STANDARD_EMOJI[k.kategori] ?? '📍'} ${talMedPlus(k.antal)} ${KATEGORI_KORT[k.kategori] ?? k.kategori}`).join('   ');
+            const karta = stadsKarta(h.stad, h.egna, { tal: talMedPlus(h.antal), rad: `event i ${h.stad} i helgen`, under });
+            const media = karta
+                ? await renderaKort('karta', karta, path.join(UTKAST, 'bild.png'))
+                : await renderaKort('rubrik', { tal: talMedPlus(h.antal), rubrik: `event i ${h.stad} i helgen`, under }, path.join(UTKAST, 'bild.png'));
             skrivUtkast('text-fb.txt', text.fb); skrivUtkast('text-ig.txt', text.ig);
             return { logg, utkast: { inlagg: nyttInlagg(temaVal, text, h.data, { typ: 'bild', fil: media }, { stad: h.stad }), media } };
         }
         case 'quiz': {
-            const q = quizForStad(ctx.events, ctx.stadssidor, ctx.orter, nu, staderAnvanda(logg, 'quiz', 56, DATUM));
+            // Två sorters quiz, varannan gång: stadsduellen (vilken av tre
+            // jämnstora städer har flest event i helgen) och veckodagsquizet.
+            const vilande = staderAnvanda(logg, 'quiz', 56, DATUM);
+            const forst = senasteQuizvariant(logg) === 'duell' ? 'veckodag' : 'duell';
+            const duell = (): Quiz | null => stadsduell(ctx.events, cityPages(), nu, vilande);
+            const veckodag = (): Quiz | null => quizForStad(ctx.events, ctx.stadssidor, ctx.orter, nu, vilande);
+            let quizVariant = forst;
+            let q = forst === 'duell' ? duell() : veckodag();
+            if (!q) { quizVariant = forst === 'duell' ? 'veckodag' : 'duell'; q = quizVariant === 'duell' ? duell() : veckodag(); }
             if (!q) return reserv('ingen stad gav ett tydligt quiz');
-            const text = byggText({ tema: 'quiz', data: q.data, fro, stad: q.stad });
+            // Duellens hashtagg får inte vara vinnarens stad: den avslöjar svaret.
+            const text = byggText({ tema: 'quiz', variant: quizVariant, data: q.data, fro, stad: quizVariant === 'duell' ? undefined : q.stad });
             const brott = kontrolleraBada(text, q.data); if (brott.length) throw new Error(brott.join('; '));
             const media = await renderaKort('brickor', {
                 rubrik: q.fraga,
-                brickor: q.alternativ.map((a, i) => ({ nr: String(i + 1), emoji: ['🌙', '☀️', '🎉'][i], titel: a })),
-                fot: 'Svaret kommer i morgon',
+                brickor: q.alternativ.map((a, i) => {
+                    const sida = quizVariant === 'duell' ? cityPageFor(a) : null;
+                    const bild = sida ? kartbildDataUri(sida.slug) ?? undefined : undefined;
+                    return { nr: String(i + 1), emoji: '', titel: a, bild };
+                }),
+                fot: quizVariant === 'duell' ? 'Gissa i kommentarerna, svaret i morgon' : 'Svaret kommer i morgon',
             }, path.join(UTKAST, 'bild.png'));
             skrivUtkast('text-fb.txt', text.fb); skrivUtkast('text-ig.txt', text.ig);
-            return { logg, utkast: { inlagg: nyttInlagg(temaVal, text, q.data, { typ: 'bild', fil: media }, { stad: q.stad, uppfoljning: { svar: quizKommentar(q) } }), media } };
+            return { logg, utkast: { inlagg: nyttInlagg({ ...temaVal, variant: quizVariant }, text, q.data, { typ: 'bild', fil: media }, { stad: q.stad, uppfoljning: { svar: quizKommentar(q) } }), media } };
         }
         default: {
             // budskap (bild)
@@ -358,11 +431,27 @@ async function byggUtkast(logg: Logg, ctx: Kontext, val: ByggVal): Promise<{ log
             const lank = variant === 'appen' ? `${LANK_BAS}/about` : LANK_BAS;
             const text = byggText({ tema: 'budskap', variant, data, fro, lank });
             const brott = kontrolleraBada(text, data); if (brott.length) throw new Error(brott.join('; '));
-            const media = await renderaKort('rubrik', kort, path.join(UTKAST, 'bild.png'));
+            // "Lägg upp ditt eget" på en riktig stadskarta, med en ledig gul
+            // bricka bland veckans event. Övriga budskap: rubrikkortet.
+            const stad = variant === 'skapa-eget' ? budskapsStad(fro) : null;
+            const sida = stad ? cityPageFor(stad) : null;
+            const karta = stad && sida
+                ? stadsKarta(stad, iStaden(veckansEvent(ctx.events, nu), sida), { etikett: kort.etikett, rad: kort.rubrik, under: kort.under }, 'Ditt event?')
+                : null;
+            const media = karta
+                ? await renderaKort('karta', karta, path.join(UTKAST, 'bild.png'))
+                : await renderaKort('rubrik', kort, path.join(UTKAST, 'bild.png'));
             skrivUtkast('text-fb.txt', text.fb); skrivUtkast('text-ig.txt', text.ig);
             return { logg, utkast: { inlagg: nyttInlagg({ ...temaVal, variant }, text, data, { typ: 'bild', fil: media }), media } };
         }
     }
+}
+
+/** Variant på senaste quizet som gick ut (eller planerades), så quizen turas om. */
+function senasteQuizvariant(logg: Logg): string | undefined {
+    return [...logg.inlagg]
+        .filter(i => i.tema === 'quiz' && i.id < DATUM && i.status !== 'vetad' && i.status !== 'misslyckad' && i.status !== 'förfallen')
+        .sort((a, b) => (a.id < b.id ? 1 : -1))[0]?.variant;
 }
 
 // --- Publicering -------------------------------------------------------------------

@@ -28,12 +28,12 @@ Koden: `apps/scraper/src/scripts/dagsinlagg.ts` (kommandot) och
 
 | Dag | Tema | Form | Reserv om inget klipp finns |
 |---|---|---|---|
-| Mån | **Veckan i siffror**: event i Sverige den här veckan, nya på kartan, största kategori | bild (siffer-kort) | - |
+| Mån | **Veckan i siffror**: event i Sverige den här veckan, nya på kartan, största kategori | bild (Sverige av prickar) | - |
 | Tis | **Grok-film, tidlös**: "Vad händer ikväll?", "Allt på ett ställe", "Vad ska vi hitta på?" | video 9:16, 15-30 s | budskaps-bild |
 | Ons | **Gissa dagens bästa event**: tre kandidater i tre städer, "vilken tror du flest öppnar?" | bild (tre brickor) | - |
-| Tor | **I helgen i <stad>**: staden med flest helgevent, riktigt antal, tre exempel | video om stadsklipp finns, annars bild | stads-kort |
-| Fre | **Grok-film, stämning**: "Fredag. Vad händer?", "Bjud med en vän", "Regnig dag?" | video | "X event i helgen"-bild |
-| Lör | **Quiz**: "Vilken veckodag händer det minst i Växjö?" (tre svar) | bild | - |
+| Tor | **I helgen i <stad>**: staden med flest helgevent, riktigt antal, största kategorierna, ett tips | video om stadsklipp finns, annars bild (stadskartan med brickor) | rubrik-kort |
+| Fre | **Grok-film, stämning**: "Fredag. Vad händer?", "Bjud med en vän", "Regnig dag?" | video | helgen i Sverige av prickar |
+| Lör | **Quiz**, varannan vecka: stadsduellen ("Vilken av de här städerna har flest event i helgen?", tre jämnstora städer) och veckodagsquizet ("Vilken veckodag händer det minst i Växjö?") | bild | - |
 | Sön | **Budskap**: lägg upp ditt eget, appen finns, bjud med, milstolpe | bild eller video | - |
 
 Regler i hjulet: samma tema aldrig två dagar i rad, samma klipp används en
@@ -56,6 +56,24 @@ kandidater, inget tydligt quiz) blir det siffror i stället. Vikter per tema
   Instagram får aldrig länk i texten: "Länk i bion" och hashtaggar sist.
 - Samma 9:16-video till båda. Bilder 1080x1350 till båda.
 - Inga arrangörsfoton i våra kort: brickor med emoji i märkesstilen.
+- Kartan är bilden (ändrat 4/11 2026 efter första provveckan: sju mörkblå
+  textkort i rad såg ut som de listinlägg som inte fungerade). Tre kort bär
+  den:
+  - **Stadskartan** (helgen i en stad, "lägg upp ditt eget"): stadssidans
+    förrenderade kartbild (`apps/web/public/kartbilder/<slug>.webp`) överst
+    med upp till 13 riktiga brickor, populärast först, i kartans egen
+    nål-form och kategorifärg. Projektionen är heronas, så brickan står där
+    eventet är. Budskapskortet får en gul bricka "Ditt event?" på en ledig
+    plats. Staden saknar kartbild: rubrikkortet som förut.
+  - **Sverige av prickar** (måndag, fredagens reserv): varje plats med event
+    den här veckan eller helgen som en gul prick, med en bricka i Stockholm,
+    Göteborg, Malmö och Umeå (stadens populäraste event). Samma idé som
+    annonsen `marketing/annons_sverige_20260707.png`.
+  - **Stadsduellen**: tre brickor med ett runt utsnitt av varje stads karta.
+  Färgerna och nål-formen är kopior ur webben (`karta.ts`, synkas för hand).
+- Budskapen roterar (lägg upp ditt eget, appen, bjud med) både på söndagen
+  och i tisdagens reserv, så samma budskap aldrig kommer två gånger på tre
+  dagar.
 - En palett: `#08304A` till `#0A5077`, gult `#FDE047`, ljusblått `#BAE6FD`,
   vitt. Fredoka. Loggan uppe till vänster, vit vadkul.se-pill nere till
   vänster. EN sak gul per bild.
@@ -67,10 +85,24 @@ kandidater, inget tydligt quiz) blir det siffror i stället. Vikter per tema
 
 ## Så ser de ut
 
-**Måndag (siffra):** "7 500+ event i Sverige den här veckan 📍 / 810+ bara i
-dag 🗓️ / 6 200+ nya på kartan sedan förra veckan ✨ / Flest just nu: musik 🎵 /
-vadkul.se / Vad lockar dig den här veckan?" plus ett siffer-kort med talet
-stort i gult.
+**Måndag (siffra):** "6 200+ event i Sverige den här veckan 🗓️ / 1 700+ nya
+på kartan sedan förra veckan ✨ / Mest musik 🎵 / Varje prick på bilden är en
+plats där något händer 📍 / vadkul.se / Hittar du din stad på bilden?" plus
+Sverige av prickar med talet stort i gult.
+
+**Torsdag (helg):** "370+ event i Göteborg i helgen 🗓️ / Mest konst, sedan
+musik och häng 🎨 / Ett tips: Tobias Grim - Releasekonsert ✨ / Hela helgen på
+kartan 📍 / vadkul.se/evenemang/goteborg / Vad ska du på i Göteborg?" plus
+stadskartan med brickorna och "🎨 76+ konst 🎵 67+ musik ☕ 58+ häng" under
+talet. Ett namngivet event, aldrig en lista.
+
+**Lördag (stadsduell):** "Quiz 🧠 / Vilken av de här städerna har flest event
+i helgen? / 1️⃣ Linköping / 2️⃣ Uppsala / 3️⃣ Västerås / Svaret kommer i morgon
+här i kommentarerna ☁️ / Vilken stad tippar du på?". Städerna är jämnstora
+(folkmängd i `cityPages.ts`, högst 1,6 gånger skillnad), aldrig de tre
+största, vinnaren har minst 20 % fler event än tvåan. Ingen stadshashtagg
+(den skulle avslöja svaret). Söndag: "Rätt svar: 2️⃣ Uppsala, 62+ event i
+helgen enligt kartan ☁️".
 
 **Onsdag (gissa):** "Tre event i dag, tre städer. Vilket tror du flest
 öppnar? 👇 / 1️⃣ Jazzkonsert med kör och ensemble, Stockholm / 2️⃣ ... / 3️⃣ ... /

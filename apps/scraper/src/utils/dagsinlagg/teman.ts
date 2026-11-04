@@ -27,9 +27,11 @@ export const KLIPP_PRIORITET: Record<number, KlippTema[]> = {
 };
 const ALLA_KLIPP_TEMAN: KlippTema[] = KLIPP_PRIORITET[2];
 
-/** Vad en videodag blir när inkorgen är tom. */
-export const VIDEO_RESERV: Record<number, { tema: Tema; variant: string }> = {
-    2: { tema: 'budskap', variant: 'skapa-eget' },
+/** Vad en videodag blir när inkorgen är tom. Tisdagens budskap följer
+ *  rotationen (ingen fast variant), annars blev söndag och tisdag samma
+ *  "lägg upp ditt eget" två gånger på tre dagar. */
+export const VIDEO_RESERV: Record<number, { tema: Tema; variant?: string }> = {
+    2: { tema: 'budskap' },
     5: { tema: 'siffra', variant: 'helg' },
 };
 
