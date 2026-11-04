@@ -409,6 +409,9 @@ interface AreaController {
     refresh(): void;
 }
 let activeArea: AreaController | null = null;
+// Hämta om användarevent + boost-overlayn på begäran (kreditdagar lagda på
+// ett event, 4/11) - sätts av prenumerationen, pekar på dess loadUserEvents.
+let userEventsRefresher: (() => void) | null = null;
 // Senast begärda rutor — läggs på en prenumeration som startar efteråt.
 let lastAreaTiles: string[] | null = null;
 let nationwideWanted = false;
@@ -610,6 +613,11 @@ export const linkEventService = {
     /** Kartan har målat första prick-rundan → cards/descriptions får hämtas
      *  (se awaitHeavyLayersGate). Idempotent; säkerhetsnätet släpper ändå. */
     releaseHeavyLayers() { releaseHeavyGateNow(); },
+
+    /** Hämta om användarevent + boost-overlayn NU - efter att kreditdagar
+     *  lagts på ett event (4/11); annars syns nya featuredUntil först när
+     *  count-proben eller 5-minuterspollen hämtar hela listan. */
+    refreshUserEvents() { userEventsRefresher?.(); },
 
     /** Hela tidslinjen behövs (sökning, bläddring bortom fönstret, boost/
      *  djuplänk utanför). Idempotent; pollarna går över till fulla lagret. */
@@ -1394,6 +1402,7 @@ export const linkEventService = {
             ensureBoostedEvents();
             emit();
         }
+        userEventsRefresher = () => { void loadUserEvents(); };
 
         /**
          * Ett pollvarv. Kostar ETT read (count) i stället för ett per event,

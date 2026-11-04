@@ -14,7 +14,7 @@ import { eventShareSlug } from '../../utils/eventShareSlug';
 // Radbrytnings-återställningen + värd-faviconen delas med stadssidornas utfällda event (2/9).
 import { hostFaviconUrl, withRecoveredLineBreaks } from '../../utils/eventExpand';
 import { linkEventService, isEventFeatured, type RsvpAttendee } from '../../services/linkEventService';
-import { type BoostTier } from '../../services/boostService';
+import { fetchBoostCredit, type BoostChoice } from '../../services/boostService';
 import BoostTierPicker from './BoostTierPicker';
 import BoostStar from './BoostStar';
 import LinkedText from './LinkedText';
@@ -80,8 +80,9 @@ interface LinkEventCardProps {
     canEdit?: boolean;
     onEditOwn?: () => void;
     /** Ägaren får boosta sitt event (Stripe Checkout). Visas bredvid "Ta bort".
-     *  Nivån (1 dag/vecka/månad) väljs i BoostTierPicker innan callbacken fyras. */
-    onBoost?: (tier: BoostTier) => void;
+     *  Nivån (1 dag/vecka/månad) väljs i BoostTierPicker innan callbacken fyras;
+     *  'credit' = lägg kontots kreditdagar på eventet (4/11, ingen betalning). */
+    onBoost?: (choice: BoostChoice) => void;
     /** Värdnamnet tryckt (29/9): kartan filtreras till arrangörens event.
      *  Utan callback leder namnet till arrangörssidan i stället. */
     onSelectOrganizer?: (slug: string, name: string) => void;
@@ -268,6 +269,19 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
     // aldrig hänger kvar över fel event.
     const [boostPickerOpen, setBoostPickerOpen] = useState(false);
     useEffect(() => { setBoostPickerOpen(false); }, [linkEvent.id]);
+    // KREDITDAGAR (4/11): saldot hämtas när väljaren öppnas - anropet
+    // avräknar samtidigt kvitton vars event hunnit vara (backend). null tills
+    // svaret kommit (nollas i knappens klick, inte i effekten); utloggad/fel
+    // → 0 (raden visas inte).
+    const [creditDays, setCreditDays] = useState<number | null>(null);
+    useEffect(() => {
+        if (!boostPickerOpen) return;
+        let stale = false;
+        fetchBoostCredit()
+            .then(r => { if (!stale) setCreditDays(r.days); })
+            .catch(() => { if (!stale) setCreditDays(0); });
+        return () => { stale = true; };
+    }, [boostPickerOpen]);
     const handleReport = async (e: React.MouseEvent, reason: string) => {
         e.preventDefault();
         e.stopPropagation();
@@ -946,6 +960,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
+                                                setCreditDays(null);
                                                 setBoostPickerOpen(true);
                                             }}
                                             className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 py-1.5 transition-colors"
@@ -993,6 +1008,11 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                     onSelect={(tier) => {
                         setBoostPickerOpen(false);
                         onBoost(tier);
+                    }}
+                    creditDays={creditDays}
+                    onUseCredit={() => {
+                        setBoostPickerOpen(false);
+                        onBoost('credit');
                     }}
                 />
             )}

@@ -23,6 +23,9 @@ import { analytics, functions } from '../lib/firebase';
 /** Boost-nivåerna: hur länge eventet lyfts fram. Backend mappar tier → pris. */
 export type BoostTier = 'day' | 'week' | 'month';
 
+/** Valet i BoostTierPicker: en betald nivå, eller kreditdagarna (gratis). */
+export type BoostChoice = BoostTier | 'credit';
+
 /** Hur många dagar en boost gäller per nivå. Speglas i backend. */
 export const BOOST_DURATION_DAYS: Record<BoostTier, number> = {
     day: 1,
@@ -96,6 +99,53 @@ export interface BoostConfirmation {
     /** Belopp i minsta enhet (öre) resp. valutakod — från Stripe-sessionen via backend. */
     amountTotal?: number;
     currency?: string;
+}
+
+/**
+ * KREDITDAGAR (ägarbeslut 4/11, Josef: "de dagar man inte förbrukar ... ska
+ * man ha återstående tid som man kan lägga på en annan event när det eventet
+ * försvinner. Men man kan minst förlora en dag ... Eventet måste vara slut
+ * innan man får kreditdagar"). Hinner ett boostat event vara innan boosten
+ * tar slut blir de hela dagar som återstår - minus en dag - kreditdagar på
+ * kontot, som läggs på ett annat event utan betalning.
+ *
+ * Saldot bor server-side (boostCredits/{uid}, stängd för klienten) och
+ * avräknas av backend i samma anrop som läser det: settleBoostCredits går
+ * igenom ens kvitton, krediterar de event som varit och svarar med saldot.
+ * Klienten kan alltså aldrig ge sig själv dagar - se apps/functions/src/
+ * boost.ts + utils/boostCredit.ts och docs/stripe-event-boost.md.
+ */
+export interface BoostCreditBalance {
+    /** Kreditdagar kvar på kontot. */
+    days: number;
+    /** Hur många kvitton som avräknades i det här anropet. */
+    settled: number;
+}
+
+export async function fetchBoostCredit(): Promise<BoostCreditBalance> {
+    const { httpsCallable } = await import('firebase/functions');
+    const settle = httpsCallable<Record<string, never>, BoostCreditBalance>(functions, 'settleBoostCredits');
+    const res = await settle({});
+    return res.data ?? { days: 0, settled: 0 };
+}
+
+export interface BoostCreditResult {
+    applied: boolean;
+    /** Nya featuredUntil (ISO) när boosten lades på. */
+    until?: string;
+    /** Dagar som lades på eventet. */
+    days: number;
+    /** Kreditdagar kvar efteråt. */
+    daysLeft: number;
+}
+
+/** Lägg ALLA kreditdagar på `eventId` - backend sätter featuredUntil direkt,
+ *  ingen Stripe-redirect. Kastar med läsbart fel (visa via toast). */
+export async function applyBoostCreditDays(eventId: string): Promise<BoostCreditResult> {
+    const { httpsCallable } = await import('firebase/functions');
+    const apply = httpsCallable<{ eventId: string }, BoostCreditResult>(functions, 'applyBoostCredit');
+    const res = await apply({ eventId });
+    return res.data ?? { applied: false, days: 0, daysLeft: 0 };
 }
 
 export async function confirmEventBoost(sessionId: string): Promise<BoostConfirmation> {

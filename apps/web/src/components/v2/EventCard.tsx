@@ -12,7 +12,7 @@ import { recordEventClick } from '@/services/eventStatsService';
 import { normalizePriceLabel } from '../../utils/priceLabel';
 import { dupKey, groupListDuplicates } from '../../utils/groupDups';
 import { NO_TIME_PAST_HOUR, isEventPast } from './v2MapBricka';
-import { type BoostTier } from '../../services/boostService';
+import { type BoostChoice } from '../../services/boostService';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import LinkEventCard from '../ui/LinkEventCard';
 import EventChatPanel from './EventChatPanel';
@@ -1349,8 +1349,9 @@ interface EventCardProps {
     /** Redigera sitt eget event — öppnar skapa-formuläret förifyllt (6/9). */
     onEditOwnEvent?: (evt: LinkEvent) => void;
     /** Boosta (featura) ett event — startar Stripe Checkout på vald nivå
-     *  (nivåerna ägs av BOOST_TIERS; väljs i kortets BoostTierPicker). */
-    onBoostOwnEvent?: (eventId: string, tier: BoostTier) => void;
+     *  (nivåerna ägs av BOOST_TIERS; väljs i kortets BoostTierPicker), eller
+     *  lägger kontots kreditdagar på eventet ('credit', 4/11). */
+    onBoostOwnEvent?: (eventId: string, choice: BoostChoice) => void;
     /** Värdnamnet i kortet filtrerar kartan till arrangörens event (29/9). */
     onSelectOrganizer?: (slug: string, name: string) => void;
     /** Göm "Inga event den här dagen"-rutan (arrangörsläget, 30/9). */
@@ -4313,7 +4314,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                         // (5/8) OCH skrapade (18/8: featuredUntil för skrapade bor i
                         // eventBoosts-overlayn, se createBoostCheckout/boostTargetRef).
                         // Nivån väljs i kortets BoostTierPicker (ägs av BOOST_TIERS).
-                        onBoost={onBoostOwnEvent ? (tier) => onBoostOwnEvent(selectedEvent.id, tier) : undefined}
+                        onBoost={onBoostOwnEvent ? (choice) => onBoostOwnEvent(selectedEvent.id, choice) : undefined}
                         onSelectOrganizer={onSelectOrganizer}
                         // Chatt-knappen i knappraden BORTTAGEN (Josef 21/8) —
                         // chatten nås genom att scrolla ner i kortet, den

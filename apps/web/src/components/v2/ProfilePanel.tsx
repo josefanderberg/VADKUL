@@ -23,6 +23,7 @@ import { boostedUntilLabel } from '@/utils/boostLabel';
 import { EVENT_CATEGORIES, SPECIAL_CATEGORY_LIST } from '@/utils/categories';
 import { forturVannerText, memberInviteUrl } from '@/utils/forturInbjudan';
 import { countForturInvites } from '@/services/forturService';
+import { fetchBoostCredit } from '@/services/boostService';
 import { readTrophies, type TrophyMirror } from '@vadkul/kontrakt';
 import TrophyLines from './TrophyLines';
 
@@ -135,6 +136,17 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
     // sektionen göms då helt (inklusive innan rules-deployen som öppnar
     // läsrätten på egna kvitton: permission denied ⇒ tyst tom lista).
     const [myBoosts, setMyBoosts] = useState<MyBoost[] | null>(null);
+    // KREDITDAGAR (4/11): saldot ur backend när panelen öppnas - anropet
+    // avräknar samtidigt kvitton vars event hunnit vara. 0/fel = ingen rad.
+    const [creditDays, setCreditDays] = useState(0);
+    useEffect(() => {
+        if (!open || !user) return;
+        let stale = false;
+        fetchBoostCredit()
+            .then(r => { if (!stale) setCreditDays(r.days); })
+            .catch(() => { if (!stale) setCreditDays(0); });
+        return () => { stale = true; };
+    }, [open, user]);
     // Förturskvittot (8/10-löftet): antalet vänner som gått med via ens
     // inbjudningar. null = inte hämtat eller nekat (rules-deployen före
     // webben) - raden göms då, precis som Mina boostar.
@@ -862,6 +874,20 @@ export default function ProfilePanel({ open, onClose, myEvents, allEvents = NO_E
                                         );
                                     })}
                                 </ul>
+                                {/* Kreditdagar (4/11): dagar som blev över när ett boostat
+                                    event hann vara - läggs på nästa boost via väljarens
+                                    gratisrad. Saldot ägs av backend (boostCredits). */}
+                                {user && creditDays > 0 && (
+                                    <div className="px-4 py-2.5 flex items-center gap-2.5 border-t border-slate-100 dark:border-slate-800">
+                                        <span aria-hidden>🎟️</span>
+                                        <span className="flex-1 min-w-0 text-sm font-bold text-slate-700 dark:text-slate-200">
+                                            {creditDays} kreditdag{creditDays === 1 ? '' : 'ar'} kvar
+                                        </span>
+                                        <span className="shrink-0 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                            läggs på nästa boost
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         )}
 
