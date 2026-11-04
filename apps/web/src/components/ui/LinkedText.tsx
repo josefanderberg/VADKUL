@@ -4,6 +4,21 @@ import { Fragment, useMemo } from 'react';
 import { splitTextLinks } from '@/utils/textLinks';
 
 /**
+ * Bara riktiga http(s)-adresser blir länkar - allt annat står kvar som text.
+ * Delningen i kontraktet släpper redan bara http(s)/www igenom, men adressen
+ * kommer ur användarskapad text, så renderingen kontrollerar protokollet
+ * själv (CodeQL #37/#38 på PR #140: "user-provided value" i href).
+ */
+function safeHttpHref(href: string): string | null {
+    try {
+        const u = new URL(href);
+        return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Fri text med KLICKBARA LÄNKAR (Josef 4/11: "gör så att länkarna blir
  * klickbara ... Den har ju 2 Spotify-länkar bland annat") - delningen bor i
  * kontraktet (textLinks) så appen länkar exakt samma text. Länkarna öppnas i
@@ -16,7 +31,10 @@ import { splitTextLinks } from '@/utils/textLinks';
  * god för länkarna.
  */
 export default function LinkedText({ text, linkClassName }: { text: string; linkClassName?: string }) {
-    const segments = useMemo(() => splitTextLinks(text), [text]);
+    const segments = useMemo(
+        () => splitTextLinks(text).map(seg => ({ text: seg.text, href: seg.href ? safeHttpHref(seg.href) : null })),
+        [text],
+    );
     return (
         <>
             {segments.map((seg, i) => seg.href ? (
