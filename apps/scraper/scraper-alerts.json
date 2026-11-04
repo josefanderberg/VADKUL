@@ -1,18 +1,11 @@
 {
-  "generatedAt": "2026-11-03T08:29:05.997Z",
+  "generatedAt": "2026-11-04T05:02:02.249Z",
   "counts": {
     "fel": 0,
-    "varning": 34,
-    "nollkoordinatTotalt": 697
+    "varning": 33,
+    "nollkoordinatTotalt": 594
   },
   "alerts": [
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "tickster-ort-linkoping-2",
-      "since": "2026-10-13",
-      "message": "gav 1 event 2026-10-06, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -49,7 +42,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Kulturhuset Bergsjön",
-      "message": "59 av 97 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+      "message": "59 av 93 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -72,8 +65,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "697 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 24, Förlösa-Kläckeberga församling 24, NBV 17, Katrineholmsbygdens församling 16, Barnarp-Ödestugu församling 15"
+      "source": "594 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 21, Förlösa-Kläckeberga församling 21, Klubbdod 15, NBV 14, Studiefrämjandet 13"
     },
     {
       "level": "varning",
@@ -85,13 +78,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 253 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Visit Ängelholm",
-      "message": "invariant-vakten larmar (8 av 141 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 252 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -218,6 +205,13 @@
       "source": "tickster-ort-eskilstuna-2",
       "since": "2026-10-23",
       "message": "i karantän sedan 2026-10-23: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "tickster-ort-linkoping-2",
+      "since": "2026-11-04",
+      "message": "i karantän sedan 2026-11-04: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
