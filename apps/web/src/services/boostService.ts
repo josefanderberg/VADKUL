@@ -19,6 +19,7 @@
  * bara vilket event det gäller och vilken nivå (tier) man valt.
  */
 import { analytics, functions } from '../lib/firebase';
+import { getAuthHeaders } from '../lib/authHeaders';
 
 /** Boost-nivåerna: hur länge eventet lyfts fram. Backend mappar tier → pris. */
 export type BoostTier = 'day' | 'week' | 'month';
@@ -110,10 +111,12 @@ export interface BoostConfirmation {
  * kontot, som läggs på ett annat event utan betalning.
  *
  * Saldot bor server-side (boostCredits/{uid}, stängd för klienten) och
- * avräknas av backend i samma anrop som läser det: settleBoostCredits går
- * igenom ens kvitton, krediterar de event som varit och svarar med saldot.
- * Klienten kan alltså aldrig ge sig själv dagar - se apps/functions/src/
- * boost.ts + utils/boostCredit.ts och docs/stripe-event-boost.md.
+ * avräknas av backend i samma anrop som läser det: /api/boost/credit/settle
+ * går igenom ens kvitton, krediterar de event som varit och svarar med
+ * saldot. Klienten kan alltså aldrig ge sig själv dagar - se apps/web/src/
+ * server/boostCredit.ts (Admin SDK i hosting-backenden; API-routes i stället
+ * för callables eftersom nya Cloud Functions inte fick anropsrättighet från
+ * deploy-kontot) och docs/stripe-event-boost.md.
  */
 export interface BoostCreditBalance {
     /** Kreditdagar kvar på kontot. */
@@ -122,11 +125,20 @@ export interface BoostCreditBalance {
     settled: number;
 }
 
+/** Routens felsvar { error } → Error med läsbar text (visa via toast). */
+async function creditFetch<T>(path: string, body?: unknown): Promise<T> {
+    const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
+        body: JSON.stringify(body ?? {}),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((data && typeof data.error === 'string') ? data.error : 'Något gick fel. Försök igen om en stund.');
+    return data as T;
+}
+
 export async function fetchBoostCredit(): Promise<BoostCreditBalance> {
-    const { httpsCallable } = await import('firebase/functions');
-    const settle = httpsCallable<Record<string, never>, BoostCreditBalance>(functions, 'settleBoostCredits');
-    const res = await settle({});
-    return res.data ?? { days: 0, settled: 0 };
+    return creditFetch<BoostCreditBalance>('/api/boost/credit/settle');
 }
 
 export interface BoostCreditResult {
@@ -142,10 +154,7 @@ export interface BoostCreditResult {
 /** Lägg ALLA kreditdagar på `eventId` - backend sätter featuredUntil direkt,
  *  ingen Stripe-redirect. Kastar med läsbart fel (visa via toast). */
 export async function applyBoostCreditDays(eventId: string): Promise<BoostCreditResult> {
-    const { httpsCallable } = await import('firebase/functions');
-    const apply = httpsCallable<{ eventId: string }, BoostCreditResult>(functions, 'applyBoostCredit');
-    const res = await apply({ eventId });
-    return res.data ?? { applied: false, days: 0, daysLeft: 0 };
+    return creditFetch<BoostCreditResult>('/api/boost/credit/apply', { eventId });
 }
 
 export async function confirmEventBoost(sessionId: string): Promise<BoostConfirmation> {

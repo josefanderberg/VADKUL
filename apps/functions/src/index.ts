@@ -11,4 +11,4 @@ export { sendPushNotification } from './pushNotifications';
 export { reportAlert } from './reports';
 export { eventReminders } from './reminders';
 export { weeklyWeekendDigest } from './digest';
-export { createBoostCheckout, confirmBoost, applyEventBoost, settleBoostCredits, applyBoostCredit } from './boost';
+export { createBoostCheckout, confirmBoost, applyEventBoost } from './boost';
