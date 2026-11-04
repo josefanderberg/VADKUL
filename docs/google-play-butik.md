@@ -126,7 +126,7 @@ Upptäckt 4/11 2026 (Josef: "det känns inte som vi har analytics uppe för
 Android- och iOS-appen"): vadkul-app hade `@react-native-firebase/crashlytics`
 men ALDRIG `@react-native-firebase/analytics`, så Google Analytics startade
 inte i apparna och konsolen hade ingen plattformsstatistik att visa. Fixat i
-vadkul-app (`data/matning`, `lib/matning`, `withoutAdIdSupport` i app.json) -
+vadkul-app d28ab17 (PR #4, mergad 4/11: `data/matning`, `lib/matning`, `withoutAdIdSupport` i app.json) -
 **kräver nytt native-bygge för iOS och Android**, OTA räcker inte.
 
 - [ ] **Dataströmmarna:** när första bygget med analytics kört på en telefon ska
