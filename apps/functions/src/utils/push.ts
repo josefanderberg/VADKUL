@@ -1,15 +1,17 @@
 import * as admin from "firebase-admin";
+import { byggPushMeddelanden, ärAppToken, ärDödToken } from "./pushMessages";
 
 /**
  * Skicka en push till ALLA en användares enheter (fcmTokens/{uid}/tokens/*).
  *
- * Skickas som DATA-ONLY-meddelande (ingen notification-payload): då visar
- * service workerns onBackgroundMessage notisen EN gång själv. Med en
- * notification-payload visar FCM-SDK:t den dessutom automatiskt → dubbla
- * notiser. sw.js läser title/body/url ur payload.data.
+ * Webbens tokens får DATA-ONLY (service workerns onBackgroundMessage visar
+ * notisen EN gång själv; en notification-payload hade gett dubbla notiser,
+ * sw.js läser title/body/url ur payload.data). Appens tokens (platform
+ * ios/android) får en riktig notis - en native app visar aldrig data-only.
+ * Uppbyggnaden är ren och testad i utils/pushMessages.
  *
- * Ogiltiga tokens (avinstallerad app, återkallat tillstånd) städas bort ur
- * Firestore, samma mönster som sendPushNotification i index.ts.
+ * Döda tokens (avinstallerad app, återkallat tillstånd) städas bort ur
+ * Firestore. Tillfälliga fel raderar ingenting.
  *
  * Returnerar antal lyckade leveranser.
  */
@@ -34,38 +36,29 @@ export async function sendPushToUser(
         .get();
 
     if (tokensSnapshot.empty) return 0;
-    const tokens = tokensSnapshot.docs.map(doc => doc.data().token as string);
+    const tokens = tokensSnapshot.docs.map(doc => ({
+        token: doc.data().token as string,
+        platform: doc.data().platform as unknown,
+    }));
 
-    const response = await admin.messaging().sendEachForMulticast({
-        tokens,
-        // Alla data-värden måste vara strängar.
-        data: {
-            type: payload.type,
-            title: payload.title,
-            body: payload.body,
-            url: payload.url,
-            eventId: payload.eventId ?? '',
-        },
-        webpush: {
-            // En påminnelse som inte hunnit fram innan eventet börjat är
-            // meningslös → låt den dö efter en timme i stället för att
-            // levereras när mobilen vaknar dagen efter. (Utskick med längre
-            // hållbarhet, t.ex. helgtipset, skickar med egen ttlSeconds.)
-            headers: { TTL: String(opts?.ttlSeconds ?? 3600), Urgency: 'high' },
-        },
-    });
+    // Webbens tokens: data-only (service workern ritar). Appens: riktig notis
+    // (utils/pushMessages). En påminnelse som inte hunnit fram innan eventet
+    // börjat är meningslös → default en timme; helgtipset skickar längre.
+    const messages = byggPushMeddelanden(tokens, payload, opts?.ttlSeconds ?? 3600, Date.now());
+    const response = await admin.messaging().sendEach(messages);
 
     if (response.failureCount > 0) {
         const batch = db.batch();
+        let döda = 0;
         response.responses.forEach((resp, idx) => {
-            if (!resp.success) {
-                console.error(`Token ${tokens[idx]} failed:`, resp.error);
-                batch.delete(
-                    db.collection('fcmTokens').doc(uid).collection('tokens').doc(tokens[idx])
-                );
-            }
+            if (resp.success) return;
+            const { token, platform } = tokens[idx];
+            console.error(`Token till ${uid} (${ärAppToken(platform) ? platform : 'webb'}) failed:`, resp.error?.code ?? resp.error);
+            if (!ärDödToken(resp.error?.code)) return;
+            batch.delete(db.collection('fcmTokens').doc(uid).collection('tokens').doc(token));
+            döda++;
         });
-        await batch.commit();
+        if (döda > 0) await batch.commit();
     }
 
     return response.successCount;
