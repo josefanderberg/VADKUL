@@ -1,18 +1,11 @@
 {
-  "generatedAt": "2026-11-04T05:02:02.249Z",
+  "generatedAt": "2026-11-05T05:59:19.340Z",
   "counts": {
     "fel": 0,
-    "varning": 33,
-    "nollkoordinatTotalt": 594
+    "varning": 31,
+    "nollkoordinatTotalt": 507
   },
   "alerts": [
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "tickster-ort-ostersund-2",
-      "since": "2026-10-14",
-      "message": "gav 1 event 2026-10-07, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -24,7 +17,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Dalheimers hus",
-      "message": "7 av 10 kommande event ligger 2026-11-12 — sajtvitt datum i stället för eventets?"
+      "message": "9 av 13 kommande event ligger 2026-11-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -41,14 +34,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Kulturhuset Bergsjön",
-      "message": "59 av 93 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "S:t Peters klosters församling",
-      "message": "7 av 10 kommande event ligger 2026-11-04 — sajtvitt datum i stället för eventets?"
+      "source": "Ljungskile församling",
+      "message": "6 av 10 kommande event ligger 2026-11-05 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -60,25 +47,19 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Wisby Strand",
-      "message": "29 av 31 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
+      "message": "29 av 32 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "594 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 21, Förlösa-Kläckeberga församling 21, Klubbdod 15, NBV 14, Studiefrämjandet 13"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Regionteatern Blekinge Kronoberg",
-      "message": "invariant-vakten larmar (2 av 22 event på samma tidsstämpel) — se nattloggen"
+      "source": "507 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Studiefrämjandet 16, Söndrum-Vapnö församling 16, Förlösa-Kläckeberga församling 16, Klubbdod 15, Uu 12"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 252 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 251 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -212,6 +193,13 @@
       "source": "tickster-ort-linkoping-2",
       "since": "2026-11-04",
       "message": "i karantän sedan 2026-11-04: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "tickster-ort-ostersund-2",
+      "since": "2026-11-05",
+      "message": "i karantän sedan 2026-11-05: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",

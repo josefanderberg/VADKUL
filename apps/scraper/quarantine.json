@@ -42,8 +42,8 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-29",
-      "emptyRetries": 10
+      "lastRetry": "2026-11-05",
+      "emptyRetries": 11
     },
     "jonkoping": {
       "since": "2026-11-02",
@@ -99,6 +99,10 @@
     },
     "tickster-ort-linkoping-2": {
       "since": "2026-11-04",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "tickster-ort-ostersund-2": {
+      "since": "2026-11-05",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "uppsala": {
