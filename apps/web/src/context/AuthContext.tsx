@@ -26,6 +26,7 @@ import { auth } from '../lib/firebase';
 import { DERIVED_CITY_KEY } from '../hooks/useSaveUserCity';
 import { getCity } from '../lib/cityUtils';
 import { rememberForturFran } from '../utils/forturInbjudan';
+import { forgetDeviceToken } from '../utils/fcm';
 
 interface AuthContextType {
   /**
@@ -125,6 +126,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    // Enhetens push-token hör till kontot som loggar ut: radera den INNAN
+    // utloggningen (efteråt stoppar reglerna raderingen), annars får nästa
+    // konto på enheten även det här kontots notiser. Taket i
+    // forgetDeviceToken gör att utloggningen aldrig väntar mer än 3 s.
+    const current = auth.currentUser;
+    if (current && !current.isAnonymous) await forgetDeviceToken(current.uid);
     await firebaseSignOut(auth);
   };
 

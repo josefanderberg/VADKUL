@@ -87,15 +87,23 @@ export const notificationService = {
   // ===== FCM TOKEN MANAGEMENT =====
 
   /**
-   * Save FCM token for a user
+   * Save FCM token for a user.
+   *
+   * createdAt = när tokenen först sparades på kontot från den här enheten,
+   * lastSeenAt = senaste besöket som bekräftade den. Förut skrevs createdAt om
+   * vid VARJE besök, så en gammal token såg nyskapad ut (utredningen 21/9).
+   * merge: en omsparning rör inte createdAt. Gå via saveDeviceToken i
+   * utils/fcm - den vet om tokenen är ny och städar roterade tokens.
    */
-  async saveFCMToken(userId: string, token: string) {
+  async saveFCMToken(userId: string, token: string, opts: { isNew: boolean } = { isNew: true }) {
     const tokenRef = doc(db, 'fcmTokens', userId, 'tokens', token);
+    const now = Timestamp.now();
     await setDoc(tokenRef, {
       token,
-      createdAt: Timestamp.now(),
+      lastSeenAt: now,
+      ...(opts.isNew ? { createdAt: now } : {}),
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
-    });
+    }, { merge: true });
   },
 
   /**

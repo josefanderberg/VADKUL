@@ -8,35 +8,42 @@ import { useAuth } from '@/context/AuthContext';
 import QueryProvider from './providers/QueryProvider';
 import InstallPrompt from './pwa/InstallPrompt';
 import { registerServiceWorker } from '@/utils/registerServiceWorker';
-import { requestNotificationPermission, onForegroundMessage, isNotisOffOnThisDevice } from '@/utils/fcm';
-import { notificationService } from '@/services/notificationService';
+import { refreshDeviceToken, onForegroundMessage } from '@/utils/fcm';
+import { shouldCheckOnResume } from '@/utils/fcmTokenSync';
 import toast, { Toaster } from 'react-hot-toast';
 
 function FCMHandler() {
     const { user } = useAuth();
+    // uid, inte user-objektet: profiländringar byter objektet (setUser({...}))
+    // och körde om hela effekten i onödan.
+    const uid = user?.uid ?? null;
 
     useEffect(() => {
-        if (!user) return;
+        if (!uid) return;
 
         // Token-UPPFRÄSCHNING, aldrig en prompt: permission-frågan ställs bara
         // från en riktig tap (profilpanelens notis-rad / gilla-nudgen) — en
         // gest-lös requestPermission() här avvisades alltid på iOS och gav
-        // 0 registrerade tokens. Är tillståndet redan beviljat resolvar
-        // requestNotificationPermission() utan UI och vi sparar om token på
-        // det inloggade kontot (token är per enhet, kontot kan ha bytts).
-        const refreshToken = async () => {
-            if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-            // Användaren har stängt av på den här enheten (profilpanelen) —
-            // en omsparad token här skulle slå på notiserna bakom ryggen.
-            if (isNotisOffOnThisDevice()) return;
-            const token = await requestNotificationPermission();
-            if (token) {
-                await notificationService.saveFCMToken(user.uid, token);
-                console.log('FCM token saved for user:', user.uid);
-            }
-        };
+        // 0 registrerade tokens. refreshDeviceToken gör inget utan beviljat
+        // tillstånd och skriver bara när tokenen är ny/roterad eller dygnet
+        // gått (utils/fcmTokenSync).
+        //
+        // Både vid mount OCH när appen kommer tillbaka i förgrunden: en
+        // iOS-PWA laddas sällan om utan väcks ur bakgrunden, och det är där
+        // iOS hunnit återkalla pushprenumerationen. Då ger getToken() en ny
+        // token som måste in på kontot innan nästa utskick (helgtipset 17/9:
+        // ägarens iPhone fick sin nya token först timmen EFTER utskicket).
+        let lastCheck: number | null = Date.now();
+        refreshDeviceToken(uid).catch(console.error);
 
-        refreshToken().catch(console.error);
+        const onVisible = () => {
+            if (document.visibilityState !== 'visible') return;
+            const now = Date.now();
+            if (!shouldCheckOnResume(lastCheck, now)) return;
+            lastCheck = now;
+            refreshDeviceToken(uid).catch(console.error);
+        };
+        document.addEventListener('visibilitychange', onVisible);
 
         // Handle foreground messages. Event-påminnelserna är data-only
         // (title/body i payload.data) — falla tillbaka på dem.
@@ -50,8 +57,11 @@ function FCMHandler() {
             });
         });
 
-        return () => unsubscribe();
-    }, [user]);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisible);
+            unsubscribe();
+        };
+    }, [uid]);
 
     return null;
 }
