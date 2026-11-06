@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-05T05:59:19.340Z",
+  "generatedAt": "2026-11-06T05:51:44.478Z",
   "counts": {
     "fel": 0,
-    "varning": 31,
-    "nollkoordinatTotalt": 507
+    "varning": 43,
+    "nollkoordinatTotalt": 504
   },
   "alerts": [
     {
@@ -16,8 +16,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Arkivensdag",
+      "message": "55 av 58 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Dalheimers hus",
-      "message": "9 av 13 kommande event ligger 2026-11-12 — sajtvitt datum i stället för eventets?"
+      "message": "9 av 12 kommande event ligger 2026-11-12 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -28,20 +34,68 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Hägerstens församling",
+      "message": "9 av 11 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Jazzimalmo",
       "message": "53 av 55 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Ljungskile församling",
-      "message": "6 av 10 kommande event ligger 2026-11-05 — sajtvitt datum i stället för eventets?"
+      "source": "Kulturhuset Bergsjön",
+      "message": "59 av 98 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Kumla församling",
+      "message": "9 av 14 kommande event ligger 2026-11-09 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Lidingö församling",
+      "message": "7 av 10 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Lundby församling",
+      "message": "13 av 20 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Mora församling",
+      "message": "11 av 17 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Nässjö pastorat",
+      "message": "12 av 20 kommande event ligger 2026-11-09 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Skellefteå landsförsamling",
+      "message": "15 av 25 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Sundsvalls museum",
-      "message": "8 av 12 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+      "message": "8 av 11 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Vendel-Tegelsmora församling",
+      "message": "6 av 10 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -51,15 +105,33 @@
     },
     {
       "level": "varning",
+      "kind": "datumkluster",
+      "source": "Ålidhems församling",
+      "message": "11 av 15 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Österhaninge församling",
+      "message": "6 av 10 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
       "kind": "nollkoordinat",
-      "source": "507 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Studiefrämjandet 16, Söndrum-Vapnö församling 16, Förlösa-Kläckeberga församling 16, Klubbdod 15, Uu 12"
+      "source": "504 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Arkivensdag 57, Studiefrämjandet 15, Klubbdod 14, NBV 12, Förlösa-Kläckeberga församling 12"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Kulturhuset Bergsjön",
+      "message": "invariant-vakten larmar (50 av 98 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 251 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 250 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
