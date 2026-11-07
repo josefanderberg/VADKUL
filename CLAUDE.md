@@ -10,6 +10,7 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 - `packages/kontrakt` — det delade kontraktet (`@vadkul/kontrakt`): typer, kategori-nycklarna och ren logik som `eventShareSlug`. Får ALDRIG bero på firebase/react/node — ska importeras oförändrat i web, functions och appen. Webben når det via shims i `src/types/` och `src/utils/`.
 - `infra/launchd` — schemalagda jobb (nattkedjan 00:30, dagsinlägget 07:00, ig-kön, audit-daemon).
 - `docs/` — arbetsdokument per område.
+- `.github/` — Actions-workflows samt issue- och PR-mallarna för ticketflödet (`.claude/skills/tickets/`).
 - `vadkulyt/` — Vad kul-studion, lokalt klippverktyg för marknadsföringsvideor. **Eget git-repo** (`github.com/josefanderberg/vadkulyt`) som det här repot ignorerar; ingår inte i deploy eller CI. Jobba i den mappen med dess egen `CLAUDE.md` och `README.md`.
 
 ## Två maskiner, en main
@@ -20,6 +21,7 @@ Eventkarta för Sverige — skrapade + användarskapade event på en Mapbox-kart
 
 ## Hårda regler
 
+- **Varje uppgift utgår från en ticket på GitHub.** Läs `.claude/skills/tickets/SKILL.md` först: kör `tickets.sh lista` för att se var vi är, hitta eller skapa ticketen i rätt grupp (även snabba saker), och referera `#nr` i commit-ämnesraden och i PR:en (`Closes #nr`).
 - **Deploya aldrig oombedd.** På uttrycklig begäran: följ skillen `.claude/skills/deploy/SKILL.md`.
 - **Starta aldrig en andra dev-server** — delad `.next` korrumperas. Kolla `lsof -i :3000` först. Se `.claude/skills/dev-miljo/`.
 - **Alla skrivningar till `linkEvents` MÅSTE gå via `stamped()`** (`apps/scraper/src/utils/firestoreStamp.ts`) — annars missar den inkrementella SQLite-syncen dokumenten.

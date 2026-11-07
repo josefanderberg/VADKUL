@@ -4,6 +4,8 @@ Det finns ingen central `skills.md` — varje skill är en egen mapp med en `SKI
 
 ```
 .claude/skills/
+├── tickets/SKILL.md     Ticketflödet på GitHub: grupperna, var vi är, #nr i commits och PR:er
+│   └── tickets.sh       Hjälpskriptet (lista, grupp, visa, ny, gren, stang)
 ├── deploy/SKILL.md      Manuella deployflödet + alla deploy-gotchas
 ├── pipeline/SKILL.md    Skrapning, stamped(), sync-to-sqlite → aggregate, nattjobbet
 ├── dev-miljo/SKILL.md   En dev-server-regeln, .next-cache, node-version, full disk
@@ -14,8 +16,10 @@ Det finns ingen central `skills.md` — varje skill är en egen mapp med en `SKI
 
 - **Automatiskt**: Claude läser alla skills `description`-rader varje session och laddar
   rätt skill när uppgiften matchar. Du behöver alltså inte nämna dem.
-- **Manuellt**: skriv `/deploy`, `/pipeline`, `/dev-miljo` eller `/kart-ui` för att
-  tvinga in en skill i kontexten.
+- **Manuellt**: skriv `/tickets`, `/deploy`, `/pipeline`, `/dev-miljo` eller `/kart-ui`
+  för att tvinga in en skill i kontexten.
+- **Tickets först**: varje uppgift börjar i tickets-skillen (vilken grupp, vilket nummer),
+  så commithistoriken går att läsa ticket för ticket.
 
 ## Så promptar du bäst
 
