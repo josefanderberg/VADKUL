@@ -17,7 +17,7 @@ Behöver miljön nollställas finns `npm run dev:reset` (kör `scripts/dev-reset
 
 - **Markörer utanför Sverige som rör sig vid zoom** = korrupt `.next`-cache. Döda alla dev-servrar, `rm -rf apps/web/.next`, starta om.
 - **curl exit 23 eller oförklarliga JSON-fel** = ofta full disk. Kör `df -h` FÖRE du börjar felsöka koden.
-- **node-kommandon failar konstigt i skript** = non-interactive bash får node **v11**. Prefixa: `PATH="$HOME/.nvm/versions/node/v22.22.0/bin:$PATH"`.
+- **node-kommandon failar konstigt i skript** = non-interactive bash får node **v11**. Prefixa: `PATH="$HOME/.nvm/versions/node/v22.23.2/bin:$PATH"`.
 
 ## Samarbete med Josef
 

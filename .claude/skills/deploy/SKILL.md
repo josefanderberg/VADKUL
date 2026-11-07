@@ -29,7 +29,7 @@ Deployen måste köras på en maskin med firebase-inloggning (den här Macen ell
 **Kör INTE lokal `firebase deploy --only hosting`** — den failar sedan 28/8 på sharp-lock-osynk i den genererade SSR-bundlen ("Missing: sharp@0.33.5 from lock file" i Cloud Builds npm ci). Actions-vägen är grön; felsök inte den lokala.
 
 Varför prefixen (gäller alla lokala node-/firebase-kommandon):
-- Non-interactive bash får gammal node via nvm — prefixa `PATH="$HOME/.nvm/versions/node/v22.22.0/bin:$PATH"`.
+- Non-interactive bash får gammal node via nvm — prefixa `PATH="$HOME/.nvm/versions/node/v22.23.2/bin:$PATH"`.
 - `NODE_OPTIONS=--dns-result-order=ipv4first` fixar återkommande nätverksflakighet mot Firebase.
 
 **GOTCHA (upptäckt 31/8): aggregat-JSON:erna i repot deployas INTE rakt av.** Deploy-workflown skriver över `events-*.json` med färsk data från `https://vadkul.se/api/events/<layer>` (= Firestores `aggregatedEvents`) före bygget. Datafixar måste alltså nå **Firestore** (kör `npm run aggregate`, som laddar upp) — och Mac minins audit-daemon (`se.vadkul.audit-pending`) skriver `aggregatedEvents` efter varje audit-batch med den kod den hade **när processen startade**. Efter pipelineändringar som påverkar aggregatet: starta om daemonen på minin (`launchctl kickstart -k gui/$(id -u)/se.vadkul.audit-pending`, efter git pull), annars vinner den gamla koden inom minuter.
