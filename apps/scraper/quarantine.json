@@ -7,12 +7,6 @@
       "lastRetry": "2026-11-04",
       "emptyRetries": 4
     },
-    "dalhalla": {
-      "since": "2026-08-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-29",
-      "emptyRetries": 8
-    },
     "destination-uppsala": {
       "since": "2026-11-02",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
@@ -56,14 +50,14 @@
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-31",
-      "emptyRetries": 10
+      "lastRetry": "2026-11-07",
+      "emptyRetries": 11
     },
     "rosendals-tradgard": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-31",
-      "emptyRetries": 10
+      "lastRetry": "2026-11-07",
+      "emptyRetries": 11
     },
     "sb-vemdalen-se": {
       "since": "2026-11-02",
@@ -71,7 +65,9 @@
     },
     "skordefest": {
       "since": "2026-10-31",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-11-07",
+      "emptyRetries": 1
     },
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
