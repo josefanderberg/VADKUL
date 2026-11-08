@@ -1,11 +1,18 @@
 {
-  "generatedAt": "2026-11-07T07:35:02.892Z",
+  "generatedAt": "2026-11-08T05:01:08.218Z",
   "counts": {
     "fel": 0,
     "varning": 36,
-    "nollkoordinatTotalt": 529
+    "nollkoordinatTotalt": 511
   },
   "alerts": [
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "tickster-ort-jonkoping-3",
+      "since": "2026-10-24",
+      "message": "gav 3 event 2026-10-17, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -28,8 +35,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Friluftsfrämjandet Järfälla",
-      "message": "7 av 10 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
+      "source": "Easyfairs Nordic AB (DK)",
+      "message": "13 av 13 kommande event ligger 2026-11-08 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Elitettan",
+      "message": "7 av 10 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -58,12 +71,6 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Kulturhuset Bergsjön",
-      "message": "59 av 93 kommande event ligger 2026-11-07 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Landskrona församling",
       "message": "6 av 10 kommande event ligger 2026-11-11 — sajtvitt datum i stället för eventets?"
     },
@@ -71,7 +78,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Sundsvalls museum",
-      "message": "8 av 11 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+      "message": "9 av 11 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -82,14 +89,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "529 event",
+      "source": "511 event",
       "message": "utan koordinat (0,0), syns inte på kartan — värst: Arkivensdag 57, Söndrum-Vapnö församling 15, Studiefrämjandet 14, Klubbdod 13, Förlösa-Kläckeberga församling 13"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Kulturhuset Bergsjön",
-      "message": "invariant-vakten larmar (50 av 93 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",

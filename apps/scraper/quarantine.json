@@ -26,8 +26,8 @@
     "folk-goteborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-10-30",
-      "emptyRetries": 8
+      "lastRetry": "2026-11-08",
+      "emptyRetries": 9
     },
     "folkets-hus-trollhattan": {
       "since": "2026-11-02",
@@ -72,8 +72,8 @@
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-01",
-      "emptyRetries": 7
+      "lastRetry": "2026-11-08",
+      "emptyRetries": 8
     },
     "staffanstorp": {
       "since": "2026-08-19",
