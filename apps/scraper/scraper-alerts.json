@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-08T05:01:08.218Z",
+  "generatedAt": "2026-11-09T07:46:19.869Z",
   "counts": {
     "fel": 0,
-    "varning": 36,
-    "nollkoordinatTotalt": 511
+    "varning": 30,
+    "nollkoordinatTotalt": 717
   },
   "alerts": [
     {
@@ -35,50 +35,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Easyfairs Nordic AB (DK)",
-      "message": "13 av 13 kommande event ligger 2026-11-08 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Elitettan",
-      "message": "7 av 10 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Hägerstens församling",
-      "message": "9 av 15 kommande event ligger 2026-11-10 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Härlanda församling",
-      "message": "6 av 10 kommande event ligger 2026-11-11 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Jazzimalmo",
       "message": "53 av 55 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Kolmårdens församling",
-      "message": "7 av 10 kommande event ligger 2026-11-11 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Landskrona församling",
-      "message": "6 av 10 kommande event ligger 2026-11-11 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Sundsvalls museum",
-      "message": "9 av 11 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+      "message": "9 av 10 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Västmanlandsmusiken",
+      "message": "9 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -89,14 +59,26 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "511 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Arkivensdag 57, Söndrum-Vapnö församling 15, Studiefrämjandet 14, Klubbdod 13, Förlösa-Kläckeberga församling 13"
+      "source": "717 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Arkivensdag 57, Förlösa-Kläckeberga församling 28, Söndrum-Vapnö församling 28, Barnarp-Ödestugu församling 25, Spånga-Kista församling 15"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
       "message": "invariant-vakten larmar (8 av 249 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Vallentuna Kommun",
+      "message": "invariant-vakten larmar (1 av 11 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Västmanlandsmusiken",
+      "message": "invariant-vakten larmar (9 av 10 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -151,13 +133,6 @@
       "level": "varning",
       "kind": "karantan",
       "source": "jonkoping",
-      "since": "2026-11-02",
-      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "konserthuset-stockholm",
       "since": "2026-11-02",
       "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     },
@@ -230,20 +205,6 @@
       "source": "tickster-ort-ostersund-2",
       "since": "2026-11-05",
       "message": "i karantän sedan 2026-11-05: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "uppsala",
-      "since": "2026-11-02",
-      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
-    },
-    {
-      "level": "varning",
-      "kind": "karantan",
-      "source": "vallentuna-kommun",
-      "since": "2026-11-02",
-      "message": "i karantän sedan 2026-11-02: 4 raka tomma körningar (found=0, inga skips)"
     }
   ]
 }

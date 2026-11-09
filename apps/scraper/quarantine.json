@@ -43,10 +43,6 @@
       "since": "2026-11-02",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
-    "konserthuset-stockholm": {
-      "since": "2026-11-02",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -99,14 +95,6 @@
     },
     "tickster-ort-ostersund-2": {
       "since": "2026-11-05",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
-    "uppsala": {
-      "since": "2026-11-02",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
-    "vallentuna-kommun": {
-      "since": "2026-11-02",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
