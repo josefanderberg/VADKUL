@@ -7,15 +7,11 @@
       "lastRetry": "2026-11-04",
       "emptyRetries": 4
     },
-    "destination-uppsala": {
-      "since": "2026-11-02",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
     "elin-sundbergs-vanforening": {
       "since": "2026-10-13",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-03",
-      "emptyRetries": 3
+      "lastRetry": "2026-11-10",
+      "emptyRetries": 4
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
@@ -29,19 +25,11 @@
       "lastRetry": "2026-11-08",
       "emptyRetries": 9
     },
-    "folkets-hus-trollhattan": {
-      "since": "2026-11-02",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-11-05",
       "emptyRetries": 11
-    },
-    "jonkoping": {
-      "since": "2026-11-02",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -54,10 +42,6 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-11-07",
       "emptyRetries": 11
-    },
-    "sb-vemdalen-se": {
-      "since": "2026-11-02",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "skordefest": {
       "since": "2026-10-31",
@@ -74,8 +58,8 @@
     "staffanstorp": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-03",
-      "emptyRetries": 10
+      "lastRetry": "2026-11-10",
+      "emptyRetries": 11
     },
     "storsjoyran": {
       "since": "2026-09-18",
@@ -95,6 +79,10 @@
     },
     "tickster-ort-ostersund-2": {
       "since": "2026-11-05",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
+    "tickster-ort-uppsala-4": {
+      "since": "2026-11-10",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     }
   }
