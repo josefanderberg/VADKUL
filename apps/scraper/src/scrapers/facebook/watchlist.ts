@@ -99,6 +99,16 @@ export const FACEBOOK_PAGE_WATCHLIST: FacebookPageWatch[] = [
     { slug: 'framnasfolkhogskola', name: 'Framnäs folkhögskola', city: 'Öjebyn' },
     { slug: 'piteaif', name: 'Piteå IF', city: 'Piteå' },
 
+    // ── Linköping (FB-kommentar 2026-11-11: "dålig koll på Hangaren") ───
+    // Kommentar i Linköping-inlägget: Hangaren Hot Sport Center och Ryd
+    // sportcenter saknas. Hangarens sida verifierad headless 2026-11-11:
+    // /events-fliken renderar utloggat (8 eventlänkar, alla passerade — de
+    // flesta anslag är bildposters, så bevakningen fångar bara riktiga
+    // FB-event framöver; jfr Roma Kungsgård). Egna sajten hangaren.org
+    // saknar eventkalender med per-event-URL:er. "Ryd sportcenter" hittades
+    // inte som FB-sida (rydsportcenter ⇒ "innehållet är inte tillgängligt").
+    { slug: 'hotsportcenter', name: 'Hangaren Hot Sport Center', city: 'Linköping' },
+
     // ── Timrå (användartips via FB-meddelande 2026-10-08) ───────────────
     // "Söråkers Folkets hus har många event men hittar inte att något var
     // med." Bara deras FHP-/Riksteatern-turnéer och enstaka FB-event kom in;
