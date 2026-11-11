@@ -4,8 +4,8 @@
     "bjorndammens-masugn": {
       "since": "2026-10-07",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-04",
-      "emptyRetries": 4
+      "lastRetry": "2026-11-11",
+      "emptyRetries": 5
     },
     "elin-sundbergs-vanforening": {
       "since": "2026-10-13",
@@ -67,6 +67,10 @@
       "lastRetry": "2026-11-06",
       "emptyRetries": 7
     },
+    "superettan": {
+      "since": "2026-11-11",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "tickster-ort-eskilstuna-2": {
       "since": "2026-10-23",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -75,7 +79,9 @@
     },
     "tickster-ort-linkoping-2": {
       "since": "2026-11-04",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-11-11",
+      "emptyRetries": 1
     },
     "tickster-ort-ostersund-2": {
       "since": "2026-11-05",

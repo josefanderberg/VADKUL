@@ -1174,4 +1174,22 @@ export const SNOWBALL_SOURCES: Source[] = [
         notes: 'web-snöboll 2026-11-03: sitemap-text, smoke 53 event ok. Hänvisad av 2 event i DB (t.ex. "Pete & Bas // Live at Plan B — Malmö").',
         lastVerified: '2026-11-03',
     },
+
+    {
+        id: 'sb-beardmen-se',
+        hostName: 'Beardmen',
+        region: 'national',
+        engine: 'sitemap' as const,
+        config: { sitemapUrl: 'https://beardmen.se/sitemap.xml', urlPatterns: [/\/event\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: '', maxUrls: 200 },
+        updateFrequency: 'every-3d' as const,
+        status: 'experimental' as const,
+        discovery: {
+            method: 'hint' as const,
+            probeUrl: 'https://beardmen.se/sitemap.xml',
+            date: '2026-11-10',
+            rawEventCount: 10,
+        },
+        notes: 'web-snöboll 2026-11-10: sitemap-text, smoke 10 event ok. Hänvisad av 1 event i DB (t.ex. "Bombus + Mass Worship").',
+        lastVerified: '2026-11-10',
+    },
 ];
