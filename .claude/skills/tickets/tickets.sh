@@ -9,11 +9,40 @@
 #   tickets.sh prio <nr> nu|snart|sen  sätter prioritet
 #   tickets.sh gren <nr>               skapar och byter till grenen ticket/<nr>-<slug>
 #   tickets.sh stang <nr> ["Kommentar"]
+#   tickets.sh start <nr>              flyttar ticketen till Pågår på boarden
+#   tickets.sh klar <nr> ["Kommentar"] committad men inte pushad: flyttar till Ska ut
+#   tickets.sh paus <nr>               flyttar tillbaka till Kvar
+#   tickets.sh pagar                   det som ligger i Pågår och Ska ut
+#   tickets.sh board                   öppnar boarden i webbläsaren
 set -euo pipefail
 OWNER=josefanderberg
 REPO=VADKUL
+# Boarden: GitHub Project med Status-kolumnerna Kvar / Pågår / Ska ut / Klart.
+# Kräver gh-behörigheten project på maskinen (gh auth refresh -s project).
+PROJEKT=3
 
 gql() { gh api graphql -f o="$OWNER" -f r="$REPO" "$@"; }
+
+# Lägger issue <nr> på boarden (ligger den redan där händer inget) och skriver ut kortets id
+board_add() {
+  gh project item-add "$PROJEKT" --owner "$OWNER" \
+    --url "https://github.com/$OWNER/$REPO/issues/$1" --format json --jq .id
+}
+
+# Flyttar issue <nr> till kolumnen <namn>: "Kvar", "Pågår", "Ska ut" eller "Klart"
+board_status() {
+  local nr="$1" kolumn="$2" item pid fid oid
+  item=$(board_add "$nr") || return 1
+  pid=$(gh project view "$PROJEKT" --owner "$OWNER" --format json --jq .id) || return 1
+  read -r fid oid < <(gh project field-list "$PROJEKT" --owner "$OWNER" --format json \
+    --jq ".fields[] | select(.name==\"Status\") | \"\(.id) \(.options[] | select(.name==\"$kolumn\") | .id)\"")
+  [ -z "${oid:-}" ] && { echo "Hittar ingen kolumn \"$kolumn\" på boarden" >&2; return 1; }
+  gh project item-edit --id "$item" --project-id "$pid" --field-id "$fid" \
+    --single-select-option-id "$oid" >/dev/null || return 1
+  echo "#$nr -> $kolumn"
+}
+
+board_miss() { echo "(boarden nåddes inte - saknar gh behörigheten project? kör: gh auth refresh -s project)" >&2; }
 
 # Under-tickets till <nr>: rader "nr|STATE|titel|labels"
 subissues() {
@@ -104,6 +133,33 @@ case "$cmd" in
     cid=$(gh issue view "$nr" --json id --jq .id)
     gql -f p="$pid" -f c="$cid" -f query='mutation($p:ID!,$c:ID!){ addSubIssue(input:{issueId:$p, subIssueId:$c}){ issue{number} } }' >/dev/null
     echo "#$nr skapad under #$parent: $url"
+    board_status "$nr" "Kvar" >/dev/null || board_miss
+    ;;
+  start)
+    nr="${1:?nummer saknas}"
+    board_status "$nr" "Pågår" || { board_miss; exit 1; }
+    ;;
+  klar)
+    nr="${1:?nummer saknas}"; kommentar="${2:-}"
+    board_status "$nr" "Ska ut" || { board_miss; exit 1; }
+    if [ -n "$kommentar" ]; then
+      gh issue comment "$nr" --body "$kommentar" >/dev/null && echo "kommentar skriven på #$nr"
+    fi
+    ;;
+  paus)
+    nr="${1:?nummer saknas}"
+    board_status "$nr" "Kvar" || { board_miss; exit 1; }
+    ;;
+  pagar)
+    gh project item-list "$PROJEKT" --owner "$OWNER" --limit 500 --format json \
+      --jq '.items | map(select(.content.number != null)) as $i
+            | ("Pågår:", ($i | map(select(.status=="Pågår")) | sort_by(.content.number) | .[] | "- #\(.content.number) \(.content.title)"),
+               "", "Ska ut (committat, inte pushat):",
+               ($i | map(select(.status=="Ska ut")) | sort_by(.content.number) | .[] | "- #\(.content.number) \(.content.title)"))' \
+      || { board_miss; exit 1; }
+    ;;
+  board)
+    gh project view "$PROJEKT" --owner "$OWNER" --web
     ;;
   gren)
     nr="${1:?nummer saknas}"
@@ -113,8 +169,9 @@ case "$cmd" in
     ;;
   stang)
     nr="${1:?nummer saknas}"; kommentar="${2:-}"
+    board_status "$nr" "Klart" >/dev/null || board_miss
     if [ -n "$kommentar" ]; then gh issue close "$nr" --comment "$kommentar"; else gh issue close "$nr"; fi
     ;;
   *)
-    sed -n '2,12p' "$0"; exit 1;;
+    sed -n '2,16p' "$0"; exit 1;;
 esac

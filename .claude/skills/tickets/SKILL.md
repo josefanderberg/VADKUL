@@ -40,10 +40,45 @@ nya tickets och säger det i svaret. `tickets.sh nu` är dagens arbetslista.
 Byt: `tickets.sh prio 172 nu`. En gång i veckan: gå igenom `snart` och `sen` ihop
 med Josef (inventera och prioritera, 6/11 2026).
 
+## Boarden
+
+Alla tickets ligger också på en board (GitHub Project "VADKUL tickets",
+https://github.com/users/josefanderberg/projects/3) med kolumnerna
+**Kvar / Pågår / Ska ut / Klart**. Det är där Josef ser vad vi har kvar, vad som
+pågår och vad som väntar på att gå ut.
+
+| Kolumn | Betyder |
+|---|---|
+| Kvar | öppna tickets som inte har påbörjats |
+| Pågår | någon jobbar på den nu |
+| Ska ut | klar och committad, men inte pushad till main. Går ut med nästa push |
+| Klart | stängd, ute på main |
+
+- **Börjar du på en ticket: `tickets.sh start <nr>`.** Den flyttas till Pågår. Glöm inte det,
+  annars syns inte arbetet på boarden.
+- **Committat men inte pushat: `tickets.sh klar <nr> "Kommentar"`.** Den flyttas till Ska ut,
+  och kommentaren hamnar på ticketen. Skriv commit-hashen och vad som krävs för att den ska
+  ut, t.ex. "Committad i a7bdec7c, inte pushad. Går ut med nästa push till main (startar en
+  deploy)." Så ser både Josef och nästa session på boarden att den väntar på en push.
+- Pausar du eller lämnar den halvfärdig: `tickets.sh paus <nr>` (tillbaka till Kvar).
+- `tickets.sh ny` lägger nya tickets i Kvar. `tickets.sh pagar` listar Pågår och Ska ut,
+  `tickets.sh board` öppnar boarden.
+- **Innan du pushar till main:** kör `tickets.sh pagar` och nämn för Josef vilka tickets i
+  Ska ut som följer med pushen.
+- Stängs en ticket (`Closes #nr` eller `tickets.sh stang`) flyttar GitHub den till Klart själv.
+  Åt andra hållet också: drar Josef ett kort till Klart stänger GitHub ticketen.
+- Gruppföräldrarna (`ticketgrupp`) ligger inte på boarden.
+- Board-kommandona kräver gh-behörigheten `project` på maskinen (`gh auth refresh -s project`).
+  Saknas den skapas tickets ändå, men skriptet säger att boarden inte nåddes.
+  Fastnar `gh auth refresh` på Y/n-frågan i appens terminal: kör den i bakgrunden med
+  `</dev/null`. Då hoppar gh över frågan och skriver ut en engångskod som Josef skriver in
+  på github.com/login/device (11/11 2026).
+
 ## Var är vi? Gör detta först
 
 ```bash
 .claude/skills/tickets/tickets.sh nu        # det som ska göras nu
+.claude/skills/tickets/tickets.sh pagar     # det som pågår och det som ska ut (boarden)
 .claude/skills/tickets/tickets.sh lista     # alla grupper som träd, med prio-tagg
 ```
 
@@ -55,7 +90,8 @@ ingen: skapa en (nedan) INNAN du börjar, även för små saker. Det är poänge
 commithistoriken ska gå att läsa ticket för ticket.
 
 Josef skriver gärna bara en rad i GitHub. Då fyller Claude på specen (Vad, Varför,
-Klart när, Var) och lägger ticketen i rätt grupp innan arbetet börjar.
+Klart när, Var), lägger ticketen i rätt grupp och på boarden (`tickets.sh paus <nr>`
+lägger in den i Kvar) innan arbetet börjar.
 
 ## Ny ticket
 
