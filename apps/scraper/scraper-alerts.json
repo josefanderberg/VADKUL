@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-11T05:52:33.521Z",
+  "generatedAt": "2026-11-12T08:23:48.682Z",
   "counts": {
     "fel": 0,
-    "varning": 28,
-    "nollkoordinatTotalt": 617
+    "varning": 30,
+    "nollkoordinatTotalt": 536
   },
   "alerts": [
     {
@@ -17,7 +17,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Arkivensdag",
-      "message": "55 av 57 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
+      "message": "61 av 66 kommande event ligger 2026-11-14 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -34,14 +34,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Jazzimalmo",
-      "message": "53 av 55 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
+      "source": "Härlanda församling",
+      "message": "6 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Korpen Vadstena",
-      "message": "8 av 12 kommande event ligger 2026-11-11 — sajtvitt datum i stället för eventets?"
+      "source": "Jazzimalmo",
+      "message": "53 av 54 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "S:t Peters klosters församling",
+      "message": "7 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -53,7 +59,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Västmanlandsmusiken",
-      "message": "9 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+      "message": "9 av 11 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -64,8 +70,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "617 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Arkivensdag 56, Söndrum-Vapnö församling 21, Förlösa-Kläckeberga församling 20, Barnarp-Ödestugu församling 19, Studiefrämjandet 17"
+      "source": "536 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Arkivensdag 65, Studiefrämjandet 16, Söndrum-Vapnö församling 16, Förlösa-Kläckeberga församling 16, Barnarp-Ödestugu församling 14"
     },
     {
       "level": "varning",
@@ -76,8 +82,14 @@
     {
       "level": "varning",
       "kind": "invariant",
+      "source": "Vallentuna Kommun",
+      "message": "invariant-vakten larmar (1 av 10 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
       "source": "Västmanlandsmusiken",
-      "message": "invariant-vakten larmar (9 av 10 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (9 av 11 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",

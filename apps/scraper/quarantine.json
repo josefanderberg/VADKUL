@@ -28,8 +28,8 @@
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-05",
-      "emptyRetries": 11
+      "lastRetry": "2026-11-12",
+      "emptyRetries": 12
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -85,7 +85,9 @@
     },
     "tickster-ort-ostersund-2": {
       "since": "2026-11-05",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-11-12",
+      "emptyRetries": 1
     },
     "tickster-ort-uppsala-4": {
       "since": "2026-11-10",
