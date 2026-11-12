@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eventShareSlug } from './eventShareSlug';
-import { inviteUrl, nextRsvp, rsvpCountDeltas, rsvpShareId, hostedAttendeeAction, hostedRegisterAction } from './rsvpTransition';
+import { inviteUrl, nextRsvp, rsvpCountDeltas, rsvpShareId, hostedAttendeeAction, hostedRegisterAction, outlinkRsvpPress } from './rsvpTransition';
 
 describe('nextRsvp', () => {
     it('tomt läge + tryck = valet', () => {
@@ -79,5 +79,15 @@ describe('hostedRegisterAction (ANMÄL DIG-knappen)', () => {
         expect(hostedRegisterAction(true, 'going')).toBe('press');
         expect(hostedRegisterAction(true, null)).toBe('cancel');
         expect(hostedRegisterAction(true, 'interested')).toBe('cancel');
+    });
+});
+
+describe('outlinkRsvpPress (ANMÄL på skrapade event sätter Kommer, 7/11)', () => {
+    it('inget svar eller Intresserad → tryck Kommer', () => {
+        expect(outlinkRsvpPress(null)).toBe('going');
+        expect(outlinkRsvpPress('interested')).toBe('going');
+    });
+    it('redan Kommer → inget tryck (klicket får aldrig stänga av svaret)', () => {
+        expect(outlinkRsvpPress('going')).toBeNull();
     });
 });

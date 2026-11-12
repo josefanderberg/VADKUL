@@ -97,3 +97,18 @@ export function hostedRegisterAction(
     if (!isAttending) return myRsvp !== 'going' ? 'press' : 'register';
     return myRsvp === 'going' ? 'press' : 'cancel';
 }
+
+/**
+ * ANMÄL/BOKA-LÄNKEN PÅ SKRAPADE EVENT OCH TIPS (ägarbeslut 7/11, Josef:
+ * "när man klickar på anmäl på ett skrapat event, då ska det ju bli att man
+ * är anmäld och kommer ... det ska bli så direkt"): klicket på utlänken
+ * sätter Kommer på köpet, så eventet visar att man kommer när man är
+ * tillbaka, och 1h-påminnelsen (functions/reminders) går till en. Svarar
+ * med vilken knapp som ska TRYCKAS (press togglar): null när Kommer redan
+ * är på, så ett andra klick aldrig stänger av svaret. Intresserad byts
+ * till Kommer. Delas av kartkortets rad, toppraden, stadssidornas utfällda
+ * event och (som port, lib/rsvp.ts svarVidUtlänk) appen.
+ */
+export function outlinkRsvpPress(myRsvp: EventRsvpStatus | null): 'going' | null {
+    return myRsvp === 'going' ? null : 'going';
+}

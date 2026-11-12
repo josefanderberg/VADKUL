@@ -9,7 +9,7 @@ import { getEventEngagement } from '@/services/eventStatsService';
 import { fetchRsvpFaces, type RsvpFace } from '@/services/rsvpService';
 import { fetchMyFriendship, fetchUserLite, sendFriendRequest } from '@/services/friendService';
 import { displayedLikeCount } from '@/utils/likeCount';
-import { rsvpShareId } from '@/utils/rsvpTransition';
+import { outlinkRsvpPress, rsvpShareId } from '@/utils/rsvpTransition';
 import { AFFILIATE_DISCLOSURE } from '@/utils/affiliateLink';
 import { eventEmoji } from './EventListRow';
 
@@ -209,6 +209,16 @@ interface RsvpRowProps extends RsvpButtonsProps {
  * Ersätter 8/10-radbrytningen, som lät ANMÄL falla ner på en egen rad.
  */
 function RsvpRow({ faces = [], cta, onVisitCta, ...buttons }: RsvpRowProps) {
+    // ANMÄL/BOKA SÄTTER KOMMER (ägarbeslut 7/11, Josef: "det ska bli så
+    // direkt"): klickstatistiken som förr, och svaret trycks till Kommer om
+    // det inte redan är det (outlinkRsvpPress) - länken öppnas av <a> i ny
+    // flik oavsett, så skrivningen hinner gå. Samma i stadssidornas
+    // EventExpanded och appens CtaKnapp.
+    const visitCta = () => {
+        onVisitCta?.();
+        const press = outlinkRsvpPress(buttons.myRsvp);
+        if (press) buttons.onSetRsvp(press);
+    };
     return (
         <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2">
             {/* Avatarraden: de som kommer/är intresserade - överlappade
@@ -228,7 +238,7 @@ function RsvpRow({ faces = [], cta, onVisitCta, ...buttons }: RsvpRowProps) {
             )}
             <div className="flex-1" />
             <RsvpButtons {...buttons} />
-            {cta && <CtaPill cta={cta} onVisitCta={onVisitCta} />}
+            {cta && <CtaPill cta={cta} onVisitCta={visitCta} />}
         </div>
     );
 }

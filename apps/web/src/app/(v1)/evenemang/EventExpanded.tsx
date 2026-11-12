@@ -15,7 +15,7 @@ import { recordEventClick } from '@/services/eventStatsService';
 import { linkEventService, type RsvpAttendee } from '@/services/linkEventService';
 import { useAuth } from '@/context/AuthContext';
 import { useEventRsvp } from '@/hooks/useEventRsvp';
-import { hostedAttendeeAction, hostedRegisterAction, inviteUrl, nextRsvp } from '@/utils/rsvpTransition';
+import { hostedAttendeeAction, hostedRegisterAction, inviteUrl, nextRsvp, outlinkRsvpPress } from '@/utils/rsvpTransition';
 import EventChatPanel from '@/components/v2/EventChatPanel';
 import HScrollRow from '@/components/ui/HScrollRow';
 import LinkedText from '@/components/ui/LinkedText';
@@ -419,7 +419,14 @@ export default function EventExpanded({ e, isDup, dayLabel, onClose, onMapClick,
                         href={outlink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={trackOutlink}
+                        // ANMÄL/BOKA sätter Kommer på köpet (ägarbeslut 7/11),
+                        // som kartkortets rad: statistiken först, sedan svaret
+                        // om det inte redan är Kommer (outlinkRsvpPress).
+                        onClick={() => {
+                            trackOutlink();
+                            const press = outlinkRsvpPress(rsvp.my);
+                            if (press) void pressRsvp(press);
+                        }}
                         className={`group/anmal shrink-0 whitespace-nowrap pl-3 pr-2 sm:pl-3.5 sm:pr-2.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider sm:tracking-widest inline-flex items-center justify-center gap-1 shadow-md ring-1 ring-inset hover:shadow-lg active:scale-[0.97] transition-all ${ctaGradient}`}
                     >
                         {tm ? 'BOKA' : 'ANMÄL'}
