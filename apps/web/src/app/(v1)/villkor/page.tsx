@@ -6,6 +6,8 @@ export const metadata: Metadata = {
     title: 'Användarvillkor',
     description: 'VADKUL:s användarvillkor: nolltolerans mot stötande innehåll, hur modereringen fungerar och hur du når oss.',
     alternates: { canonical: '/villkor' },
+    // Appen öppnar sidan själv - ingen Hämta-rad (isInAppOpenedPage).
+    itunes: null,
 };
 
 /**

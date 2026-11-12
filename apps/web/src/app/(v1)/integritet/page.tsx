@@ -6,6 +6,8 @@ export const metadata: Metadata = {
     title: 'Integritet',
     description: 'Så hanterar VADKUL dina uppgifter: vad som lagras, var, och hur du raderar det.',
     alternates: { canonical: '/integritet' },
+    // Appen öppnar sidan själv - ingen Hämta-rad (isInAppOpenedPage).
+    itunes: null,
 };
 
 /**

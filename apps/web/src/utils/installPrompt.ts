@@ -53,7 +53,10 @@ export function detectInstallPlatform(ua: string, maxTouchPoints = 0): InstallPl
 //   Android: fyll i 'https://play.google.com/store/apps/details?id=se.vadkul.app'
 //            när appen är släppt i Google Play - aldrig före, då blir det
 //            en död butikssida. Till dess säger Android-kortet "kommer snart".
-export const APP_STORE_URL: string | null = 'https://apps.apple.com/se/app/id6820135961';
+// APP_STORE_ID styr också Safaris egen Hämta-rad (Smart App Banner, metataggen
+// apple-itunes-app i rotlayouten) - en källa för både länken och raden.
+export const APP_STORE_ID: string | null = '6820135961';
+export const APP_STORE_URL: string | null = APP_STORE_ID ? `https://apps.apple.com/se/app/id${APP_STORE_ID}` : null;
 export const PLAY_STORE_URL: string | null = null;
 
 export interface StoreLinks {

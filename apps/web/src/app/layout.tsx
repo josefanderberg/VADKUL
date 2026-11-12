@@ -8,6 +8,7 @@ import Hotjar from '@/components/analytics/Hotjar';
 import FirebaseAnalytics from '@/components/analytics/FirebaseAnalytics';
 import SiteVisitBeacon from '@/components/analytics/SiteVisitBeacon';
 import { roundedEventTotal } from './(v1)/evenemang/cityData';
+import { APP_STORE_ID } from '@/utils/installPrompt';
 
 // Rundad, vänlig display-font för moln-texten och andra "lockande" inslag.
 // Variabel font så vi får alla vikter (300–700) i en fil.
@@ -57,6 +58,12 @@ export async function generateMetadata(): Promise<Metadata> {
         // appen Insights för delningar. Sätts via NEXT_PUBLIC_FB_APP_ID i .env/WEB_ENV.
         ...(process.env.NEXT_PUBLIC_FB_APP_ID ? { other: { 'fb:app_id': process.env.NEXT_PUBLIC_FB_APP_ID } } : {}),
         manifest: '/manifest.json',
+        // Smart App Banner: Safari på iPhone visar sin egen Hämta/Öppna-rad
+        // överst, redan vid första besöket (vår egen butiksbanner kommer först
+        // vid andra). Bara Safari - Chrome på iOS och FB/IG-webbvyerna har
+        // InstallPrompt. /villkor och /integritet stänger av raden (appen
+        // öppnar dem själv).
+        ...(APP_STORE_ID ? { itunes: { appId: APP_STORE_ID } } : {}),
         appleWebApp: {
             capable: true,
             statusBarStyle: 'black-translucent',

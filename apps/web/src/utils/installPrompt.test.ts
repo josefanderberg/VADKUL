@@ -7,6 +7,8 @@ import {
     isInAppOpenedPage,
     shouldOfferInstall,
     INSTALL_SNOOZE_MS,
+    APP_STORE_ID,
+    APP_STORE_URL,
     type InstallPlatform,
 } from './installPrompt';
 
@@ -141,6 +143,13 @@ describe('appStoreLinkFor + storeNameFor (butiksbannern)', () => {
         expect(appStoreLinkFor('ios-safari')).toBe('https://apps.apple.com/se/app/id6820135961');
         expect(appStoreLinkFor('desktop')).toBe('https://apps.apple.com/se/app/id6820135961');
         expect(appStoreLinkFor('android')).toBeNull();
+    });
+
+    // Safaris Hämta-rad (apple-itunes-app i rotlayouten) läser APP_STORE_ID.
+    // Fel id = raden pekar på någon annans app eller visas inte alls.
+    it('Smart App Banner-id:t är VADKUL:s app och samma som butikslänken', () => {
+        expect(APP_STORE_ID).toBe('6820135961');
+        expect(APP_STORE_URL).toBe(`https://apps.apple.com/se/app/id${APP_STORE_ID}`);
     });
 });
 
