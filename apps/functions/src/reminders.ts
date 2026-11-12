@@ -12,8 +12,10 @@ import { eventShareSlug } from '@vadkul/kontrakt';
  * Körs var 5:e minut. TVÅ utskicksvägar på samma tick:
  *
  *  1) AUTOMATISKA 1h-påminnelsen: hittar event som börjar inom en timme och
- *     pushar till alla som ANMÄLT sig (linkEvents/{id}/attendees) eller
- *     GILLAT eventet (users där savedEventIds innehåller event-id:t).
+ *     pushar till alla som ANMÄLT sig (linkEvents/{id}/attendees), GILLAT
+ *     eventet (users där savedEventIds innehåller event-id:t) eller SVARAT
+ *     KOMMER (eventRsvps/{slug}/svar med status going - sedan 7/11, #185:
+ *     ANMÄL på skrapade event sätter Kommer, och Kommer ska ge notisen).
  *  2) KLOCK-KNAPPENS valda fönster (8h/3h/1h/start) ur eventReminderPrefs —
  *     se processReminderPrefs nedan.
  *
@@ -63,6 +65,12 @@ export const eventReminders = region.pubsub
             const mapId = !isUserCreated && typeof event.url === 'string' && event.url
                 ? event.url as string
                 : eventDoc.id;
+            // /e/<slug> studsar direkt in på kartan med eventet öppet.
+            // Slugas på KART-id:t - webbens /e/-uppslag hashar URL:en för
+            // skrapade event, en slug på doc-id:t hade gett en död länk.
+            // Samma slug nycklar Kommer-svaren (eventRsvps): webben svarar
+            // på rsvpShareId, som för ett Firestore-dokument är doc-id:t.
+            const slug = eventShareSlug(mapId);
 
             const markerRef = db.collection('eventReminders').doc(eventDoc.id);
             try {
@@ -81,6 +89,15 @@ export const eventReminders = region.pubsub
                     .where('savedEventIds', 'array-contains-any', likeIds)
                     .get();
                 likersSnap.docs.forEach(d => recipients.add(d.id));
+                // KOMMER-SVAREN (7/11, #185): den som tryckt Kommer (eller
+                // ANMÄL på ett skrapat event, som sätter Kommer) ska få
+                // notisen. Anonyma svar räknas med - de når fram bara om
+                // webben hunnit registrera en token för sessionen. Samma
+                // kostnadsbild som attendees: en nästan alltid tom läsning.
+                const goingSnap = await db.collection('eventRsvps').doc(slug).collection('svar')
+                    .where('status', '==', 'going')
+                    .get();
+                goingSnap.docs.forEach(d => recipients.add(d.id));
 
                 if (recipients.size === 0) continue;
 
@@ -102,10 +119,6 @@ export const eventReminders = region.pubsub
                     .toLocaleTimeString('sv-SE', { timeZone: 'Europe/Stockholm', hour: '2-digit', minute: '2-digit' });
                 const title = `⏰ Om 1 timme: ${event.title}`;
                 const body = `Börjar kl ${startsAt}${event.locationName ? ` · ${event.locationName}` : ''}`;
-                // /e/<slug> studsar direkt in på kartan med eventet öppet.
-                // Slugas på KART-id:t - webbens /e/-uppslag hashar URL:en för
-                // skrapade event, en slug på doc-id:t hade gett en död länk.
-                const slug = eventShareSlug(mapId);
                 const url = `/e/${slug}`;
 
                 let delivered = 0;
