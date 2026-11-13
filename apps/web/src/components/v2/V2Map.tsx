@@ -32,6 +32,7 @@ import {
     LABEL_TEXT_SIZE_STOPS, eventLabels, labelFeaturesFrom, obstacleIcon, titleAnchorOffsets, wishLabels,
 } from './v2MapLabel';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
+import { createSourceHealer, isFeatureIndexError } from './v2MapEngineHeal';
 import { pickSpreadRevealKeys } from '../../utils/revealSpread';
 import {
     CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, pickCloudRevealKeys,
@@ -3484,6 +3485,30 @@ export default function V2Map({
         // fastnar i true om en zoom-animation byts ut innan 180 ms-timern hann gå.
         // I vila är detta en no-op (redan false), så ingen flimmer/extra omritning.
         map.on('moveend', exitZooming);
+
+        // MOTORBUGGEN "feature index out of bounds" (#206, se v2MapEngineHeal):
+        // ett kakel i en geojson-källa med feature-state kan fällas vid
+        // laddning och ritas då inte alls. Läks med en full setData av källans
+        // eget innehåll (avstudsad och bromsad) i stället för att bli ett hål i
+        // kartan och en Console Error. Mitt i streamen kan en våg som skickas
+        // medan getData väntar skrivas över; streamens avslutande normalisering
+        // (full setData) lägger tillbaka den. Alla andra fel loggas precis som
+        // MapLibre gör när kartan saknar error-lyssnare.
+        const requestHeal = createSourceHealer((sourceId) => {
+            const src = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
+            if (!src || src.type !== 'geojson') return;
+            src.getData()
+                .then(data => { if (map.getSource(sourceId) === src) src.setData(data); })
+                .catch(() => { /* källan riven under tiden - nästa syncPlainLayer bygger om */ });
+        });
+        map.on('error', (e) => {
+            const sourceId = (e as { sourceId?: string }).sourceId;
+            if (sourceId && isFeatureIndexError(e.error)) {
+                requestHeal(sourceId);
+                return;
+            }
+            console.error(e.error ?? e);
+        });
 
         // OBS: klickvägen använder INTE queryRenderedFeatures. Motorbuggen
         // (samma klass som stream-normaliseringens "Out of bounds") gör att
