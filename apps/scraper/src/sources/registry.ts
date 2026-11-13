@@ -2609,6 +2609,17 @@ export const SOURCES: Source[] = [
                     sitemapUrl: 'https://www.falkenberg.se/sitemap.xml',
                     urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
                     defaultCity: 'Falkenberg',
+                    // Platsraden under rubriken: "Lokal - Gata 1 - Ort - 311 35".
+                    // Lokalnamnet kan självt bära " - " ("Falkenberg - Teater
+                    // Storan"), så de TRE sista leden är gata, ort, postnummer.
+                    detailPlaceRegex: {
+                        venue: /<!-- Location Information -->\s*<div[^>]*>\s*([^<]+?)\s+-\s+(?:(?! - )[^<])+\s+-\s+(?:(?! - )[^<])+\s+-\s+\d{3} ?\d{2}\s*</,
+                        address: /<!-- Location Information -->\s*<div[^>]*>\s*[^<]+?\s+-\s+((?:(?! - )[^<])+\s+-\s+(?:(?! - )[^<])+\s+-\s+\d{3} ?\d{2})\s*</,
+                    },
+                    // Sajtens reservpunkt när lokalen saknar egen koordinat.
+                    placeholderCoords: [[56.904894, 12.4912926]],
+                    // Pristabellen (Kategori | PRIS): andra cellen per rad.
+                    detailPriceSelector: 'table:has(th:contains("PRIS")) tbody td:nth-child(2)',
                 },
         // Mätt 2026-09-07: samma 124 sidor hämtas oavsett fönster, men med
         // default-fönstret (30 d) sparades bara 41 av dem — 81 färdighämtade
@@ -2616,6 +2627,9 @@ export const SOURCES: Source[] = [
         // vid sparning, så bredden är gratis här (till skillnad från källor
         // med urlDateRegex, där fönstret styr hur mycket som hämtas).
         windowDays: 180,
+        // Läker de kända eventen efter platsfixen 13/11 (#228): koordinater,
+        // lokal och pris läses om på nästa körning.
+        contentSweep: '2026-11-13',
         updateFrequency: 'every-3d',
         notes: 'Probe-sitemap 2026-06-04: 287 event-URLs (evenemang-mönster). '
             + 'Fönstret breddat 7/9 efter mätning (41 → 122 sparade). '

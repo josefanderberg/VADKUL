@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -918,5 +918,60 @@ describe('extractCatalogDates — datumbricka med månaden först (Tingsryd)', (
         const b = dates.get('https://tingsryd.se/evenemang/hostfest')!;
         expect([a.getMonth(), a.getDate()]).toEqual([10, 1]);
         expect([b.getMonth(), b.getDate()]).toEqual([11, 12]);
+    });
+});
+
+// Falkenberg (#228, 13/11 2026): utsnitt ur riktiga detaljsidor. Kartlänken är
+// WordPress-kodad (&#038;), platsraden "Lokal - Gata - Ort - Postnr" och priset
+// står i en tabell utan etikett i löptexten.
+describe('Falkenbergs detaljsidor', () => {
+    const PLACE_RX = {
+        venue: /<!-- Location Information -->\s*<div[^>]*>\s*([^<]+?)\s+-\s+(?:(?! - )[^<])+\s+-\s+(?:(?! - )[^<])+\s+-\s+\d{3} ?\d{2}\s*</,
+        address: /<!-- Location Information -->\s*<div[^>]*>\s*[^<]+?\s+-\s+((?:(?! - )[^<])+\s+-\s+(?:(?! - )[^<])+\s+-\s+\d{3} ?\d{2})\s*</,
+    };
+    const PRICE_SEL = 'table:has(th:contains("PRIS")) tbody td:nth-child(2)';
+    const page = (loc: string, rows: string) => `
+        <!-- Location Information -->
+        <div class="mb-8 text-lg text-gray-700">
+            ${loc}                    </div>
+        <table class="w-full"><thead><tr><th>Kategori</th><th>PRIS</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+        <a href="https://www.google.com/maps/search/?api=1&#038;query=56.907357416048725%2C12.492169907115334" class="google-maps-link">Karta</a>`;
+    const BLACK_BOX = page('Blackboxen Falkhallen - Nyhems Plan 1 - Falkenberg - 31135', '<tr><td>Vuxen</td><td> 420 SEK </td></tr>');
+
+    it('läser koordinaterna ur den WordPress-kodade kartlänken (&#038;)', () => {
+        const e = ev();
+        backfillPlaceFromHtml(BLACK_BOX, e);
+        expect(e.coords).toEqual([56.907357416048725, 12.492169907115334]);
+    });
+
+    it('platsraden ger lokal och adress', () => {
+        const e = ev();
+        applyDetailPlaceRegex(BLACK_BOX, PLACE_RX, e);
+        expect(e.venueName).toBe('Blackboxen Falkhallen');
+        expect(e.address).toBe('Nyhems Plan 1, Falkenberg, 31135');
+    });
+
+    it('lokalnamn med eget " - " behålls helt', () => {
+        const e = ev();
+        applyDetailPlaceRegex(page('Falkenberg - Teater Storan - Torggatan 10 - Falkenberg - 311 47', ''), PLACE_RX, e);
+        expect(e.venueName).toBe('Falkenberg - Teater Storan');
+        expect(e.address).toBe('Torggatan 10, Falkenberg, 311 47');
+    });
+
+    it('sajtens reservpunkt räknas inte som plats', () => {
+        expect(isPlaceholderCoord([56.904894, 12.4912926], [[56.904894, 12.4912926]])).toBe(true);
+        expect(isPlaceholderCoord([56.9073574, 12.4921699], [[56.904894, 12.4912926]])).toBe(false);
+        expect(isPlaceholderCoord(undefined, [[56.904894, 12.4912926]])).toBe(false);
+        expect(isPlaceholderCoord([56.904894, 12.4912926], undefined)).toBe(false);
+    });
+
+    it('pristabellen: ett pris, intervall, gratis och inget', () => {
+        expect(priceFromDetailSelector(BLACK_BOX, PRICE_SEL)).toBe('420 kr');
+        expect(priceFromDetailSelector(page('x', '<tr><td>Vuxen</td><td>470 SEK</td></tr><tr><td>Barn</td><td>250 SEK</td></tr>'), PRICE_SEL)).toBe('250–470 kr');
+        expect(priceFromDetailSelector(page('x', '<tr><td>Vuxen</td><td>100 kr</td></tr><tr><td>Barn</td><td>0 SEK</td></tr>'), PRICE_SEL)).toBe('0–100 kr');
+        expect(priceFromDetailSelector(page('x', '<tr><td>Alla</td><td>0 SEK</td></tr>'), PRICE_SEL)).toBe('Gratis');
+        expect(priceFromDetailSelector(page('x', '<tr><td>Info</td><td>Begränsat antal platser</td></tr>'), PRICE_SEL)).toBeUndefined();
+        expect(priceFromDetailSelector('<p>Ingen tabell</p>', PRICE_SEL)).toBeUndefined();
     });
 });

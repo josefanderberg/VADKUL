@@ -256,6 +256,20 @@ export interface SitemapConfig {
      */
     detailPlaceRegex?: { venue?: RegExp; address?: RegExp; coords?: RegExp };
     /**
+     * Koordinater som sajten själv faller tillbaka på när den saknar punkt
+     * för lokalen - ortens mittpunkt. De är ingen plats: kastas, så venue och
+     * adress geokodas i stället. Falkenberg 13/11 2026 (#228): Teater Storan
+     * och Vinbergs kyrka låg båda på 56.9048940, 12.4912926.
+     */
+    placeholderCoords?: [number, number][];
+    /**
+     * CSS-selektor för detaljsidans PRISCELLER (en träff per biljettkategori:
+     * "420 SEK", "Gratis"). Tolkas av priceFromDetailSelector och fyller bara
+     * ett tomt prisfält. För pristabeller utan etikett i löptexten, som
+     * beskrivningens prisletare aldrig ser. Falkenberg 13/11 2026 (#228).
+     */
+    detailPriceSelector?: string;
+    /**
      * Katalogen hämtas med POST (Episerver-block som Konserthusets
      * /CalendarSlideBlock/LoadMore/ — GET ger 405). Kroppen skickas som
      * application/x-www-form-urlencoded; `{{today}}` byts mot dagens lokala
@@ -374,7 +388,8 @@ export function applyDetailPlaceRegex(
     let hit = false;
     const venue = grab(rx.venue);
     if (venue && venue.length <= 80) { ev.venueName = venue; hit = true; }
-    const address = grab(rx.address);
+    // "Torggatan 10 - Falkenberg - 31147" (Falkenberg) → kommaseparerad adress.
+    const address = grab(rx.address)?.replace(/\s+-\s+/g, ', ');
     if (address) {
         ev.address = address; hit = true;
         const town = postalTown(address);
@@ -385,6 +400,36 @@ export function applyDetailPlaceRegex(
     const lng = cm ? parseFloat(cm[2]) : NaN;
     if (Number.isFinite(lat) && Number.isFinite(lng) && isInNordic(lat, lng)) { ev.coords = [lat, lng]; hit = true; }
     return hit;
+}
+
+/** Är koordinaten en av sajtens platshållare (SitemapConfig.placeholderCoords)? */
+export function isPlaceholderCoord(coords: [number, number] | undefined, placeholders: [number, number][] | undefined): boolean {
+    if (!coords || !placeholders) return false;
+    return placeholders.some(([lat, lng]) => Math.abs(coords[0] - lat) < 1e-5 && Math.abs(coords[1] - lng) < 1e-5);
+}
+
+/**
+ * Priset ur detaljsidans prisceller (SitemapConfig.detailPriceSelector): ett
+ * belopp → "420 kr", flera → "250–470 kr", bara gratis/0 → "Gratis". Celler
+ * utan belopp ("Begränsat antal platser") ger inget pris. Exporterad för test.
+ */
+export function priceFromDetailSelector(html: string, selector: string): string | undefined {
+    const $ = cheerio.load(html);
+    const amounts: number[] = [];
+    let free = false;
+    $(selector).each((_i, el) => {
+        const text = $(el).text().replace(/\s+/g, ' ').trim();
+        if (!text || text.length > 60) return;
+        const m = text.match(/^(?:fr(?:ån|\.)?\s*)?(\d{1,3}(?:[ \u00a0.]\d{3})*|\d+)(?:[.,]\d{2})?\s*(?:sek|kr(?:onor)?|:-)?$/i);
+        if (m) {
+            const n = parseInt(m[1].replace(/[ \u00a0.]/g, ''), 10);
+            if (n === 0) free = true; else if (n < 100_000) amounts.push(n);
+        } else if (/^(?:gratis|fri entr[ée]|kostnadsfritt|avgiftsfritt)$/i.test(text)) free = true;
+    });
+    if (amounts.length === 0) return free ? 'Gratis' : undefined;
+    const min = free ? 0 : Math.min(...amounts);
+    const max = Math.max(...amounts);
+    return min === max ? `${max} kr` : `${min}–${max} kr`;
 }
 
 /**
@@ -1405,10 +1450,12 @@ function backfillFromHtml(html: string, ev: RawEvent, pageUrl: string): void {
 export function backfillPlaceFromHtml(html: string, ev: RawEvent): void {
     // 1) Koordinater ur kart-URL:er. Konservativ: kräver "map" i URL:en och
     //    ett lat,lng-par i query/center/q/ll/destination. Nordics-bounds-
-    //    valideras så slumptal aldrig blir koordinater.
+    //    valideras så slumptal aldrig blir koordinater. WordPress skriver
+    //    &-tecknet som &#038; i href (Falkenberg, #228) - utan det missades
+    //    länken och 82 event hamnade på stadens mittpunkt.
     if (!ev.coords) {
         const m = html.match(
-            /https?:\/\/[^"'\s<>]*map[^"'\s<>]*?[?&](?:amp;)?(?:query|center|q|ll|destination)=(-?\d{1,2}\.\d+)(?:,|%2[cC])(-?\d{1,3}\.\d+)/i,
+            /https?:\/\/[^"'\s<>]*map[^"'\s<>]*?[?&](?:amp;|#0?38;)?(?:query|center|q|ll|destination)=(-?\d{1,2}\.\d+)(?:,|%2[cC])(-?\d{1,3}\.\d+)/i,
         );
         if (m) {
             const lat = parseFloat(m[1]);
@@ -1644,6 +1691,12 @@ export const sitemapEngine = async (
             }
             if (config.detailPlaceSelector) applyDetailPlace(html, config.detailPlaceSelector, ev);
             if (config.detailPlaceRegex) applyDetailPlaceRegex(html, config.detailPlaceRegex, ev);
+            // Sajtens egen ortsmittpunkt är ingen plats - venue/adress geokodas.
+            if (isPlaceholderCoord(ev.coords, config.placeholderCoords)) ev.coords = undefined;
+            if (config.detailPriceSelector && !ev.price) {
+                const p = priceFromDetailSelector(html, config.detailPriceSelector);
+                if (p) ev.price = p;
+            }
             if (config.detailDescSelector) {
                 const d = descFromDetailSelector(html, config.detailDescSelector, config.detailDescStrip);
                 if (d) ev.description = d;
