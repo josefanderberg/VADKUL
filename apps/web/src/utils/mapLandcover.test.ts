@@ -6,8 +6,14 @@ import type * as maplibregl from 'maplibre-gl';
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
     addZoomedOutLandcover, COARSE_KINDS, COARSE_LAYER_ID, DETAIL_KINDS, DETAIL_LAYER_ID,
-    FOREST_KINDS, LANDCOVER_COARSE_MAX_ZOOM, LANDCOVER_COLORS, LANDCOVER_FALT_FJARRAN, LANDCOVER_MAX_ZOOM,
+    DEEP_COARSE_LAYER_ID, DEEP_MAX_ZOOM, DEEP_SOURCE_ID, DEEP_WATER_LAYER_ID,
+    FOREST_DEEP_LAYER_ID, FOREST_FAR_OPACITY, FOREST_KINDS, FOREST_LAYER_ID,
+    LANDCOVER_COARSE_MAX_ZOOM, LANDCOVER_COLORS, LANDCOVER_FALT_FJARRAN, LANDCOVER_MAX_ZOOM,
 } from './mapLandcover';
+import { childTileUrls, DEEP_KINDS, DEEP_LAYERS, DEEP_PROTOCOL } from './deepTiles';
+
+// Grönskans färg så som nöjesfältsstilen sätter den på Voyagers lager.
+const GRONSKA = ['interpolate', ['linear'], ['zoom'], 6, '#47822c', 10, '#7eb152'] as unknown as maplibregl.ExpressionSpecification;
 
 // Voyager i miniatyr, med lagren i samma ordning som den riktiga stilen (13/11).
 function voyagerLike(sourceName = 'protomaps'): maplibregl.StyleSpecification {
@@ -16,11 +22,11 @@ function voyagerLike(sourceName = 'protomaps'): maplibregl.StyleSpecification {
         sources: { [sourceName]: { type: 'vector', tiles: ['https://example.invalid/{z}/{x}/{y}.mvt'] } },
         layers: [
             { id: 'background', type: 'background' },
-            { id: 'landcover', type: 'fill', source: sourceName, 'source-layer': 'landuse', minzoom: 7 },
+            { id: 'landcover', type: 'fill', source: sourceName, 'source-layer': 'landuse', minzoom: 7, paint: { 'fill-color': GRONSKA } },
             { id: 'park_nature_reserve', type: 'fill', source: sourceName, 'source-layer': 'landuse' },
             { id: 'landuse_residential', type: 'fill', source: sourceName, 'source-layer': 'landuse', minzoom: 6 },
             { id: 'waterway', type: 'line', source: sourceName, 'source-layer': 'water' },
-            { id: 'water', type: 'fill', source: sourceName, 'source-layer': 'water' },
+            { id: 'water', type: 'fill', source: sourceName, 'source-layer': 'water', paint: { 'fill-color': '#4e8ab7' } },
             { id: 'road_primary', type: 'line', source: sourceName, 'source-layer': 'roads' },
             { id: 'place_city', type: 'symbol', source: sourceName, 'source-layer': 'places' },
         ],
@@ -59,8 +65,9 @@ describe('addZoomedOutLandcover', () => {
         addZoomedOutLandcover(style);
         expect(style.layers.map(l => l.id)).toEqual([
             'background', 'landcover', 'park_nature_reserve', 'landuse_residential',
-            COARSE_LAYER_ID, DETAIL_LAYER_ID,
-            'waterway', 'water', 'road_primary', 'place_city',
+            FOREST_DEEP_LAYER_ID, FOREST_LAYER_ID,
+            DEEP_COARSE_LAYER_ID, COARSE_LAYER_ID, DETAIL_LAYER_ID,
+            'waterway', 'water', DEEP_WATER_LAYER_ID, 'road_primary', 'place_city',
         ]);
     });
 
@@ -70,7 +77,7 @@ describe('addZoomedOutLandcover', () => {
             addZoomedOutLandcover(style);
             expect(lager(style, COARSE_LAYER_ID)).toMatchObject({ source: namn, 'source-layer': 'landcover' });
             expect(lager(style, DETAIL_LAYER_ID)).toMatchObject({ source: namn, 'source-layer': 'landuse' });
-            expect(Object.keys(style.sources)).toEqual([namn]);
+            expect(Object.keys(style.sources)).toEqual([namn, DEEP_SOURCE_ID]);
             expect(Object.values(style.sources).some(s => s.type === 'raster-dem')).toBe(false);
         }
     });
@@ -80,7 +87,12 @@ describe('addZoomedOutLandcover', () => {
         addZoomedOutLandcover(style);
         const grovt = lager(style, COARSE_LAYER_ID);
         const detalj = lager(style, DETAIL_LAYER_ID);
-        expect(opacitetVid(grovt, 5)).toBe(1);
+        // Under DEEP_MAX_ZOOM ritas det grova ur de djupare kaklen (#211).
+        const djupt = lager(style, DEEP_COARSE_LAYER_ID);
+        expect(djupt.maxzoom).toBe(DEEP_MAX_ZOOM);
+        expect(grovt.minzoom).toBe(DEEP_MAX_ZOOM);
+        expect(djupt.paint?.['fill-color']).toEqual(grovt.paint?.['fill-color']);
+        expect(opacitetVid(grovt, 6)).toBe(1);
         expect(synligVid(detalj, 5)).toBe(false);
         expect(synligVid(detalj, 6.9)).toBe(false);
         // Korstoningen: båda finns i z7-kaklen.
@@ -96,9 +108,10 @@ describe('addZoomedOutLandcover', () => {
         const style = voyagerLike();
         addZoomedOutLandcover(style);
         expect(LANDCOVER_MAX_ZOOM).toBeLessThan(10.5);
-        for (const id of [COARSE_LAYER_ID, DETAIL_LAYER_ID]) {
+        for (const id of [COARSE_LAYER_ID, DETAIL_LAYER_ID, DEEP_COARSE_LAYER_ID, DEEP_WATER_LAYER_ID, FOREST_LAYER_ID, FOREST_DEEP_LAYER_ID]) {
             const l = lager(style, id);
-            expect(synligVid(l, LANDCOVER_MAX_ZOOM)).toBe(false);
+            if (id === COARSE_LAYER_ID || id === DETAIL_LAYER_ID) expect(synligVid(l, LANDCOVER_MAX_ZOOM)).toBe(false);
+            expect(l.maxzoom).toBeLessThanOrEqual(LANDCOVER_MAX_ZOOM);
             expect(synligVid(l, 10.5)).toBe(false);
             expect(synligVid(l, 11)).toBe(false);
         }
@@ -130,7 +143,7 @@ describe('addZoomedOutLandcover', () => {
             }
         });
 
-        it('skogen ritas inte - den har landets gröna, som förut', () => {
+        it('marktäckeslagren ritar inte skogen - den har egna lager (#211)', () => {
             const style = voyagerLike();
             addZoomedOutLandcover(style);
             for (const id of [COARSE_LAYER_ID, DETAIL_LAYER_ID]) {
@@ -226,5 +239,86 @@ describe('åkrarna i Sverige-vyn är grönare än inzoomat', () => {
         expect(uttryck[5]).toBe(LANDCOVER_MAX_ZOOM);
         expect(fargFor(uttryck[6], 'farmland')).toBe(LANDCOVER_COLORS.falt);
         expect(fargFor(uttryck[4], 'grassland')).toBe(fargFor(uttryck[6], 'grassland'));
+    });
+});
+
+// #211, Josef 13/11: "gärna mer av skogsområde och sjöar så långt utzoomat som
+// det kan finnas med" och "ännu viktigare ... det som är skogsområde. alltså de
+// konturerna om de fortfarande sågs längre utzoomat".
+describe('djupare kakel och skogens konturer i Sverige-vyn', () => {
+    const färdig = (namn = 'protomaps') => {
+        const style = voyagerLike(namn);
+        addZoomedOutLandcover(style);
+        return style;
+    };
+
+    it('den djupa källan är baskartans egna kakel bakom protokollet, ett zoomsteg djupare', () => {
+        const style = färdig();
+        const src = style.sources[DEEP_SOURCE_ID] as maplibregl.VectorSourceSpecification;
+        expect(src.type).toBe('vector');
+        expect(src.tiles).toEqual([`${DEEP_PROTOCOL}://https://example.invalid/{z}/{x}/{y}.mvt`]);
+        // Kakel z ger barnen på z+1, och källan används aldrig från DEEP_MAX_ZOOM.
+        expect(src.maxzoom).toBe(DEEP_MAX_ZOOM - 1);
+        const barn = childTileUrls(src.tiles![0].replace('{z}/{x}/{y}', '5/17/9'));
+        expect(barn?.[0].url).toBe('https://example.invalid/6/34/18.mvt');
+    });
+
+    it('inga lager använder den djupa källan från zoom 6 - inga extra hämtningar inzoomat', () => {
+        const djupa = färdig().layers.filter(l => 'source' in l && l.source === DEEP_SOURCE_ID);
+        expect(djupa.map(l => l.id).sort()).toEqual([FOREST_DEEP_LAYER_ID, DEEP_COARSE_LAYER_ID, DEEP_WATER_LAYER_ID].sort());
+        for (const l of djupa) expect(l.maxzoom).toBe(DEEP_MAX_ZOOM);
+        // Allt lagren läser finns i det hopslagna kaklet.
+        for (const l of djupa) expect(DEEP_LAYERS).toContain((l as maplibregl.FillLayerSpecification)['source-layer']);
+    });
+
+    it('de djupare sjöarna har baskartans vattenfärg och ligger direkt ovanpå dess vatten', () => {
+        const style = färdig();
+        expect(lager(style, DEEP_WATER_LAYER_ID).paint?.['fill-color']).toBe('#4e8ab7');
+        const ids = style.layers.map(l => l.id);
+        expect(ids.indexOf(DEEP_WATER_LAYER_ID)).toBe(ids.indexOf('water') + 1);
+    });
+
+    it('skogens konturer ritas under zoom 7 i Voyager-grönskans egen färg, utan glapp', () => {
+        const style = färdig();
+        const djup = lager(style, FOREST_DEEP_LAYER_ID);
+        const nära = lager(style, FOREST_LAYER_ID);
+        for (const l of [djup, nära]) {
+            expect(l['source-layer']).toBe('landuse');
+            expect(l.filter).toEqual(['in', ['get', 'kind'], ['literal', [...FOREST_KINDS]]]);
+            expect(l.paint?.['fill-color']).toEqual(GRONSKA);
+        }
+        // Det hopslagna kaklet har just de skogsytor lagret ritar.
+        expect([...DEEP_KINDS.landuse].sort()).toEqual([...FOREST_KINDS].sort());
+        // Djupa kakel till 6, baskartans 6-7, sedan Voyagers eget lager (minzoom 7).
+        expect([djup.minzoom, djup.maxzoom]).toEqual([undefined, DEEP_MAX_ZOOM]);
+        expect([nära.minzoom, nära.maxzoom]).toEqual([DEEP_MAX_ZOOM, 7]);
+        expect(nära.source).toBe('protomaps');
+        // Full styrka där Voyagers lager tar vid, mjukare längst ut.
+        expect(opacitetVid(nära, 7)).toBe(1);
+        expect(opacitetVid(djup, 5)).toBe(FOREST_FAR_OPACITY);
+        expect(opacitetVid(djup, 4)).toBe(FOREST_FAR_OPACITY);
+    });
+
+    it('skogen ligger under fält och öppen mark', () => {
+        const ids = färdig().layers.map(l => l.id);
+        expect(ids.indexOf(FOREST_DEEP_LAYER_ID)).toBeLessThan(ids.indexOf(DEEP_COARSE_LAYER_ID));
+        expect(ids.indexOf(FOREST_LAYER_ID)).toBeLessThan(ids.indexOf(COARSE_LAYER_ID));
+    });
+
+    it('en källa utan egen kakelmall (TileJSON) får ingen djup källa, men skog och marktäcke ur baskartan', () => {
+        const style = voyagerLike();
+        style.sources.protomaps = { type: 'vector', url: 'https://example.invalid/tiles.json' };
+        addZoomedOutLandcover(style);
+        expect(style.sources[DEEP_SOURCE_ID]).toBeUndefined();
+        const ids = style.layers.map(l => l.id);
+        expect(ids).not.toContain(DEEP_WATER_LAYER_ID);
+        expect(ids).not.toContain(DEEP_COARSE_LAYER_ID);
+        expect(lager(style, COARSE_LAYER_ID).minzoom).toBeUndefined();
+        expect(lager(style, FOREST_LAYER_ID)).toMatchObject({ source: 'protomaps', maxzoom: 7 });
+        expect(validateStyleMin(style)).toEqual([]);
+    });
+
+    it('stilen med djup källa är giltig enligt MapLibres stilspec', () => {
+        expect(validateStyleMin(färdig())).toEqual([]);
     });
 });

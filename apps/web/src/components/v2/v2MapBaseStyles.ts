@@ -5,6 +5,7 @@
 
 import * as maplibregl from 'maplibre-gl';
 import { addZoomedOutLandcover } from '../../utils/mapLandcover';
+import { DEEP_PROTOCOL, loadDeepTile } from '../../utils/deepTiles';
 import { swapCartoVectorSources } from '../../utils/cartoTiles';
 
 // ── WORKER-FIXEN (prodstoppet 25/9 kväll) ───────────────────────────────────
@@ -88,6 +89,20 @@ export const BOOTSTRAP_STYLE: maplibregl.StyleSpecification = {
 /** Väglager som nöjesfältsstilen gör vita, i Voyagers gamla och nya schema (#208). */
 export function isThemeParkRoadLayer(id: string, sourceLayer: string | undefined): boolean {
     return (sourceLayer === 'transportation' || sourceLayer === 'roads') && !id.startsWith('aeroway');
+}
+
+// Protokollet bakom Sverige-vyns djupare kakel (#211, utils/deepTiles): fyra
+// barnkakel hämtas och slås ihop till ett. Registreras en gång, innan stilen
+// som pekar på det lämnas till kartan.
+let deepTileProtocolAdded = false;
+function ensureDeepTileProtocol() {
+    if (deepTileProtocolAdded || typeof window === 'undefined') return;
+    deepTileProtocolAdded = true;
+    maplibregl.addProtocol(DEEP_PROTOCOL, async (params, abortController) => {
+        const bytes = await loadDeepTile(params.url, (url, signal) => fetch(url, { signal }), abortController.signal);
+        // slice(): en egen buffert i exakt längd (skrivarens är större).
+        return { data: bytes.slice().buffer };
+    });
 }
 
 // "Nöjesfälts"-kartan: hämta Voyager-stilen och måla om den i en mild, naturlig
@@ -209,7 +224,10 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
     // SKOG OCH ÖPPNA FÄLT UTZOOMAT (#203, ersätter reliefen från #197) - inte
     // när stadssidornas kartbilder renderas ur egna kakel: de ligger på zoom 11
     // där marktäcket ändå är uttonat.
-    if (!egnaKakel) addZoomedOutLandcover(style);
+    if (!egnaKakel) {
+        ensureDeepTileProtocol();
+        addZoomedOutLandcover(style);
+    }
 
     return style;
 }
