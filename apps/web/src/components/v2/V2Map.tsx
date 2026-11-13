@@ -23,11 +23,14 @@ import {
 } from './v2MapBaseStyles';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
-    BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
+    BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_STOPS, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
     BRICKA_BODY_ALPHA, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
-    makeBrickaImageData, selectedMarkerColors, sourceGradientCss,
+    makeBrickaImageData, selectedMarkerColors, sourceGradientCss, zoomStopsExpr,
 } from './v2MapBricka';
-import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
+import {
+    LABEL_BADGE_BOX, LABEL_BODY_BOX, LABEL_CAT_PLACEMENT, LABEL_SLOT_OFFSET_PX, LABEL_SLOT_SIZE_PX,
+    LABEL_TEXT_SIZE_STOPS, eventLabels, labelFeaturesFrom, obstacleIcon, titleAnchorOffsets, wishLabels,
+} from './v2MapLabel';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
 import { pickSpreadRevealKeys } from '../../utils/revealSpread';
 import {
@@ -53,26 +56,31 @@ const LABEL_CAT_MIN_ZOOM = 9;
 // vänster, höger och över"): titellagren har INGEN minzoom längre - de tända
 // brickorna (molnhålet, sticky) får titel även i Sverige-vyn när den får
 // plats. Titeln provar under brickan först, sedan höger, vänster och över
-// (MapLibres text-variable-anchor-offset, i em). Kategorin är kvar som reserv
-// från LABEL_CAT_MIN_ZOOM och står bara under brickan.
-// Brickans mått (v2MapBricka, icon-size ~0,8-1): kroppens mitt ~30 px över
-// spetsen, halva bredden ~25 px, toppen ~58 px. Texten är 11-13,5 px.
-const LABEL_TITLE_ANCHOR_OFFSETS: maplibregl.DataDrivenPropertyValueSpecification<maplibregl.VariableAnchorOffsetCollectionSpecification> = [
-    'literal',
-    [
-        'top', [0, 0.35],      // under brickan (som förut, föredras)
-        'left', [2.4, -2.6],   // till höger om kroppen
-        'right', [-2.4, -2.6], // till vänster om kroppen
-        'bottom', [0, -5.1],   // ovanför brickan
-    ],
-];
+// och (#204) snett under/över - åtta lägen, LABEL_TITLE_PLACEMENTS i
+// v2MapLabel (testad mot brickans mått). Kategorin är kvar som reserv från
+// LABEL_CAT_MIN_ZOOM och står bara under brickan.
 // SPÄRREN UNDER SPETSEN: titellagret bär en osynlig 2x2-ikon på samma plats
 // som kategorireserven skulle stå. Står titeln till höger, vänster eller över
 // ligger spärren ändå kvar under brickan, så kategorin för SAMMA bricka krockar
 // och visas inte - samma regel som 7/10 ("kategori bara när titeln inte får
 // plats"), nu när titeln kan flytta. Spärren tar en prick, inte en etikett.
+// Geometrin (LABEL_SLOT_OFFSET_PX) bor i v2MapLabel.
 const LABEL_SLOT_IMAGE = 'vadkul-label-slot';
-const LABEL_SLOT_OFFSET_PX = 10;
+// KROCKLAGREN (#204, Josef 13/11: "texten blir dåligt placerad om det är en
+// öppen eventbricka nedanför, för det täcker ju texten. så placera på sidor
+// eller över"): brickorna ritas med icon-ignore-placement och syns därför inte
+// för textkollisionen. Två osynliga lager ur etikettspegeln (bara TÄNDA, ej
+// passerade grupper) skriver in en ruta över varje tänd brickas kropp och, för
+// grupper, över "+N"-pillen. De ligger ovanför titel- och kategorilagren i
+// ritordningen och placeras därför FÖRE dem (MapLibre placerar uppifrån och
+// ner) - titlarna viker undan till nästa fria läge. Den valda gruppens -top-
+// lager ligger överst och placeras före krockytorna, så dess titel vinner
+// fortfarande alltid (och ritas ovanpå allt). Rutornas mått: LABEL_BODY_BOX /
+// LABEL_BADGE_BOX i v2MapLabel.
+const LABEL_OBSTACLE_LAYER_ID = 'plain-events-label-obstacles';
+const LABEL_OBSTACLE_BADGE_LAYER_ID = 'plain-events-label-obstacles-badge';
+const LABEL_OBSTACLE_IMAGE = 'vadkul-label-obstacle';
+const LABEL_OBSTACLE_BADGE_IMAGE = 'vadkul-label-obstacle-badge';
 
 // ════════════════════════════════════════════════════════════════════════════
 // V2Map — kartan är appens hjärta. Grov karta över filen:
@@ -306,6 +314,9 @@ const PAST_DIM_EXPR: maplibregl.ExpressionSpecification =
 // fick plats; får ingen av dem plats visas inget. -top är den valda gruppens
 // lager (alltid överst, placeras först av alla → titeln vinner alltid där).
 const LABEL_LAYER_IDS = ['plain-events-labels', 'plain-events-labels-titles', 'plain-events-labels-top'] as const;
+// Allt som slås av/på med etiketterna: utan synliga etiketter (zoom-gesten,
+// etikett-toggeln) ska krockytorna inte heller tränga undan baskartans ortsnamn.
+const LABEL_TOGGLE_LAYER_IDS = [...LABEL_LAYER_IDS, LABEL_OBSTACLE_LAYER_ID, LABEL_OBSTACLE_BADGE_LAYER_ID] as const;
 // ── Z-växlingen för överlappande brickor ──────────────────────────────────────
 // Grannbrickor (egna grupper >11 m isär) som täcker varandra på skärmen turas
 // om att ligga överst. Mekaniken är en SPEGELKÄLLA: brickan som "har ordet"
@@ -1841,7 +1852,7 @@ export default function V2Map({
     const applyLabelVisibility = useCallback(() => {
         const map = mapRef.current;
         if (!map || isZoomingRef.current) return;
-        for (const id of LABEL_LAYER_IDS) {
+        for (const id of LABEL_TOGGLE_LAYER_IDS) {
             if (layerExists(map, id)) map.setLayoutProperty(id, 'visibility', labelsHiddenRef.current ? 'none' : 'visible');
         }
     }, []);
@@ -1879,7 +1890,7 @@ export default function V2Map({
                         'icon-ignore-placement': true,
                         // Storlek matchad mot DOM-brickorna (~38px kropp) så enskilda
                         // GL-event och fler-event-grupper (DOM) ser lika stora ut.
-                        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, GL_ICON_SIZE_TOP],
+                        'icon-size': zoomStopsExpr(GL_ICON_SIZE_STOPS),
                         // Fler-event-brickor (count>1) ritas ÖVERST och hamnar först i
                         // queryRenderedFeatures — sort-key = antal event → ju fler, desto
                         // högre upp i staplingen (och lättast att träffa). Den VALDA
@@ -1925,7 +1936,7 @@ export default function V2Map({
                         'icon-anchor': 'bottom',
                         'icon-allow-overlap': true,
                         'icon-ignore-placement': true,
-                        'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, GL_ICON_SIZE_TOP],
+                        'icon-size': zoomStopsExpr(GL_ICON_SIZE_STOPS),
                         // Nyast främjad överst inom spegeln (intoningen sker ovanpå
                         // förra fronten, som ligger kvar tills tonen är klar).
                         'symbol-sort-key': ['coalesce', ['get', 'seq'], 0],
@@ -1967,7 +1978,10 @@ export default function V2Map({
             // bär. Stilbyten rensar bilderna, därför här och inte en gång.
             if (!map.hasImage(LABEL_SLOT_IMAGE)) {
                 try {
-                    map.addImage(LABEL_SLOT_IMAGE, { width: 2, height: 2, data: new Uint8Array(2 * 2 * 4) });
+                    map.addImage(LABEL_SLOT_IMAGE, {
+                        width: LABEL_SLOT_SIZE_PX, height: LABEL_SLOT_SIZE_PX,
+                        data: new Uint8Array(LABEL_SLOT_SIZE_PX * LABEL_SLOT_SIZE_PX * 4),
+                    });
                 } catch { /* finns redan */ }
             }
             for (const layerId of LABEL_LAYER_IDS) {
@@ -1980,22 +1994,26 @@ export default function V2Map({
                 const isTitle = layerId === 'plain-events-labels-titles' || isTop;
                 const placement: maplibregl.SymbolLayerSpecification['layout'] = isTitle
                     ? {
-                        // Under, höger, vänster, över - första plats som är fri (#196).
-                        'text-variable-anchor-offset': LABEL_TITLE_ANCHOR_OFFSETS,
+                        // Under, höger, vänster, över, sedan snett under/över -
+                        // första plats som är fri (#196, #204).
+                        'text-variable-anchor-offset': titleAnchorOffsets(),
                         'text-justify': 'auto',
                         // Spärren mot kategorin för samma bricka (se LABEL_SLOT_IMAGE).
+                        // Valfri (#204): är platsen under spetsen tagen av en
+                        // grannbricka ska titeln ändå kunna stå vid sidan.
                         ...(isTop ? {} : {
                             'icon-image': LABEL_SLOT_IMAGE,
                             'icon-anchor': 'center' as const,
                             'icon-offset': [0, LABEL_SLOT_OFFSET_PX],
+                            'icon-optional': true,
                         }),
                     }
                     : {
                         // Spetsen (icon-anchor bottom) står på koordinaten → texten
                         // börjar strax under den; krockar aldrig med "+N"-badgen
                         // som sitter uppe till höger.
-                        'text-anchor': 'top',
-                        'text-offset': [0, 0.35],
+                        'text-anchor': LABEL_CAT_PLACEMENT[0],
+                        'text-offset': [LABEL_CAT_PLACEMENT[1][0], LABEL_CAT_PLACEMENT[1][1]],
                     };
                 map.addLayer({
                     id: layerId,
@@ -2011,7 +2029,7 @@ export default function V2Map({
                     layout: {
                         'text-field': isTitle ? ['get', 'labelTitle'] : ['get', 'labelCat'],
                         'text-font': ['Open Sans Bold'],
-                        'text-size': ['interpolate', ['linear'], ['zoom'], 9, 11, 13, 12.5, 16, 13.5],
+                        'text-size': zoomStopsExpr(LABEL_TEXT_SIZE_STOPS),
                         ...placement,
                         'text-max-width': 12,
                         // Placeringen sker i STIGANDE sort-key-ordning (lägst
@@ -2032,6 +2050,42 @@ export default function V2Map({
                         'text-opacity': DIM_FACTOR_EXPR,
                     },
                 }, isTop ? undefined : 'plain-events');
+            }
+            // KROCKLAGREN (#204, se LABEL_OBSTACLE_LAYER_ID): osynliga rutor över
+            // de tända brickornas kropp och "+N"-pill, direkt under brick-lagret
+            // = ovanför titel- och kategorilagren, så de placeras före texten och
+            // texten viker undan. allow-overlap: rutorna står alltid kvar;
+            // ignore-placement false: de skrivs in i krockindexet.
+            const obstacles = [
+                { id: LABEL_OBSTACLE_LAYER_ID, image: LABEL_OBSTACLE_IMAGE, icon: obstacleIcon(LABEL_BODY_BOX), badgeOnly: false },
+                { id: LABEL_OBSTACLE_BADGE_LAYER_ID, image: LABEL_OBSTACLE_BADGE_IMAGE, icon: obstacleIcon(LABEL_BADGE_BOX), badgeOnly: true },
+            ];
+            for (const o of obstacles) {
+                if (!map.hasImage(o.image)) {
+                    try {
+                        map.addImage(o.image, { width: o.icon.width, height: o.icon.height, data: new Uint8Array(o.icon.width * o.icon.height * 4) });
+                    } catch { /* finns redan */ }
+                }
+                if (map.getLayer(o.id)) continue;
+                map.addLayer({
+                    id: o.id,
+                    type: 'symbol',
+                    source: 'plain-events-labels',
+                    // Pillen bakas bara på grupper (count > 1, deriveGroupBrick).
+                    ...(o.badgeOnly ? { filter: ['>', ['coalesce', ['get', 'count'], 1], 1] as maplibregl.FilterSpecification } : {}),
+                    layout: {
+                        'icon-image': o.image,
+                        'icon-anchor': 'top-left',
+                        // Skalas med icon-size, precis som brickan.
+                        'icon-offset': o.icon.offset,
+                        'icon-size': zoomStopsExpr(GL_ICON_SIZE_STOPS),
+                        'icon-padding': 0,
+                        'icon-allow-overlap': true,
+                        'icon-ignore-placement': false,
+                        'visibility': (isZoomingRef.current || labelsHiddenRef.current) ? 'none' : 'visible',
+                    },
+                    paint: { 'icon-opacity': 0 },
+                }, 'plain-events');
             }
             // Prick-lagret = "nål"-läget UNDER zoom-gesten (visas av showNeedles,
             // göms av showBricks). Vilar dolt — i vila syns brickorna. Cirklar
@@ -2060,8 +2114,14 @@ export default function V2Map({
                     },
                 });
             }
-            if (map.getLayer('plain-events-dots') && map.getLayer('plain-events')) {
-                map.moveLayer('plain-events-dots', 'plain-events');
+            // Prickarna under ALLA etikettlager (#204, Josef 13/11: "vi måste göra
+            // så att texten är över sådana eventprickar") - och därmed under
+            // brickorna som förut. Förr låg de direkt under brick-lagret, alltså
+            // ovanpå titlarna, och en släckt grannprick kunde täcka texten.
+            if (map.getLayer('plain-events-dots')) {
+                const under = map.getLayer(LABEL_LAYER_IDS[0]) ? LABEL_LAYER_IDS[0]
+                    : map.getLayer('plain-events') ? 'plain-events' : undefined;
+                if (under) map.moveLayer('plain-events-dots', under);
             }
             // Pusha datan — stor initial påfyllnad streamas i delmängder (pö om
             // pö), små ändringar går som en enda setData. Ladda-pillen i JSX:en
@@ -3341,7 +3401,7 @@ export default function V2Map({
             container.classList.add('map-state-needle');
             setGlLayer('plain-events', false);
             setGlLayer(FRONT_LAYER_ID, false); // spegelkopian följer brickorna
-            LABEL_LAYER_IDS.forEach(id => setGlLayer(id, false)); // text över nål-prickar = svävande etiketter
+            LABEL_TOGGLE_LAYER_IDS.forEach(id => setGlLayer(id, false)); // text över nål-prickar = svävande etiketter
             // During zoom, show all dots including revealed ones ("har varit" stays at 50%)
             if (layerExists(map, 'plain-events-dots')) {
                 map.setPaintProperty('plain-events-dots', 'circle-opacity', PAST_DIM_EXPR);
@@ -3354,7 +3414,7 @@ export default function V2Map({
             container.classList.add('map-state-full');
             setGlLayer('plain-events', true);
             setGlLayer(FRONT_LAYER_ID, true);
-            LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
+            LABEL_TOGGLE_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
             // Prickarna göms INTE här — då blir det ett tomt glapp medan symbol-lagret
             // (brickorna) placerar sina ikoner. De ligger kvar tills exitZooming, dvs
             // när zoomen tystnat OCH brickorna hunnit ritas. Så syns alltid något.
@@ -3395,7 +3455,7 @@ export default function V2Map({
             isZoomingRef.current = false;
             setGlLayer('plain-events', true);            // brickorna ska vara tända i vila
             setGlLayer(FRONT_LAYER_ID, true);
-            LABEL_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
+            LABEL_TOGGLE_LAYER_IDS.forEach(id => setGlLayer(id, !labelsHiddenRef.current)); // respektera etikett-toggeln
             // Zoomen kan ha korsat z13 (kategori ↔ titel) — låt spegeln skriva
             // om sig med rätt nivå (signaturvakten gör den till no-op annars).
             scheduleLabelSyncRef.current();

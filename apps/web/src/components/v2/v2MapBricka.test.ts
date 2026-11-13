@@ -12,6 +12,10 @@ import {
     USER_EVENT_HEX,
     selectedMarkerColors,
     SELECTED_RING_FALLBACK_HEX,
+    GL_ICON_SIZE_STOPS,
+    GL_ICON_SIZE_TOP,
+    interpolateZoomStops,
+    zoomStopsExpr,
 } from './v2MapBricka';
 
 // "Har varit"-logiken delas av ALLA ytor (kartan, EventCard, SavedSection,
@@ -150,5 +154,19 @@ describe('selectedMarkerColors (vald bricka, 30/9)', () => {
         expect(selectedMarkerColors(null).body).toContain(
             selectedMarkerColors(SELECTED_RING_FALLBACK_HEX).body,
         );
+    });
+});
+
+describe('GL_ICON_SIZE_STOPS (#204)', () => {
+    it('interpolerar linjärt och är konstant utanför ändarna', () => {
+        const stops = [[4, 0.78], [9, 0.9], [13, 0.98]] as const;
+        expect(interpolateZoomStops(stops, 2)).toBe(0.78);
+        expect(interpolateZoomStops(stops, 6.5)).toBeCloseTo(0.84);
+        expect(interpolateZoomStops(stops, 11)).toBeCloseTo(0.94);
+        expect(interpolateZoomStops(stops, 20)).toBe(0.98);
+    });
+
+    it('bygger samma uttryck som lagren hade förut', () => {
+        expect(zoomStopsExpr(GL_ICON_SIZE_STOPS)).toEqual(['interpolate', ['linear'], ['zoom'], 4, 0.78, 9, 0.9, 13, GL_ICON_SIZE_TOP]);
     });
 });

@@ -274,6 +274,31 @@ export const COUNT_BADGE_CORNER_Y = BRICKA_CENTER_ABOVE_COORD + (BRICKA_IMG_S / 
 // 13 px just för att GL→DOM-bytet vid klick inte ska krympa siffran. Delas
 // med V2Map (lagerdefinitionen + DOM-markörens offsetberäkning).
 export const GL_ICON_SIZE_TOP = 0.98;
+// Hela icon-size-kurvan (zoom, storlek) för GL-brickorna. Delas av brick-
+// lagret, z-växlingens spegel och etiketternas krocklager (#204) - krockytan
+// måste växa exakt som brickan, annars hamnar titlarna under kanten.
+export const GL_ICON_SIZE_STOPS: ReadonlyArray<readonly [number, number]> = [
+    [4, 0.78], [9, 0.9], [13, GL_ICON_SIZE_TOP],
+];
+
+// Linjär interpolation mellan zoomsteg, som MapLibres
+// ['interpolate', ['linear'], ['zoom'], ...]: konstant utanför ändarna.
+export function interpolateZoomStops(stops: ReadonlyArray<readonly [number, number]>, zoom: number): number {
+    if (zoom <= stops[0][0]) return stops[0][1];
+    for (let i = 1; i < stops.length; i++) {
+        const [z1, v1] = stops[i];
+        if (zoom <= z1) {
+            const [z0, v0] = stops[i - 1];
+            return v0 + (v1 - v0) * (zoom - z0) / (z1 - z0);
+        }
+    }
+    return stops[stops.length - 1][1];
+}
+
+// Samma steg som MapLibre-uttryck - så lagren och testerna läser EN källa.
+export function zoomStopsExpr(stops: ReadonlyArray<readonly [number, number]>): ['interpolate', ['linear'], ['zoom'], ...number[]] {
+    return ['interpolate', ['linear'], ['zoom'], ...stops.flatMap(([z, v]) => [z, v])];
+}
 // Extra luft på canvasens SIDOR: badge-pillen sticker ut utanför brickhörnet
 // (och blir bredare vid 2–3 siffror). Läggs symmetriskt på båda sidor så
 // bottom-center-ankaret (spetsen) inte flyttas.
