@@ -14,6 +14,8 @@
  *     iväg och stannar där det hamnar tills molnen tonat bort helt eller
  *     nivån byts, då står de på sina platser igen. När indelningen byts vid
  *     ett zoomsteg tonar den gamla uppsättningen ut medan den nya tonar in.
+ *     En ZOOMNING knuffar aldrig (#210): den avväpnar pekaren och trycket
+ *     tills man för pekaren igen eller trycker på nytt.
  *  3. I vila driver molnen bara några pixlar, och då ritas de glest (~12
  *     bilder/s) så lagret inte kostar batteri. Över CLOUD_GONE_ZOOM står
  *     slingan helt still.
@@ -30,6 +32,7 @@ import {
     cloudScaleFor,
     glideStep,
     pushOffset,
+    pushRearmed,
     type Cloud,
     type CloudPoint,
 } from '@/utils/eventClouds';
@@ -187,6 +190,13 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     let focus: CloudPoint | null = null;
     let touchPoint: CloudPoint | null = null;
     let pointer: { x: number; y: number } | null = null;
+    // En zoomning knuffar inte (#210): när kartan zoomas ut krymper den kring
+    // pekaren och drar in molnen under den, fast den står still. Zoomen
+    // avväpnar därför pekaren (tills den flyttats en bit från `pointerParked`)
+    // och trycket (tills nästa tryck). Det valda eventet knuffar som förut.
+    let pointerArmed = true;
+    let pointerParked: { x: number; y: number } | null = null;
+    let touchArmed = true;
     let sets: CloudSet[] = [];
     let level: number | null = null;
     let destroyed = false;
@@ -317,9 +327,9 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         const ease = 1 - Math.exp(-dt / PUSH_TAU_MS);
         const t = reducedMotion ? 0 : now / 1000;
         const pushers: { x: number; y: number }[] = [];
-        if (pointer) pushers.push(pointer);
+        if (pointer && pointerArmed) pushers.push(pointer);
         if (focusPx) pushers.push(focusPx);
-        if (touchPx) pushers.push(touchPx);
+        if (touchPx && touchArmed) pushers.push(touchPx);
 
         for (const set of sets) {
             const scale = cloudScaleFor(zoom, set.level);
@@ -440,6 +450,12 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     const onMouseMove = (e: maplibregl.MapMouseEvent) => {
         if (!canHover) return;
         pointer = { x: e.point.x, y: e.point.y };
+        if (!pointerArmed) {
+            // Under själva zoomningen väcks knuffen aldrig - handen darrar.
+            if (map.isZooming() || !pushRearmed(pointerParked, pointer)) return;
+            pointerArmed = true;
+            pointerParked = null;
+        }
         if (visible()) {
             dirty = true;
             schedule();
@@ -450,6 +466,15 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         const to = (e.originalEvent as MouseEvent | undefined)?.relatedTarget as Node | null | undefined;
         if (to && map.getContainer().contains(to)) return;
         pointer = null;
+        // Nästa gång pekaren kommer in över kartan är det en riktig rörelse.
+        pointerParked = null;
+        dirty = true;
+        schedule();
+    };
+    const onZoomStart = () => {
+        pointerArmed = false;
+        pointerParked = pointer;
+        touchArmed = false;
         dirty = true;
         schedule();
     };
@@ -459,6 +484,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     map.on('resize', onResize);
     map.on('mousemove', onMouseMove);
     map.on('mouseout', onMouseOut);
+    map.on('zoomstart', onZoomStart);
     resize();
     schedule();
 
@@ -476,6 +502,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         },
         setTouchPoint(next) {
             touchPoint = next;
+            touchArmed = true;
             dirty = true;
             schedule();
         },
@@ -489,6 +516,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 map.off('resize', onResize);
                 map.off('mousemove', onMouseMove);
                 map.off('mouseout', onMouseOut);
+                map.off('zoomstart', onZoomStart);
             } catch { /* kartan är redan riven */ }
             canvas.remove();
         },

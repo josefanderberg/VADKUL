@@ -383,6 +383,26 @@ export function glideStep(
     return { ox: g.ox + (vx * dt) / scale, oy: g.oy + (vy * dt) / scale, vx, vy };
 }
 
+/** Så långt (px) måste pekaren flyttas efter en zoomning innan den knuffar igen. */
+export const PUSH_REARM_PX = 14;
+
+/**
+ * Får pekaren knuffa igen efter en zoomning (#210)? När kartan zoomas ut
+ * krymper den kring pekaren, så molnen dras in under en pekare som står still
+ * och knuffades förut undan (Josef 13/11: "zoomar man ut snabbt ... då blir det
+ * att man alltid puttar undan några moln"). Zoomen avväpnar därför knuffen, och
+ * den kommer tillbaka först när man själv för pekaren en bit från där den stod
+ * (`parked`). Handens små darr under rullningen räcker inte. `parked` null =
+ * pekaren var inte över kartan när zoomen började.
+ */
+export function pushRearmed(
+    parked: { x: number; y: number } | null,
+    now: { x: number; y: number },
+): boolean {
+    if (!parked) return true;
+    return Math.hypot(now.x - parked.x, now.y - parked.y) >= PUSH_REARM_PX;
+}
+
 /**
  * Vart ett moln vill flytta sig när något (pekaren, det valda eventet) står
  * nära: rakt bort från knuffaren, mest precis intill och ingenting vid

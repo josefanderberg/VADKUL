@@ -24,6 +24,8 @@ import {
     GLIDE_MAX_SPEED,
     pickCloudRevealKeys,
     pushOffset,
+    pushRearmed,
+    PUSH_REARM_PX,
     type CloudRevealPoint,
     type CloudView,
 } from './eventClouds';
@@ -361,5 +363,30 @@ describe('glideStep', () => {
     it('tål noll tid och skräp', () => {
         expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 1, 0)).toBe(still);
         expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 0, 16)).toBe(still);
+    });
+});
+
+// #210, Josef 13/11: "zoomar man ut snabbt ... då blir det att man alltid
+// puttar undan några moln". Zoomen avväpnar pekarens knuff.
+describe('pushRearmed', () => {
+    const parked = { x: 400, y: 300 };
+
+    it('en pekare som står still efter zoomningen knuffar inte', () => {
+        expect(pushRearmed(parked, { x: 400, y: 300 })).toBe(false);
+    });
+
+    it('handens darr under rullningen väcker inte knuffen', () => {
+        expect(pushRearmed(parked, { x: 403, y: 298 })).toBe(false);
+        expect(pushRearmed(parked, { x: 400 + PUSH_REARM_PX - 1, y: 300 })).toBe(false);
+    });
+
+    it('en riktig rörelse väcker knuffen igen, åt vilket håll som helst', () => {
+        expect(pushRearmed(parked, { x: 400 + PUSH_REARM_PX, y: 300 })).toBe(true);
+        expect(pushRearmed(parked, { x: 400, y: 300 - PUSH_REARM_PX })).toBe(true);
+        expect(pushRearmed(parked, { x: 380, y: 320 })).toBe(true);
+    });
+
+    it('pekaren var utanför kartan när zoomen började - första rörelsen in knuffar', () => {
+        expect(pushRearmed(null, { x: 10, y: 10 })).toBe(true);
     });
 });
