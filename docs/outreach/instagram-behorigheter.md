@@ -1,5 +1,18 @@
 # Instagram-publicering: behörigheterna som saknas
 
+**Status 2026-11-05: bildinlägg fungerar på både Facebook och Instagram.
+Dagsinlägget (`npm run dagsinlagg -- --kolla` på minin) saknar tre scopes:**
+
+| Scope | Behövs för |
+|---|---|
+| `publish_video` | videodagarna (Grok-klippen) på Facebook |
+| `pages_manage_engagement` | svaret på spelet och quizet som kommentar på Facebook |
+| `instagram_manage_comments` | samma svar som kommentar på Instagram |
+
+Gör om steg 3-6 nedan med alla scopes i listan, spara den nya sidtoken på
+minin och kör `--kolla` igen. Utan dem går bildinläggen ut som vanligt, men
+videodagarna och morgondagens svar fallerar.
+
 **Status 2026-09-02: FORTFARANDE BLOCKERAT — och ingen ny token har någonsin
 landat.** Token som ligger på MacBooken (`apps/scraper/.env`,
 `apps/web/.env.local`) och på minin (`~/.vadkul-secrets/env`) är en och
@@ -68,8 +81,11 @@ resultatet är en hemlighet som bara ska passera dina händer.
    pages_show_list
    pages_read_engagement
    pages_manage_posts
+   pages_manage_engagement
+   publish_video
    instagram_basic
    instagram_content_publish
+   instagram_manage_comments
    ```
 
 4. **Växla upp till en långlivad token.** Klistra in den korta token i
@@ -115,12 +131,13 @@ resultatet är en hemlighet som bara ska passera dina händer.
      IG-scopes i listan är det fortfarande fel token, oavsett vad
      Explorer visade.
 
-7. **Verifiera** — båda ska vara gröna:
+7. **Verifiera** — alla ska vara gröna:
 
    ```sh
    cd apps/scraper
    npm run ig-ko -- --kolla       # behörigheter + att IG_USER_ID stämmer
    npm run ig-ko -- --provkör     # bygger bild + IG-container, publicerar INTE
+   ssh mini 'cd ~/Repos/VADKUL/apps/scraper && PATH=/usr/local/bin:$PATH npm run dagsinlagg -- --kolla'
    ```
 
    `--provkör` skapar en container hos Meta men hoppar över publiceringen,
