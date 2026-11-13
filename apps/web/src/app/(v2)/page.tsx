@@ -3664,6 +3664,18 @@ export default function HomePage() {
     }, []);
     // Radklicket i kortets väljarlista: välj eventet OCH lämna väljarläget —
     // kortet visar därefter det valda eventet som vanligt.
+    // VÄLJARLISTAN FÅR FÄRSKA OBJEKT (#227): groupChoice fångas vid brick-
+    // klicket, ofta innan kortlagret (värd, pris, bild) landat - och raderna
+    // visar nu arrangör och pris. Slå upp samma id i dagens eventlista så
+    // raderna fylls i när lagret mergats; event som filtrerats bort ur
+    // listan behåller sitt gamla objekt.
+    const groupChoiceFresh = useMemo(() => {
+        if (!groupChoice) return null;
+        const ids = new Set(groupChoice.map(ev => ev.id));
+        const fresh = new Map<string, LinkEvent>();
+        for (const ev of visibleEvents) if (ids.has(ev.id)) fresh.set(ev.id, ev);
+        return groupChoice.map(ev => fresh.get(ev.id) ?? ev);
+    }, [groupChoice, visibleEvents]);
     const handlePickFromGroup = useCallback((evt: LinkEvent) => {
         // Läs gruppen INNAN väljarläget rivs — annars finns ingen väg tillbaka
         // till listan man just stod i.
@@ -6582,7 +6594,7 @@ export default function HomePage() {
                 eventsSettled={eventsSettledForView}
                 selectedEvent={selectedEvent}
                 onSelectEvent={selectEventSmooth}
-                groupChoice={groupChoice}
+                groupChoice={groupChoiceFresh}
                 onPickFromGroup={handlePickFromGroup}
                 // Pilen visas när det ÖPPNA eventet hör till gruppen man kom
                 // ifrån — inte när man bläddrat bort (då pekar den ingenstans),

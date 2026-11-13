@@ -10,12 +10,13 @@ import { getDayLabel } from './FloatingNavbar';
 import { usableImageUrl } from '@/lib/deepLinkEventIndex';
 import { isFeaturedNow } from '@/utils/featured';
 import BoostStar from '../ui/BoostStar';
+import { groupRowMeta } from '@/utils/groupRowMeta';
 
 // ── Gruppväljaren i EVENTKORTET ─────────────────────────────────────────────
 // Ersätter multi-event-listan som svävade över kartan (V2MapGroupList,
 // borttagen 31/8 kväll på ägarbeslut): klickar man en bricka med FLERA event
 // på samma koordinat byts EVENTKORTETS INNEHÅLL ut mot den här listan (emoji +
-// titel + tid per rad) tills man valt — radklicket väljer eventet och kortet
+// titel + tid, arrangör och pris per rad) tills man valt — radklicket väljer eventet och kortet
 // visar det som vanligt (sidan nollar groupChoice i onPickFromGroup).
 // Ingen nästa-knapp/räknare som i gamla panelen: här finns plats att se och
 // scrolla hela listan, så man pekar direkt på det man vill ha.
@@ -125,11 +126,16 @@ export default function EventCardGroupList({ events, selectedEvent, onSelect, mo
             : '';
         const catKey = (ev.category && ev.category in EVENT_CATEGORIES ? ev.category : 'other') as EventCategoryType;
         const catLabel = EVENT_CATEGORIES[catKey].label;
+        const { who, price } = groupRowMeta(ev, catLabel);
         return (
             <span className={`flex items-center gap-1 text-[11px] font-semibold ${isSel ? 'text-white/80' : 'text-slate-500 dark:text-zinc-400'}`}>
                 {tid && <Clock size={10} className="shrink-0" />}
                 {tid && <span className="shrink-0 tabular-nums">{`kl ${tid}`}</span>}
-                <span className="min-w-0 truncate">{tid ? `· ${catLabel}` : catLabel}</span>
+                {/* ARRANGÖREN DIREKT EFTER TIDEN, sedan priset (#227, Josef
+                    13/11) - kategorin står kvar bara tills värden landat med
+                    kortlagret. Värden trunkeras, priset viker aldrig. */}
+                <span className="min-w-0 truncate">{tid ? `· ${who}` : who}</span>
+                {price && <span className="shrink-0">{`· ${price}`}</span>}
                 {isPast && <span className="shrink-0">· har varit</span>}
             </span>
         );
