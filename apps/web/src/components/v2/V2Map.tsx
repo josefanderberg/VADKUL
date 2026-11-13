@@ -421,7 +421,9 @@ const REVEAL_STREAM_MS_MAX = 50;    // restid (ms) för LÅNGT hopp (hela skärm
 // Antal samtidigt TÄNDA reveal-markörer ska normalt ligga ≤ seed (50) / ≤ N-kring-tap
 // (50). Fler än så = något läcker (strandade brickor o.dyl.) → console.warn så man
 // ser direkt att det behöver korrigeras. (Logg + ev. varning via reportRevealCount.)
-const REVEAL_VISIBLE_WARN = 80;
+// Hålet runt muspekaren (#195) lägger upp till 50 till ovanpå seedet på alla
+// zoomar - inzoomat kan seed (50) + hål (50) + sticky stå tända samtidigt.
+const REVEAL_VISIBLE_WARN = 130;
 // Molnhålet (#195) räknas om högst så här ofta när muspekaren rör sig (ms).
 const CLOUD_HOVER_THROTTLE_MS = 60;
 
@@ -1398,8 +1400,9 @@ export default function V2Map({
     // MOLNHÅLET (#195, Josef 13/11: "där man hovrar ... ska också visas de 50
     // event som är över där ... bara där molnen skingrar sig"): brickorna i
     // hålet där molnen viker undan - runt muspekaren på datorn, runt senaste
-    // trycket på pekskärm. Bara medan molnen syns (zoom < CLOUD_GONE_ZOOM),
-    // annars tom. Tänds av pumpReveal precis som seedet.
+    // trycket på pekskärm. Muspekarens hål gäller på ALLA zoomar (Josef 13/11:
+    // "även om det inte finns några moln"), tryckets bara medan molnen syns.
+    // Tänds av pumpReveal precis som seedet.
     const revealHoverRef = useRef<Set<string>>(new Set());
     const cloudPointerPxRef = useRef<{ x: number; y: number } | null>(null);
     const cloudTouchPtRef = useRef<{ lng: number; lat: number } | null>(null);
@@ -2387,17 +2390,23 @@ export default function V2Map({
     // MOLNHÅLET (#195): brickorna i hålet runt muspekaren (datorn) eller
     // senaste trycket (pekskärm), upp till CLOUD_REVEAL_MAX, populära först.
     // Ligger hålet i havet blir mängden tom - de närmaste långt bort tänds
-    // aldrig. Utan moln i bild (zoom >= CLOUD_GONE_ZOOM) finns inget hål.
+    // aldrig. Muspekarens hål finns på alla zoomar; tryckets bara under molnen.
     const cloudHoverKeys = useCallback((): Set<string> => {
         const map = mapRef.current;
         if (!map) return new Set();
         const zoom = map.getZoom();
-        if (cloudOpacityForZoom(zoom) <= 0.002) return new Set();
-        let origin = cloudTouchPtRef.current;
+        // Muspekaren tänder på ALLA zoomar, även inzoomat där molnen är borta
+        // (Josef 13/11: "så att de syns när man hovrar och är lite närmare
+        // inzoomat. även om det inte finns några moln"). Trycket på pekskärm
+        // gäller bara medan molnen syns - inzoomat är ett tryck på tom karta
+        // fortfarande bara "stäng kortet".
+        let origin: { lng: number; lat: number } | null = null;
         const px = cloudPointerPxRef.current;
         if (px) {
             const ll = map.unproject([px.x, px.y]);
             origin = { lng: ll.lng, lat: ll.lat };
+        } else if (cloudTouchPtRef.current && cloudOpacityForZoom(zoom) > 0.002) {
+            origin = cloudTouchPtRef.current;
         }
         if (!origin) return new Set();
         return new Set(pickCloudRevealKeys(revealCoordsRef.current, origin, zoom, CLOUD_REVEAL_RADIUS_PX, CLOUD_REVEAL_MAX));
@@ -2470,7 +2479,6 @@ export default function V2Map({
         const onMove = (e: maplibregl.MapMouseEvent) => {
             if (!canHover) return;
             cloudPointerPxRef.current = { x: e.point.x, y: e.point.y };
-            if (revealHoverRef.current.size === 0 && cloudOpacityForZoom(map.getZoom()) <= 0.002) return;
             const wait = CLOUD_HOVER_THROTTLE_MS - (performance.now() - lastAt);
             if (wait <= 0) run();
             else if (timer == null) timer = setTimeout(run, wait);
