@@ -1,11 +1,18 @@
 {
-  "generatedAt": "2026-11-12T08:23:48.682Z",
+  "generatedAt": "2026-11-13T07:05:24.729Z",
   "counts": {
     "fel": 0,
-    "varning": 30,
-    "nollkoordinatTotalt": 536
+    "varning": 33,
+    "nollkoordinatTotalt": 472
   },
   "alerts": [
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "sb-gamlalinkoping-info",
+      "since": "2026-11-07",
+      "message": "gav 9 event 2026-11-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -22,20 +29,20 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Dalheimers hus",
-      "message": "9 av 12 kommande event ligger 2026-11-12 — sajtvitt datum i stället för eventets?"
+      "source": "Danmarks Ishockey Union",
+      "message": "9 av 13 kommande event ligger 2026-11-13 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Forshaga-Munkfors församling",
+      "message": "8 av 11 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Hedemora Kommun",
-      "message": "15 av 23 kommande event ligger 2026-11-17 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Härlanda församling",
-      "message": "6 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+      "message": "15 av 22 kommande event ligger 2026-11-17 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -46,8 +53,14 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "S:t Peters klosters församling",
+      "source": "Kolmårdens församling",
       "message": "7 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Nederluleå församling",
+      "message": "12 av 17 kommande event ligger 2026-11-17 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -70,20 +83,26 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "536 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Arkivensdag 65, Studiefrämjandet 16, Söndrum-Vapnö församling 16, Förlösa-Kläckeberga församling 16, Barnarp-Ödestugu församling 14"
+      "source": "472 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Arkivensdag 65, Tickster Norge 16, Studiefrämjandet 13, Förlösa-Kläckeberga församling 13, ABF 12"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Arkivensdag",
+      "message": "invariant-vakten larmar (13 av 66 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Järfälla Kommun",
+      "message": "invariant-vakten larmar (8 av 75 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 248 event på samma tidsstämpel) — se nattloggen"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Vallentuna Kommun",
-      "message": "invariant-vakten larmar (1 av 10 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (8 av 239 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
