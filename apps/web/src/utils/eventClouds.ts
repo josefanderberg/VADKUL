@@ -59,6 +59,12 @@ const ALPHA_MAX = 0.82;
 
 /** Hur långt utanför molnets kant pekaren börjar knuffa (px). */
 export const PUSH_MARGIN_PX = 110;
+/** Hålet runt pekaren (eller trycket på mobil) där molnen skingras och
+ *  eventen under tänds (px). Samma mått som knuffens räckvidd utanför
+ *  molnkanten, så det som tänds är det man ser genom hålet. */
+export const CLOUD_REVEAL_RADIUS_PX = PUSH_MARGIN_PX;
+/** Så många event tänds som mest i hålet (Josef 13/11: "de 50 event som är över där"). */
+export const CLOUD_REVEAL_MAX = 50;
 /** Hur långt ett moln som mest flyttar sig, som andel av räckvidden. */
 const PUSH_STRENGTH = 0.55;
 /** Hur mycket ett knuffat moln som mest tunnas ut. */
@@ -146,6 +152,56 @@ export function buildClouds(points: readonly CloudPoint[], level: number): Cloud
     // De tätaste sist = ritas överst.
     clouds.sort((a, b) => a.count - b.count || (a.id < b.id ? -1 : 1));
     return clouds;
+}
+
+/**
+ * Hur långt från kartans MITT brickorna tänds medan molnen ligger kvar (px).
+ * Med molnen fullt framme tänds ingenting kring mitten - bara där molnen
+ * skingras (pekaren, trycket, det valda eventet). Radien växer när molnen
+ * tonar ut och är obegränsad när de är borta, så stadsvyn tänder som förut.
+ */
+export function cloudCenterRevealRadiusPx(zoom: number): number {
+    const t = cloudOpacityForZoom(zoom) / CLOUD_MAX_OPACITY;
+    if (!(t > 0.0025)) return Infinity;
+    return (CLOUD_REVEAL_RADIUS_PX * (1 - t)) / t;
+}
+
+export interface CloudRevealPoint extends CloudPoint {
+    key: string;
+    /** Populär (🔥) eller guld - går före i urvalet. */
+    pop: boolean;
+}
+
+/**
+ * De event som tänds i ett hål i molnen: alla inom `radiusPx` från `center`
+ * vid den här zoomen, populära först och närmast först inom varje skikt, max
+ * `max` stycken. Ligger hålet i havet blir listan tom - de närmaste långt
+ * bort tänds aldrig. Returen är sorterad på avstånd.
+ */
+export function pickCloudRevealKeys(
+    points: readonly CloudRevealPoint[],
+    center: CloudPoint,
+    zoom: number,
+    radiusPx: number,
+    max: number,
+): string[] {
+    if (!(radiusPx > 0) || !(max > 0) || !Number.isFinite(zoom)) return [];
+    const world = 512 * Math.pow(2, zoom);
+    const cx = mercatorX(center.lng) * world;
+    const cy = mercatorY(center.lat) * world;
+    const r2 = radiusPx * radiusPx;
+    const inside: { key: string; d2: number; pop: boolean }[] = [];
+    for (const p of points) {
+        if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+        const dx = mercatorX(p.lng) * world - cx;
+        const dy = mercatorY(p.lat) * world - cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 <= r2) inside.push({ key: p.key, d2, pop: p.pop });
+    }
+    inside.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (a.d2 - b.d2));
+    const picked = inside.slice(0, max);
+    picked.sort((a, b) => a.d2 - b.d2);
+    return picked.map(p => p.key);
 }
 
 /**

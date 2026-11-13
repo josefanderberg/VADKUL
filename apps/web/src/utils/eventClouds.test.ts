@@ -5,12 +5,17 @@ import {
     CLOUD_MAX_LEVEL,
     CLOUD_MAX_OPACITY,
     CLOUD_MIN_LEVEL,
+    CLOUD_REVEAL_MAX,
+    CLOUD_REVEAL_RADIUS_PX,
     PUSH_MARGIN_PX,
     buildClouds,
+    cloudCenterRevealRadiusPx,
     cloudLevelFor,
     cloudOpacityForZoom,
     cloudScaleFor,
+    pickCloudRevealKeys,
     pushOffset,
+    type CloudRevealPoint,
 } from './eventClouds';
 
 const STOCKHOLM = { lat: 59.3293, lng: 18.0686 };
@@ -141,5 +146,69 @@ describe('pushOffset', () => {
         const hit = pushOffset(10, 10, 10, 10, 40);
         expect(hit.y).toBeLessThan(0);
         expect(Number.isFinite(hit.x)).toBe(true);
+    });
+});
+
+/** En punkt `px` skärmpixlar öster om `from` vid zoomen `zoom`. */
+function eastOf(from: { lat: number; lng: number }, px: number, zoom: number) {
+    return { lat: from.lat, lng: from.lng + (px / (512 * Math.pow(2, zoom))) * 360 };
+}
+
+describe('pickCloudRevealKeys', () => {
+    const zoom = 5;
+    const pt = (key: string, px: number, pop = false): CloudRevealPoint => ({ key, pop, ...eastOf(STOCKHOLM, px, zoom) });
+
+    it('tänder bara det som ligger i hålet', () => {
+        const points = [pt('nära', 20), pt('kanten', CLOUD_REVEAL_RADIUS_PX - 2), pt('utanför', CLOUD_REVEAL_RADIUS_PX + 5)];
+        expect(pickCloudRevealKeys(points, STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, CLOUD_REVEAL_MAX))
+            .toEqual(['nära', 'kanten']);
+    });
+
+    it('ett hål i havet tänder ingenting, inte ens de närmaste långt bort', () => {
+        const havet = eastOf(STOCKHOLM, 600, zoom);
+        const points = [pt('a', 0), pt('b', 30), { key: 'gbg', pop: true, ...GOTEBORG }];
+        expect(pickCloudRevealKeys(points, havet, zoom, CLOUD_REVEAL_RADIUS_PX, CLOUD_REVEAL_MAX)).toEqual([]);
+    });
+
+    it('tar som mest max stycken, populära först, och returnerar dem i avståndsordning', () => {
+        const points = [pt('n1', 5), pt('n2', 10), pt('pop-langre', 80, true), pt('n3', 15)];
+        expect(pickCloudRevealKeys(points, STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, 3))
+            .toEqual(['n1', 'n2', 'pop-langre']);
+    });
+
+    it('radien räknas i skärmpixlar, så samma plats är utanför vid högre zoom', () => {
+        const nära = { key: 'x', pop: false, ...eastOf(STOCKHOLM, 50, zoom) };
+        expect(pickCloudRevealKeys([nära], STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, 50)).toEqual(['x']);
+        expect(pickCloudRevealKeys([nära], STOCKHOLM, zoom + 1, CLOUD_REVEAL_RADIUS_PX, 50)).toEqual(['x']);
+        expect(pickCloudRevealKeys([nära], STOCKHOLM, zoom + 2, CLOUD_REVEAL_RADIUS_PX, 50)).toEqual([]);
+    });
+
+    it('noll radie eller noll max ger ingenting', () => {
+        expect(pickCloudRevealKeys([pt('a', 0)], STOCKHOLM, zoom, 0, 50)).toEqual([]);
+        expect(pickCloudRevealKeys([pt('a', 0)], STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, 0)).toEqual([]);
+    });
+});
+
+describe('cloudCenterRevealRadiusPx', () => {
+    it('tänder inget kring mitten när molnen står fullt framme', () => {
+        expect(cloudCenterRevealRadiusPx(4)).toBe(0);
+        expect(cloudCenterRevealRadiusPx(CLOUD_FULL_ZOOM)).toBeCloseTo(0);
+    });
+
+    it('är obegränsad när molnen är borta, så stadsvyn tänder som förut', () => {
+        expect(cloudCenterRevealRadiusPx(CLOUD_GONE_ZOOM)).toBe(Infinity);
+        expect(cloudCenterRevealRadiusPx(12)).toBe(Infinity);
+    });
+
+    it('växer jämnt medan molnen tonar ut', () => {
+        let prev = -1;
+        for (let z = CLOUD_FULL_ZOOM; z < CLOUD_GONE_ZOOM; z += 0.25) {
+            const r = cloudCenterRevealRadiusPx(z);
+            expect(r).toBeGreaterThanOrEqual(prev);
+            prev = r;
+        }
+        // Halvvägs i tätheten är radien lika stor som hålet runt pekaren.
+        const mid = (CLOUD_FULL_ZOOM + CLOUD_GONE_ZOOM) / 2;
+        expect(cloudCenterRevealRadiusPx(mid)).toBeCloseTo(CLOUD_REVEAL_RADIUS_PX, 0);
     });
 });

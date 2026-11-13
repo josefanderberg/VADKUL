@@ -28,7 +28,11 @@ import {
     makeBrickaImageData, selectedMarkerColors, sourceGradientCss,
 } from './v2MapBricka';
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
-import { attachEventClouds, type EventClouds } from './v2MapClouds';
+import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
+import {
+    CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, cloudCenterRevealRadiusPx, cloudOpacityForZoom,
+    pickCloudRevealKeys,
+} from '../../utils/eventClouds';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
 import CitySignposts, { type SignpostCity } from './CitySignposts';
 
@@ -394,6 +398,8 @@ const REVEAL_STREAM_MS_MAX = 50;    // restid (ms) för LÅNGT hopp (hela skärm
 // (50). Fler än så = något läcker (strandade brickor o.dyl.) → console.warn så man
 // ser direkt att det behöver korrigeras. (Logg + ev. varning via reportRevealCount.)
 const REVEAL_VISIBLE_WARN = 80;
+// Molnhålet (#195) räknas om högst så här ofta när muspekaren rör sig (ms).
+const CLOUD_HOVER_THROTTLE_MS = 60;
 
 // ── Streamad utritning av eventmarkörerna ────────────────────────────────────
 // Den INITIALA påfyllnaden (källan tom → tusentals features) portioneras i
@@ -1365,6 +1371,14 @@ export default function V2Map({
     // försvinna. Den valda visas som vit-kantad DOM-markör; när den lämnar valt läge
     // håller denna uppsättning kvar den i GL-lagret. GL-motsvarighet till revealedKeysRef.
     const revealStickyRef = useRef<Set<string>>(new Set());
+    // MOLNHÅLET (#195, Josef 13/11: "där man hovrar ... ska också visas de 50
+    // event som är över där ... bara där molnen skingrar sig"): brickorna i
+    // hålet där molnen viker undan - runt muspekaren på datorn, runt senaste
+    // trycket på pekskärm. Bara medan molnen syns (zoom < CLOUD_GONE_ZOOM),
+    // annars tom. Tänds av pumpReveal precis som seedet.
+    const revealHoverRef = useRef<Set<string>>(new Set());
+    const cloudPointerPxRef = useRef<{ x: number; y: number } | null>(null);
+    const cloudTouchPtRef = useRef<{ lng: number; lat: number } | null>(null);
     const revealCoordsRef = useRef<{ key: string; lng: number; lat: number; pop: boolean }[]>([]); // platt lista för avstånd + populärrank
     const revealWrittenRef = useRef<Map<string, number>>(new Map());      // senast skrivet opacitetsvärde (skippa redundanta skrivningar)
     const revealRafRef = useRef<number | null>(null);
@@ -2105,6 +2119,7 @@ export default function V2Map({
         };
         revealSeedRef.current.forEach(light);
         revealStickyRef.current.forEach(light); // klickade brickor stannar tända
+        revealHoverRef.current.forEach(light); // molnhålet (#195)
         // Direktskrivningarna ovan går INTE via writeReveal — synka spegeln själv.
         scheduleLabelSync();
     }, [scheduleLabelSync]);
@@ -2122,10 +2137,15 @@ export default function V2Map({
         if (!map || !layerExists(map, 'plain-events')) { revealRafRef.current = null; return; }
         const seed = revealSeedRef.current;
         const sticky = revealStickyRef.current;
-        // Tänd vilo-uppsättningen + klickade (sticky) brickor, släck allt annat.
+        const hover = revealHoverRef.current;
+        // Tänd vilo-uppsättningen + klickade (sticky) brickor + molnhålet,
+        // släck allt annat.
         seed.forEach(k => writeReveal(k, 1));
         sticky.forEach(k => writeReveal(k, 1));
-        revealWrittenRef.current.forEach((op, k) => { if (op > 0 && !seed.has(k) && !sticky.has(k)) writeReveal(k, 0); });
+        hover.forEach(k => writeReveal(k, 1));
+        revealWrittenRef.current.forEach((op, k) => {
+            if (op > 0 && !seed.has(k) && !sticky.has(k) && !hover.has(k)) writeReveal(k, 0);
+        });
         revealRafRef.current = null;
         reportRevealCount('vila');
     }, [reportRevealCount, writeReveal]);
@@ -2317,6 +2337,37 @@ export default function V2Map({
     }, [nearestKeysTo, pickRevealKeys, reportRevealCount, writeReveal]);
     startRevealTravelRef.current = startRevealTravel;
 
+    // MOLNHÅLET (#195): brickorna i hålet runt muspekaren (datorn) eller
+    // senaste trycket (pekskärm), upp till CLOUD_REVEAL_MAX, populära först.
+    // Ligger hålet i havet blir mängden tom - de närmaste långt bort tänds
+    // aldrig. Utan moln i bild (zoom >= CLOUD_GONE_ZOOM) finns inget hål.
+    const cloudHoverKeys = useCallback((): Set<string> => {
+        const map = mapRef.current;
+        if (!map) return new Set();
+        const zoom = map.getZoom();
+        if (cloudOpacityForZoom(zoom) <= 0.002) return new Set();
+        let origin = cloudTouchPtRef.current;
+        const px = cloudPointerPxRef.current;
+        if (px) {
+            const ll = map.unproject([px.x, px.y]);
+            origin = { lng: ll.lng, lat: ll.lat };
+        }
+        if (!origin) return new Set();
+        return new Set(pickCloudRevealKeys(revealCoordsRef.current, origin, zoom, CLOUD_REVEAL_RADIUS_PX, CLOUD_REVEAL_MAX));
+    }, []);
+    // Räkna om bara hålet (pekaren rörde sig) - billigare än hela seedet.
+    const refreshCloudHover = useCallback(() => {
+        const next = cloudHoverKeys();
+        const cur = revealHoverRef.current;
+        if (next.size === cur.size) {
+            let same = true;
+            for (const k of next) if (!cur.has(k)) { same = false; break; }
+            if (same) return;
+        }
+        revealHoverRef.current = next;
+        ensureRevealPumpRef.current();
+    }, [cloudHoverKeys]);
+
     // Välj seed = de REVEAL_SEED_COUNT markörerna närmast utgångspunkten. Körs
     // vid dataändring, på 'load', när GPS-positionen dyker upp och (throttlat)
     // när kartan rör sig — se mitt-följningen i init-effekten.
@@ -2331,12 +2382,27 @@ export default function V2Map({
         // kväll) delas med tap-migrationen via pickRevealKeys, så seed-
         // omräkningen aldrig byter uppsättning mot en annan sorts urval.
         const origin = (map ? map.getCenter() : null) ?? userPosRef.current;
-        const seedKeys: string[] = origin ? pickRevealKeysRef.current(origin.lng, origin.lat) : [];
+        let seedKeys: string[] = origin ? pickRevealKeysRef.current(origin.lng, origin.lat) : [];
+        // MOLNEN (#195): medan molnen ligger kvar tänds bara det som står nära
+        // mitten (cloudCenterRevealRadiusPx - ingenting alls när molnen står
+        // fullt framme, obegränsat när de är borta). Annars tände en mitt i
+        // havet de närmaste brickorna långt bort, under molnen.
+        if (map && origin) {
+            const zoom = map.getZoom();
+            const r = cloudCenterRevealRadiusPx(zoom);
+            if (r < Infinity) {
+                const inside = new Set(pickCloudRevealKeys(revealCoordsRef.current, origin, zoom, r, Infinity));
+                seedKeys = seedKeys.filter(k => inside.has(k));
+            }
+        }
         const newSeed = new Set(seedKeys);
-        // Göm gamla seed-nycklar som inte längre är seed (men aldrig klickade/sticky).
+        const newHover = cloudHoverKeys();
+        revealHoverRef.current = newHover;
+        // Göm gamla seed-nycklar som inte längre är seed (men aldrig klickade/sticky
+        // eller i molnhålet).
         if (map && layerExists(map, 'plain-events')) {
             revealSeedRef.current.forEach(k => {
-                if (!newSeed.has(k) && !revealStickyRef.current.has(k)) {
+                if (!newSeed.has(k) && !revealStickyRef.current.has(k) && !newHover.has(k)) {
                     try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 0 }); } catch { /* */ }
                     revealWrittenRef.current.delete(k);
                 }
@@ -2345,8 +2411,60 @@ export default function V2Map({
         revealSeedRef.current = newSeed;
         reapplyAllRevealRef.current();
         ensureRevealPumpRef.current();
-    }, []);
+    }, [cloudHoverKeys]);
     recomputeRevealSeedRef.current = recomputeRevealSeed;
+
+    // Muspekaren och trycket styr molnhålet (#195). Pekaren throttlas - urvalet
+    // är billigt men mousemove kommer i varje bildruta. På pekskärm finns ingen
+    // hovring: där flyttar ett tryck hålet (och molnen skingras där, se
+    // v2MapClouds.setTouchPoint), och det ligger kvar tills nästa tryck.
+    useEffect(() => {
+        const map = mapInstance;
+        if (!map) return;
+        const canHover = cloudsCanHover();
+        let lastAt = 0;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const run = () => {
+            timer = null;
+            lastAt = performance.now();
+            refreshCloudHover();
+        };
+        const onMove = (e: maplibregl.MapMouseEvent) => {
+            if (!canHover) return;
+            cloudPointerPxRef.current = { x: e.point.x, y: e.point.y };
+            if (revealHoverRef.current.size === 0 && cloudOpacityForZoom(map.getZoom()) <= 0.002) return;
+            const wait = CLOUD_HOVER_THROTTLE_MS - (performance.now() - lastAt);
+            if (wait <= 0) run();
+            else if (timer == null) timer = setTimeout(run, wait);
+        };
+        const onOut = (e: maplibregl.MapMouseEvent) => {
+            // Pekaren gick bara upp på en DOM-bricka i kartan - inte ut ur den.
+            const to = (e.originalEvent as MouseEvent | undefined)?.relatedTarget as Node | null | undefined;
+            if (to && map.getContainer().contains(to)) return;
+            cloudPointerPxRef.current = null;
+            if (timer != null) { clearTimeout(timer); timer = null; }
+            refreshCloudHover();
+        };
+        const onTap = (e: maplibregl.MapMouseEvent) => {
+            if (canHover) return;
+            if (cloudOpacityForZoom(map.getZoom()) <= 0.002) return;
+            const pt = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+            cloudTouchPtRef.current = pt;
+            cloudsRef.current?.setTouchPoint(pt);
+            refreshCloudHover();
+        };
+        map.on('mousemove', onMove);
+        map.on('mouseout', onOut);
+        map.on('click', onTap);
+        return () => {
+            if (timer != null) clearTimeout(timer);
+            try {
+                map.off('mousemove', onMove);
+                map.off('mouseout', onOut);
+                map.off('click', onTap);
+            } catch { /* kartan är redan riven */ }
+        };
+    }, [mapInstance, refreshCloudHover]);
 
     // GPS-platsen kommer asynkront efter laddning. När den dyker upp (och man inte
     // redan tryckt på kartan) → räkna om seedet; stadshoppet som följer flyttar
@@ -2605,16 +2723,28 @@ export default function V2Map({
             const map = mapRef.current;
             if (map && layerExists(map, 'plain-events')) {
                 const c = map.getCenter();
-                for (const k of nearestKeysTo(c.lng, c.lat, REVEAL_SEED_COUNT)) {
+                // Medan molnen ligger kvar (#195): bara det nära mitten, som
+                // seedet, plus molnhålet - aldrig de närmaste långt bort.
+                const zoom = map.getZoom();
+                const r = cloudCenterRevealRadiusPx(zoom);
+                const seedKeys = r < Infinity
+                    ? pickCloudRevealKeys(revealCoordsRef.current, c, zoom, r, REVEAL_SEED_COUNT)
+                    : nearestKeysTo(c.lng, c.lat, REVEAL_SEED_COUNT);
+                for (const k of seedKeys) {
                     try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 1 }); } catch { /* källan ej redo */ }
                     revealWrittenRef.current.set(k, 1);
                     revealSeedRef.current.add(k);
+                }
+                for (const k of cloudHoverKeys()) {
+                    try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 1 }); } catch { /* källan ej redo */ }
+                    revealWrittenRef.current.set(k, 1);
+                    revealHoverRef.current.add(k);
                 }
             }
             return;
         }
         reconcileRevealWithData();
-    }, [plainData, reconcileRevealWithData, nearestKeysTo]);
+    }, [plainData, reconcileRevealWithData, nearestKeysTo, cloudHoverKeys]);
 
     // Tvinga fram det VALDA eventets GL-bricka oavsett var den ligger (även när
     // den inte är bland de N närmaste senaste tappet, t.ex. efter Nästa till ett

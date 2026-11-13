@@ -32,6 +32,9 @@ export interface EventClouds {
     setPoints(points: readonly CloudPoint[]): void;
     /** Det valda eventets plats - molnen håller sig undan därifrån. */
     setFocus(point: CloudPoint | null): void;
+    /** Där man senast tryckte på en pekskärm (#195) - molnen skingras där
+     *  som runt muspekaren på datorn. null = inget tryck. */
+    setTouchPoint(point: CloudPoint | null): void;
     destroy(): void;
 }
 
@@ -107,6 +110,12 @@ function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HT
     return cv;
 }
 
+/** Har enheten en riktig muspekare som kan hovra? Pekskärmar svarar nej. */
+export function cloudsCanHover(): boolean {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;
+    return !window.matchMedia('(hover: none)').matches;
+}
+
 export function attachEventClouds(map: maplibregl.Map): EventClouds {
     const glCanvas = map.getCanvas();
     const canvas = document.createElement('canvas');
@@ -127,9 +136,14 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     const sprites = SPRITE_PUFFS.map(makeSprite);
     const reducedMotion =
         typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Pekskärmar saknar hovring. Webbläsaren skickar ändå en låtsad musrörelse
+    // vid varje tryck, som skulle lämna ett hål kvar på skärmen när kartan
+    // flyttas - där skingras molnen i stället kring trycket (setTouchPoint).
+    const canHover = cloudsCanHover();
 
     let points: readonly CloudPoint[] = [];
     let focus: CloudPoint | null = null;
+    let touchPoint: CloudPoint | null = null;
     let pointer: { x: number; y: number } | null = null;
     let sets: CloudSet[] = [];
     let level: number | null = null;
@@ -227,6 +241,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         ctx.clearRect(0, 0, cssW, cssH);
 
         const focusPx = focus ? map.project([focus.lng, focus.lat]) : null;
+        const touchPx = touchPoint ? map.project([touchPoint.lng, touchPoint.lat]) : null;
         const ease = 1 - Math.exp(-dt / PUSH_TAU_MS);
         const t = reducedMotion ? 0 : now / 1000;
 
@@ -255,6 +270,12 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 }
                 if (focusPx) {
                     const o = pushOffset(p.x, p.y, focusPx.x, focusPx.y, r);
+                    tx += o.x;
+                    ty += o.y;
+                    tf = Math.max(tf, o.fade);
+                }
+                if (touchPx) {
+                    const o = pushOffset(p.x, p.y, touchPx.x, touchPx.y, r);
                     tx += o.x;
                     ty += o.y;
                     tf = Math.max(tf, o.fade);
@@ -334,13 +355,17 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         schedule();
     };
     const onMouseMove = (e: maplibregl.MapMouseEvent) => {
+        if (!canHover) return;
         pointer = { x: e.point.x, y: e.point.y };
         if (visible()) {
             dirty = true;
             schedule();
         }
     };
-    const onMouseOut = () => {
+    const onMouseOut = (e: maplibregl.MapMouseEvent) => {
+        // Pekaren gick bara upp på en DOM-bricka i kartan - inte ut ur den.
+        const to = (e.originalEvent as MouseEvent | undefined)?.relatedTarget as Node | null | undefined;
+        if (to && map.getContainer().contains(to)) return;
         pointer = null;
         dirty = true;
         schedule();
@@ -363,6 +388,11 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         },
         setFocus(next) {
             focus = next;
+            dirty = true;
+            schedule();
+        },
+        setTouchPoint(next) {
+            touchPoint = next;
             dirty = true;
             schedule();
         },
