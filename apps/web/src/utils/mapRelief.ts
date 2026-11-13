@@ -21,7 +21,12 @@ import type * as maplibregl from 'maplibre-gl';
 // ut precis som förut och inte hämtar ett enda höjdkakel.
 export const RELIEF_DEM_ID = 'relief-dem';
 export const RELIEF_MAX_ZOOM = 10;
-const RELIEF_DEM_MAX_ZOOM = 9;
+// Höjdkaklens högsta zoom. Kaklen är 256 px, så kartzoom z hämtar kakel på
+// z+1: Sverige-vyn (zoom 5-6) får full detalj ur z6-z7. Mellan 7 och 10, där
+// reliefen tonar ut, förstoras z7-kaklen i stället för att nya hämtas - en
+// utzoomning Stockholm -> Sverige gick från 83 till ungefär en tredjedel så
+// många kakel (13/11, besökarnas mobildata).
+export const RELIEF_DEM_MAX_ZOOM = 7;
 const RELIEF_DEM_SOURCE: maplibregl.RasterDEMSourceSpecification = {
     type: 'raster-dem',
     tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],

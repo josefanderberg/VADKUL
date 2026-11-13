@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type * as maplibregl from 'maplibre-gl';
-import { addZoomedOutRelief, RELIEF_DEM_ID, RELIEF_MAX_ZOOM } from './mapRelief';
+import { addZoomedOutRelief, RELIEF_DEM_ID, RELIEF_DEM_MAX_ZOOM, RELIEF_MAX_ZOOM } from './mapRelief';
 import { CLOUD_GONE_ZOOM } from './eventClouds';
 
 function voyagerLike(): maplibregl.StyleSpecification {
@@ -41,6 +41,14 @@ describe('addZoomedOutRelief', () => {
         expect(RELIEF_MAX_ZOOM).toBeLessThanOrEqual(CLOUD_GONE_ZOOM);
         // Stadslandningen ligger runt 10,5 och stadssidornas kartor på 11.
         expect(RELIEF_MAX_ZOOM).toBeLessThan(10.5);
+    });
+
+    it('hämtar grova höjdkakel, så en utzoomning inte drar mycket mobildata', () => {
+        const style = voyagerLike();
+        addZoomedOutRelief(style);
+        const src = style.sources[RELIEF_DEM_ID] as maplibregl.RasterDEMSourceSpecification;
+        expect(src.maxzoom).toBe(RELIEF_DEM_MAX_ZOOM);
+        expect(RELIEF_DEM_MAX_ZOOM).toBeLessThanOrEqual(7);
     });
 
     it('lägger inte till något två gånger', () => {
