@@ -23,15 +23,19 @@
  * KAKLEN MÅSTE VARA VÅRA EGNA. CARTO tillåter att deras kakel visas direkt
  * för besökare (§9.c.i) men förbjuder att vi cachar innehållet på vår server
  * (§9.c.iii) — och en förrenderad bild är precis det. Voyager-stilen däremot
- * är BSD-3 och skriven mot det öppna OpenMapTiles-schemat, så samma stil mot
- * egna kakel ur OSM-data ger identiskt utseende, helt lagligt.
- * Skriptet KONTROLLERAR detta per stad och vägrar spara en bild som ritats ur
- * CARTO:s kakel — ta inte bort den vakten.
+ * är BSD-3 och sedan oktober 2026 skriven mot det öppna Protomaps-schemat, så
+ * samma stil mot ett utdrag ur Protomaps eget bygge ger identiskt utseende,
+ * helt lagligt. (Före oktober var det OpenMapTiles-schemat och kakel från
+ * planetiler. De passar inte längre.)
+ * Skriptet KONTROLLERAR båda delarna per stad: det vägrar spara en bild om
+ * något kakel hämtats från CARTO (licensvakten) eller om de egna kaklen inte
+ * följer Protomaps-schemat (schemavakten). Ta inte bort vakterna.
  *
  * KÖRS SÄLLAN — inte i CI. Bara när en stad tillkommer eller kartstilen ändras.
- * Tre terminaler:
+ * Kräver node 22.18 eller senare: vakterna bor i src/utils/cartoTiles.ts och
+ * node kör TypeScript-filen direkt. Tre terminaler:
  *
- *   1) kakelservern (se docs/kartbilder.md för hur sweden.pmtiles byggs)
+ *   1) kakelservern (se docs/kartbilder.md för hur sweden.pmtiles tas fram)
  *      node serve-tiles.mjs
  *   2) dev-servern MED egna kakel:
  *      cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/{z}/{x}/{y}.pbf' npm run dev
@@ -49,6 +53,17 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+
+// Vakterna delas med webben (v2MapBaseStyles byter källan med samma test) och
+// har sina tester där. Node 22.18+ stryker typerna själv.
+let kakel;
+try {
+    kakel = await import('../src/utils/cartoTiles.ts');
+} catch (e) {
+    console.error(`\n  Kunde inte läsa src/utils/cartoTiles.ts (${e.message}).\n  Skriptet kräver node 22.18 eller senare, som kör TypeScript direkt.\n`);
+    process.exit(1);
+}
+const { isCartoTileUrl, isVectorTileUrl, mvtLayerNames, tileSchemaOf } = kakel;
 
 const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -133,22 +148,24 @@ async function main() {
             const mål = path.join(OUT_DIR, `${slug}.webp`);
             if (args.keep && existsSync(mål)) { console.log(`  [${i + 1}/${slugs.length}] ${slug} — finns, hoppar över`); continue; }
             try {
-                // Spåra var kaklen kom ifrån — vakten nedan bygger på detta.
+                // Spåra var kaklen kom ifrån - vakterna nedan bygger på detta.
+                // Puppeteer rapporterar även MapLibres worker-hämtningar här.
                 const cartoKakel = [];
+                const egnaKakel = [];
                 const onResp = r => {
-                    // Bara KARTKAKLEN får fälla renderingen. De ligger under
-                    // deras /vector/-sökväg (stilens källa pekar på
-                    // tiles.basemaps.cartocdn.com/vector/carto.streets/v1/).
-                    //
-                    // Stilens övriga delar hämtas fortfarande därifrån och SKA
-                    // göra det: style.json (BSD-3), sprite/*.png (ikonatlasen)
-                    // och fonts/*.pbf (typsnitten) hör till formgivningen, som
-                    // är CC-BY och fri att använda när vi krediterar — vilket
-                    // kartkrediten gör. Typsnitten slutar på .pbf och fällde
-                    // vakten i en tidigare version; matcha därför på sökvägen,
-                    // inte på filändelsen.
+                    // Bara KARTKAKLEN får fälla renderingen: allt från
+                    // cartocdn.com utom formgivningen. Stilens övriga delar
+                    // hämtas fortfarande därifrån och SKA göra det: style.json
+                    // (BSD-3), sprite (ikonatlasen) och fonts/*.pbf (typsnitten)
+                    // hör till formgivningen, som är CC-BY och fri att använda
+                    // när vi krediterar, vilket kartkrediten gör. Den gamla
+                    // vakten letade efter /vector/ i sökvägen och missade v2-
+                    // kaklen (/v/<datum>/vectortiles/…) när Voyager bytte i
+                    // oktober 2026 (#205). isCartoTileUrl släpper därför bara
+                    // det kända och fäller allt annat.
                     const u = r.url();
-                    if (/cartocdn\.com\/[^?]*\/vector\//.test(u)) cartoKakel.push(u);
+                    if (isCartoTileUrl(u)) cartoKakel.push(u);
+                    else if (r.ok() && isVectorTileUrl(u)) egnaKakel.push(u);
                 };
                 page.on('response', onResp);
 
@@ -190,6 +207,26 @@ async function main() {
                 page.off('response', onResp);
                 if (cartoKakel.length) {
                     throw new Error(`${cartoKakel.length} kakel hämtades från CARTO (${cartoKakel[0]}) — kör dev-servern med NEXT_PUBLIC_VECTOR_TILES_URL mot egna kakel`);
+                }
+                // SCHEMAVAKTEN: de egna kaklen måste följa samma schema som
+                // stilen. Planetilers gamla sweden.pmtiles (OpenMapTiles) mot
+                // Voyagers Protomaps-stil ritar bara vatten och bakgrund, och
+                // en sådan bild kan bli stor nog att passera tomhetsvakten.
+                // Läs några av kaklen direkt från kakelservern och titta på
+                // lagernamnen.
+                const scheman = await Promise.all(egnaKakel.slice(0, 3).map(async u => {
+                    try {
+                        const res = await fetch(u);
+                        return tileSchemaOf(mvtLayerNames(new Uint8Array(await res.arrayBuffer())));
+                    } catch {
+                        return 'okänt';
+                    }
+                }));
+                if (scheman.includes('openmaptiles')) {
+                    throw new Error('kakelservern levererar OpenMapTiles-kakel (planetilers gamla sweden.pmtiles), men Voyager-stilen kräver Protomaps-schemat. Ta fram ett utdrag ur Protomaps bygge enligt docs/kartbilder.md');
+                }
+                if (!scheman.includes('protomaps')) {
+                    throw new Error(`hittade inga egna kakel i Protomaps-schemat (${egnaKakel.length} vektorkakel hämtades) - kör dev-servern med NEXT_PUBLIC_VECTOR_TILES_URL mot ett Protomaps-utdrag, se docs/kartbilder.md`);
                 }
 
                 const buf = await hero.screenshot({ type: 'webp', quality: 82, optimizeForSpeed: false });

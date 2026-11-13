@@ -5,6 +5,7 @@
 
 import * as maplibregl from 'maplibre-gl';
 import { addZoomedOutLandcover } from '../../utils/mapLandcover';
+import { swapCartoVectorSources } from '../../utils/cartoTiles';
 
 // ── WORKER-FIXEN (prodstoppet 25/9 kväll) ───────────────────────────────────
 // maplibre 6 laddar sin worker som en RIKTIG modulfil (maplibre-gl-worker.mjs,
@@ -99,16 +100,20 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
     // innehållet på vår server (§9.c.iii), och en förrenderad bild är just det.
     //
     // Att det GÅR beror på att Voyager-stilen är BSD-3-licensierad och skriven
-    // mot det öppna OpenMapTiles-schemat (source-layers landcover, water,
-    // transportation, place …). Samma stil mot egna kakel ur OSM-data ger
-    // därför identiskt utseende. I DRIFT är den här raden inaktiv och
-    // huvudkartan hämtar som vanligt direkt från CARTO — vilket är tillåtet.
-    // Värdet får vara antingen en TileJSON-URL eller en kakel-mall med {z}/{x}/{y}.
+    // mot ett öppet kakelschema. Sedan oktober 2026 är det Protomaps-schemat
+    // (källan heter `protomaps`, lagren earth, roads, places …): CARTO:s v2-kakel
+    // har exakt samma lager och attribut som Protomaps eget bygge (jämfört
+    // kakel för kakel 13/11, #205). Samma stil mot ett utdrag ur det bygget ger
+    // därför identiskt utseende. Före oktober var det OpenMapTiles, och
+    // planetilers gamla sweden.pmtiles passar INTE längre. I DRIFT är grenen
+    // inaktiv och huvudkartan hämtar som vanligt direkt från CARTO, vilket är
+    // tillåtet. Värdet får vara en TileJSON-URL eller en kakel-mall med {z}/{x}/{y}.
+    // Hittas ingen CARTO-källa att byta har stilen ändrats igen: då stoppar
+    // licensvakten i renderingsskriptet varje kakel som ändå hämtas från CARTO.
     const egnaKakel = process.env.NEXT_PUBLIC_VECTOR_TILES_URL;
-    if (egnaKakel && style.sources?.carto) {
-        style.sources.carto = egnaKakel.includes('{z}')
-            ? { type: 'vector', tiles: [egnaKakel], minzoom: 0, maxzoom: 14 }
-            : { type: 'vector', url: egnaKakel };
+    if (egnaKakel) {
+        const bytta = swapCartoVectorSources(style, egnaKakel);
+        if (!bytta.length) console.error('NEXT_PUBLIC_VECTOR_TILES_URL: hittade ingen CARTO-källa i Voyager-stilen att byta mot egna kakel');
     }
 
     if (style.layers) {
