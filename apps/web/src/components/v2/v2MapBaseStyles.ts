@@ -6,6 +6,7 @@
 import * as maplibregl from 'maplibre-gl';
 import { addZoomedOutLandcover } from '../../utils/mapLandcover';
 import { DEEP_PROTOCOL, loadDeepTile } from '../../utils/deepTiles';
+import { addPoiSigns } from '../../utils/mapPoiSigns';
 import { swapCartoVectorSources } from '../../utils/cartoTiles';
 
 // ── WORKER-FIXEN (prodstoppet 25/9 kväll) ───────────────────────────────────
@@ -227,6 +228,8 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
     if (!egnaKakel) {
         ensureDeepTileProtocol();
         addZoomedOutLandcover(style);
+        // PLATSSKYLTAR (#216): badplatser, parker, museer m.m. från zoom 13.
+        addPoiSigns(style);
     }
 
     return style;

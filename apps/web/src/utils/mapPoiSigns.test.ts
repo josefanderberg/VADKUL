@@ -1,0 +1,123 @@
+import { describe, expect, it } from 'vitest';
+import type * as maplibregl from 'maplibre-gl';
+import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
+import {
+    addPoiSigns, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM, POI_SIGN_NAME_ZOOM, POI_SIGNS,
+    poiSignImageId, poiSignKeyFromImageId, type PoiSignKey,
+} from './mapPoiSigns';
+
+const FONT = ['Montserrat SemiBold', 'Open Sans Bold'];
+// Voyager i miniatyr: etikettlagren i samma ordning som den riktiga stilen.
+function voyagerLike(): maplibregl.StyleSpecification {
+    return {
+        version: 8,
+        glyphs: 'https://example.invalid/{fontstack}/{range}.pbf',
+        sources: { protomaps: { type: 'vector', tiles: ['https://example.invalid/{z}/{x}/{y}.mvt'] } },
+        layers: [
+            { id: 'background', type: 'background' },
+            { id: 'water', type: 'fill', source: 'protomaps', 'source-layer': 'water' },
+            { id: 'watername_lake', type: 'symbol', source: 'protomaps', 'source-layer': 'water', layout: { 'text-field': ['get', 'name'], 'text-font': FONT } },
+            { id: 'place_hamlet', type: 'symbol', source: 'protomaps', 'source-layer': 'places', layout: { 'text-field': ['get', 'name'], 'text-font': FONT } },
+            { id: 'place_town', type: 'symbol', source: 'protomaps', 'source-layer': 'places', layout: { 'text-field': ['get', 'name'], 'text-font': FONT } },
+            { id: 'poi_park', type: 'symbol', source: 'protomaps', 'source-layer': 'pois', minzoom: 15, layout: { 'text-field': ['get', 'name'], 'text-font': FONT } },
+            { id: 'roadname_minor', type: 'symbol', source: 'protomaps', 'source-layer': 'roads', layout: { 'text-field': ['get', 'name'], 'text-font': FONT } },
+        ],
+    };
+}
+const färdig = () => { const s = voyagerLike(); addPoiSigns(s); return s; };
+const skyltlager = (s: maplibregl.StyleSpecification) =>
+    s.layers.find(l => l.id === POI_SIGN_LAYER_ID) as maplibregl.SymbolLayerSpecification;
+// Värdet ett match-uttryck ger en viss kind (grenarna är [kinds[], värde]-par).
+function matchFor(uttryck: unknown, kind: string): unknown {
+    const m = uttryck as unknown[];
+    for (let i = 2; i < m.length - 1; i += 2) if ((m[i] as string[]).includes(kind)) return m[i + 1];
+    return m[m.length - 1];
+}
+
+// #216, Josef 13/11: "bollplaner, parker, lekplatser, naturreservat, bibliotek,
+// museer, golfbanor ... badplatser också ... tecknade vägskyltar som visas när
+// man zoomar in ganska nära".
+describe('platsskyltarna', () => {
+    it('har en skylt för var och en av platstyperna Josef räknade upp', () => {
+        expect(Object.keys(POI_SIGNS).sort()).toEqual(
+            ['bad', 'bibliotek', 'bollplan', 'golf', 'lekplats', 'museum', 'naturreservat', 'park'].sort());
+        // Badplatser finns under flera namn i kaklen.
+        expect(POI_SIGNS.bad.kinds).toEqual(expect.arrayContaining(['bathing_place', 'public_bath', 'beach']));
+    });
+
+    it('ingen kind hör till två skyltar och varje skylt har ett eget tecken', () => {
+        const kinds = Object.values(POI_SIGNS).flatMap(s => [...s.kinds]);
+        expect(new Set(kinds).size).toBe(kinds.length);
+        const tecken = Object.values(POI_SIGNS).map(s => s.emoji);
+        expect(new Set(tecken).size).toBe(tecken.length);
+    });
+
+    it('bild-id:t går att läsa tillbaka, och främmande bilder är inte våra', () => {
+        for (const key of Object.keys(POI_SIGNS) as PoiSignKey[]) {
+            expect(poiSignKeyFromImageId(poiSignImageId(key))).toBe(key);
+        }
+        expect(poiSignKeyFromImageId('circle-11')).toBeNull();
+        expect(poiSignKeyFromImageId('vadkul-skylt-okänd')).toBeNull();
+    });
+});
+
+describe('addPoiSigns', () => {
+    it('lägger skyltarna under ortsnamnen (som vinner en krock) och över sjönamnen', () => {
+        expect(färdig().layers.map(l => l.id)).toEqual([
+            'background', 'water', 'watername_lake', POI_SIGN_LAYER_ID,
+            'place_hamlet', 'place_town', 'poi_park', 'roadname_minor',
+        ]);
+    });
+
+    it('ritar ur baskartans pois-lager, först när man zoomat in nära', () => {
+        const l = skyltlager(färdig());
+        expect(l).toMatchObject({ type: 'symbol', source: 'protomaps', 'source-layer': 'pois', minzoom: POI_SIGN_MIN_ZOOM });
+        // Stadslandningen (~10,5) och stadssidornas kartor (11) har inga skyltar.
+        expect(POI_SIGN_MIN_ZOOM).toBeGreaterThanOrEqual(12.5);
+    });
+
+    it('filtret släpper bara igenom platstyperna med skylt', () => {
+        const filter = skyltlager(färdig()).filter as unknown[];
+        const kinds = (filter[2] as ['literal', string[]])[1];
+        expect(kinds.sort()).toEqual(Object.values(POI_SIGNS).flatMap(s => [...s.kinds]).sort());
+        for (const inte of ['restaurant', 'supermarket', 'crossing', 'parking', 'school']) expect(kinds).not.toContain(inte);
+    });
+
+    it('varje platstyp får sin egen skyltbild', () => {
+        const bild = skyltlager(färdig()).layout?.['icon-image'];
+        expect(matchFor(bild, 'bathing_place')).toBe(poiSignImageId('bad'));
+        expect(matchFor(bild, 'beach')).toBe(poiSignImageId('bad'));
+        expect(matchFor(bild, 'museum')).toBe(poiSignImageId('museum'));
+        expect(matchFor(bild, 'playground')).toBe(poiSignImageId('lekplats'));
+        expect(matchFor(bild, 'restaurant')).toBe('');
+    });
+
+    it('badplatsen går före parken när två skyltar krockar', () => {
+        const ordning = skyltlager(färdig()).layout?.['symbol-sort-key'];
+        expect(matchFor(ordning, 'bathing_place')).toBeLessThan(matchFor(ordning, 'park') as number);
+    });
+
+    it('namnet kommer först närmare in, och skylten står kvar om namnet inte får plats', () => {
+        const layout = skyltlager(färdig()).layout!;
+        const text = layout['text-field'] as unknown[];
+        expect(text.slice(0, 4)).toEqual(['step', ['zoom'], '', POI_SIGN_NAME_ZOOM]);
+        expect(POI_SIGN_NAME_ZOOM).toBeGreaterThan(POI_SIGN_MIN_ZOOM);
+        expect(layout['text-optional']).toBe(true);
+        expect(layout['text-font']).toEqual(FONT);
+    });
+
+    it('Voyagers egna parknamn göms - skylten bär namnet', () => {
+        const park = färdig().layers.find(l => l.id === 'poi_park') as maplibregl.SymbolLayerSpecification;
+        expect(park.layout?.visibility).toBe('none');
+    });
+
+    it('ger en giltig stil, läggs inte till två gånger och rör inget utan vektorkälla', () => {
+        const s = färdig();
+        expect(validateStyleMin(s)).toEqual([]);
+        addPoiSigns(s);
+        expect(s.layers.filter(l => l.id === POI_SIGN_LAYER_ID)).toHaveLength(1);
+        const tom: maplibregl.StyleSpecification = { version: 8, sources: {}, layers: [{ id: 'background', type: 'background' }] };
+        addPoiSigns(tom);
+        expect(tom.layers).toHaveLength(1);
+    });
+});

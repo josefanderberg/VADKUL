@@ -32,6 +32,7 @@ import {
     LABEL_TEXT_SIZE_STOPS, eventLabels, labelFeaturesFrom, obstacleIcon, titleAnchorOffsets, wishLabels,
 } from './v2MapLabel';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
+import { attachPoiSignImages } from './v2MapPoiSignImages';
 import {
     createSourceHealer, createTileRetrier, isFeatureIndexError, isRetryableTileFetch, type TileXYZ,
 } from './v2MapEngineHeal';
@@ -793,6 +794,11 @@ export default function V2Map({
     // löses upp när man zoomar in och brickorna tar över. Lagret är en egen
     // canvas mellan GL-kartan och DOM-brickorna (v2MapClouds) och rör varken
     // källor, lager eller reveal-systemet.
+    // Platsskyltarnas bilder (#216) ritas när stilen ber om dem.
+    useEffect(() => {
+        if (!mapInstance) return;
+        return attachPoiSignImages(mapInstance);
+    }, [mapInstance]);
     const cloudsRef = useRef<EventClouds | null>(null);
     useEffect(() => {
         if (!mapInstance) return;
