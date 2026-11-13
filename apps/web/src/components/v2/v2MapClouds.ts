@@ -1,7 +1,10 @@
 /**
- * Molnlagret på kartan (#191): en 2D-canvas mellan GL-kartan och DOM-brickorna
- * som ritar vita moln där eventen finns. Var molnen står och hur de beter sig
- * räknas i utils/eventClouds (testad) - här finns bara ritning och rörelse.
+ * Molnlagret på kartan (#191, #198): en 2D-canvas mellan GL-kartan och DOM-
+ * brickorna som ritar vita moln över det som är GLEST - där eventen finns är
+ * det klart väder. Var molnen står och hur de beter sig räknas i
+ * utils/eventClouds (testad) - här finns bara ritning och rörelse. Molnen
+ * byggs för vyn plus en marginal och byggs om medan kartan flyttas; ett moln
+ * som kommer till eller försvinner (ny vy, eventen laddas in) tonar.
  *
  * Mjukheten kommer av tre saker:
  *  1. Under en kartrörelse ritas molnen i kartans EGEN bildruta ('render'),
@@ -19,6 +22,7 @@
 import type * as maplibregl from 'maplibre-gl';
 import {
     buildClouds,
+    type CloudView,
     cloudLevelFor,
     cloudOpacityForZoom,
     cloudScaleFor,
@@ -44,8 +48,11 @@ const PUSH_TAU_MS = 420;
 const SET_FADE_MS = 420;
 /** Vilotakten: driften är så långsam att tätare ritning inte syns. */
 const IDLE_FRAME_MS = 80;
-/** Utanför den här marginalen runt skärmen ritas inga moln. */
+/** Utanför den här marginalen runt skärmen ritas inga moln - och molnen
+ *  byggs för vyn plus samma marginal, så de finns redan när de panoreras in. */
 const CULL_MARGIN_PX = 220;
+/** Hur ofta molnen byggs om under en kartrörelse (ms). */
+const MOVE_REBUILD_MS = 200;
 const MAX_DPR = 2;
 
 const SPRITE_W = 256;
@@ -64,6 +71,10 @@ interface CloudState {
     oy: number;
     /** Nuvarande uttunning av knuffen (0-1). */
     fade: number;
+    /** Molnets egen in-/uttoning (0-1). */
+    vis: number;
+    /** Finns i senaste bygget - annars tonar molnet ut och släpps. */
+    present: boolean;
 }
 
 interface CloudSet {
@@ -176,24 +187,43 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     };
 
     const activeSet = () => sets.find(s => !s.leaving) ?? null;
+    let lastBuildAt = 0;
 
-    /** Bygg (om) den aktiva uppsättningen. Samma nivå = byt på plats och
-     *  behåll molnens rörelse; ny nivå = tona över. */
+    /** Vyn plus marginalen, i grader. */
+    const viewWithMargin = (): CloudView => {
+        const nw = map.unproject([-CULL_MARGIN_PX, -CULL_MARGIN_PX]);
+        const se = map.unproject([cssW + CULL_MARGIN_PX, cssH + CULL_MARGIN_PX]);
+        return { west: nw.lng, north: nw.lat, east: se.lng, south: se.lat };
+    };
+
+    /** Bygg (om) den aktiva uppsättningen. Samma nivå = byt på plats, behåll
+     *  molnens rörelse och tona de moln som kommer till eller försvinner;
+     *  ny nivå = tona över hela uppsättningen. */
     const rebuild = () => {
+        lastBuildAt = performance.now();
         const zoom = map.getZoom();
         const nextLevel = cloudLevelFor(zoom, level ?? undefined);
         const current = activeSet();
+        const built = buildClouds(points, nextLevel, viewWithMargin());
         if (current && current.level === nextLevel) {
             const old = new Map(current.states.map(s => [s.cloud.id, s]));
-            current.states = buildClouds(points, nextLevel).map(cloud => {
+            const next: CloudState[] = [];
+            for (const cloud of built) {
                 const prev = old.get(cloud.id);
-                return prev ? { ...prev, cloud } : { cloud, ox: 0, oy: 0, fade: 0 };
-            });
+                next.push(prev
+                    ? { ...prev, cloud, present: true }
+                    : { cloud, ox: 0, oy: 0, fade: 0, vis: 0, present: true });
+                old.delete(cloud.id);
+            }
+            for (const st of old.values()) if (st.vis > 0.01) next.push({ ...st, present: false });
+            next.sort((a, b) => a.cloud.alpha - b.cloud.alpha);
+            current.states = next;
         } else {
             for (const s of sets) s.leaving = true;
             sets.push({
                 level: nextLevel,
-                states: buildClouds(points, nextLevel).map(cloud => ({ cloud, ox: 0, oy: 0, fade: 0 })),
+                // Hela uppsättningen tonar in via set.alpha - molnen själva står fullt.
+                states: built.map(cloud => ({ cloud, ox: 0, oy: 0, fade: 0, vis: 1, present: true })),
                 // Allra första uppsättningen tonar också in - inget poppar.
                 alpha: 0,
                 leaving: false,
@@ -247,6 +277,17 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
 
         for (const set of sets) {
             const scale = cloudScaleFor(zoom, set.level);
+            // Moln som kommit till eller försvunnit tonar i sin egen takt.
+            let gone = false;
+            for (const st of set.states) {
+                const target = st.present ? 1 : 0;
+                if (st.vis !== target) {
+                    st.vis = st.present ? Math.min(1, st.vis + step) : Math.max(0, st.vis - step);
+                    moving = true;
+                    if (!st.present && st.vis <= 0) gone = true;
+                }
+            }
+            if (gone) set.states = set.states.filter(st => st.present || st.vis > 0);
             for (const st of set.states) {
                 const c = st.cloud;
                 const p = map.project([c.lng, c.lat]);
@@ -287,7 +328,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                     moving = true;
                 }
 
-                const alpha = c.alpha * zoomOpacity * set.alpha * (1 - st.fade);
+                const alpha = c.alpha * zoomOpacity * set.alpha * st.vis * (1 - st.fade);
                 if (alpha <= 0.004) continue;
 
                 // Driften: en långsam, egen bana per moln.
@@ -303,8 +344,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 const h = w * (SPRITE_H / SPRITE_W);
                 ctx.globalAlpha = alpha;
                 ctx.drawImage(sprite, x - w / 2, y - h * 0.58, w, h);
-                // Täta platser får fler puffar runt sig - molnet blir en bank.
-                const extra = Math.min(2, Math.floor(Math.log2(c.count) / 3));
+                // De tommaste trakterna får fler puffar runt sig - molnet blir en bank.
+                const extra = c.extra;
                 for (let i = 0; i < extra; i++) {
                     const a = phase + i * 2.4;
                     const ew = w * (0.72 - i * 0.08);
@@ -344,14 +385,19 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     const onRender = () => {
         if (!map.isMoving()) return;
         if (!visible() && cleared) return;
-        draw(performance.now());
+        const now = performance.now();
+        // Nya rutor kommer in i bild när kartan flyttas - bygg om då och då.
+        if (now - lastBuildAt >= MOVE_REBUILD_MS) rebuild();
+        draw(now);
     };
     const onMoveEnd = () => {
+        if (visible()) rebuild();
         dirty = true;
         schedule();
     };
     const onResize = () => {
         resize();
+        if (visible()) rebuild();
         schedule();
     };
     const onMouseMove = (e: maplibregl.MapMouseEvent) => {

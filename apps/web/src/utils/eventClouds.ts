@@ -1,10 +1,13 @@
 /**
- * Molnlagrets rena logik (#191): var molnen står, hur stora och täta de är,
- * hur de tonar ut när man zoomar in och hur de viker undan för pekaren.
+ * Molnlagrets rena logik (#191, #198): var molnen står, hur stora och täta de
+ * är, hur de tonar ut när man zoomar in och hur de viker undan för pekaren.
  *
  * Molnen är VADKUL:s logga gjord till karta: i utzoomat läge ligger vita moln
- * över landet, tätare och större där det finns många event. Zoomar man in
- * löses de upp och brickorna tar över. Ritningen bor i
+ * över det som är GLEST - tomma trakter, hav, grannländer - och där det händer
+ * saker är det klart väder (vänt 13/11, Josef: "borde vi kanske ha molnen där
+ * det inte är lika många event istället? ... för rökigt/molnigt där man är").
+ * Molnen är trasiga och spridda, inte ett täcke, så landet syns emellan.
+ * Zoomar man in löses de upp och brickorna tar över. Ritningen bor i
  * components/v2/v2MapClouds.ts - här finns bara matematiken, så den går att
  * testa utan canvas och karta.
  *
@@ -22,8 +25,10 @@ export interface Cloud {
     id: string;
     lat: number;
     lng: number;
-    /** Antal event i molnet. */
+    /** Antal event i molnets ruta (glesa rutor kan ha några få). */
     count: number;
+    /** Extra puffar runt molnet (0-2) - de tommaste trakterna blir banker. */
+    extra: number;
     /** Halva bredden i px PÅ MOLNETS NIVÅ (skalas med 2^(zoom - nivå)). */
     radius: number;
     /** Täthet 0-1 före zoomtoningen. */
@@ -42,7 +47,7 @@ export const CLOUD_GONE_ZOOM = 10;
  *  så man ser knappt landet") - molnen ska vara tussar över landet, inte ett täcke. */
 export const CLOUD_MAX_OPACITY = 0.8;
 
-/** Rutans sida i px på molnets egen nivå. Ett moln per ruta med event. */
+/** Rutans sida i px på molnets egen nivå. Högst ett moln per ruta. */
 export const CLOUD_CELL_PX = 88;
 export const CLOUD_MIN_LEVEL = 4;
 export const CLOUD_MAX_LEVEL = 10;
@@ -50,12 +55,19 @@ export const CLOUD_MAX_LEVEL = 10;
  *  molnen mellan två indelningar när man står mitt emellan. */
 const LEVEL_HYSTERESIS = 0.62;
 
-const RADIUS_BASE = 17;
-const RADIUS_PER_DOUBLING = 8;
-const RADIUS_MAX = 66;
-const ALPHA_BASE = 0.32;
-const ALPHA_PER_DOUBLING = 0.07;
-const ALPHA_MAX = 0.82;
+/** Så många viktade event (rutan + halva grannarna + en fjärdedel av
+ *  hörnen) som krävs för helt klart väder. */
+export const CLOUD_CLEAR_AT = 3;
+/** Andel av de helt tomma rutorna som får ett moln - resten är luckor, så
+ *  molnen blir trasiga och spridda och landet syns emellan. Glesa rutor
+ *  får färre i proportion till hur glest det är. */
+export const CLOUD_PRESENCE = 0.62;
+/** Fler rutor än så i vyn = något är fel (ofantlig vy) - bygg inget. */
+const MAX_VIEW_CELLS = 4000;
+const RADIUS_MIN = 30;
+const RADIUS_MAX = 62;
+const ALPHA_MIN = 0.3;
+const ALPHA_MAX = 0.78;
 
 /** Hur långt utanför molnets kant pekaren börjar knuffa (px). */
 export const PUSH_MARGIN_PX = 110;
@@ -112,45 +124,80 @@ function hash01(a: number, b: number): number {
     return (h >>> 0) / 4294967296;
 }
 
+/** Lat ur webbmercatorns y (0 = nord, 1 = syd). */
+function latFromMercatorY(y: number): number {
+    return ((2 * Math.atan(Math.exp((0.5 - y) * 2 * Math.PI)) - Math.PI / 2) * 180) / Math.PI;
+}
+
+/** Området molnen ska täcka (oftast vyn plus en marginal). */
+export interface CloudView {
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+}
+
 /**
- * Ett moln per ruta som har event, mitt i eventens tyngdpunkt. Fler event =
- * större och tätare moln (logaritmiskt, så Stockholm inte dränker landet).
+ * Molnen för vyn: rutnätet på molnens nivå läggs över `view`, och varje ruta
+ * får ett moln efter hur GLEST det är där. Tätheten är rutans event plus
+ * halva grannarnas och en fjärdedel av hörnens, så en stad blir klar även i
+ * kanterna. Från CLOUD_CLEAR_AT viktade event är det helt klart; tomma trakter
+ * får moln i CLOUD_PRESENCE av rutorna (luckorna gör molnen trasiga). Varje
+ * moln har en fast form, storlek och förskjutning per ruta, så samma vy ger
+ * samma moln och ett moln behåller sin nyckel när eventlistan fylls på.
  * Oplacerade punkter (0,0 eller ogiltiga) hoppas över.
  */
-export function buildClouds(points: readonly CloudPoint[], level: number): Cloud[] {
+export function buildClouds(points: readonly CloudPoint[], level: number, view: CloudView): Cloud[] {
     const cellsPerWorld = (512 * Math.pow(2, level)) / CLOUD_CELL_PX;
-    const cells = new Map<string, { ix: number; iy: number; n: number; lat: number; lng: number }>();
+    const counts = new Map<string, number>();
     for (const p of points) {
         const { lat, lng } = p;
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         if (!lat || !lng || Math.abs(lat) > 85 || Math.abs(lng) > 180) continue;
-        const ix = Math.floor(mercatorX(lng) * cellsPerWorld);
-        const iy = Math.floor(mercatorY(lat) * cellsPerWorld);
-        const key = `${ix}_${iy}`;
-        const cell = cells.get(key);
-        if (cell) {
-            cell.n += 1;
-            cell.lat += lat;
-            cell.lng += lng;
-        } else {
-            cells.set(key, { ix, iy, n: 1, lat, lng });
+        const key = `${Math.floor(mercatorX(lng) * cellsPerWorld)}_${Math.floor(mercatorY(lat) * cellsPerWorld)}`;
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    if (![view.west, view.south, view.east, view.north].every(Number.isFinite)) return [];
+    const x0 = Math.floor(mercatorX(clamp(view.west, -180, 180)) * cellsPerWorld);
+    const x1 = Math.floor(mercatorX(clamp(view.east, -180, 180)) * cellsPerWorld);
+    const y0 = Math.floor(mercatorY(view.north) * cellsPerWorld);
+    const y1 = Math.floor(mercatorY(view.south) * cellsPerWorld);
+    if (x1 < x0 || y1 < y0) return [];
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) > MAX_VIEW_CELLS) return [];
+
+    const n = (ix: number, iy: number) => counts.get(`${ix}_${iy}`) ?? 0;
+    const clouds: Cloud[] = [];
+    for (let iy = y0; iy <= y1; iy++) {
+        for (let ix = x0; ix <= x1; ix++) {
+            const here = n(ix, iy);
+            const density = here
+                + 0.5 * (n(ix - 1, iy) + n(ix + 1, iy) + n(ix, iy - 1) + n(ix, iy + 1))
+                + 0.25 * (n(ix - 1, iy - 1) + n(ix + 1, iy - 1) + n(ix - 1, iy + 1) + n(ix + 1, iy + 1));
+            const coverage = clamp(1 - density / CLOUD_CLEAR_AT, 0, 1);
+            if (coverage <= 0.05) continue;
+            // Luckorna: en fast andel av rutorna står tomma, fler ju glesare
+            // molnen ska vara.
+            if (hash01(ix, iy) > CLOUD_PRESENCE * coverage) continue;
+            const seed = hash01(ix + 1013, iy - 7307);
+            const jx = hash01(iy * 3 + 11, ix * 5 - 17) - 0.5;
+            const jy = hash01(ix * 7 - 29, iy * 13 + 5) - 0.5;
+            const size = hash01(ix - 401, iy + 2903);
+            const lng = ((ix + 0.5 + jx * 0.6) / cellsPerWorld) * 360 - 180;
+            const lat = latFromMercatorY((iy + 0.5 + jy * 0.6) / cellsPerWorld);
+            clouds.push({
+                id: `${level}:${ix}_${iy}`,
+                lat,
+                lng,
+                count: here,
+                radius: RADIUS_MIN + (RADIUS_MAX - RADIUS_MIN) * (0.35 * coverage + 0.65 * size),
+                alpha: ALPHA_MIN + (ALPHA_MAX - ALPHA_MIN) * coverage * (0.55 + 0.45 * seed),
+                extra: coverage > 0.85 && size > 0.55 ? (size > 0.85 ? 2 : 1) : 0,
+                seed,
+            });
         }
     }
-    const clouds: Cloud[] = [];
-    for (const [key, c] of cells) {
-        const doublings = Math.log2(c.n);
-        clouds.push({
-            id: `${level}:${key}`,
-            lat: c.lat / c.n,
-            lng: c.lng / c.n,
-            count: c.n,
-            radius: Math.min(RADIUS_MAX, RADIUS_BASE + RADIUS_PER_DOUBLING * Math.log2(1 + c.n)),
-            alpha: Math.min(ALPHA_MAX, ALPHA_BASE + ALPHA_PER_DOUBLING * doublings),
-            seed: hash01(c.ix, c.iy),
-        });
-    }
     // De tätaste sist = ritas överst.
-    clouds.sort((a, b) => a.count - b.count || (a.id < b.id ? -1 : 1));
+    clouds.sort((a, b) => a.alpha - b.alpha || (a.id < b.id ? -1 : 1));
     return clouds;
 }
 
