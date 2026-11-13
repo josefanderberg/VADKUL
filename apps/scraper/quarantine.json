@@ -16,8 +16,8 @@
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-06",
-      "emptyRetries": 11
+      "lastRetry": "2026-11-13",
+      "emptyRetries": 12
     },
     "folk-goteborg": {
       "since": "2026-08-19",
@@ -64,8 +64,8 @@
     "storsjoyran": {
       "since": "2026-09-18",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-06",
-      "emptyRetries": 7
+      "lastRetry": "2026-11-13",
+      "emptyRetries": 8
     },
     "superettan": {
       "since": "2026-11-11",
@@ -74,8 +74,8 @@
     "tickster-ort-eskilstuna-2": {
       "since": "2026-10-23",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-06",
-      "emptyRetries": 2
+      "lastRetry": "2026-11-13",
+      "emptyRetries": 3
     },
     "tickster-ort-linkoping-2": {
       "since": "2026-11-04",
