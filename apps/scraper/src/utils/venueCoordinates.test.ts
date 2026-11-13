@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     stripParishSegments, suffixQueries, firstWordPlaceQuery, standaloneVenueQuery, classifyQueryPrecision, isForeignAddress,
+    isCoarseSourceCoord,
 } from './venueCoordinates';
 import { isGenericLookupName, lookupVenueSmart, upsertKnownVenue } from './sqliteHelper';
 
@@ -168,5 +169,25 @@ describe('isForeignAddress', () => {
         expect(isForeignAddress('Eesti Maja, Wallingatan 32, Stockholm')).toBe(false);
         expect(isForeignAddress('Folkets Hus, Sala')).toBe(false);
         expect(isForeignAddress('Savoy Terrasse, Fredrikstad, Norge')).toBe(false);
+    });
+});
+
+describe('isCoarseSourceCoord (#199: ortsmittpunkter från källan)', () => {
+    it('exakta bågminuter i båda leden är en ortsmittpunkt', () => {
+        expect(isCoarseSourceCoord(57.05, 14.316667)).toBe(true);      // Hestra vid Rydaholm (Värnamo-Cruncho)
+        expect(isCoarseSourceCoord(56.733333, 13.116667)).toBe(true);  // Simlångsdalen
+        expect(isCoarseSourceCoord(56.05, 12.7)).toBe(true);           // Helsingborg
+        expect(isCoarseSourceCoord(55, 10)).toBe(true);
+    });
+
+    it('riktiga platskoordinater flaggas inte', () => {
+        expect(isCoarseSourceCoord(57.0523419, 14.3171234)).toBe(false);
+        expect(isCoarseSourceCoord(55.70742, 13.194263)).toBe(false);   // Edens Hörsal, Lund
+        expect(isCoarseSourceCoord(57.05, 14.3171234)).toBe(false);     // bara ena ledet på rutnätet
+    });
+
+    it('null-ön och trasiga värden är inte grova (de hanteras på annat håll)', () => {
+        expect(isCoarseSourceCoord(0, 0)).toBe(false);
+        expect(isCoarseSourceCoord(NaN, 14)).toBe(false);
     });
 });

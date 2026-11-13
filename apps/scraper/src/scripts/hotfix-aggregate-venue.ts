@@ -16,6 +16,10 @@
  *
  *   npm run hotfix-aggregate               # dry-run
  *   npm run hotfix-aggregate -- --apply
+ *   npm run hotfix-aggregate -- --apply --only="Hestra Handsken"
+ *
+ * --only=<namn> begränsar till fixen med det namnet (exakt, case-okänsligt),
+ * så en ny rapport kan rättas utan att äldre fixars dokument rörs (#199).
  */
 
 import { db } from '../config/firebase';
@@ -24,6 +28,10 @@ import { VENUE_FIXES, matchVenueFix } from '../data/venueFixes';
 import { uploadShardedLayer } from './aggregate-events';
 
 const APPLY = process.argv.includes('--apply');
+const ONLY = process.argv.find(a => a.startsWith('--only='))?.slice('--only='.length).trim().toLowerCase();
+const FIXES = ONLY
+    ? VENUE_FIXES.filter(f => f.names.some(n => n.trim().toLowerCase() === ONLY))
+    : VENUE_FIXES;
 
 /** Rätta KÄLLDOKUMENTEN i linkEvents — inte bara den publicerade kartbilden.
  *  Utan detta re-aggregerar minin fel koordinater ur sin SQLite varje timme
@@ -33,7 +41,7 @@ const APPLY = process.argv.includes('--apply');
  *  Filtrerad 'in'-query på locationName (max 30 värden) — aldrig hela
  *  kollektionen. */
 async function fixSourceDocs(firestore: NonNullable<typeof db>): Promise<number> {
-    const names = VENUE_FIXES.flatMap(f => f.names);
+    const names = FIXES.flatMap(f => f.names);
     let fixedDocs = 0;
     for (let i = 0; i < names.length; i += 30) {
         const snap = await firestore.collection('linkEvents')
@@ -41,7 +49,7 @@ async function fixSourceDocs(firestore: NonNullable<typeof db>): Promise<number>
             .get();
         for (const doc of snap.docs) {
             const v = doc.data() as { locationName?: string; lat?: number; lng?: number };
-            const fix = matchVenueFix(v.locationName, VENUE_FIXES);
+            const fix = matchVenueFix(v.locationName, FIXES);
             if (!fix) continue;
             const off = Math.abs((v.lat ?? 0) - fix.lat) > 1e-4 || Math.abs((v.lng ?? 0) - fix.lng) > 1e-4;
             if (!off) continue;
@@ -61,6 +69,8 @@ async function fixSourceDocs(firestore: NonNullable<typeof db>): Promise<number>
 async function main() {
     if (!db) throw new Error('Firestore ej initierad (service-account.json saknas).');
     console.log(APPLY ? '🔧 APPLY' : '🔍 DRY-RUN');
+    if (ONLY && FIXES.length === 0) throw new Error(`Ingen venue-fix heter "${ONLY}".`);
+    if (ONLY) console.log(`   bara: ${FIXES.map(f => f.names[0]).join(', ')}`);
 
     const fixedDocs = await fixSourceDocs(db);
     console.log(`${APPLY ? 'Rättade' : 'Skulle rätta'} källdokument i linkEvents: ${fixedDocs}`);
@@ -85,7 +95,7 @@ async function main() {
     let moved = 0;
     for (const shard of shards) {
         for (const evt of shard.events) {
-            const fix = matchVenueFix(evt?.locationName, VENUE_FIXES);
+            const fix = matchVenueFix(evt?.locationName, FIXES);
             if (!fix) continue;
             const off = Math.abs((evt.lat ?? 0) - fix.lat) > 1e-4 || Math.abs((evt.lng ?? 0) - fix.lng) > 1e-4;
             if (!off) continue;

@@ -273,6 +273,24 @@ export function isInNordic(lat: number, lng: number): boolean {
     );
 }
 
+/**
+ * Ligger koordinaten EXAKT på hela bågminuter i båda leden (57.05 = 57°03',
+ * 14.316667 = 14°19')? Då är det en ortsmittpunkt ur ett ortnamnsregister
+ * (GeoNames, Wikipedia), inte en lokal. Riktiga platskoordinater hamnar
+ * praktiskt taget aldrig där: 13/11 2026 gällde det 5 av 8 546 kommande
+ * event med källkoordinater, och alla fem var ortsmittpunkter. Värnamo
+ * kommuns Cruncho-kalender lade "Affärsmöjligheter i Asien" (Hestra Handsken,
+ * Hestra i Gislaved kommun) på byn Hestra vid Rydaholm så här (#199).
+ *
+ * Toleransen 1e-4 bågminuter (~0,2 m) täcker sexdecimalsavrundning
+ * (14.316667 * 60 = 859.00002) men släpper igenom riktiga punkter.
+ */
+export function isCoarseSourceCoord(lat: number, lng: number): boolean {
+    if (!isFinite(lat) || !isFinite(lng) || (lat === 0 && lng === 0)) return false;
+    const onArcminute = (v: number) => Math.abs(v * 60 - Math.round(v * 60)) < 1e-4;
+    return onArcminute(lat) && onArcminute(lng);
+}
+
 /** Behålls för bakåtkompatibilitet — föredra isInNordic() för ny kod. */
 export function isInSweden(lat: number, lng: number): boolean {
     return lat >= 55.0 && lat <= 69.5 && lng >= 10.5 && lng <= 24.5;

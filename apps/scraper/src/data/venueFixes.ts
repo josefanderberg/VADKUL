@@ -410,6 +410,20 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 14.66196,
         note: 'Kulturhuset Sävsjö (Röda Kvarn) — OSM (overpass-seedens biografrad); arrangörsförfrågan 2/10',
     },
+    {
+        // Hestra Handsken (Martin Magnusson & Co AB), Äspåsvägen 5, 335 71
+        // Hestra i Gislaved kommun. Värnamo kommuns Cruncho-kalender lade
+        // "Affärsmöjligheter i Asien" på BYN Hestra vid Rydaholm: postnummer
+        // 331 77, orten "Hestra, Rydaholm", koordinat 57.05, 14.316667 — ~50 km
+        // fel (rapport 13/11, #199). Källan är konsekvent fel, så bara den här
+        // raden rättar det. OSM saknar firman; koordinaten är Nominatims punkt
+        // för Äspåsvägen 5, Hestra (företagsregistrets besöksadress).
+        names: ['Hestra Handsken', 'Hestra-Handsken', 'Hestra Handsken, Hestra'],
+        city: 'Hestra',
+        lat: 57.44829,
+        lng: 13.58983,
+        note: 'Hestra Handsken, Äspåsvägen 5, Hestra (Gislaved) — Nominatim; Värnamo-Cruncho lade den vid Rydaholm (13/11, #199)',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */

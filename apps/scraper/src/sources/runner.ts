@@ -19,7 +19,7 @@ import { ruleEmojiFor } from '../utils/emojiRules';
 import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent, lookupTatortNear } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
-import { geocodeVenueSweden, isInNordic, type GeoHit } from '../utils/venueCoordinates';
+import { geocodeVenueSweden, isCoarseSourceCoord, isInNordic, type GeoHit } from '../utils/venueCoordinates';
 import { firstPreciseHit } from '../utils/geocodeChain';
 import { cleanLocationName } from '../utils/text';
 import { classifyEvent } from '../utils/classify';
@@ -125,6 +125,18 @@ export function tatortFloor(city: string | undefined): GeoHit | null {
     return t ? [t[0], t[1], 'stad-centroid'] : null;
 }
 
+/** geocodedQuery för en grov källkoordinat (se isCoarseSourceCoord). */
+export const COARSE_SOURCE_QUERY = 'källans ortskoordinat (grov)';
+
+/**
+ * Slår en geokodningsträff en grov källkoordinat (ortsmittpunkt, #199)? Bara
+ * på plats- eller gatunivå: en ort- eller stadscentroid är inte bättre än
+ * källans egen ortsmittpunkt, och träffar utan känd väg (gammal cache) kan
+ * vara gamla stadsfallbackar.
+ */
+export function beatsCoarseSource(hit: GeoHit): boolean {
+    return hit[2] === 'poi' || hit[2] === 'gata';
+}
 
 /**
  * Kända URL:er som motorn släppte helt (returnerade inte). Motorer som frågar
@@ -212,6 +224,18 @@ export async function runSource(
     // Geocode-cache per källkörning — paraplyn återanvänder samma församling/
     // klubb/ort många gånger; spara Nominatim-anropen.
     const geoCache = new Map<string, GeoHit | null>();
+    // Kandidatkedjan för ett event (adress → venue+stad → stad).
+    // nearCity-validering: känner källan till staden får Nominatim inte
+    // returnera en namne i fel stad ("S:t Nikolai kyrka" → Örebro för
+    // Halmstad-event). Cache-nyckeln MÅSTE inkludera staden — samma fråga kan
+    // ge olika svar för olika städer.
+    const geocodeChainFor = (e: RawEvent) => firstPreciseHit(geocodeQueriesFor(e), async (q) => {
+        const cacheKey = e.city ? `${q}|near:${e.city}` : q;
+        if (!geoCache.has(cacheKey)) {
+            geoCache.set(cacheKey, await geocodeVenueSweden(q, e.city ? { nearCity: e.city } : undefined));
+        }
+        return geoCache.get(cacheKey);
+    });
 
     let rawEvents: RawEvent[];
     try {
@@ -299,9 +323,22 @@ export async function runSource(
                     if (e.coords && (storedUngeocoded || storedRow?.geoPrecision === 'stad-centroid')) {
                         // "Sverige" är bara fallbacken — källans venue/ort ersätter den.
                         const loc = (storedPlaceless ? '' : storedRow?.locationName) || e.venueName || e.city || storedRow?.locationName || '';
-                        if (await refreshEventPlace(e.url, loc, e.coords[0], e.coords[1], 'källans egna koordinater', true, 'kallkoordinat')) {
+                        const coarse = isCoarseSourceCoord(e.coords[0], e.coords[1]);
+                        if (await refreshEventPlace(e.url, loc, e.coords[0], e.coords[1],
+                            coarse ? COARSE_SOURCE_QUERY : 'källans egna koordinater', true, coarse ? 'ort-centroid' : 'kallkoordinat')) {
                             result.updated++;
                             ctx.log(`  📍 koordinater från källan: ${e.title.slice(0, 50)}`);
+                        }
+                    } else if (storedRow && storedRow.geoPrecision === 'kallkoordinat'
+                        && isCoarseSourceCoord(storedRow.lat ?? 0, storedRow.lng ?? 0)) {
+                        // Sparad på en grov källkoordinat (ortsmittpunkt, #199) från
+                        // innan vakten fanns: prova adressen/venuen nu. Bara en träff
+                        // på plats- eller gatunivå flyttar eventet.
+                        const best = await geocodeChainFor(e);
+                        if (best && beatsCoarseSource(best.hit)
+                            && await refreshEventPlace(e.url, storedRow.locationName || e.venueName || best.query, best.hit[0], best.hit[1], best.query, true, best.hit[2] ?? null)) {
+                            result.updated++;
+                            ctx.log(`  📍 grov källkoordinat ersatt: ${e.title.slice(0, 50)} → ${best.query}`);
                         }
                     } else if ((e.venueName || movedFromDefault || storedPlaceless) && cityLower && (storedLoc === cityLower || storedLoc === '' || storedLoc === 'sverige' || storedUngeocoded || movedFromDefault)) {
                         const q = e.venueName ? `${e.venueName}, ${e.city}` : e.city!;
@@ -387,18 +424,21 @@ export async function runSource(
                 ctx.log(`⚠️ ogiltiga koords [${lat},${lng}] från källan för "${e.title.slice(0, 40)}" — geokodar på namn`);
                 lat = 0; lng = 0; geocodedQuery = ''; geoPrecision = null;
             }
-            if (!opts.dryRun && !lat && !lng) {
-                const best = await firstPreciseHit(geocodeQueriesFor(e), async (q) => {
-                    // nearCity-validering: känner källan till staden får Nominatim
-                    // inte returnera en namne i fel stad ("S:t Nikolai kyrka" →
-                    // Örebro för Halmstad-event). Cache-nyckeln MÅSTE inkludera
-                    // staden — samma fråga kan ge olika svar för olika städer.
-                    const cacheKey = e.city ? `${q}|near:${e.city}` : q;
-                    if (!geoCache.has(cacheKey)) {
-                        geoCache.set(cacheKey, await geocodeVenueSweden(q, e.city ? { nearCity: e.city } : undefined));
-                    }
-                    return geoCache.get(cacheKey);
-                });
+            // Grov källkoordinat = ortsmittpunkt på exakta bågminuter (#199):
+            // rätt trakt i bästa fall, fel by i värsta (Hestra Handsken låg vid
+            // Rydaholm). Den får aldrig märkas som exakt — den står kvar som
+            // reserv, märkt ort-centroid, och adressen/venuen provas först.
+            const coarseSource = isCoarseSourceCoord(lat, lng);
+            if (coarseSource) { geocodedQuery = COARSE_SOURCE_QUERY; geoPrecision = 'ort-centroid'; }
+            if (!opts.dryRun && coarseSource) {
+                const best = await geocodeChainFor(e);
+                if (best && beatsCoarseSource(best.hit)) {
+                    ctx.log(`  📍 grov källkoordinat [${lat},${lng}] ersatt av "${best.query}": ${e.title.slice(0, 40)}`);
+                    lat = best.hit[0]; lng = best.hit[1];
+                    geocodedQuery = best.query; geoPrecision = best.hit[2];
+                }
+            } else if (!opts.dryRun && !lat && !lng) {
+                const best = await geocodeChainFor(e);
                 if (best) {
                     lat = best.hit[0]; lng = best.hit[1];
                     geocodedQuery = best.query; geoPrecision = best.hit[2] ?? null;

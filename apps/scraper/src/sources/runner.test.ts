@@ -21,6 +21,10 @@ vi.mock('../utils/venueCoordinates', () => ({
     // släpper igenom giltiga koords och kastar projicerade.
     isInNordic: (lat: number, lng: number) =>
         lat >= 54.5 && lat <= 71.5 && lng >= 4.5 && lng <= 31.5,
+    // Speglar den riktiga: ortsmittpunkt = exakta bågminuter i båda leden.
+    isCoarseSourceCoord: (lat: number, lng: number) => !(lat === 0 && lng === 0)
+        && Math.abs(lat * 60 - Math.round(lat * 60)) < 1e-4
+        && Math.abs(lng * 60 - Math.round(lng * 60)) < 1e-4,
 }));
 vi.mock('../utils/classify', () => ({
     classifyEvent: vi.fn(() => 'community'),
@@ -47,7 +51,7 @@ vi.mock('../utils/llmAudit', () => ({
     ollamaIsAvailable: vi.fn(async () => false),
 }));
 
-import { runSource, deriveHasSpecificTime, geocodeQueriesFor, countKnownDropped, sweepVersionFor, CONTENT_SWEEP_VERSION } from './runner';
+import { runSource, deriveHasSpecificTime, geocodeQueriesFor, countKnownDropped, sweepVersionFor, CONTENT_SWEEP_VERSION, COARSE_SOURCE_QUERY, beatsCoarseSource } from './runner';
 import { Source, RawEvent, Engine } from './types';
 import { addEventsBatch, eventExistsInDb, refreshEventContent, refreshEventPlace } from '../utils/dbHelper';
 import { geocodeVenueSweden } from '../utils/venueCoordinates';
@@ -289,6 +293,32 @@ describe('runSource — geocoding', () => {
         const written = writtenEvents()[0];
         expect(written.lat).toBe(59.0);
         expect(written.lng).toBe(18.0);
+    });
+
+    // #199: Värnamo kommuns Cruncho lade Hestra Handsken på byn Hestra vid
+    // Rydaholm (57°03', 14°19') och eventet märktes som exakt.
+    it('grov källkoordinat (exakta bågminuter) → venuen provas först, träff på platsnivå vinner', async () => {
+        geocodeMock.mockResolvedValue([57.44829, 13.58983, 'poi']);
+        await run([makeEvent({ coords: [57.05, 14.316667], venueName: 'Hestra Handsken', city: 'Hestra, Rydaholm' })]);
+        expect(geocodeMock).toHaveBeenCalled();
+        const w = writtenEvents()[0];
+        expect([w.lat, w.lng]).toEqual([57.44829, 13.58983]);
+        expect(w.geoPrecision).toBe('poi');
+    });
+
+    it('grov källkoordinat utan bättre träff står kvar, men märkt ort-centroid', async () => {
+        geocodeMock.mockResolvedValue([57.06, 14.3, 'stad-centroid']);
+        await run([makeEvent({ coords: [57.05, 14.316667], venueName: 'Hestra Handsken', city: 'Hestra, Rydaholm' })]);
+        const w = writtenEvents()[0];
+        expect([w.lat, w.lng]).toEqual([57.05, 14.316667]);
+        expect(w.geoPrecision).toBe('ort-centroid');
+        expect(w.geocodedQuery).toBe(COARSE_SOURCE_QUERY);
+    });
+
+    it('vanliga källkoordinater rörs inte av grov-vakten', async () => {
+        await run([makeEvent({ coords: [57.0523419, 14.3171234], venueName: 'X', city: 'Y' })]);
+        expect(geocodeMock).not.toHaveBeenCalled();
+        expect(writtenEvents()[0].geoPrecision).toBe('kallkoordinat');
     });
 
     it('giltig koord utanför Norden (utländsk) kastas också', async () => {
@@ -621,6 +651,22 @@ describe('runSource — refresh läker event på null-ön', () => {
         expect(geocodeMock).not.toHaveBeenCalled();
         expect(placeMock).not.toHaveBeenCalled();
     });
+
+    it('sparad på grov källkoordinat → flyttas när venuen nu träffar på platsnivå (#199)', async () => {
+        sqliteMock.mockReturnValue(nullIsland({ locationName: 'Breared Kannesten 650', lat: 56.733333, lng: 13.116667, geoPrecision: 'kallkoordinat' }));
+        geocodeMock.mockResolvedValue([56.7412, 13.0987, 'gata'] as any);
+        await run([makeEvent({ address: 'Breared Kannesten 650', city: 'Simlångsdalen', coords: [56.733333, 13.116667] })]);
+        const call = placeMock.mock.calls[0];
+        expect(call.slice(1, 4)).toEqual(['Breared Kannesten 650', 56.7412, 13.0987]);
+        expect(call[6]).toBe('gata');
+    });
+
+    it('sparad på grov källkoordinat → står kvar när geokodningen bara ger en centroid', async () => {
+        sqliteMock.mockReturnValue(nullIsland({ locationName: 'Hestra Handsken', lat: 57.05, lng: 14.316667, geoPrecision: 'kallkoordinat' }));
+        geocodeMock.mockResolvedValue([57.06, 14.3, 'stad-centroid'] as any);
+        await run([makeEvent({ venueName: 'Hestra Handsken', city: 'Hestra, Rydaholm', coords: [57.05, 14.316667] })]);
+        expect(placeMock).not.toHaveBeenCalled();
+    });
 });
 
 describe('runSource — tätortsgolvet för nya event', () => {
@@ -639,5 +685,15 @@ describe('runSource — tätortsgolvet för nya event', () => {
     it('utan ort, eller okänd tätort → null-ön som förut', async () => {
         await run([makeEvent({ venueName: 'Okänd plats' }), makeEvent({ city: 'Förlösa-Kläckeberga' })]);
         expect(writtenEvents().map((w) => [w.lat, w.lng])).toEqual([[0, 0], [0, 0]]);
+    });
+});
+
+describe('beatsCoarseSource (#199)', () => {
+    it('bara träffar på plats- eller gatunivå slår källans ortsmittpunkt', () => {
+        expect(beatsCoarseSource([1, 1, 'poi'])).toBe(true);
+        expect(beatsCoarseSource([1, 1, 'gata'])).toBe(true);
+        expect(beatsCoarseSource([1, 1, 'ort-centroid'])).toBe(false);
+        expect(beatsCoarseSource([1, 1, 'stad-centroid'])).toBe(false);
+        expect(beatsCoarseSource([1, 1, null])).toBe(false);   // gammal cache, okänd väg
     });
 });
