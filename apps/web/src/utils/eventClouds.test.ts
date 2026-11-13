@@ -420,14 +420,14 @@ describe('cloudShadow', () => {
         expect(stor.dy).toBeLessThan(60);
     });
 
-    // #218, Josef 13/11: "i riktning ifrån där man klickar så att vi är som solen".
-    describe('solen är där man pekar', () => {
+    // #218, Josef 13/11: "så att vi är som solen" -> "solen är i mitten".
+    describe('solen står mitt i bilden', () => {
         const frö = frön.find(s => cloudShadow(s, 40) !== null)!;
         const längd = (sk: { dx: number; dy: number }) => Math.hypot(sk.dx, sk.dy);
         const full = längd(cloudShadow(frö, 40)!);
 
         it('skuggan faller bort från solen, åt alla håll', () => {
-            // fromSun = från pekaren till molnet.
+            // fromSun = från skärmens mitt till molnet.
             const öster = cloudShadow(frö, 40, { x: 300, y: 0 })!;
             expect(öster.dx).toBeGreaterThan(0);
             expect(öster.dy).toBeCloseTo(0);
@@ -445,7 +445,7 @@ describe('cloudShadow', () => {
             expect(längd(cloudShadow(frö, 40, { x: 0, y: 2000 })!)).toBeCloseTo(full);
         });
 
-        it('intill solen kortas skuggan mjukt - den slår inte om tvärt när pekaren passerar', () => {
+        it('intill solen kortas skuggan mjukt - den slår inte om tvärt när molnet passerar mitten', () => {
             const nära = längd(cloudShadow(frö, 40, { x: 20, y: 0 })!);
             const närmare = längd(cloudShadow(frö, 40, { x: 5, y: 0 })!);
             expect(nära).toBeLessThan(full);

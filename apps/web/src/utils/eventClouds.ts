@@ -415,12 +415,13 @@ export interface CloudShadow {
  * går på molnets frö, så samma moln har alltid (eller aldrig) skugga - den
  * blinkar inte till när molnen byggs om under en kartrörelse.
  *
- * SOLEN ÄR DÄR MAN PEKAR (#218, Josef 13/11: "skuggorna på molnet går det göra
- * så dem är i riktning ifrån där man klickar så att vi är som solen"):
- * `fromSun` är vektorn från pekaren (eller senaste trycket) till molnet i px,
- * och skuggan faller åt det hållet - bort från solen. Precis intill solen
- * kortas den, så den inte slår om tvärt när pekaren passerar molnet. Utan sol
- * (ingen pekare över kartan, inget tryck) faller skuggan snett nedåt höger.
+ * SOLEN STÅR MITT I BILDEN (#218, Josef 13/11: "så att vi är som solen", och
+ * efter första versionen där solen följde pekaren och skuggorna ryckte vid
+ * hovring över knappar: "eller så utgår vi ifrån mitten bara. solen är i
+ * mitten"): `fromSun` är vektorn från skärmens mitt till molnet i px, och
+ * skuggan faller åt det hållet - utåt, bort från solen. Nära mitten kortas den,
+ * så den inte slår om tvärt när ett moln passerar mitten under en panorering.
+ * Utan `fromSun` faller skuggan snett nedåt höger.
  */
 export function cloudShadow(
     seed: number,
