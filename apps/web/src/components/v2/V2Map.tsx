@@ -33,6 +33,7 @@ import {
 } from './v2MapLabel';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
 import { attachPoiSignImages } from './v2MapPoiSignImages';
+import { createPoiSignPopup, type PoiSignPopup } from './v2MapPoiSignPopup';
 import {
     createSourceHealer, createTileRetrier, isFeatureIndexError, isRetryableTileFetch, type TileXYZ,
 } from './v2MapEngineHeal';
@@ -795,9 +796,19 @@ export default function V2Map({
     // canvas mellan GL-kartan och DOM-brickorna (v2MapClouds) och rör varken
     // källor, lager eller reveal-systemet.
     // Platsskyltarnas bilder (#216) ritas när stilen ber om dem.
+    // Ett tryck på en skylt visar vad den är och platsens namn (#225);
+    // kartans klick-lyssnare anropar rutan via refen.
+    const poiSignPopupRef = useRef<PoiSignPopup | null>(null);
     useEffect(() => {
         if (!mapInstance) return;
-        return attachPoiSignImages(mapInstance);
+        const detach = attachPoiSignImages(mapInstance);
+        const popup = createPoiSignPopup(mapInstance);
+        poiSignPopupRef.current = popup;
+        return () => {
+            detach();
+            popup.remove();
+            poiSignPopupRef.current = null;
+        };
     }, [mapInstance]);
     const cloudsRef = useRef<EventClouds | null>(null);
     useEffect(() => {
@@ -3562,9 +3573,13 @@ export default function V2Map({
                 // Kort-öppningen körs HÄRIFRÅN i stället för via MapLibres
                 // delegerade lager-lyssnare — delegatens interna query är
                 // både oskyddad och opålitlig (se ovan).
+                poiSignPopupRef.current?.close();
                 onGlMarkerClick(e as unknown as maplibregl.MapLayerMouseEvent);
                 return;
             }
+            // Platsskylt under trycket (#225): visa vad den är. Resten av
+            // tomt-klickets beteende (stäng kortet) gäller som vanligt.
+            poiSignPopupRef.current?.handleClick(e.point);
             // Tom karta-tap (eller bara dolda brickor under fingret) = stäng öppet eventkort.
             onSelectEventRef.current(null); // stäng eventkortet (klick utanför markör)
             onSelectWishRef.current?.(null); // stäng ev. öppet önske-kort

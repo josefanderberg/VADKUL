@@ -4,11 +4,12 @@ import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
     addPoiSigns, POI_SIGN_DEEP_MIN_ZOOM, POI_SIGN_DEEP_NAME_ZOOM, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM,
     POI_SIGN_NAME_ZOOM, POI_SIGNS,
+    POI_SIGN_HIT, POI_SIGN_LABELS, pickPoiSignHit, poiSignInfo, poiSignKeyForKind,
     poiSignImageId, poiSignKeyFromImageId, type PoiSignKey,
 } from './mapPoiSigns';
 import { DEEP_POI_KINDS, DEEP_SOURCE_ID, deepLayersFor } from './deepTiles';
 import { addZoomedOutLandcover } from './mapLandcover';
-import { PICTOGRAM_BOX, POI_SIGN_PICTOGRAMS } from './poiSignPictograms';
+import { POI_SIGN_PICTOGRAMS } from './poiSignPictograms';
 
 const FONT = ['Montserrat SemiBold', 'Open Sans Bold'];
 // Voyager i miniatyr: etikettlagren i samma ordning som den riktiga stilen.
@@ -52,22 +53,32 @@ describe('platsskyltarna', () => {
     it('ingen kind hör till två skyltar och varje skylt har en egen symbol', () => {
         const kinds = Object.values(POI_SIGNS).flatMap(s => [...s.kinds]);
         expect(new Set(kinds).size).toBe(kinds.length);
-        // #225: vägmärkenas svarta symboler, inga emojier.
+        // #225: vägmärkenas svarta motiv, inga emojier.
         expect(Object.keys(POI_SIGN_PICTOGRAMS).sort()).toEqual(Object.keys(POI_SIGNS).sort());
-        const symboler = Object.values(POI_SIGN_PICTOGRAMS).map(shapes => JSON.stringify(shapes));
-        expect(new Set(symboler).size).toBe(symboler.length);
-        for (const shapes of Object.values(POI_SIGN_PICTOGRAMS)) {
-            expect(shapes.length).toBeGreaterThan(0);
-            for (const shape of shapes) {
-                expect(shape.d).toMatch(/^M/);
-                // Allt ritas inom rutan (grovt: inga koordinater utanför 0-24 i absoluta kommandon).
-                const absoluta = shape.d.replace(/[a-z][^A-Za-z]*/g, '').match(/-?\d+(\.\d+)?/g) ?? [];
-                for (const n of absoluta) {
-                    expect(Number(n)).toBeGreaterThanOrEqual(0);
-                    expect(Number(n)).toBeLessThanOrEqual(PICTOGRAM_BOX);
-                }
+        const motiv = Object.values(POI_SIGN_PICTOGRAMS).map(p => JSON.stringify(p.shapes));
+        expect(new Set(motiv).size).toBe(motiv.length);
+        for (const p of Object.values(POI_SIGN_PICTOGRAMS)) {
+            expect(p.box[2]).toBeGreaterThan(0);
+            expect(p.shapes.length).toBeGreaterThan(0);
+            // Varje bana börjar med en förflyttning inom motivets ruta (det vita fältet).
+            for (const shape of p.shapes) {
+                const start = /^[Mm]\s*(-?[\d.]+)[ ,]+(-?[\d.]+)/.exec(shape.d);
+                expect(start).not.toBeNull();
+                const [x, y] = [Number(start![1]), Number(start![2])];
+                expect(x).toBeGreaterThanOrEqual(p.box[0]);
+                expect(x).toBeLessThanOrEqual(p.box[0] + p.box[2]);
+                expect(y).toBeGreaterThanOrEqual(p.box[1]);
+                expect(y).toBeLessThanOrEqual(p.box[1] + p.box[2]);
             }
         }
+    });
+
+    it('badplats, golfbana, sevärdhet och friluftsområde bär vägmärkenas egna motiv', () => {
+        // Josef 13/11: "det ska ju vara exakt kopior" - rita inte om dem för hand.
+        expect(POI_SIGN_PICTOGRAMS.bad.original).toBe('H15');
+        expect(POI_SIGN_PICTOGRAMS.naturreservat.original).toBe('H16');
+        expect(POI_SIGN_PICTOGRAMS.golf.original).toBe('H20');
+        expect(POI_SIGN_PICTOGRAMS.museum.original).toBe('H22');
     });
 
     it('bild-id:t går att läsa tillbaka, och främmande bilder är inte våra', () => {
@@ -174,4 +185,50 @@ describe('skyltarna ur de djupare kaklen', () => {
         expect(skyltlager(färdig())).toMatchObject({ source: 'protomaps', minzoom: POI_SIGN_MIN_ZOOM });
         expect((skyltlager(färdig()).layout!['text-field'] as unknown[])[3]).toBe(POI_SIGN_NAME_ZOOM);
     });
+
+describe('tryck på en skylt (#225)', () => {
+    it('namnlösa platser får platstypen under skylten', () => {
+        const style = { version: 8, sources: { bas: { type: 'vector', tiles: ['https://x/{z}/{x}/{y}.mvt'] } }, layers: [
+            { id: 'water', type: 'fill', source: 'bas', 'source-layer': 'water' },
+        ] } as unknown as maplibregl.StyleSpecification;
+        addPoiSigns(style);
+        const layer = style.layers.find(l => l.id === POI_SIGN_LAYER_ID) as maplibregl.SymbolLayerSpecification;
+        const field = JSON.stringify(layer.layout?.['text-field']);
+        expect(field).toContain('["coalesce",["get","name"],["match",["get","kind"]');
+        for (const label of Object.values(POI_SIGN_LABELS)) expect(field).toContain(label);
+    });
+
+    it('varje skylt har ett namn i klartext', () => {
+        expect(Object.keys(POI_SIGN_LABELS).sort()).toEqual(Object.keys(POI_SIGNS).sort());
+        expect(POI_SIGN_LABELS.bad).toBe('Badplats');
+        expect(POI_SIGN_LABELS.naturreservat).toBe('Naturreservat');
+    });
+
+    it('kind ur kaklen blir platstyp och namn, namnlösa får bara typen', () => {
+        expect(poiSignInfo('beach', ' Evedal ')).toEqual({ key: 'bad', type: 'Badplats', name: 'Evedal' });
+        expect(poiSignInfo('nature_reserve', 'Bokhultet')).toEqual({ key: 'naturreservat', type: 'Naturreservat', name: 'Bokhultet' });
+        expect(poiSignInfo('playground', undefined)).toEqual({ key: 'lekplats', type: 'Lekplats', name: null });
+        expect(poiSignInfo('playground', '  ')?.name).toBeNull();
+        expect(poiSignInfo('restaurant', 'Pizzeria')).toBeNull();
+        expect(poiSignInfo(undefined, 'x')).toBeNull();
+        expect(poiSignKeyForKind('golf_course')).toBe('golf');
+    });
+
+    it('trycket träffar skylten ovanför foten, inte långt vid sidan eller under', () => {
+        const foot = { x: 100, y: 200 };
+        expect(pickPoiSignHit([foot], { x: 100, y: 175 })).toBe(0); // mitt på plattan
+        expect(pickPoiSignHit([foot], { x: 100, y: 210 })).toBe(0); // på namnet under
+        expect(pickPoiSignHit([foot], { x: 100 + POI_SIGN_HIT.halfWidth + 1, y: 175 })).toBeNull();
+        expect(pickPoiSignHit([foot], { x: 100, y: 200 - POI_SIGN_HIT.above - 1 })).toBeNull();
+        expect(pickPoiSignHit([foot], { x: 100, y: 200 + POI_SIGN_HIT.below + 1 })).toBeNull();
+        expect(pickPoiSignHit([], { x: 100, y: 175 })).toBeNull();
+    });
+
+    it('av två skyltar vinner den vars platta ligger närmast, skräpträffar långt bort räknas inte', () => {
+        const feet = [{ x: 100, y: 200 }, { x: 130, y: 205 }, { x: 900, y: 40 }];
+        expect(pickPoiSignHit(feet, { x: 104, y: 178 })).toBe(0);
+        expect(pickPoiSignHit(feet, { x: 128, y: 180 })).toBe(1);
+        expect(pickPoiSignHit([{ x: 900, y: 40 }], { x: 104, y: 178 })).toBeNull();
+    });
+});
 });

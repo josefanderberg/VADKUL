@@ -65,6 +65,72 @@ export function poiSignKeyFromImageId(id: string): PoiSignKey | null {
 
 const KEYS = Object.keys(POI_SIGNS) as PoiSignKey[];
 
+// ── Tryck på en skylt (#225) ─────────────────────────────────────────────────
+// Josef 13/11: "det kan väl komma upp vad det är om man klickar på en skylt
+// okså. gärna namnet på badplatsen eller naturreservatet. de som har namn".
+
+/** Vad skylten står för, i klartext. */
+export const POI_SIGN_LABELS: Readonly<Record<PoiSignKey, string>> = {
+    bad: 'Badplats',
+    museum: 'Museum',
+    bibliotek: 'Bibliotek',
+    naturreservat: 'Naturreservat',
+    golf: 'Golfbana',
+    lekplats: 'Lekplats',
+    // Kaklens 'pitch' är alla slags planer, inte bara bollplaner.
+    bollplan: 'Idrottsplan',
+    park: 'Park',
+};
+
+/** Skylten för ett kind-värde ur kaklen, eller null om platstypen saknar skylt. */
+export function poiSignKeyForKind(kind: unknown): PoiSignKey | null {
+    if (typeof kind !== 'string') return null;
+    return KEYS.find(key => (POI_SIGNS[key].kinds as readonly string[]).includes(kind)) ?? null;
+}
+
+export interface PoiSignInfo {
+    key: PoiSignKey;
+    /** "Badplats", "Naturreservat" ... */
+    type: string;
+    /** Platsens eget namn, null när kaklen saknar det. */
+    name: string | null;
+}
+
+/** Texten som visas när man trycker på en skylt. */
+export function poiSignInfo(kind: unknown, name: unknown): PoiSignInfo | null {
+    const key = poiSignKeyForKind(kind);
+    if (!key) return null;
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    return { key, type: POI_SIGN_LABELS[key], name: trimmed || null };
+}
+
+// Skyltens tryckyta kring stolpens fot, i skärmpixlar: plattan står ovanför
+// foten och namnet under. Lite generös, fingrar är breda.
+export const POI_SIGN_HIT = { halfWidth: 22, above: 46, below: 16 } as const;
+
+/**
+ * Vilken skylt ett tryck träffar: index för den vars platta ligger närmast
+ * trycket, eller null om trycket inte ligger på någon skylt. `feet` är
+ * skyltarnas fotpunkter på skärmen.
+ */
+export function pickPoiSignHit(
+    feet: readonly { x: number; y: number }[],
+    click: { x: number; y: number },
+): number | null {
+    let best: number | null = null;
+    let bestDist = Infinity;
+    feet.forEach((foot, i) => {
+        const dx = click.x - foot.x;
+        const dy = click.y - foot.y;
+        if (Math.abs(dx) > POI_SIGN_HIT.halfWidth) return;
+        if (dy < -POI_SIGN_HIT.above || dy > POI_SIGN_HIT.below) return;
+        // Avståndet mäts till plattans mitt, inte till foten.
+        const dist = Math.hypot(dx, dy + POI_SIGN_HIT.above / 2);
+        if (dist < bestDist) { bestDist = dist; best = i; }
+    });
+    return best;
+}
+
 // Voyagers egna parknamn - skylten bär namnet i stället, annars står det två gånger.
 const VOYAGER_PARK_LABEL_ID = 'poi_park';
 const FALLBACK_FONT = ['Montserrat SemiBold', 'Open Sans Bold', 'Noto Sans Regular'];
@@ -113,7 +179,10 @@ export function addPoiSigns(style: maplibregl.StyleSpecification) {
             // Stolpens fot står på platsen.
             'icon-anchor': 'bottom',
             'symbol-sort-key': perKind((_, i) => i, KEYS.length),
-            'text-field': ['step', ['zoom'], '', nameZoom, ['coalesce', ['get', 'name'], '']],
+            // Platsens namn, annars platstypen ("Lekplats", "Park") - Josef 13/11:
+            // "kan du inte skriva lekplats under också, eller park, för de som
+            // de inte dyker upp någon text under."
+            'text-field': ['step', ['zoom'], '', nameZoom, ['coalesce', ['get', 'name'], perKind(key => POI_SIGN_LABELS[key], '')]],
             'text-font': font,
             'text-size': 11,
             'text-anchor': 'top',

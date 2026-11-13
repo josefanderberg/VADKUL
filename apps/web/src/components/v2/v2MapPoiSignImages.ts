@@ -1,33 +1,41 @@
 /**
  * Skyltbilderna till platsskyltarna (#216, utseendet #225): varje platstyp är
  * ett vägmärke för serviceanläggning - blå platta med vit kantlinje, vitt fält
- * och svart symbol - på en stolpe. Josef 13/11: "designen på skyltarna ska vara
- * exakt som sådan info vägskyltar. samma design." Inga emojier och ingen gul
- * ram (den blågula formen från #216 är ersatt - bygg inte tillbaka den).
+ * och svart motiv - på en stolpe. Josef 13/11: "designen på skyltarna ska vara
+ * exakt som sådan info vägskyltar" och sedan "det ska ju vara exakt kopior men
+ * lite mer teknade alltså skylten". MOTIVEN är därför vägmärkenas egna
+ * (utils/poiSignPictograms), och SKYLTEN är tecknad: mörk kontur, runda hörn,
+ * glans på plattan och en liten lutning ("Lekfull som brickorna"). Inga
+ * emojier och ingen gul ram (formen från #216 är ersatt - bygg inte tillbaka).
  * Ritas på en canvas i webbläsaren första gången kartan ber om bilden
  * ('styleimagemissing'), så de överlever stilbyten och ingen sprite behöver
- * hämtas. Vilka skyltar som finns och var de står bestäms i utils/mapPoiSigns,
- * symbolerna i utils/poiSignPictograms (båda testade).
+ * hämtas. Vilka skyltar som finns och var de står bestäms i utils/mapPoiSigns.
  */
 import type * as maplibregl from 'maplibre-gl';
 import { poiSignKeyFromImageId, type PoiSignKey } from '@/utils/mapPoiSigns';
-import { PICTOGRAM_BOX, POI_SIGN_PICTOGRAMS } from '@/utils/poiSignPictograms';
+import { POI_SIGN_PICTOGRAMS } from '@/utils/poiSignPictograms';
 
 const PIXEL_RATIO = 2;
 // Mått i CSS-px.
-const PLATE = 28;
-const EDGE = 1; // vit kantlinje runt plattan
-const FIELD_INSET = 4.5; // plattans kant -> vita fältet
-const SYMBOL_INSET = 1.5; // luft mellan fältets kant och symbolen
+const PLATE = 30;
+const OUTLINE = 1.5; // mörk tecknad kontur
+const EDGE = 1.5; // vägmärkets vita kantlinje innanför konturen
+// Vita fältet är 62,5 % av plattan, som på vägmärket.
+const FIELD = PLATE * 0.625;
 const POLE_H = 9;
-const POLE_W = 3;
-const PAD = 3; // luft för skuggan
+const POLE_W = 4;
+const PAD = 5; // luft för skugga och lutning
+const FOOT_PAD = 1; // stolpens fot står nästan i bildens nederkant = på platsen
 const W = PLATE + PAD * 2;
-const H = PLATE + POLE_H + PAD * 2;
-// Vägmärkenas blå.
-const BLUE = '#005B9F';
+const H = PAD + PLATE + POLE_H + FOOT_PAD;
+/** Skylten lutar lite, kring stolpens fot (som står kvar på platsen). */
+const TILT_RAD = -4 * Math.PI / 180;
+// Vägmärkets blå (#0c479d), ljusare upptill för glansen.
+const BLUE_TOP = '#2466c4';
+const BLUE = '#0c479d';
+const INK = '#0b2550';
 const WHITE = '#ffffff';
-const BLACK = '#111111';
+const BLACK = '#000000';
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
     ctx.beginPath();
@@ -47,40 +55,66 @@ function drawSign(key: PoiSignKey): ImageData | null {
     if (!ctx) return null;
     ctx.scale(PIXEL_RATIO, PIXEL_RATIO);
     const cx = W / 2;
-    // Stolpen: från plattans underkant ner till platsen (bildens nederkant).
-    ctx.fillStyle = '#5b6470';
-    ctx.fillRect(cx - POLE_W / 2, PAD + PLATE - 1, POLE_W, POLE_H + 1);
-    // Plattan med mjuk skugga: vit kantlinje, blå botten, vitt fält.
+    const foot = H - FOOT_PAD;
+    // Luta allt kring stolpens fot.
+    ctx.translate(cx, foot);
+    ctx.rotate(TILT_RAD);
+    ctx.translate(-cx, -foot);
+    const top = PAD;
+    // Stolpen: från plattans underkant ner till platsen, med mörk kontur.
+    ctx.fillStyle = INK;
+    roundRect(ctx, cx - POLE_W / 2 - 1, top + PLATE - 2, POLE_W + 2, POLE_H + 2, 2);
+    ctx.fill();
+    ctx.fillStyle = '#9aa4b2';
+    roundRect(ctx, cx - POLE_W / 2, top + PLATE - 2, POLE_W, POLE_H + 1, 1.5);
+    ctx.fill();
+    // Plattan: mörk kontur med mjuk skugga, vit kantlinje, blå botten.
     ctx.save();
-    ctx.shadowColor = 'rgba(15,23,42,0.35)';
+    ctx.shadowColor = 'rgba(15,23,42,0.4)';
     ctx.shadowBlur = 3;
-    ctx.shadowOffsetY = 1.5;
-    ctx.fillStyle = WHITE;
-    roundRect(ctx, PAD, PAD, PLATE, PLATE, 4);
+    ctx.shadowOffsetY = 2;
+    ctx.fillStyle = INK;
+    roundRect(ctx, PAD, top, PLATE, PLATE, 7);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = BLUE;
-    roundRect(ctx, PAD + EDGE, PAD + EDGE, PLATE - EDGE * 2, PLATE - EDGE * 2, 3);
-    ctx.fill();
-    const field = PLATE - FIELD_INSET * 2;
     ctx.fillStyle = WHITE;
-    roundRect(ctx, PAD + FIELD_INSET, PAD + FIELD_INSET, field, field, 1.5);
+    roundRect(ctx, PAD + OUTLINE, top + OUTLINE, PLATE - OUTLINE * 2, PLATE - OUTLINE * 2, 5.5);
     ctx.fill();
-    // Symbolen: svart, skalad från sin ruta till fältet.
-    const size = field - SYMBOL_INSET * 2;
+    const inset = OUTLINE + EDGE;
+    const blue = ctx.createLinearGradient(0, top, 0, top + PLATE);
+    blue.addColorStop(0, BLUE_TOP);
+    blue.addColorStop(0.6, BLUE);
+    ctx.fillStyle = blue;
+    roundRect(ctx, PAD + inset, top + inset, PLATE - inset * 2, PLATE - inset * 2, 4);
+    ctx.fill();
+    // Glansen: en ljus båge över plattans övre del.
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    roundRect(ctx, PAD + inset + 1.5, top + inset + 1, PLATE - inset * 2 - 3, 2.5, 1.25);
+    ctx.fill();
+    // Vita fältet med motivet, skalat från motivets egen ruta.
+    const fx = cx - FIELD / 2;
+    const fy = top + (PLATE - FIELD) / 2;
+    ctx.fillStyle = WHITE;
+    roundRect(ctx, fx, fy, FIELD, FIELD, 2);
+    ctx.fill();
+    const { box, shapes } = POI_SIGN_PICTOGRAMS[key];
     ctx.save();
-    ctx.translate(PAD + FIELD_INSET + SYMBOL_INSET, PAD + FIELD_INSET + SYMBOL_INSET);
-    ctx.scale(size / PICTOGRAM_BOX, size / PICTOGRAM_BOX);
-    ctx.fillStyle = BLACK;
-    ctx.strokeStyle = BLACK;
+    roundRect(ctx, fx, fy, FIELD, FIELD, 2);
+    ctx.clip();
+    ctx.translate(fx, fy);
+    ctx.scale(FIELD / box[2], FIELD / box[2]);
+    ctx.translate(-box[0], -box[1]);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    for (const shape of POI_SIGN_PICTOGRAMS[key]) {
+    for (const shape of shapes) {
+        const color = shape.white ? WHITE : BLACK;
         const path = new Path2D(shape.d);
         if (shape.stroke) {
+            ctx.strokeStyle = color;
             ctx.lineWidth = shape.stroke;
             ctx.stroke(path);
         } else {
+            ctx.fillStyle = color;
             ctx.fill(path);
         }
     }

@@ -600,3 +600,10 @@ html:has([data-app="v2"]) body {
 @media (prefers-reduced-motion: reduce) {
   .zoomout-line { animation: none; }
 }
+
+/* Platsskyltens namnruta (#225): MapLibres popup i kartans egna former. */
+.vadkul-skylt-popup .maplibregl-popup-content {
+    padding: 7px 12px;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+}
