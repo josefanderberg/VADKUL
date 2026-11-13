@@ -327,12 +327,16 @@ export function pickCloudRevealKeys(
     return inside.slice(0, max).map(p => p.key);
 }
 
-/** Knuffens acceleration rakt på pekaren (px/s²) - avtar mot räckviddens kant. */
-export const GLIDE_PUSH_ACCEL = 2600;
+/** Knuffens acceleration rakt på pekaren (px/s²) - avtar mot räckviddens kant.
+ *  2600 -> 700 och toppfarten 900 -> 260 i #220 (Josef 13/11: "sen ska man
+ *  inte kunna skjuta iväg molnen så snabbt. ha mer en saktare uppstart
+ *  iallafall. de skjuts ju iväg onaturligt snabbt"): molnet kommer igång mjukt
+ *  och glider lugnt. Höj inte tillbaka. */
+export const GLIDE_PUSH_ACCEL = 700;
 /** Hur fort glidningen bromsas in (tidskonstant, ms). */
 export const GLIDE_TAU_MS = 650;
 /** Högsta fart ett knuffat moln får (px/s). */
-export const GLIDE_MAX_SPEED = 900;
+export const GLIDE_MAX_SPEED = 260;
 /** Under den här farten (px/s) står molnet still. */
 const GLIDE_STOP_SPEED = 4;
 
@@ -398,7 +402,9 @@ export function glideStep(
     vy *= brake;
     // Under GLIDE_STOP_SPEED återstår bara ett par pixlar av glidningen -
     // stanna, så ritlagret kan gå tillbaka till vilotakten.
-    if (Math.hypot(vx, vy) < GLIDE_STOP_SPEED) {
+    // Bara när ingen knuffar: med den mjuka starten (#220) är farten låg de
+    // första bildrutorna, och då får den inte nollas medan den byggs upp.
+    if (ax === 0 && ay === 0 && Math.hypot(vx, vy) < GLIDE_STOP_SPEED) {
         vx = 0;
         vy = 0;
     }

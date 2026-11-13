@@ -389,6 +389,23 @@ describe('glideStep', () => {
         expect(Math.hypot(g.vx, g.vy)).toBeLessThanOrEqual(GLIDE_MAX_SPEED);
     });
 
+    // #220, Josef 13/11: "ha mer en saktare uppstart iallafall. de skjuts ju
+    // iväg onaturligt snabbt".
+    it('kommer igång mjukt: första tiondelen flyttar molnet bara några pixlar', () => {
+        const tidigt = run(still, [{ x: 80, y: 100 }], 6); // ~0,1 s
+        expect(tidigt.ox).toBeGreaterThan(0);
+        expect(tidigt.ox).toBeLessThan(6);
+        // Farten byggs upp steg för steg, den nollas inte medan knuffen pågår.
+        const ett = run(still, [{ x: 80, y: 100 }], 1);
+        const två = run(still, [{ x: 80, y: 100 }], 2);
+        expect(ett.vx).toBeGreaterThan(0);
+        expect(två.vx).toBeGreaterThan(ett.vx);
+    });
+
+    it('toppfarten är lugn', () => {
+        expect(GLIDE_MAX_SPEED).toBeLessThanOrEqual(300);
+    });
+
     it('tål noll tid och skräp', () => {
         expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 1, 0)).toBe(still);
         expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 0, 16)).toBe(still);
