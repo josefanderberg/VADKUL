@@ -1,5 +1,6 @@
 /**
- * Platsskyltar på kartan (#216): tecknade vägskyltar för badplatser, museer,
+ * Platsskyltar på kartan (#216): vägmärken (blå platta, vitt fält, svart
+ * symbol - #225, symbolerna i utils/poiSignPictograms) för badplatser, museer,
  * bibliotek, naturreservat, golfbanor, lekplatser, bollplaner och parker.
  * Josef 13/11: "bollplaner, parker, lekplatser, naturreservat, bibliotek,
  * museer, golfbanor. De är ju intressanta. kan du hämta badplatser också så har
@@ -36,20 +37,18 @@ export const POI_SIGN_DEEP_NAME_ZOOM = POI_SIGN_NAME_ZOOM - 1;
 export interface PoiSign {
     /** kind-värden i kaklens pois-lager. */
     kinds: readonly string[];
-    /** Tecknet på skylten. Bara emojier som finns på äldre telefoner. */
-    emoji: string;
 }
 
 // Ordningen = företräde när två skyltar krockar: badplatsen först.
 export const POI_SIGNS = {
-    bad: { kinds: ['bathing_place', 'public_bath', 'beach'], emoji: '🏊' },
-    museum: { kinds: ['museum'], emoji: '🏛️' },
-    bibliotek: { kinds: ['library'], emoji: '📚' },
-    naturreservat: { kinds: ['nature_reserve'], emoji: '🌲' },
-    golf: { kinds: ['golf_course'], emoji: '⛳' },
-    lekplats: { kinds: ['playground'], emoji: '🎠' },
-    bollplan: { kinds: ['pitch'], emoji: '⚽' },
-    park: { kinds: ['park'], emoji: '🌳' },
+    bad: { kinds: ['bathing_place', 'public_bath', 'beach'] },
+    museum: { kinds: ['museum'] },
+    bibliotek: { kinds: ['library'] },
+    naturreservat: { kinds: ['nature_reserve'] },
+    golf: { kinds: ['golf_course'] },
+    lekplats: { kinds: ['playground'] },
+    bollplan: { kinds: ['pitch'] },
+    park: { kinds: ['park'] },
 } as const satisfies Record<string, PoiSign>;
 export type PoiSignKey = keyof typeof POI_SIGNS;
 

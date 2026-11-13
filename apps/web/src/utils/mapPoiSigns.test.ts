@@ -8,6 +8,7 @@ import {
 } from './mapPoiSigns';
 import { DEEP_POI_KINDS, DEEP_SOURCE_ID, deepLayersFor } from './deepTiles';
 import { addZoomedOutLandcover } from './mapLandcover';
+import { PICTOGRAM_BOX, POI_SIGN_PICTOGRAMS } from './poiSignPictograms';
 
 const FONT = ['Montserrat SemiBold', 'Open Sans Bold'];
 // Voyager i miniatyr: etikettlagren i samma ordning som den riktiga stilen.
@@ -48,11 +49,25 @@ describe('platsskyltarna', () => {
         expect(POI_SIGNS.bad.kinds).toEqual(expect.arrayContaining(['bathing_place', 'public_bath', 'beach']));
     });
 
-    it('ingen kind hör till två skyltar och varje skylt har ett eget tecken', () => {
+    it('ingen kind hör till två skyltar och varje skylt har en egen symbol', () => {
         const kinds = Object.values(POI_SIGNS).flatMap(s => [...s.kinds]);
         expect(new Set(kinds).size).toBe(kinds.length);
-        const tecken = Object.values(POI_SIGNS).map(s => s.emoji);
-        expect(new Set(tecken).size).toBe(tecken.length);
+        // #225: vägmärkenas svarta symboler, inga emojier.
+        expect(Object.keys(POI_SIGN_PICTOGRAMS).sort()).toEqual(Object.keys(POI_SIGNS).sort());
+        const symboler = Object.values(POI_SIGN_PICTOGRAMS).map(shapes => JSON.stringify(shapes));
+        expect(new Set(symboler).size).toBe(symboler.length);
+        for (const shapes of Object.values(POI_SIGN_PICTOGRAMS)) {
+            expect(shapes.length).toBeGreaterThan(0);
+            for (const shape of shapes) {
+                expect(shape.d).toMatch(/^M/);
+                // Allt ritas inom rutan (grovt: inga koordinater utanför 0-24 i absoluta kommandon).
+                const absoluta = shape.d.replace(/[a-z][^A-Za-z]*/g, '').match(/-?\d+(\.\d+)?/g) ?? [];
+                for (const n of absoluta) {
+                    expect(Number(n)).toBeGreaterThanOrEqual(0);
+                    expect(Number(n)).toBeLessThanOrEqual(PICTOGRAM_BOX);
+                }
+            }
+        }
     });
 
     it('bild-id:t går att läsa tillbaka, och främmande bilder är inte våra', () => {
