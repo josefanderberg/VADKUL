@@ -4,6 +4,7 @@
 // inget komponent-state — bara MapLibre-konfiguration.
 
 import * as maplibregl from 'maplibre-gl';
+import { addZoomedOutRelief } from '../../utils/mapRelief';
 
 // ── WORKER-FIXEN (prodstoppet 25/9 kväll) ───────────────────────────────────
 // maplibre 6 laddar sin worker som en RIKTIG modulfil (maplibre-gl-worker.mjs,
@@ -188,6 +189,11 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
             return { ...layer, paint } as typeof layer;
         });
     }
+
+    // RELIEFEN UTZOOMAT (#197) - inte när stadssidornas kartbilder renderas ur
+    // egna kakel: de ska inte hämta något utifrån, och de ligger på zoom 11
+    // där reliefen ändå är uttonad.
+    if (!egnaKakel) addZoomedOutRelief(style);
 
     return style;
 }
