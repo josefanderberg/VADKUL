@@ -28,6 +28,7 @@ import {
     makeBrickaImageData, selectedMarkerColors, sourceGradientCss,
 } from './v2MapBricka';
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
+import { attachEventClouds, type EventClouds } from './v2MapClouds';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
 import CitySignposts, { type SignpostCity } from './CitySignposts';
 
@@ -732,6 +733,32 @@ export default function V2Map({
         ambientStartRef.current = { at: performance.now(), target };
         map.easeTo({ zoom: target, duration: AMBIENT_SLOW_MS, easing: t => t });
     }, [chromeHidden, selectedEvent, mapInstance]);
+
+    // ── Molnlagret (#191) ────────────────────────────────────────────────
+    // Vita moln över kartan i utzoomat läge, tätare där eventen finns; de
+    // löses upp när man zoomar in och brickorna tar över. Lagret är en egen
+    // canvas mellan GL-kartan och DOM-brickorna (v2MapClouds) och rör varken
+    // källor, lager eller reveal-systemet.
+    const cloudsRef = useRef<EventClouds | null>(null);
+    useEffect(() => {
+        if (!mapInstance) return;
+        const clouds = attachEventClouds(mapInstance);
+        cloudsRef.current = clouds;
+        return () => {
+            clouds.destroy();
+            cloudsRef.current = null;
+        };
+    }, [mapInstance]);
+    useEffect(() => {
+        cloudsRef.current?.setPoints(events);
+    }, [mapInstance, events]);
+    const selectedLat = selectedEvent?.lat;
+    const selectedLng = selectedEvent?.lng;
+    useEffect(() => {
+        cloudsRef.current?.setFocus(
+            selectedLat && selectedLng ? { lat: selectedLat, lng: selectedLng } : null,
+        );
+    }, [mapInstance, selectedLat, selectedLng]);
     const markersRef = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLElement; lastStateKey: string }>>(new Map());
     // Grupp-nycklar som någon gång visats som bricka via att vara markerade.
     // En gång avslöjad → brickan visas alltid direkt (ingen staggered kö), så
