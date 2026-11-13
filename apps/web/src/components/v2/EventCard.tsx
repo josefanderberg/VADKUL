@@ -24,6 +24,7 @@ import BoostStar from '../ui/BoostStar';
 import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease, releaseVelocity } from '@/utils/sheetSnap';
+import { cardSelectionKind } from '@/utils/cardSelectionKind';
 import { SIDE_PANEL_QUERY, SIDE_PANEL_W } from '@/utils/sidePanel';
 import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM, parseCategoryQuery, isFilterQuery, searchEvents, sortNearestFirst } from '@/utils/eventSearch';
 import type { CityPoint } from '@/utils/cityPoints';
@@ -2268,11 +2269,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         listPickIdRef.current = null;
         const isSearchPick = searchPickIdRef.current === selectedEvent.id;
         searchPickIdRef.current = null;
-        if (isPickNext) {
+        const selectionKind = cardSelectionKind({ prevId, id: selectedEvent.id, isPickNext, isDayStepLanding, isListPick });
+        if (selectionKind === 'internal') {
             // Intern navigering (Nästa/Bakåt) drev fram detta event — behåll
             // ankare, besökt-set OCH bakåt/framåt-stackarna.
             expectedNextIdRef.current = null;
-        } else if (isDayStepLanding || isListPick) {
+        } else if (selectionKind === 'refresh') {
+            // SAMMA event, bara ett färskare objekt (sidan pekar om det öppna
+            // kortet när bild/värd/beskrivning landar): inget val alls. Före
+            // #226 föll det ner i "nytt val utifrån" och nollade historiken
+            // strax efter varje dagbyte, så Bakåt dog (utils/cardSelectionKind).
+        } else if (selectionKind === 'landing') {
             // LANDNINGEN efter ett dagbyte via Nästa/Bakåt (Josef 2/9): sidan
             // valde eventet åt oss. Ny dag = ny runda — nytt ankare och tomt
             // besökt-set — men bakåt-/framåtstackarna står KVAR så man kan gå
