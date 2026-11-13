@@ -1,0 +1,51 @@
+# 09 - Mörk novemberkväll
+
+Mörkt och blött ute, men det lyser varmt i fönstren: fika, bio och bowling
+nära dig. Säsong: november till februari. Skicka det till boten med
+bildtexten **hitta på** (eller **regn** om du vill att det ska gå som
+regndagsfilm).
+
+**Bifoga:** `pwa-icon-bla-512.png` + `annons_sverige_20260707.png`.
+
+## Bild (startbild)
+
+```text
+Vertical 9:16 frame. VADKUL brand style: soft 2.5D vector illustration with gentle depth and soft glow, like a premium app explainer animation. Background: smooth deep navy gradient, #08304A at the top to #0A5077 at the bottom. The map: Sweden at night seen from above, land a slightly lighter blue than the sea, no roads, no borders, no labels. Events are small warm yellow glowing dots (#FDE047) and round white tiles, each holding exactly one emoji, with a soft yellow halo. Mascot: a small fluffy white cloud with a light-blue outline, two closed happy eye arcs and a simple smile, exactly like the attached reference. People, when shown: simple rounded illustrated figures with dot eyes. Palette: navy, deep blue, warm yellow, white and light blue (#BAE6FD) only; emojis keep their own colors. Rounded shapes everywhere. Calm, warm, Scandinavian and uncluttered. Keep the top third of the frame calm and empty, and the bottom fifth free of important details.
+
+Scene: a quiet Swedish town street on a dark, rainy November evening, seen from slightly above, filling the lower two thirds of the frame: rounded houses and a small square in deep blue shades, wet cobblestones with soft reflections, light drizzle drawn as thin light-blue streaks. Warm yellow light spills from two or three windows: a small café, a cinema entrance without any sign, a bowling hall. A few tiny yellow dots glow above them. The sky above is empty navy.
+
+Avoid: any text, letters, numbers, logos, watermarks, signs or app screens. Avoid photorealism, realistic faces and stock-photo people. Avoid red, purple, orange and green outside the emojis. Avoid flashing, glitch effects, lens flares, confetti and fast cuts.
+```
+
+## Video A (15 s)
+
+```text
+15-second video. Keep the exact look of the image: VADKUL style, soft 2.5D illustration, navy night gradient, warm yellow glowing dots, round white emoji tiles, the white smiling cloud mascot. No new colors. Keep the top third calm and empty.
+
+Motion: slow, smooth and calm, one camera move at a time. Allowed camera moves: slow push-in, smooth top-down dive into the map, gentle sideways drift. No shaky camera, no whip pans, no rotation, no hard cuts. Yellow dots light up one by one like stars, with a soft fade-in, never blinking. Emoji tiles pop in with a small soft bounce. The cloud mascot bobs gently up and down. The last 3 seconds are a calm, almost still, centered frame.
+
+Action: First (0-2 s), the drizzle falls softly and the café window glows a little warmer, as if inviting you in. Then (2-12 s), a slow push-in along the street; three round white tiles pop in one by one above the warm windows: a hot beverage emoji, a popcorn emoji and a bowling emoji. Finally (12-15 s), the rain fades out and the white cloud mascot drifts in from the left and settles between the tiles, bobbing gently, with the three tiles and the cloud in the middle of the frame. Calm, still landing frame.
+
+Audio: warm, upbeat Scandinavian indie-pop instrumental with soft plucked guitar and light hand percussion, around 110 BPM. No vocals, no voiceover. A soft, quiet pop when a tile appears.
+
+Avoid: any text, letters, numbers, logos, watermarks, signs or app screens. Avoid photorealism, realistic faces and stock-photo people. Avoid red, purple, orange and green outside the emojis. Avoid flashing, glitch effects, lens flares, confetti and fast cuts.
+```
+
+## Texter (läggs på i klippet)
+
+Dagsinlägget lägger på textraderna själv utifrån bildtexten (hitta på:
+"Vad ska vi hitta på?" / "Allt nära dig, på en karta"). Tabellen gäller
+bara om klippet klipps i studion.
+
+| Tid | Text | Stil |
+|---|---|---|
+| 0,3-3 s | Mörkt ute. Vad gör vi? | rubrik, vit |
+| 4-8 s | Allt nära dig, **på en karta** | rubrik, "på en karta" gult |
+| 9-13 s | Fika, bio, bowling. Nära dig. | underrad, ljusblå |
+| efter 15 s | slutbilden | 1,5 s |
+
+## Caption
+
+```text
+Mörkt och blött ute. Vad hittar du på i kväll? 👇 Fika, bio, bowling och mycket mer nära dig, samlat på en karta. Länk i bion ☁️ #vadkul #evenemang #sverige #november
+```
