@@ -85,6 +85,11 @@ export const BOOTSTRAP_STYLE: maplibregl.StyleSpecification = {
     ]
 };
 
+/** Väglager som nöjesfältsstilen gör vita, i Voyagers gamla och nya schema (#208). */
+export function isThemeParkRoadLayer(id: string, sourceLayer: string | undefined): boolean {
+    return (sourceLayer === 'transportation' || sourceLayer === 'roads') && !id.startsWith('aeroway');
+}
+
 // "Nöjesfälts"-kartan: hämta Voyager-stilen och måla om den i en mild, naturlig
 // palett (grönt land, blått vatten, dämpade byggnader/vägar) så den fungerar som
 // en lugn bakgrund i stället för en gäll tivoli-look. Hämtas + transformeras en
@@ -181,9 +186,15 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
                     paint['fill-color'] = '#d6d2c0'; // dämpad beige-grå
                 }
             }
-            // Vägar / transportation. Casing-lagren (kantlinjen runt vägbanan)
-            // får en mjuk sandton så väghierarkin syns mot det vita.
-            else if (sourceLayer === 'transportation') {
+            // Vägar. Voyager hade dem i source-layer `transportation`
+            // (OpenMapTiles) och har dem sedan oktober 2026 i `roads`
+            // (Protomaps), med samma lager-id: road_*, tunnel_*, bridge_*,
+            // rail. Matchades bara det gamla namnet slutade vägarna vara vita
+            // när stilen bytte (#208). I `roads` ligger också flygfältens banor
+            // (aeroway-*), som förut låg i ett eget lager och aldrig gjordes
+            // vita. Casing-grenen nedan träffar inget i Voyager (kantlagren
+            // heter *_case), så även kantlinjerna blir vita, precis som förut.
+            else if (isThemeParkRoadLayer(layer.id, sourceLayer)) {
                 if (paint['line-color']) {
                     paint['line-color'] = layer.id.includes('casing')
                         ? '#c9c3b2'
