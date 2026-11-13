@@ -4,7 +4,7 @@
 // inget komponent-state — bara MapLibre-konfiguration.
 
 import * as maplibregl from 'maplibre-gl';
-import { addZoomedOutRelief } from '../../utils/mapRelief';
+import { addZoomedOutLandcover } from '../../utils/mapLandcover';
 
 // ── WORKER-FIXEN (prodstoppet 25/9 kväll) ───────────────────────────────────
 // maplibre 6 laddar sin worker som en RIKTIG modulfil (maplibre-gl-worker.mjs,
@@ -190,10 +190,10 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
         });
     }
 
-    // RELIEFEN UTZOOMAT (#197) - inte när stadssidornas kartbilder renderas ur
-    // egna kakel: de ska inte hämta något utifrån, och de ligger på zoom 11
-    // där reliefen ändå är uttonad.
-    if (!egnaKakel) addZoomedOutRelief(style);
+    // SKOG OCH ÖPPNA FÄLT UTZOOMAT (#203, ersätter reliefen från #197) - inte
+    // när stadssidornas kartbilder renderas ur egna kakel: de ligger på zoom 11
+    // där marktäcket ändå är uttonat.
+    if (!egnaKakel) addZoomedOutLandcover(style);
 
     return style;
 }
