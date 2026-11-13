@@ -15,7 +15,9 @@ import {
     cloudClearAt,
     CLOUD_CLEAR_AT,
     CLOUD_CLEAR_LEVEL,
+    CLOUD_LATE_FROM_LEVEL,
     cloudLevelFor,
+    cloudLevelStartZoom,
     cloudOpacityForZoom,
     cloudScaleFor,
     glideStep,
@@ -82,6 +84,42 @@ describe('cloudLevelFor', () => {
         expect(cloudLevelFor(5.45, 6)).toBe(6);
         expect(cloudLevelFor(5.7, 5)).toBe(6);
         expect(cloudLevelFor(7.4, 5)).toBe(7);
+    });
+
+    // Josef 13/11: "de molnen som syns i det andra ifrån de mest inzoomade
+    // steget, de ska vxla över till 3 utzoomnings läget tidigare."
+    it('nivå 8 räcker ett helt zoomsteg längre in, nivå 9 och 10 kommer senare', () => {
+        expect(CLOUD_LATE_FROM_LEVEL).toBe(9);
+        expect(cloudLevelFor(8.4)).toBe(8);
+        expect(cloudLevelFor(9)).toBe(8);
+        expect(cloudLevelFor(9.45)).toBe(8);
+        expect(cloudLevelFor(9.5)).toBe(9);
+        expect(cloudLevelFor(10.4)).toBe(9);
+        expect(cloudLevelFor(10.5)).toBe(10);
+        // Utzoomat som förut: nivån börjar ett halvt steg före sin egen zoom.
+        for (const l of [5, 6, 7, 8]) expect(cloudLevelStartZoom(l)).toBe(l - 0.5);
+    });
+
+    it('zoomar man ut inifrån byter molnen till nivå 8 redan vid 9,5 (minus hysteresen)', () => {
+        expect(cloudLevelFor(9.45, 9)).toBe(9);
+        expect(cloudLevelFor(9.3, 9)).toBe(8);
+        expect(cloudLevelFor(9.6, 8)).toBe(8);
+        expect(cloudLevelFor(9.7, 8)).toBe(9);
+    });
+
+    it('nivå 9 syns bara där huvudkurvan nästan tonat ut', () => {
+        expect(cloudOpacityForZoom(cloudLevelStartZoom(9))).toBeLessThanOrEqual(CLOUD_TAIL_OPACITY);
+    });
+
+    it('varje zoom hamnar på exakt en nivå, i ordning', () => {
+        let prev = CLOUD_MIN_LEVEL;
+        for (let z = 2; z <= 14; z += 0.05) {
+            const l = cloudLevelFor(z);
+            expect(l).toBeGreaterThanOrEqual(prev);
+            expect(l - prev).toBeLessThanOrEqual(1);
+            prev = l;
+        }
+        expect(prev).toBe(CLOUD_MAX_LEVEL);
     });
 });
 

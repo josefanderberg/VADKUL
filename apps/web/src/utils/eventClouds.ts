@@ -119,15 +119,38 @@ export function cloudOpacityForZoom(zoom: number): number {
     return Math.max(main, tail);
 }
 
+/** Nivåerna härifrån och inåt börjar ett helt zoomsteg senare, så den grövre
+ *  nivån före dem räcker längre in (Josef 13/11: "de molnen som syns i det
+ *  andra ifrån de mest inzoomade steget, de ska vxla över till 3 utzoomnings
+ *  läget tidigare. så blir det inte så många tydliga vita moln"). Nivå 9 gav
+ *  vid zoom 8,5-9,5 ett tätt rutnät av små rutor där nästan varje ruta var
+ *  för gles för klart väder - många tydliga vita moln. Nu gäller nivå 8 till
+ *  zoom 9,5, där huvudkurvan nästan tonat ut, och nivå 9 och 10 syns bara med
+ *  den svaga resten. */
+export const CLOUD_LATE_FROM_LEVEL = 9;
+const CLOUD_LATE_STEPS = 1;
+
+/** Zoomen där nivån börjar gälla - under den gäller nivån utanför. */
+export function cloudLevelStartZoom(level: number): number {
+    return level - 0.5 + (level >= CLOUD_LATE_FROM_LEVEL ? CLOUD_LATE_STEPS : 0);
+}
+
 /**
  * Indelningsnivån för en zoom. Med `current` hålls nivån kvar tills zoomen
- * gått tydligt förbi halvvägs till nästa (hysteres).
+ * gått tydligt förbi gränsen till nästa (hysteres, LEVEL_HYSTERESIS - 0,5
+ * zoomsteg på var sida om gränsen).
  */
 export function cloudLevelFor(zoom: number, current?: number): number {
-    const target = clamp(Math.round(zoom), CLOUD_MIN_LEVEL, CLOUD_MAX_LEVEL);
+    let target = CLOUD_MIN_LEVEL;
+    for (let l = CLOUD_MIN_LEVEL + 1; l <= CLOUD_MAX_LEVEL; l++) {
+        if (zoom >= cloudLevelStartZoom(l)) target = l;
+    }
     if (current == null || !Number.isFinite(current)) return target;
-    if (Math.abs(zoom - current) <= LEVEL_HYSTERESIS) return clamp(current, CLOUD_MIN_LEVEL, CLOUD_MAX_LEVEL);
-    return target;
+    const cur = clamp(Math.round(current), CLOUD_MIN_LEVEL, CLOUD_MAX_LEVEL);
+    const margin = LEVEL_HYSTERESIS - 0.5;
+    const lo = cur > CLOUD_MIN_LEVEL ? cloudLevelStartZoom(cur) - margin : -Infinity;
+    const hi = cur < CLOUD_MAX_LEVEL ? cloudLevelStartZoom(cur + 1) + margin : Infinity;
+    return zoom >= lo && zoom < hi ? cur : target;
 }
 
 /** Skalan mellan molnets nivå och den zoom som visas just nu. */
