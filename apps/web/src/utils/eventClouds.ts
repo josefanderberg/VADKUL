@@ -37,8 +37,10 @@ export interface Cloud {
     seed: number;
 }
 
-/** Vid och under den här zoomen står molnen fullt framme (Sverige-vyn). */
-export const CLOUD_FULL_ZOOM = 6.5;
+/** Vid och under den här zoomen står molnen fullt framme. Var 6,5 - höjd 13/11
+ *  (Josef: "kanske att molnen är lite för tunna när vi är närmare ... mer
+ *  inzoomat så lite tjockare moln"). */
+export const CLOUD_FULL_ZOOM = 8;
 /** Vid och över den här zoomen är molnen helt borta. Stadslandningen ligger
  *  runt 10,5 - där ska kartan se ut precis som utan moln. */
 export const CLOUD_GONE_ZOOM = 10;
@@ -56,8 +58,17 @@ export const CLOUD_MAX_LEVEL = 10;
 const LEVEL_HYSTERESIS = 0.62;
 
 /** Så många viktade event (rutan + halva grannarna + en fjärdedel av
- *  hörnen) som krävs för helt klart väder. */
+ *  hörnen) som krävs för helt klart väder på CLOUD_CLEAR_LEVEL och inåt.
+ *  Utåt växer gränsen med rutans storlek, se cloudClearAt. */
 export const CLOUD_CLEAR_AT = 3;
+export const CLOUD_CLEAR_LEVEL = 8;
+/** Hur mycket gränsen växer per nivå utåt (en ruta har 4x ytan per nivå;
+ *  3x ger lite fler klara trakter än ren yta). */
+const CLEAR_GROWTH_PER_LEVEL = 3;
+/** Molnen tätnar så här mycket per nivå inåt från CLOUD_THICK_FROM_LEVEL. */
+const THICKEN_PER_LEVEL = 0.08;
+const CLOUD_THICK_FROM_LEVEL = 6;
+const THICKEN_MAX = 1.25;
 /** Andel av de helt tomma rutorna som får ett moln - resten är luckor, så
  *  molnen blir trasiga och spridda och landet syns emellan. Glesa rutor
  *  får färre i proportion till hur glest det är. */
@@ -127,6 +138,19 @@ function hash01(a: number, b: number): number {
     return (h >>> 0) / 4294967296;
 }
 
+/**
+ * Hur många viktade event en ruta behöver för helt klart väder på nivån.
+ * Utzoomat är rutorna stora (~10 mil i Sverige-vyn) och nästan varje ruta i
+ * södra Sverige har några event - med en fast gräns blev hela landet klart och
+ * molnen låg bara runt Sverige (Josef 13/11: "kanske att de kan vara över
+ * event där de är mindre tätt i utzoomat läge"). Gränsen växer därför med
+ * rutans storlek: CLOUD_CLEAR_AT på CLOUD_CLEAR_LEVEL och inåt.
+ */
+export function cloudClearAt(level: number): number {
+    const steps = Math.max(0, CLOUD_CLEAR_LEVEL - level);
+    return CLOUD_CLEAR_AT * Math.pow(CLEAR_GROWTH_PER_LEVEL, steps);
+}
+
 /** Lat ur webbmercatorns y (0 = nord, 1 = syd). */
 function latFromMercatorY(y: number): number {
     return ((2 * Math.atan(Math.exp((0.5 - y) * 2 * Math.PI)) - Math.PI / 2) * 180) / Math.PI;
@@ -144,7 +168,7 @@ export interface CloudView {
  * Molnen för vyn: rutnätet på molnens nivå läggs över `view`, och varje ruta
  * får ett moln efter hur GLEST det är där. Tätheten är rutans event plus
  * halva grannarnas och en fjärdedel av hörnens, så en stad blir klar även i
- * kanterna. Från CLOUD_CLEAR_AT viktade event är det helt klart; tomma trakter
+ * kanterna. Från cloudClearAt(nivå) viktade event är det helt klart; tomma trakter
  * får moln i CLOUD_PRESENCE av rutorna (luckorna gör molnen trasiga). Varje
  * moln har en fast form, storlek och förskjutning per ruta, så samma vy ger
  * samma moln och ett moln behåller sin nyckel när eventlistan fylls på.
@@ -169,6 +193,9 @@ export function buildClouds(points: readonly CloudPoint[], level: number, view: 
     if ((x1 - x0 + 1) * (y1 - y0 + 1) > MAX_VIEW_CELLS) return [];
 
     const n = (ix: number, iy: number) => counts.get(`${ix}_${iy}`) ?? 0;
+    const clearAt = cloudClearAt(level);
+    // Inzoomat lite tjockare moln (Josef 13/11).
+    const thicken = clamp(1 + THICKEN_PER_LEVEL * (level - CLOUD_THICK_FROM_LEVEL), 1, THICKEN_MAX);
     const clouds: Cloud[] = [];
     for (let iy = y0; iy <= y1; iy++) {
         for (let ix = x0; ix <= x1; ix++) {
@@ -176,7 +203,7 @@ export function buildClouds(points: readonly CloudPoint[], level: number, view: 
             const density = here
                 + 0.5 * (n(ix - 1, iy) + n(ix + 1, iy) + n(ix, iy - 1) + n(ix, iy + 1))
                 + 0.25 * (n(ix - 1, iy - 1) + n(ix + 1, iy - 1) + n(ix - 1, iy + 1) + n(ix + 1, iy + 1));
-            const coverage = clamp(1 - density / CLOUD_CLEAR_AT, 0, 1);
+            const coverage = clamp(1 - density / clearAt, 0, 1);
             if (coverage <= 0.05) continue;
             // Luckorna: en fast andel av rutorna står tomma, fler ju glesare
             // molnen ska vara.
@@ -193,7 +220,7 @@ export function buildClouds(points: readonly CloudPoint[], level: number, view: 
                 lng,
                 count: here,
                 radius: RADIUS_MIN + (RADIUS_MAX - RADIUS_MIN) * (0.35 * coverage + 0.65 * size),
-                alpha: ALPHA_MIN + (ALPHA_MAX - ALPHA_MIN) * coverage * (0.55 + 0.45 * seed),
+                alpha: Math.min(1, thicken * (ALPHA_MIN + (ALPHA_MAX - ALPHA_MIN) * coverage * (0.55 + 0.45 * seed))),
                 extra: coverage > 0.85 && size > 0.55 ? (size > 0.85 ? 2 : 1) : 0,
                 seed,
             });

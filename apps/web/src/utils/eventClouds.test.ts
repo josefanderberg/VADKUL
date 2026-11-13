@@ -10,6 +10,9 @@ import {
     CLOUD_REVEAL_RADIUS_PX,
     PUSH_MARGIN_PX,
     buildClouds,
+    cloudClearAt,
+    CLOUD_CLEAR_AT,
+    CLOUD_CLEAR_LEVEL,
     cloudLevelFor,
     cloudOpacityForZoom,
     cloudScaleFor,
@@ -111,6 +114,24 @@ describe('buildClouds', () => {
         const runt = (cs: ReturnType<typeof buildClouds>) => cs.filter(c => near(c, { lat: 57.3, lng: 15.2 }, 60));
         expect(runt(glest).length).toBeLessThanOrEqual(runt(tomt).length);
         if (runt(glest).length > 0) expect(avg(runt(glest))).toBeLessThan(avg(runt(tomt)));
+    });
+
+    it('utzoomat får glesbygd med några event moln, men storstaden är klar', () => {
+        const norrland: { lat: number; lng: number }[] = [];
+        for (let la = 62; la <= 64; la += 0.8) for (let lo = 14; lo <= 18; lo += 1.2) {
+            for (let i = 0; i < 4; i++) norrland.push({ lat: la + i * 0.01, lng: lo });
+        }
+        const view: CloudView = { west: 12, south: 58, east: 20, north: 65 };
+        const clouds = buildClouds([...city(STOCKHOLM, 400), ...norrland], 5, view);
+        // Moln även i rutor som HAR event - inte bara i de tomma emellan.
+        expect(clouds.filter(c => c.lat > 61.5 && c.count > 0).length).toBeGreaterThan(0);
+        expect(clouds.filter(c => near(c, STOCKHOLM, 40))).toEqual([]);
+    });
+
+    it('inzoomat lite tjockare moln än utzoomat', () => {
+        const view: CloudView = { west: 15, south: 57, east: 16, north: 58 };
+        const avg = (cs: { alpha: number }[]) => cs.reduce((a, c) => a + c.alpha, 0) / cs.length;
+        expect(avg(buildClouds([], 9, view))).toBeGreaterThan(avg(buildClouds([], 6, view)));
     });
 
     it('fyller bara vyn', () => {
@@ -229,5 +250,16 @@ describe('pickCloudRevealKeys', () => {
     it('noll radie eller noll max ger ingenting', () => {
         expect(pickCloudRevealKeys([pt('a', 0)], STOCKHOLM, zoom, 0, 50)).toEqual([]);
         expect(pickCloudRevealKeys([pt('a', 0)], STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, 0)).toEqual([]);
+    });
+});
+
+describe('cloudClearAt', () => {
+    it('är den fasta gränsen inzoomat och växer per nivå utåt', () => {
+        expect(cloudClearAt(CLOUD_CLEAR_LEVEL)).toBe(CLOUD_CLEAR_AT);
+        expect(cloudClearAt(CLOUD_CLEAR_LEVEL + 2)).toBe(CLOUD_CLEAR_AT);
+        expect(cloudClearAt(7)).toBeGreaterThan(cloudClearAt(8));
+        expect(cloudClearAt(5)).toBeGreaterThan(cloudClearAt(7));
+        // Sverige-vyn: tiotals event innan en ruta är helt klar.
+        expect(cloudClearAt(5)).toBeGreaterThan(30);
     });
 });
