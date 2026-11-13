@@ -8,6 +8,9 @@
  * En prognos per ort hålls i minnet en halvtimme (SMHI uppdaterar varje
  * timme), så att panorera fram och tillbaka mellan två orter inte hämtar om.
  * Svarar SMHI inte, eller ligger orten utanför deras område, visas inget.
+ * Medan en ny ort hämtas står förra ortens väder kvar (state 'stale'), och före
+ * allra första svaret ges en utfyllnad ('pending') - plattans dagchip ska inte
+ * byta bredd och få dagen att hoppa (#221).
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -17,6 +20,7 @@ import {
     smhiPointUrl,
     weatherEmoji,
     weatherText,
+    weatherToShow,
     type WeatherStep,
 } from '@/utils/smhiWeather';
 
@@ -49,11 +53,21 @@ export interface CityWeather {
     emoji: string;
     temp: string;
     text: string;
+    /**
+     * 'fresh' = ortens egen prognos. 'stale' = förra ortens, kvar medan den nya
+     * hämtas. 'pending' = inget att visa än: emoji/temp är bara utfyllnad som
+     * plattan ritar osynligt, så dagchipet inte ändrar bredd (#221).
+     */
+    state: 'fresh' | 'stale' | 'pending';
 }
+
+/** Utfyllnaden medan första prognosen hämtas - samma bredd som ett vanligt väder. */
+const PENDING: CityWeather = { emoji: '⛅', temp: '0°', text: '', state: 'pending' };
 
 /**
  * Vädret för `point` på dag `dayOffset` (0 = idag), eller null. `point` null
- * eller `enabled` false = ingen hämtning.
+ * eller `enabled` false = ingen hämtning. Läs `state` innan värdet används
+ * som fakta (skärmläsartext, tooltip).
  */
 export function useCityWeather(point: { lat: number; lng: number } | null, dayOffset: number, enabled: boolean): CityWeather | null {
     const url = enabled && point ? smhiPointUrl(point.lat, point.lng) : null;
@@ -75,10 +89,13 @@ export function useCityWeather(point: { lat: number; lng: number } | null, dayOf
     }, [url, tick]);
 
     return useMemo(() => {
-        if (!url || !loaded || loaded.url !== url) return null;
-        const w = pickWeatherForDay(loaded.steps, dayOffset, new Date());
-        if (!w) return null;
-        return { emoji: weatherEmoji(w.symbol, w.time), temp: formatTemp(w.temp), text: weatherText(w.symbol) };
+        const shown = weatherToShow(url, loaded);
+        if (!shown) return null;
+        if (shown.state === 'pending') return PENDING;
+        const w = pickWeatherForDay(shown.steps, dayOffset, new Date());
+        // Förra orten saknar timmen för den här dagen: håll platsen tills den nya kommit.
+        if (!w) return shown.state === 'stale' ? PENDING : null;
+        return { emoji: weatherEmoji(w.symbol, w.time), temp: formatTemp(w.temp), text: weatherText(w.symbol), state: shown.state };
         // tick: "just nu" flyttar sig under ett långt besök.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [url, loaded, dayOffset, tick]);

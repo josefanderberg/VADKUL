@@ -126,3 +126,31 @@ export function formatTemp(temp: number): string {
     const r = Math.round(temp);
     return `${r === 0 ? 0 : r}°`;
 }
+
+// ── Vad plattan visar medan en ny ort laddas (#221) ──────────────────────────
+// Josef 13/11: "när temperaturen ändras när man går till en annan stad. då
+// försvinner allt. så söndag flyttas snabbt mot mitten i några sekunder. kan du
+// inte ha en placeholder". Förut visades ingenting medan den nya ortens prognos
+// hämtades, och då krympte dagchipet och dagen hoppade.
+export type WeatherShown =
+    /** Den visade ortens egen prognos. */
+    | { state: 'fresh'; steps: readonly WeatherStep[] }
+    /** Förra ortens prognos, kvar tills den nya kommit - chipet behåller bredden. */
+    | { state: 'stale'; steps: readonly WeatherStep[] }
+    /** Inget att visa än: en osynlig platshållare håller platsen. */
+    | { state: 'pending' }
+    | null;
+
+/**
+ * Vilken prognos plattan visar för orten bakom `url`, givet den senast
+ * inlästa. null = inget väder alls (ingen ort, eller orten saknar prognos).
+ */
+export function weatherToShow(
+    url: string | null,
+    loaded: { url: string; steps: readonly WeatherStep[] } | null,
+): WeatherShown {
+    if (!url) return null;
+    if (!loaded) return { state: 'pending' };
+    if (loaded.url === url) return loaded.steps.length > 0 ? { state: 'fresh', steps: loaded.steps } : null;
+    return loaded.steps.length > 0 ? { state: 'stale', steps: loaded.steps } : { state: 'pending' };
+}

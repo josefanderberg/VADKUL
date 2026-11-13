@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatTemp, parseSmhiForecast, pickWeatherForDay, smhiPointUrl, weatherEmoji, weatherText } from './smhiWeather';
+import {
+    formatTemp, parseSmhiForecast, pickWeatherForDay, smhiPointUrl, weatherEmoji, weatherText, weatherToShow,
+    type WeatherStep,
+} from './smhiWeather';
 
 // Ett utdrag i snow1g-formatet (fälten som används + några till).
 const SVAR = {
@@ -98,5 +101,34 @@ describe('formatTemp', () => {
         expect(formatTemp(2.4)).toBe('2°');
         expect(formatTemp(-2.6)).toBe('-3°');
         expect(formatTemp(-0.4)).toBe('0°');
+    });
+});
+
+// #221, Josef 13/11: "när temperaturen ändras när man går till en annan stad.
+// då försvinner allt. så söndag flyttas snabbt mot mitten i några sekunder".
+describe('weatherToShow', () => {
+    const steg: WeatherStep[] = [{ time: Date.UTC(2026, 10, 13, 12), temp: 3, symbol: 3 }];
+    const VAXJO = 'https://smhi.invalid/vaxjo';
+    const KALMAR = 'https://smhi.invalid/kalmar';
+
+    it('ingen ort = inget väder', () => {
+        expect(weatherToShow(null, { url: VAXJO, steps: steg })).toBeNull();
+    });
+
+    it('före allra första svaret hålls platsen', () => {
+        expect(weatherToShow(VAXJO, null)).toEqual({ state: 'pending' });
+    });
+
+    it('ortens egen prognos visas som den är', () => {
+        expect(weatherToShow(VAXJO, { url: VAXJO, steps: steg })).toEqual({ state: 'fresh', steps: steg });
+    });
+
+    it('på väg till en ny ort står förra ortens väder kvar - chipet byter inte bredd', () => {
+        expect(weatherToShow(KALMAR, { url: VAXJO, steps: steg })).toEqual({ state: 'stale', steps: steg });
+    });
+
+    it('en ort utan prognos visar inget, men håller platsen åt nästa ort', () => {
+        expect(weatherToShow(VAXJO, { url: VAXJO, steps: [] })).toBeNull();
+        expect(weatherToShow(KALMAR, { url: VAXJO, steps: [] })).toEqual({ state: 'pending' });
     });
 });

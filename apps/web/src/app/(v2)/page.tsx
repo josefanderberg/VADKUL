@@ -5031,7 +5031,7 @@ export default function HomePage() {
             key={cityTourTarget?.key ?? 0}
             href={cityLink.href}
             title={cityLink.label}
-            aria-label={plattaWeather
+            aria-label={plattaWeather?.state === 'fresh'
                 ? `${cityLink.aria}. Väder ${plattaDayLabel.toLowerCase()}: ${plattaWeather.text}, ${plattaWeather.temp} (SMHI)`
                 : cityLink.aria}
             // hover:scale-105 som skapa-knappen (Josef 10/9: "så fattar man att
@@ -5091,8 +5091,15 @@ export default function HomePage() {
                         className={`block whitespace-nowrap text-[11px] font-black uppercase tracking-wider text-white/90 leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
                     >
                         {plattaDayLabel}
+                        {/* Vädret behåller sin plats medan en ny ort laddas (#221):
+                            förra ortens värde nedtonat, eller en osynlig utfyllnad
+                            före första svaret - annars hoppar dagen i sidled. */}
                         {plattaWeather && (
-                            <span title={`${plattaWeather.text}, ${plattaWeather.temp} - väder från SMHI`}>
+                            <span
+                                title={plattaWeather.state === 'fresh' ? `${plattaWeather.text}, ${plattaWeather.temp} - väder från SMHI` : undefined}
+                                aria-hidden={plattaWeather.state === 'fresh' ? undefined : true}
+                                className={`transition-opacity duration-300 ${plattaWeather.state === 'pending' ? 'opacity-0' : plattaWeather.state === 'stale' ? 'opacity-50' : ''}`}
+                            >
                                 {' · '}
                                 <span aria-hidden className="normal-case">{plattaWeather.emoji}</span>
                                 {' '}{plattaWeather.temp}
