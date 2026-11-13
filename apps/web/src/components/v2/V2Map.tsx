@@ -30,8 +30,7 @@ import {
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
 import {
-    CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, cloudCenterRevealRadiusPx, cloudOpacityForZoom,
-    pickCloudRevealKeys,
+    CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, cloudOpacityForZoom, pickCloudRevealKeys,
 } from '../../utils/eventClouds';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
 import CitySignposts, { type SignpostCity } from './CitySignposts';
@@ -2382,19 +2381,10 @@ export default function V2Map({
         // kväll) delas med tap-migrationen via pickRevealKeys, så seed-
         // omräkningen aldrig byter uppsättning mot en annan sorts urval.
         const origin = (map ? map.getCenter() : null) ?? userPosRef.current;
-        let seedKeys: string[] = origin ? pickRevealKeysRef.current(origin.lng, origin.lat) : [];
-        // MOLNEN (#195): medan molnen ligger kvar tänds bara det som står nära
-        // mitten (cloudCenterRevealRadiusPx - ingenting alls när molnen står
-        // fullt framme, obegränsat när de är borta). Annars tände en mitt i
-        // havet de närmaste brickorna långt bort, under molnen.
-        if (map && origin) {
-            const zoom = map.getZoom();
-            const r = cloudCenterRevealRadiusPx(zoom);
-            if (r < Infinity) {
-                const inside = new Set(pickCloudRevealKeys(revealCoordsRef.current, origin, zoom, r, Infinity));
-                seedKeys = seedKeys.filter(k => inside.has(k));
-            }
-        }
+        // Mitt-urvalet står kvar även under molnen (Josef 13/11: "det ska
+        // fortfarande visas de 50 närmaste mitten eller där man är") - molnhålet
+        // (#195) läggs OVANPÅ, det ersätter inget.
+        const seedKeys: string[] = origin ? pickRevealKeysRef.current(origin.lng, origin.lat) : [];
         const newSeed = new Set(seedKeys);
         const newHover = cloudHoverKeys();
         revealHoverRef.current = newHover;
@@ -2723,18 +2713,12 @@ export default function V2Map({
             const map = mapRef.current;
             if (map && layerExists(map, 'plain-events')) {
                 const c = map.getCenter();
-                // Medan molnen ligger kvar (#195): bara det nära mitten, som
-                // seedet, plus molnhålet - aldrig de närmaste långt bort.
-                const zoom = map.getZoom();
-                const r = cloudCenterRevealRadiusPx(zoom);
-                const seedKeys = r < Infinity
-                    ? pickCloudRevealKeys(revealCoordsRef.current, c, zoom, r, REVEAL_SEED_COUNT)
-                    : nearestKeysTo(c.lng, c.lat, REVEAL_SEED_COUNT);
-                for (const k of seedKeys) {
+                for (const k of nearestKeysTo(c.lng, c.lat, REVEAL_SEED_COUNT)) {
                     try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 1 }); } catch { /* källan ej redo */ }
                     revealWrittenRef.current.set(k, 1);
                     revealSeedRef.current.add(k);
                 }
+                // Molnhålet (#195) förtänds på samma sätt.
                 for (const k of cloudHoverKeys()) {
                     try { map.setFeatureState({ source: 'plain-events', id: k }, { reveal: 1 }); } catch { /* källan ej redo */ }
                     revealWrittenRef.current.set(k, 1);

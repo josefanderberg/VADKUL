@@ -154,18 +154,6 @@ export function buildClouds(points: readonly CloudPoint[], level: number): Cloud
     return clouds;
 }
 
-/**
- * Hur långt från kartans MITT brickorna tänds medan molnen ligger kvar (px).
- * Med molnen fullt framme tänds ingenting kring mitten - bara där molnen
- * skingras (pekaren, trycket, det valda eventet). Radien växer när molnen
- * tonar ut och är obegränsad när de är borta, så stadsvyn tänder som förut.
- */
-export function cloudCenterRevealRadiusPx(zoom: number): number {
-    const t = cloudOpacityForZoom(zoom) / CLOUD_MAX_OPACITY;
-    if (!(t > 0.0025)) return Infinity;
-    return (CLOUD_REVEAL_RADIUS_PX * (1 - t)) / t;
-}
-
 export interface CloudRevealPoint extends CloudPoint {
     key: string;
     /** Populär (🔥) eller guld - går före i urvalet. */

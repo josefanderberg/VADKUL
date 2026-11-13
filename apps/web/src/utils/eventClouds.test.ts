@@ -9,7 +9,6 @@ import {
     CLOUD_REVEAL_RADIUS_PX,
     PUSH_MARGIN_PX,
     buildClouds,
-    cloudCenterRevealRadiusPx,
     cloudLevelFor,
     cloudOpacityForZoom,
     cloudScaleFor,
@@ -186,29 +185,5 @@ describe('pickCloudRevealKeys', () => {
     it('noll radie eller noll max ger ingenting', () => {
         expect(pickCloudRevealKeys([pt('a', 0)], STOCKHOLM, zoom, 0, 50)).toEqual([]);
         expect(pickCloudRevealKeys([pt('a', 0)], STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, 0)).toEqual([]);
-    });
-});
-
-describe('cloudCenterRevealRadiusPx', () => {
-    it('tänder inget kring mitten när molnen står fullt framme', () => {
-        expect(cloudCenterRevealRadiusPx(4)).toBe(0);
-        expect(cloudCenterRevealRadiusPx(CLOUD_FULL_ZOOM)).toBeCloseTo(0);
-    });
-
-    it('är obegränsad när molnen är borta, så stadsvyn tänder som förut', () => {
-        expect(cloudCenterRevealRadiusPx(CLOUD_GONE_ZOOM)).toBe(Infinity);
-        expect(cloudCenterRevealRadiusPx(12)).toBe(Infinity);
-    });
-
-    it('växer jämnt medan molnen tonar ut', () => {
-        let prev = -1;
-        for (let z = CLOUD_FULL_ZOOM; z < CLOUD_GONE_ZOOM; z += 0.25) {
-            const r = cloudCenterRevealRadiusPx(z);
-            expect(r).toBeGreaterThanOrEqual(prev);
-            prev = r;
-        }
-        // Halvvägs i tätheten är radien lika stor som hålet runt pekaren.
-        const mid = (CLOUD_FULL_ZOOM + CLOUD_GONE_ZOOM) / 2;
-        expect(cloudCenterRevealRadiusPx(mid)).toBeCloseTo(CLOUD_REVEAL_RADIUS_PX, 0);
     });
 });
