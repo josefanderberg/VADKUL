@@ -21,6 +21,7 @@ import { acceptFriendInvite, fetchUserLite, recordInviteLanding } from '@/servic
 import { storageService } from '@/services/storageService';
 import { recordEventView, recordEventLike, recordEventRsvpCount } from '@/services/eventStatsService';
 import { setRsvpStatus } from '@/services/rsvpService';
+import { RSVP_LOGIN_PROMPT_KEY, rsvpLoginPromptText, shouldPromptRsvpLogin } from '@/utils/rsvpLoginPrompt';
 import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP_EVENTS_KEY, hostedAttendeeAction } from '@/utils/rsvpTransition';
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus, ListFilter as FilterIcon } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
@@ -3451,6 +3452,51 @@ export default function HomePage() {
         startTransition(() => setMapOrganizer({ slug, name }));
     }, []);
 
+    // LOGGA IN EFTER ETT SVAR UTAN KONTO (#214, Josef 13/11: "en popup som
+    // säger att man ska logga in för att spara sitt val och få notiser").
+    // Svaret är redan satt när uppmaningen kommer - den blockerar inget.
+    // Loggar man in länkas den anonyma sessionen till kontot (AuthContext),
+    // så svaret följer med. Reglerna (en gång per besök, tyst en vecka efter
+    // "Inte nu") är testade i utils/rsvpLoginPrompt.
+    const rsvpLoginPromptShownRef = useRef(false);
+    const maybePromptRsvpLogin = useCallback((next: EventRsvpStatus | null) => {
+        let dismissedAt: string | null = null;
+        try { dismissedAt = localStorage.getItem(RSVP_LOGIN_PROMPT_KEY); } catch { /* privat läge */ }
+        // Medan inloggningen ännu läses in är `user` null även för den som har konto.
+        if (authLoading) return;
+        if (!next || !shouldPromptRsvpLogin({
+            hasAccount: !!user, next, shownThisVisit: rsvpLoginPromptShownRef.current, dismissedAt, now: Date.now(),
+        })) return;
+        rsvpLoginPromptShownRef.current = true;
+        toast((t) => (
+            <div className="flex flex-col gap-2">
+                <span className="text-sm font-bold">{rsvpLoginPromptText(next)}</span>
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            toast.dismiss(t.id);
+                            openLogin('Logga in för att spara ditt svar');
+                        }}
+                        className="px-3.5 py-1.5 rounded-full bg-[#006AA7] hover:bg-[#005590] text-white text-xs font-black transition-colors"
+                    >
+                        Logga in
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            toast.dismiss(t.id);
+                            try { localStorage.setItem(RSVP_LOGIN_PROMPT_KEY, String(Date.now())); } catch { /* privat läge */ }
+                        }}
+                        className="px-3.5 py-1.5 rounded-full text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors"
+                    >
+                        Inte nu
+                    </button>
+                </div>
+            </div>
+        ), { duration: 12000, icon: '✅' });
+    }, [user, authLoading, openLogin]);
+
     // KOMMER/INTRESSERAD (6/10, spår 3): optimistiskt — seten styr UI:t
     // direkt, svarsdokumentet (eventRsvps) och räknardeltan (eventStats)
     // skrivs i bakgrunden. INGET konto krävs: anonyma sessioner räknas med
@@ -3459,6 +3505,7 @@ export default function HomePage() {
         const prev: EventRsvpStatus | null = goingEventIds.has(evt.id) ? 'going'
             : interestedEventIds.has(evt.id) ? 'interested' : null;
         const next = nextRsvp(prev, pressed);
+        maybePromptRsvpLogin(next);
         setGoingEventIds(ids => {
             const n = new Set(ids);
             if (next === 'going') n.add(evt.id); else n.delete(evt.id);
@@ -3499,7 +3546,7 @@ export default function HomePage() {
             // läget står kvar lokalt och synkas via users-spegeln senare.
             console.warn('Kunde inte spara svaret:', err);
         }
-    }, [goingEventIds, interestedEventIds, ensureTipIdentity, user]);
+    }, [goingEventIds, interestedEventIds, ensureTipIdentity, user, maybePromptRsvpLogin]);
 
     // BJUD MED (6/10): den som bjuder markeras själv som Kommer ("man visar
     // att man kommer när man delar den") och delningsarket öppnas med
