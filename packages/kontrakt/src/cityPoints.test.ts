@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nearestCityPoint } from './cityPoints';
+import { findCityPoint, nearestCityPoint, searchCities } from './cityPoints';
 
 // nearestCityPoint är platsrubriken för centroid-högar i webbens multi-event-
 // lista och stadsrutans namnuppslag - fel ort här syns direkt i UI:t.
@@ -19,5 +19,14 @@ describe('nearestCityPoint', () => {
         // grad; utan cos-korrigering ser öst/väst-avstånd dubbelt så långa ut
         // och fel ort kan vinna. Nära Kiruna ska Kiruna vinna.
         expect(nearestCityPoint(67.8, 20.3).name).toBe('Kiruna');
+    });
+});
+
+// #175: Hudiksvall misstänktes saknas i stadssöket. Den finns - och ska fortsätta
+// finnas, både i sökrutan (prefix) och i det exakta uppslaget ("konst hudiksvall").
+describe('stadssöket hittar mindre orter', () => {
+    it('Hudiksvall ger träff på prefix och exakt namn', () => {
+        expect(searchCities('hudik')[0]?.name).toBe('Hudiksvall');
+        expect(findCityPoint('hudiksvall')?.name).toBe('Hudiksvall');
     });
 });
