@@ -167,7 +167,11 @@ const APPROACH_MAX = 1.6;
  * Molnen växer fortare än kartan när man zoomar in (#219, Josef 13/11: "när
  * man zoomar in så ska de bli större också eller mindre om man zoomar in. så
  * ser det ut som man verkligen kommer närmare kartan"). Molnen ligger ju
- * närmare ögat än marken. Faktorn läggs på molnets STORLEK, utöver
+ * närmare ögat än marken. GÄLLER BARA MOLNEN SEDDA UPPIFRÅN (Josef samma
+ * kväll, när alla moln växte: "nu känns det som det blev många fler moln. jag
+ * ville att bara de som ser ut som de är uppifrån de ska bli större och mindre
+ * vid zoom. inte de andra") - ritlagret lägger inte faktorn på sidomolnen.
+ * Faktorn läggs på molnets STORLEK, utöver
  * cloudScaleFor som bara låter molnet följa kartan: 1 på molnets egen nivå,
  * större inåt och mindre utåt. Platsen rörs inte, så molnen står kvar över
  * det glesa. Vid ett nivåbyte tonar nästa uppsättning in i sin egen storlek.

@@ -107,6 +107,8 @@ interface CloudSprite {
     img: HTMLCanvasElement;
     shadow: HTMLCanvasElement;
     anchorY: number;
+    /** Sedd uppifrån (TOP_PUFFS) - bara de växer fortare än kartan vid zoom. */
+    top: boolean;
 }
 
 interface CloudState {
@@ -231,7 +233,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         const img = makeSprite(puffs, top);
         const shadow = makeShadowSprite(puffs);
         const anchorY = top ? TOP_ANCHOR_Y : SIDE_ANCHOR_Y;
-        return [{ img, shadow, anchorY }, { img: mirrorSprite(img), shadow: mirrorSprite(shadow), anchorY }];
+        return [{ img, shadow, anchorY, top }, { img: mirrorSprite(img), shadow: mirrorSprite(shadow), anchorY, top }];
     };
     const sprites: CloudSprite[] = [
         ...SPRITE_PUFFS.flatMap(p => form(p, false)),
@@ -417,8 +419,11 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
             for (const st of set.states) {
                 const c = st.cloud;
                 const p = map.project([c.lng, c.lat]);
-                // Storleken växer fortare än kartan (#219) - platsen följer kartan.
-                const r = c.radius * scale * approach;
+                const spriteIndex = Math.floor(c.seed * sprites.length) % sprites.length;
+                const sprite = sprites[spriteIndex];
+                // Bara molnen SEDDA UPPIFRÅN växer fortare än kartan (#219) -
+                // sidomolnen följer kartan som förut. Platsen följer alltid kartan.
+                const r = c.radius * scale * (sprite.top ? approach : 1);
                 // Knuffen följer molnet: ett undanknuffat moln ligger kvar
                 // förskjutet även när det panoreras ut och in i bild.
                 const px = p.x + st.ox * scale;
@@ -457,10 +462,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
 
                 const x = p.x + st.ox * scale + dx;
                 const y = p.y + st.oy * scale + dy;
-                const spriteIndex = Math.floor(c.seed * sprites.length) % sprites.length;
                 const w = r * 2;
                 const h = w * (SPRITE_H / SPRITE_W);
-                const sprite = sprites[spriteIndex];
                 cloudStamps.push({ img: sprite.img, x: x - w / 2, y: y - h * sprite.anchorY, w, h, a: alpha });
                 // Markskuggan (#215): följer molnets toning, knuff och drift.
                 const shadow = cloudShadow(c.seed, r, { x: x - sunPx.x, y: y - sunPx.y });
