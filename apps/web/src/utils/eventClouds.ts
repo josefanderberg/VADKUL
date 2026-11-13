@@ -37,13 +37,17 @@ export interface Cloud {
     seed: number;
 }
 
-/** Vid och under den här zoomen står molnen fullt framme. 6,5 -> 8 -> 9,5
- *  13/11 (Josef: "molnen syns för lite när vi är mer inzoomade. gör så de
- *  börja synas tidigare"). */
-export const CLOUD_FULL_ZOOM = 9.5;
-/** Vid och över den här zoomen är molnen helt borta. Var 10 (stadslandningen
- *  ~10,5 helt utan moln); sedan 13/11 syns de svagt även där - eventtrakterna
- *  är ändå klara, molnen ligger över det glesa runt omkring. */
+/** Vid och under den här zoomen står molnen fullt framme. 6,5 -> 8 13/11
+ *  (Josef: "mer inzoomat så lite tjockare moln"). Prövades på 9,5 samma dag
+ *  men blev "för synliga" - huvudkurvan ska INTE vara starkare än så här. */
+export const CLOUD_FULL_ZOOM = 8;
+/** Här har huvudkurvan tonat ut helt. */
+export const CLOUD_FADE_ZOOM = 10;
+/** Den svaga resten inzoomat: mellan CLOUD_FADE_ZOOM och CLOUD_GONE_ZOOM ligger
+ *  molnen kvar med högst den här tätheten (Josef 13/11: "jag menar bara att de
+ *  ska synas lite mer när vi är inzoomade mycket. inte mer annars"). */
+export const CLOUD_TAIL_OPACITY = 0.2;
+/** Vid och över den här zoomen är molnen helt borta. */
 export const CLOUD_GONE_ZOOM = 12;
 /** Molnens högsta täthet. Under 1 så kartan anas även genom det tätaste.
  *  Storlek och täthet sänktes 11/11 (Josef: "80% av sverige täckt med moln.
@@ -99,11 +103,20 @@ const PUSH_FADE = 0.4;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** Molnens täthet för en zoomnivå: full i Sverige-vyn, mjukt ner till noll. */
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/**
+ * Molnens täthet för en zoomnivå: full till CLOUD_FULL_ZOOM, mjukt ner till
+ * noll vid CLOUD_FADE_ZOOM (huvudkurvan, oförändrad sedan 13/11 morgon) - och
+ * ovanpå den en svag rest (CLOUD_TAIL_OPACITY) som håller molnen synliga en
+ * bit in och tonar ut till CLOUD_GONE_ZOOM. Resten tar bara över där
+ * huvudkurvan redan är svagare, så utzoomat är molnen exakt som förut.
+ */
 export function cloudOpacityForZoom(zoom: number): number {
     if (!Number.isFinite(zoom)) return 0;
-    const t = clamp((CLOUD_GONE_ZOOM - zoom) / (CLOUD_GONE_ZOOM - CLOUD_FULL_ZOOM), 0, 1);
-    return CLOUD_MAX_OPACITY * t * t * (3 - 2 * t);
+    const main = CLOUD_MAX_OPACITY * smooth(clamp((CLOUD_FADE_ZOOM - zoom) / (CLOUD_FADE_ZOOM - CLOUD_FULL_ZOOM), 0, 1));
+    const tail = CLOUD_TAIL_OPACITY * smooth(clamp((CLOUD_GONE_ZOOM - zoom) / (CLOUD_GONE_ZOOM - CLOUD_FADE_ZOOM), 0, 1));
+    return Math.max(main, tail);
 }
 
 /**

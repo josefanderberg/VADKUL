@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+    CLOUD_FADE_ZOOM,
     CLOUD_FULL_ZOOM,
     CLOUD_GONE_ZOOM,
     CLOUD_MAX_LEVEL,
     CLOUD_MAX_OPACITY,
     CLOUD_MIN_LEVEL,
     CLOUD_PRESENCE,
+    CLOUD_TAIL_OPACITY,
     CLOUD_REVEAL_MAX,
     CLOUD_REVEAL_RADIUS_PX,
     PUSH_MARGIN_PX,
@@ -40,13 +42,26 @@ describe('cloudOpacityForZoom', () => {
         expect(cloudOpacityForZoom(15)).toBe(0);
     });
 
-    it('tunnas ut jämnt på vägen in', () => {
+    it('tunnas ut på vägen in, utan att någonsin bli tätare', () => {
         let prev = cloudOpacityForZoom(CLOUD_FULL_ZOOM);
         for (let z = CLOUD_FULL_ZOOM + 0.25; z <= CLOUD_GONE_ZOOM; z += 0.25) {
             const o = cloudOpacityForZoom(z);
-            expect(o).toBeLessThan(prev);
+            expect(o).toBeLessThanOrEqual(prev);
             prev = o;
         }
+        expect(cloudOpacityForZoom(CLOUD_GONE_ZOOM - 0.25)).toBeLessThan(cloudOpacityForZoom(CLOUD_FADE_ZOOM));
+    });
+
+    it('utzoomat exakt som huvudkurvan - resten syns bara långt inzoomat', () => {
+        // "jag menar bara att de ska synas lite mer när vi är inzoomade mycket. inte mer annars"
+        const main = (z: number) => {
+            const t = Math.min(1, Math.max(0, (CLOUD_FADE_ZOOM - z) / (CLOUD_FADE_ZOOM - CLOUD_FULL_ZOOM)));
+            return CLOUD_MAX_OPACITY * t * t * (3 - 2 * t);
+        };
+        for (const z of [5, 7, CLOUD_FULL_ZOOM, 8.5, 9]) expect(cloudOpacityForZoom(z)).toBeCloseTo(main(z));
+        expect(cloudOpacityForZoom(11)).toBeGreaterThan(0);
+        expect(cloudOpacityForZoom(11)).toBeLessThanOrEqual(CLOUD_TAIL_OPACITY);
+        expect(CLOUD_TAIL_OPACITY).toBeLessThan(CLOUD_MAX_OPACITY / 2);
     });
 
     it('tål skräpvärden', () => {

@@ -61,24 +61,22 @@ const MAX_DPR = 2;
 
 const SPRITE_W = 256;
 const SPRITE_H = 168;
-/** Molnformerna: överlappande puffar (x, y, r) i spritens koordinater. Åtta
- *  former, och var och en ritas även spegelvänd - 16 varianter, så upprepningen
- *  inte syns när molnen är många (#201, Josef 13/11: "Kanske mer varianter av moln"). */
+/** Molnformerna: överlappande puffar (x, y, r) i spritens koordinater. Sex
+ *  former, och var och en ritas även spegelvänd - 12 varianter, så upprepningen
+ *  inte syns när molnen är många (#201, Josef 13/11: "Kanske mer varianter av
+ *  moln"). De två smala formerna (långt-flackt och tunt-trasigt) prövades och
+ *  togs bort samma dag (Josef: "ta bort de smala molnet") - inga smala former. */
 const SPRITE_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
     // Bulliga stackmoln (de tre första formerna).
     [[70, 100, 46], [118, 78, 58], [170, 94, 50], [206, 112, 34], [40, 116, 30], [126, 114, 48]],
     [[60, 104, 40], [104, 86, 50], [152, 74, 54], [196, 100, 44], [128, 114, 50], [226, 118, 26]],
     [[84, 96, 52], [140, 82, 56], [190, 104, 42], [44, 114, 32], [120, 116, 44], [222, 120, 24]],
-    // Långt och flackt.
-    [[34, 112, 24], [70, 104, 32], [112, 98, 38], [156, 100, 36], [198, 106, 30], [232, 114, 20], [96, 118, 28], [150, 118, 28]],
     // Liten rund tuss.
     [[106, 102, 34], [144, 94, 40], [176, 108, 28], [86, 116, 24], [128, 118, 34]],
     // Högt tornande.
     [[128, 62, 44], [98, 88, 42], [160, 86, 44], [72, 112, 30], [188, 110, 32], [128, 108, 52]],
     // Två toppar.
     [[58, 106, 32], [92, 94, 38], [128, 110, 26], [164, 92, 40], [202, 104, 34], [108, 120, 24], [184, 120, 24]],
-    // Tunt och trasigt.
-    [[46, 114, 18], [80, 108, 24], [116, 102, 28], [152, 104, 26], [188, 108, 22], [222, 114, 16], [132, 116, 20], [96, 118, 16]],
 ];
 
 interface CloudState {
