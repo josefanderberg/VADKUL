@@ -30,6 +30,7 @@ import {
     type CloudView,
     cloudLevelFor,
     cloudOpacityForZoom,
+    cloudApproachFor,
     cloudScaleFor,
     cloudShadow,
     glideStep,
@@ -66,8 +67,10 @@ const MAX_DPR = 2;
 
 const SPRITE_W = 256;
 const SPRITE_H = 168;
-/** Var i spriten molnet har sin mitt (andel av höjden). */
-const SPRITE_ANCHOR_Y = 0.58;
+/** Var i spriten molnet har sin mitt (andel av höjden): sidomolnen står på
+ *  sin platta undersida, molnen uppifrån är runda kring mitten. */
+const SIDE_ANCHOR_Y = 0.58;
+const TOP_ANCHOR_Y = 0.5;
 /** Molnformerna: överlappande puffar (x, y, r) i spritens koordinater. Sex
  *  former, och var och en ritas även spegelvänd - 12 varianter, så upprepningen
  *  inte syns när molnen är många (#201, Josef 13/11: "Kanske mer varianter av
@@ -87,6 +90,24 @@ const SPRITE_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number
     // Två toppar.
     [[58, 106, 32], [92, 94, 38], [128, 110, 26], [164, 92, 40], [202, 104, 34], [108, 120, 24], [184, 120, 24]],
 ];
+
+/** NÅGRA MOLN SEDDA UPPIFRÅN (#219, Josef 13/11, efter att alla moln prövats
+ *  uppifrån i #218 och sidomolnen kom tillbaka: "eller kan du inte behålla
+ *  några som är ifrån ovan"): två runda tussar kring spritens mitt, utan platt
+ *  undersida. Med speglingarna 4 av 16 varianter - en fjärdedel av molnen.
+ *  Sidomolnen ska förbli i majoritet. */
+const TOP_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
+    // Stor rund tuss med flikar runt om.
+    [[128, 84, 50], [92, 70, 36], [164, 70, 38], [100, 106, 34], [158, 108, 36], [128, 52, 30], [128, 116, 30]],
+    // Oregelbunden.
+    [[118, 80, 44], [162, 92, 34], [86, 96, 30], [140, 54, 28], [100, 58, 26], [136, 116, 28]],
+];
+
+interface CloudSprite {
+    img: HTMLCanvasElement;
+    shadow: HTMLCanvasElement;
+    anchorY: number;
+}
 
 interface CloudState {
     cloud: Cloud;
@@ -113,7 +134,7 @@ interface CloudSet {
     leaving: boolean;
 }
 
-function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HTMLCanvasElement {
+function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>, top = false): HTMLCanvasElement {
     const cv = document.createElement('canvas');
     cv.width = SPRITE_W;
     cv.height = SPRITE_H;
@@ -122,7 +143,8 @@ function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HT
     // Skuggan först: samma puffar en bit ner, i kartans blågrå. Den sticker
     // fram under molnets nederkant och ger det kropp mot den ljusa kartan.
     for (const [x, y, r] of puffs) {
-        const sy = y + r * 0.2;
+        // Uppifrån finns ingen undersida: kroppen ligger rakt under puffen.
+        const sy = top ? y : y + r * 0.2;
         const g = ctx.createRadialGradient(x, sy, r * 0.3, x, sy, r);
         g.addColorStop(0, 'rgba(84,110,150,0.24)');
         g.addColorStop(0.7, 'rgba(84,110,150,0.12)');
@@ -204,11 +226,17 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     // senare i samma behållare).
     glCanvas.after(canvas);
     const ctx = canvas.getContext('2d');
-    const baseSprites = SPRITE_PUFFS.map(makeSprite);
-    const sprites = [...baseSprites, ...baseSprites.map(mirrorSprite)];
-    // Skuggorna i samma ordning som molnen, så varje moln får sin egen form.
-    const baseShadows = SPRITE_PUFFS.map(makeShadowSprite);
-    const shadowSprites = [...baseShadows, ...baseShadows.map(mirrorSprite)];
+    // Varje form med sin egen skugga, och var och en även spegelvänd.
+    const form = (puffs: ReadonlyArray<readonly [number, number, number]>, top: boolean): CloudSprite[] => {
+        const img = makeSprite(puffs, top);
+        const shadow = makeShadowSprite(puffs);
+        const anchorY = top ? TOP_ANCHOR_Y : SIDE_ANCHOR_Y;
+        return [{ img, shadow, anchorY }, { img: mirrorSprite(img), shadow: mirrorSprite(shadow), anchorY }];
+    };
+    const sprites: CloudSprite[] = [
+        ...SPRITE_PUFFS.flatMap(p => form(p, false)),
+        ...TOP_PUFFS.flatMap(p => form(p, true)),
+    ];
     // Vad som ska ritas i den här bildrutan: skuggorna först, molnen ovanpå,
     // så en skugga aldrig hamnar över ett annat moln.
     type Stamp = { img: HTMLCanvasElement; x: number; y: number; w: number; h: number; a: number };
@@ -374,6 +402,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         cloudStamps.length = 0;
         for (const set of sets) {
             const scale = cloudScaleFor(zoom, set.level);
+            const approach = cloudApproachFor(zoom, set.level);
             // Moln som kommit till eller försvunnit tonar i sin egen takt.
             let gone = false;
             for (const st of set.states) {
@@ -388,7 +417,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
             for (const st of set.states) {
                 const c = st.cloud;
                 const p = map.project([c.lng, c.lat]);
-                const r = c.radius * scale;
+                // Storleken växer fortare än kartan (#219) - platsen följer kartan.
+                const r = c.radius * scale * approach;
                 // Knuffen följer molnet: ett undanknuffat moln ligger kvar
                 // förskjutet även när det panoreras ut och in i bild.
                 const px = p.x + st.ox * scale;
@@ -430,13 +460,14 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 const spriteIndex = Math.floor(c.seed * sprites.length) % sprites.length;
                 const w = r * 2;
                 const h = w * (SPRITE_H / SPRITE_W);
-                cloudStamps.push({ img: sprites[spriteIndex], x: x - w / 2, y: y - h * SPRITE_ANCHOR_Y, w, h, a: alpha });
+                const sprite = sprites[spriteIndex];
+                cloudStamps.push({ img: sprite.img, x: x - w / 2, y: y - h * sprite.anchorY, w, h, a: alpha });
                 // Markskuggan (#215): följer molnets toning, knuff och drift.
                 const shadow = cloudShadow(c.seed, r, { x: x - sunPx.x, y: y - sunPx.y });
                 if (shadow) {
                     shadowStamps.push({
-                        img: shadowSprites[spriteIndex],
-                        x: x - w / 2 + shadow.dx, y: y - h * SPRITE_ANCHOR_Y + shadow.dy, w, h,
+                        img: sprite.shadow,
+                        x: x - w / 2 + shadow.dx, y: y - h * sprite.anchorY + shadow.dy, w, h,
                         a: alpha * shadow.opacity,
                     });
                 }
@@ -449,7 +480,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                     const ex = x + Math.cos(a) * r * 0.55 - dx * 0.5;
                     const ey = y + Math.sin(a) * r * 0.3 - dy * 0.5;
                     const other = sprites[(Math.floor(c.seed * sprites.length) + i + 1) % sprites.length];
-                    cloudStamps.push({ img: other, x: ex - ew / 2, y: ey - eh * SPRITE_ANCHOR_Y, w: ew, h: eh, a: alpha * 0.8 });
+                    cloudStamps.push({ img: other.img, x: ex - ew / 2, y: ey - eh * other.anchorY, w: ew, h: eh, a: alpha * 0.8 });
                 }
             }
         }

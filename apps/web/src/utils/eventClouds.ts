@@ -158,6 +158,24 @@ export function cloudScaleFor(zoom: number, level: number): number {
     return Math.pow(2, zoom - level);
 }
 
+/** Hur mycket fortare än kartan molnen växer (0 = följer kartan exakt). */
+export const CLOUD_APPROACH = 0.5;
+const APPROACH_MIN = 0.75;
+const APPROACH_MAX = 1.6;
+
+/**
+ * Molnen växer fortare än kartan när man zoomar in (#219, Josef 13/11: "när
+ * man zoomar in så ska de bli större också eller mindre om man zoomar in. så
+ * ser det ut som man verkligen kommer närmare kartan"). Molnen ligger ju
+ * närmare ögat än marken. Faktorn läggs på molnets STORLEK, utöver
+ * cloudScaleFor som bara låter molnet följa kartan: 1 på molnets egen nivå,
+ * större inåt och mindre utåt. Platsen rörs inte, så molnen står kvar över
+ * det glesa. Vid ett nivåbyte tonar nästa uppsättning in i sin egen storlek.
+ */
+export function cloudApproachFor(zoom: number, level: number): number {
+    return clamp(Math.pow(2, CLOUD_APPROACH * (zoom - level)), APPROACH_MIN, APPROACH_MAX);
+}
+
 function mercatorX(lng: number): number {
     return (lng + 180) / 360;
 }

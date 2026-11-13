@@ -20,6 +20,7 @@ import {
     cloudLevelStartZoom,
     cloudOpacityForZoom,
     cloudScaleFor,
+    cloudApproachFor,
     glideStep,
     GLIDE_MAX_SPEED,
     pickCloudRevealKeys,
@@ -133,6 +134,31 @@ describe('cloudScaleFor', () => {
         expect(cloudScaleFor(6, 6)).toBe(1);
         expect(cloudScaleFor(7, 6)).toBe(2);
         expect(cloudScaleFor(5.5, 6)).toBeCloseTo(Math.SQRT1_2);
+    });
+});
+
+// #219, Josef 13/11: "när man zoomar in så ska de bli större ... så ser det ut
+// som man verkligen kommer närmare kartan".
+describe('cloudApproachFor', () => {
+    it('är 1 på molnets egen nivå', () => {
+        expect(cloudApproachFor(6, 6)).toBe(1);
+    });
+
+    it('molnen växer fortare än kartan inåt och krymper fortare utåt', () => {
+        expect(cloudApproachFor(6.5, 6)).toBeGreaterThan(1);
+        expect(cloudApproachFor(5.5, 6)).toBeLessThan(1);
+        // Jämnt hela vägen - inget hopp medan man zoomar inom nivån.
+        let prev = 0;
+        for (let z = 5; z <= 7.5; z += 0.1) {
+            const v = cloudApproachFor(z, 6);
+            expect(v).toBeGreaterThanOrEqual(prev);
+            prev = v;
+        }
+    });
+
+    it('håller sig inom rimliga gränser långt från nivån', () => {
+        expect(cloudApproachFor(12, 6)).toBeLessThanOrEqual(1.6);
+        expect(cloudApproachFor(0, 6)).toBeGreaterThanOrEqual(0.75);
     });
 });
 
