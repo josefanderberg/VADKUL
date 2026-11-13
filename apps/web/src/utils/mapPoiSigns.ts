@@ -65,6 +65,20 @@ export function poiSignKeyFromImageId(id: string): PoiSignKey | null {
 
 const KEYS = Object.keys(POI_SIGNS) as PoiSignKey[];
 
+// ── Två zoomsteg (#225) ──────────────────────────────────────────────────────
+// Josef 13/11: "eller brir det för stökigt med massa skyltar?" -> "ja gör så".
+// Lekplatser, idrottsplaner och parker finns det tiotals av i en stad, och de
+// saknar oftast namn. De får därför ett EGET lager som tänds först på
+// kvartersnivå, så stadsvyn bara bär de få resmålen (bad, naturreservat, golf,
+// museum, bibliotek) och eventens brickor får dominera.
+export const POI_SIGN_NEAR_LAYER_ID = 'vadkul-poi-signs-near';
+export const POI_SIGN_NEAR_MIN_ZOOM = 15;
+export const POI_SIGN_NEAR_KEYS: readonly PoiSignKey[] = ['lekplats', 'bollplan', 'park'];
+/** Båda skyltlagren - det som frågar efter skyltar (trycket) ska fråga båda. */
+export const POI_SIGN_LAYER_IDS = [POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID] as const;
+const FAR_KEYS = KEYS.filter(key => !POI_SIGN_NEAR_KEYS.includes(key));
+const kindsOf = (keys: readonly PoiSignKey[]) => keys.flatMap(k => [...POI_SIGNS[k].kinds]);
+
 // ── Tryck på en skylt (#225) ─────────────────────────────────────────────────
 // Josef 13/11: "det kan väl komma upp vad det är om man klickar på en skylt
 // okså. gärna namnet på badplatsen eller naturreservatet. de som har namn".
@@ -166,23 +180,23 @@ export function addPoiSigns(style: maplibregl.StyleSpecification) {
         : FALLBACK_FONT;
     if (park?.type === 'symbol') park.layout = { ...park.layout, visibility: 'none' };
 
-    const layer: maplibregl.SymbolLayerSpecification = {
-        id: POI_SIGN_LAYER_ID,
+    const label: maplibregl.ExpressionSpecification = ['coalesce', ['get', 'name'], perKind(key => POI_SIGN_LABELS[key], '')];
+    const signLayer = (
+        id: string, keys: readonly PoiSignKey[], from: number,
+        text: maplibregl.SymbolLayerSpecification['layout'] & object,
+    ): maplibregl.SymbolLayerSpecification => ({
+        id,
         type: 'symbol',
         source,
         'source-layer': 'pois',
-        minzoom: minZoom,
-        filter: ['in', ['get', 'kind'], ['literal', KEYS.flatMap(k => [...POI_SIGNS[k].kinds])]],
+        minzoom: from,
+        filter: ['in', ['get', 'kind'], ['literal', kindsOf(keys)]],
         layout: {
             'icon-image': perKind(key => poiSignImageId(key), ''),
-            'icon-size': ['interpolate', ['linear'], ['zoom'], minZoom, 0.8, 16, 1],
+            'icon-size': ['interpolate', ['linear'], ['zoom'], Math.min(from, 15), 0.8, 16, 1],
             // Stolpens fot står på platsen.
             'icon-anchor': 'bottom',
             'symbol-sort-key': perKind((_, i) => i, KEYS.length),
-            // Platsens namn, annars platstypen ("Lekplats", "Park") - Josef 13/11:
-            // "kan du inte skriva lekplats under också, eller park, för de som
-            // de inte dyker upp någon text under."
-            'text-field': ['step', ['zoom'], '', nameZoom, ['coalesce', ['get', 'name'], perKind(key => POI_SIGN_LABELS[key], '')]],
             'text-font': font,
             'text-size': 11,
             'text-anchor': 'top',
@@ -190,13 +204,24 @@ export function addPoiSigns(style: maplibregl.StyleSpecification) {
             'text-max-width': 8,
             // Får namnet inte plats står skylten kvar utan det.
             'text-optional': true,
+            ...text,
         },
         paint: {
             'text-color': '#12384f',
             'text-halo-color': 'rgba(255,255,255,0.92)',
             'text-halo-width': 1.4,
         },
-    };
+    });
+    // Platsens namn, annars platstypen ("Lekplats", "Park") - Josef 13/11:
+    // "kan du inte skriva lekplats under också, eller park, för de som de inte
+    // dyker upp någon text under."
+    const layer = signLayer(POI_SIGN_LAYER_ID, FAR_KEYS, minZoom, {
+        'text-field': ['step', ['zoom'], '', nameZoom, label],
+    });
+    // Kvartersnivån: texten står där direkt.
+    const near = signLayer(POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_MIN_ZOOM, { 'text-field': label });
     const firstPlace = style.layers.findIndex(l => l.type === 'symbol' && 'source-layer' in l && l['source-layer'] === 'places');
-    style.layers.splice(firstPlace >= 0 ? firstPlace : style.layers.length, 0, layer);
+    // Det nära lagret UNDER det vanliga: symboler placeras uppifrån, så ett
+    // bad eller museum vinner en krock mot en lekplats.
+    style.layers.splice(firstPlace >= 0 ? firstPlace : style.layers.length, 0, near, layer);
 }

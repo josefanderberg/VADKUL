@@ -4,7 +4,7 @@ import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
     addPoiSigns, POI_SIGN_DEEP_MIN_ZOOM, POI_SIGN_DEEP_NAME_ZOOM, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM,
     POI_SIGN_NAME_ZOOM, POI_SIGNS,
-    POI_SIGN_HIT, POI_SIGN_LABELS, pickPoiSignHit, poiSignInfo, poiSignKeyForKind,
+    POI_SIGN_HIT, POI_SIGN_LABELS, POI_SIGN_LAYER_IDS, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_MIN_ZOOM, pickPoiSignHit, poiSignInfo, poiSignKeyForKind,
     poiSignImageId, poiSignKeyFromImageId, type PoiSignKey,
 } from './mapPoiSigns';
 import { DEEP_POI_KINDS, DEEP_SOURCE_ID, deepLayersFor } from './deepTiles';
@@ -93,7 +93,7 @@ describe('platsskyltarna', () => {
 describe('addPoiSigns', () => {
     it('lägger skyltarna under ortsnamnen (som vinner en krock) och över sjönamnen', () => {
         expect(färdig().layers.map(l => l.id)).toEqual([
-            'background', 'water', 'watername_lake', POI_SIGN_LAYER_ID,
+            'background', 'water', 'watername_lake', POI_SIGN_NEAR_LAYER_ID, POI_SIGN_LAYER_ID,
             'place_hamlet', 'place_town', 'poi_park', 'roadname_minor',
         ]);
     });
@@ -106,10 +106,27 @@ describe('addPoiSigns', () => {
     });
 
     it('filtret släpper bara igenom platstyperna med skylt', () => {
-        const filter = skyltlager(färdig()).filter as unknown[];
-        const kinds = (filter[2] as ['literal', string[]])[1];
+        const s = färdig();
+        const kinds = [POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID].flatMap(id => {
+            const filter = (s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification).filter as unknown[];
+            return (filter[2] as ['literal', string[]])[1];
+        });
         expect(kinds.sort()).toEqual(Object.values(POI_SIGNS).flatMap(s => [...s.kinds]).sort());
         for (const inte of ['restaurant', 'supermarket', 'crossing', 'parking', 'school']) expect(kinds).not.toContain(inte);
+    });
+
+    it('lekplatser, idrottsplaner och parker tänds först på kvartersnivå (#225)', () => {
+        // Josef 13/11: "eller brir det för stökigt med massa skyltar?"
+        const s = färdig();
+        const kindsIn = (id: string) => (((s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification).filter as unknown[])[2] as ['literal', string[]])[1];
+        expect(kindsIn(POI_SIGN_NEAR_LAYER_ID).sort()).toEqual(['park', 'pitch', 'playground']);
+        for (const nära of ['park', 'pitch', 'playground']) expect(kindsIn(POI_SIGN_LAYER_ID)).not.toContain(nära);
+        expect(kindsIn(POI_SIGN_LAYER_ID)).toEqual(expect.arrayContaining(['bathing_place', 'nature_reserve', 'golf_course', 'museum', 'library']));
+        const near = s.layers.find(l => l.id === POI_SIGN_NEAR_LAYER_ID) as maplibregl.SymbolLayerSpecification;
+        expect(near.minzoom).toBe(POI_SIGN_NEAR_MIN_ZOOM);
+        expect(POI_SIGN_NEAR_MIN_ZOOM).toBeGreaterThan(POI_SIGN_MIN_ZOOM);
+        expect([...POI_SIGN_NEAR_KEYS].sort()).toEqual(['bollplan', 'lekplats', 'park']);
+        expect(POI_SIGN_LAYER_IDS).toEqual([POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID]);
     });
 
     it('varje platstyp får sin egen skyltbild', () => {

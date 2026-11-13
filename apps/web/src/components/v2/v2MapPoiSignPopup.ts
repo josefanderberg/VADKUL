@@ -11,7 +11,7 @@
  * pickPoiSignHit, testad). Skräpträffar faller bort där.
  */
 import * as maplibregl from 'maplibre-gl';
-import { POI_SIGN_HIT, POI_SIGN_LAYER_ID, pickPoiSignHit, poiSignInfo, type PoiSignInfo } from '@/utils/mapPoiSigns';
+import { POI_SIGN_HIT, POI_SIGN_LAYER_IDS, pickPoiSignHit, poiSignInfo, type PoiSignInfo } from '@/utils/mapPoiSigns';
 
 export interface PoiSignPopup {
     /** Ett tryck på kartan som inte tog en eventbricka. true = en skylt träffades. */
@@ -23,7 +23,8 @@ export interface PoiSignPopup {
 interface Hit { info: PoiSignInfo; lngLat: [number, number] }
 
 function findSign(map: maplibregl.Map, point: { x: number; y: number }): Hit | null {
-    if (!map.getLayer(POI_SIGN_LAYER_ID)) return null;
+    const layers = POI_SIGN_LAYER_IDS.filter(id => map.getLayer(id));
+    if (layers.length === 0) return null;
     let features: maplibregl.MapGeoJSONFeature[] = [];
     try {
         features = map.queryRenderedFeatures(
@@ -31,7 +32,7 @@ function findSign(map: maplibregl.Map, point: { x: number; y: number }): Hit | n
                 [point.x - POI_SIGN_HIT.halfWidth, point.y - POI_SIGN_HIT.below],
                 [point.x + POI_SIGN_HIT.halfWidth, point.y + POI_SIGN_HIT.above],
             ],
-            { layers: [POI_SIGN_LAYER_ID] },
+            { layers },
         );
     } catch {
         return null;
