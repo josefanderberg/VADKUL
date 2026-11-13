@@ -47,6 +47,31 @@ const HOVER_PEEK_MAX_EMOJI = 8;
 // som lät titeln "ta över" är ersatt. LABEL_TITLE_MIN_ZOOM (13) används
 // fortfarande av zoom-bannern och reveal-ransonen som "titlarna syns brett".
 const LABEL_CAT_MIN_ZOOM = 9;
+// TITLAR LÅNGT UTZOOMAT + FYRA PLATSER (#196, Josef 13/11: "Det ska alltid
+// synas under några när man är långt bort ... sen kan vi även sätta titel åt
+// vänster, höger och över"): titellagren har INGEN minzoom längre - de tända
+// brickorna (molnhålet, sticky) får titel även i Sverige-vyn när den får
+// plats. Titeln provar under brickan först, sedan höger, vänster och över
+// (MapLibres text-variable-anchor-offset, i em). Kategorin är kvar som reserv
+// från LABEL_CAT_MIN_ZOOM och står bara under brickan.
+// Brickans mått (v2MapBricka, icon-size ~0,8-1): kroppens mitt ~30 px över
+// spetsen, halva bredden ~25 px, toppen ~58 px. Texten är 11-13,5 px.
+const LABEL_TITLE_ANCHOR_OFFSETS: maplibregl.DataDrivenPropertyValueSpecification<maplibregl.VariableAnchorOffsetCollectionSpecification> = [
+    'literal',
+    [
+        'top', [0, 0.35],      // under brickan (som förut, föredras)
+        'left', [2.4, -2.6],   // till höger om kroppen
+        'right', [-2.4, -2.6], // till vänster om kroppen
+        'bottom', [0, -5.1],   // ovanför brickan
+    ],
+];
+// SPÄRREN UNDER SPETSEN: titellagret bär en osynlig 2x2-ikon på samma plats
+// som kategorireserven skulle stå. Står titeln till höger, vänster eller över
+// ligger spärren ändå kvar under brickan, så kategorin för SAMMA bricka krockar
+// och visas inte - samma regel som 7/10 ("kategori bara när titeln inte får
+// plats"), nu när titeln kan flytta. Spärren tar en prick, inte en etikett.
+const LABEL_SLOT_IMAGE = 'vadkul-label-slot';
+const LABEL_SLOT_OFFSET_PX = 10;
 
 // ════════════════════════════════════════════════════════════════════════════
 // V2Map — kartan är appens hjärta. Grov karta över filen:
@@ -1928,20 +1953,47 @@ export default function V2Map({
             // Två lager ur samma spegel: botten (alla utom valda) läggs FÖRE
             // brick-lagret i ritordningen — texten hamnar under brickorna;
             // toppen (bara den valda gruppens etikett) läggs sist, ovanpå.
+            // Spärren under spetsen (#196) - en genomskinlig bild som titellagret
+            // bär. Stilbyten rensar bilderna, därför här och inte en gång.
+            if (!map.hasImage(LABEL_SLOT_IMAGE)) {
+                try {
+                    map.addImage(LABEL_SLOT_IMAGE, { width: 2, height: 2, data: new Uint8Array(2 * 2 * 4) });
+                } catch { /* finns redan */ }
+            }
             for (const layerId of LABEL_LAYER_IDS) {
                 if (map.getLayer(layerId)) continue;
                 const isTop = layerId === 'plain-events-labels-top';
                 // Titellagret (och den valda gruppens -top) visar TITELN på
-                // alla etikett-zoomar; bas-lagret visar KATEGORIN och vinner
-                // bara när titeln inte fick plats (se LABEL_LAYER_IDS-
-                // kommentaren — zoom-steget vid z13 är ersatt 7/10 kväll).
+                // alla zoomar; bas-lagret visar KATEGORIN och vinner bara när
+                // titeln inte fick plats (se LABEL_LAYER_IDS-kommentaren —
+                // zoom-steget vid z13 är ersatt 7/10 kväll).
                 const isTitle = layerId === 'plain-events-labels-titles' || isTop;
+                const placement: maplibregl.SymbolLayerSpecification['layout'] = isTitle
+                    ? {
+                        // Under, höger, vänster, över - första plats som är fri (#196).
+                        'text-variable-anchor-offset': LABEL_TITLE_ANCHOR_OFFSETS,
+                        'text-justify': 'auto',
+                        // Spärren mot kategorin för samma bricka (se LABEL_SLOT_IMAGE).
+                        ...(isTop ? {} : {
+                            'icon-image': LABEL_SLOT_IMAGE,
+                            'icon-anchor': 'center' as const,
+                            'icon-offset': [0, LABEL_SLOT_OFFSET_PX],
+                        }),
+                    }
+                    : {
+                        // Spetsen (icon-anchor bottom) står på koordinaten → texten
+                        // börjar strax under den; krockar aldrig med "+N"-badgen
+                        // som sitter uppe till höger.
+                        'text-anchor': 'top',
+                        'text-offset': [0, 0.35],
+                    };
                 map.addLayer({
                     id: layerId,
                     type: 'symbol',
                     source: 'plain-events-labels',
-                    // Under stegtröskeln (Sverige-vyn) är etiketter meningslösa brus.
-                    minzoom: LABEL_CAT_MIN_ZOOM,
+                    // Kategorierna är brus i Sverige-vyn; titlarna får stå på alla
+                    // zoomar (#196) - kollisionen väljer de som får plats.
+                    ...(isTitle ? {} : { minzoom: LABEL_CAT_MIN_ZOOM }),
                     // Vald grupp = sortKey ≥ 1e6 (samma gräns som brick-staplingen).
                     filter: isTop
                         ? ['>=', ['coalesce', ['get', 'sortKey'], 0], 1_000_000]
@@ -1950,11 +2002,7 @@ export default function V2Map({
                         'text-field': isTitle ? ['get', 'labelTitle'] : ['get', 'labelCat'],
                         'text-font': ['Open Sans Bold'],
                         'text-size': ['interpolate', ['linear'], ['zoom'], 9, 11, 13, 12.5, 16, 13.5],
-                        // Spetsen (icon-anchor bottom) står på koordinaten → texten
-                        // börjar strax under den; krockar aldrig med "+N"-badgen
-                        // som sitter uppe till höger.
-                        'text-anchor': 'top',
-                        'text-offset': [0, 0.35],
+                        ...placement,
                         'text-max-width': 12,
                         // Placeringen sker i STIGANDE sort-key-ordning (lägst
                         // placeras först och vinner kollisionen) — negationen ger
