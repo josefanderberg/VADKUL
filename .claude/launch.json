@@ -4,7 +4,7 @@
     {
       "name": "web",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.22.0/bin:$PATH\" && cd apps/web && exec ../../node_modules/.bin/next dev"],
+      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.23.2/bin:$PATH\" && cd apps/web && exec ../../node_modules/.bin/next dev"],
       "port": 3000,
       "autoPort": true
     },
@@ -17,7 +17,7 @@
     {
       "name": "web-kartbilder",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.22.0/bin:$PATH\" && cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/{z}/{x}/{y}.pbf' exec ../../node_modules/.bin/next dev"],
+      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v22.23.2/bin:$PATH\" && cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/{z}/{x}/{y}.pbf' exec ../../node_modules/.bin/next dev"],
       "port": 3000,
       "autoPort": true
     }
