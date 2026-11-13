@@ -14,8 +14,9 @@
  *     iväg och stannar där det hamnar tills molnen tonat bort helt eller
  *     nivån byts, då står de på sina platser igen. När indelningen byts vid
  *     ett zoomsteg tonar den gamla uppsättningen ut medan den nya tonar in.
- *     En ZOOMNING knuffar aldrig (#210): den avväpnar pekaren och trycket
- *     tills man för pekaren igen eller trycker på nytt.
+ *     En ZOOMNING eller DRAGNING knuffar aldrig (#210, #217): den avväpnar
+ *     pekaren (zoomen även trycket) tills man för pekaren igen eller trycker
+ *     på nytt.
  *  3. I vila driver molnen bara några pixlar, och då ritas de glest (~12
  *     bilder/s) så lagret inte kostar batteri. Över CLOUD_GONE_ZOOM står
  *     slingan helt still.
@@ -498,8 +499,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         if (!canHover) return;
         pointer = { x: e.point.x, y: e.point.y };
         if (!pointerArmed) {
-            // Under själva zoomningen väcks knuffen aldrig - handen darrar.
-            if (map.isZooming() || !pushRearmed(pointerParked, pointer)) return;
+            // Medan kartan rör sig (zoom, dragning, efterglid) väcks knuffen aldrig.
+            if (map.isMoving() || !pushRearmed(pointerParked, pointer)) return;
             pointerArmed = true;
             pointerParked = null;
         }
@@ -525,6 +526,20 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         dirty = true;
         schedule();
     };
+    // En DRAGNING knuffar inte heller (#217, Josef 13/11: "när man drar på
+    // kartan så puttar man moln långt framför sig"). Pekaren står då still mot
+    // kartan och knuffade oavbrutet molnen omkring sig. Platsen den väcks från
+    // sätts när kartan stannat - under dragningen följer pekaren ju med.
+    // Trycket på mobil är geo-förankrat och rör sig inte mot molnen.
+    const onDragStart = () => {
+        pointerArmed = false;
+        pointerParked = pointer;
+        dirty = true;
+        schedule();
+    };
+    const onDragEnd = () => {
+        if (!pointerArmed) pointerParked = pointer;
+    };
 
     map.on('render', onRender);
     map.on('moveend', onMoveEnd);
@@ -532,6 +547,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     map.on('mousemove', onMouseMove);
     map.on('mouseout', onMouseOut);
     map.on('zoomstart', onZoomStart);
+    map.on('dragstart', onDragStart);
+    map.on('dragend', onDragEnd);
     resize();
     schedule();
 
@@ -564,6 +581,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 map.off('mousemove', onMouseMove);
                 map.off('mouseout', onMouseOut);
                 map.off('zoomstart', onZoomStart);
+                map.off('dragstart', onDragStart);
+                map.off('dragend', onDragEnd);
             } catch { /* kartan är redan riven */ }
             canvas.remove();
         },
