@@ -37,13 +37,14 @@ export interface Cloud {
     seed: number;
 }
 
-/** Vid och under den här zoomen står molnen fullt framme. Var 6,5 - höjd 13/11
- *  (Josef: "kanske att molnen är lite för tunna när vi är närmare ... mer
- *  inzoomat så lite tjockare moln"). */
-export const CLOUD_FULL_ZOOM = 8;
-/** Vid och över den här zoomen är molnen helt borta. Stadslandningen ligger
- *  runt 10,5 - där ska kartan se ut precis som utan moln. */
-export const CLOUD_GONE_ZOOM = 10;
+/** Vid och under den här zoomen står molnen fullt framme. 6,5 -> 8 -> 9,5
+ *  13/11 (Josef: "molnen syns för lite när vi är mer inzoomade. gör så de
+ *  börja synas tidigare"). */
+export const CLOUD_FULL_ZOOM = 9.5;
+/** Vid och över den här zoomen är molnen helt borta. Var 10 (stadslandningen
+ *  ~10,5 helt utan moln); sedan 13/11 syns de svagt även där - eventtrakterna
+ *  är ändå klara, molnen ligger över det glesa runt omkring. */
+export const CLOUD_GONE_ZOOM = 12;
 /** Molnens högsta täthet. Under 1 så kartan anas även genom det tätaste.
  *  Storlek och täthet sänktes 11/11 (Josef: "80% av sverige täckt med moln.
  *  så man ser knappt landet") - molnen ska vara tussar över landet, inte ett täcke. */
@@ -62,9 +63,9 @@ const LEVEL_HYSTERESIS = 0.62;
  *  Utåt växer gränsen med rutans storlek, se cloudClearAt. */
 export const CLOUD_CLEAR_AT = 3;
 export const CLOUD_CLEAR_LEVEL = 8;
-/** Hur mycket gränsen växer per nivå utåt (en ruta har 4x ytan per nivå;
- *  3x ger lite fler klara trakter än ren yta). */
-const CLEAR_GROWTH_PER_LEVEL = 3;
+/** Hur mycket gränsen växer per nivå utåt (en ruta har 4x ytan per nivå).
+ *  3 -> 3,5 13/11 (Josef: "lite mer över sverige när vi är långt utzoomade"). */
+const CLEAR_GROWTH_PER_LEVEL = 3.5;
 /** Molnen tätnar så här mycket per nivå inåt från CLOUD_THICK_FROM_LEVEL. */
 const THICKEN_PER_LEVEL = 0.08;
 const CLOUD_THICK_FROM_LEVEL = 6;
@@ -266,6 +267,84 @@ export function pickCloudRevealKeys(
     }
     inside.sort((a, b) => a.d2 - b.d2 || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
     return inside.slice(0, max).map(p => p.key);
+}
+
+/** Knuffens acceleration rakt på pekaren (px/s²) - avtar mot räckviddens kant. */
+export const GLIDE_PUSH_ACCEL = 2600;
+/** Hur fort glidningen bromsas in (tidskonstant, ms). */
+export const GLIDE_TAU_MS = 650;
+/** Högsta fart ett knuffat moln får (px/s). */
+export const GLIDE_MAX_SPEED = 900;
+/** Under den här farten (px/s) står molnet still. */
+const GLIDE_STOP_SPEED = 4;
+
+/** Ett molns knuff: förskjutningen i px PÅ MOLNETS NIVÅ (så den följer med
+ *  när kartan zoomas) och farten i skärm-px per sekund. */
+export interface CloudGlide {
+    ox: number;
+    oy: number;
+    vx: number;
+    vy: number;
+}
+
+/**
+ * Ett tidssteg av knuffen (#201, Josef 13/11: "så att de knuffas bort helt
+ * alltså glider iväg. men zoomar man in och sen ut så återställs deras
+ * defaultplatser"). Varje knuffare (pekaren, trycket, det valda eventet) inom
+ * räckhåll accelererar molnet rakt bort från sig, farten bromsas in mjukt och
+ * molnet STANNAR där det hamnar - ingen fjäder tillbaka. Återställningen sker
+ * i ritlagret (zoomar man in tills molnen är borta, eller byter nivå).
+ * `cloudX`/`cloudY` är molnets nuvarande skärmposition (med förskjutningen),
+ * `scale` = cloudScaleFor(zoom, nivå).
+ */
+export function glideStep(
+    g: CloudGlide,
+    cloudX: number,
+    cloudY: number,
+    pushers: readonly { x: number; y: number }[],
+    radius: number,
+    scale: number,
+    dtMs: number,
+): CloudGlide {
+    if (!(dtMs > 0) || !(scale > 0)) return g;
+    const dt = dtMs / 1000;
+    const reach = radius + PUSH_MARGIN_PX;
+    let ax = 0;
+    let ay = 0;
+    for (const p of pushers) {
+        let dx = cloudX - p.x;
+        let dy = cloudY - p.y;
+        const d = Math.hypot(dx, dy);
+        if (d >= reach) continue;
+        if (d < 0.5) {
+            dx = 0;
+            dy = -1;
+        } else {
+            dx /= d;
+            dy /= d;
+        }
+        const t = 1 - d / reach;
+        const eased = t * t * (3 - 2 * t);
+        ax += dx * GLIDE_PUSH_ACCEL * eased;
+        ay += dy * GLIDE_PUSH_ACCEL * eased;
+    }
+    let vx = g.vx + ax * dt;
+    let vy = g.vy + ay * dt;
+    const speed = Math.hypot(vx, vy);
+    if (speed > GLIDE_MAX_SPEED) {
+        vx *= GLIDE_MAX_SPEED / speed;
+        vy *= GLIDE_MAX_SPEED / speed;
+    }
+    const brake = Math.exp(-dtMs / GLIDE_TAU_MS);
+    vx *= brake;
+    vy *= brake;
+    // Under GLIDE_STOP_SPEED återstår bara ett par pixlar av glidningen -
+    // stanna, så ritlagret kan gå tillbaka till vilotakten.
+    if (Math.hypot(vx, vy) < GLIDE_STOP_SPEED) {
+        vx = 0;
+        vy = 0;
+    }
+    return { ox: g.ox + (vx * dt) / scale, oy: g.oy + (vy * dt) / scale, vx, vy };
 }
 
 /**

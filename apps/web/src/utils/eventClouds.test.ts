@@ -16,6 +16,8 @@ import {
     cloudLevelFor,
     cloudOpacityForZoom,
     cloudScaleFor,
+    glideStep,
+    GLIDE_MAX_SPEED,
     pickCloudRevealKeys,
     pushOffset,
     type CloudRevealPoint,
@@ -31,9 +33,10 @@ describe('cloudOpacityForZoom', () => {
         expect(cloudOpacityForZoom(CLOUD_FULL_ZOOM)).toBeCloseTo(CLOUD_MAX_OPACITY);
     });
 
-    it('är helt borta i stadsvyn', () => {
+    it('syns svagt vid stadslandningen och är helt borta längre in', () => {
+        expect(cloudOpacityForZoom(10.5)).toBeGreaterThan(0);
+        expect(cloudOpacityForZoom(10.5)).toBeLessThan(CLOUD_MAX_OPACITY);
         expect(cloudOpacityForZoom(CLOUD_GONE_ZOOM)).toBe(0);
-        expect(cloudOpacityForZoom(10.5)).toBe(0);
         expect(cloudOpacityForZoom(15)).toBe(0);
     });
 
@@ -261,5 +264,49 @@ describe('cloudClearAt', () => {
         expect(cloudClearAt(5)).toBeGreaterThan(cloudClearAt(7));
         // Sverige-vyn: tiotals event innan en ruta är helt klar.
         expect(cloudClearAt(5)).toBeGreaterThan(30);
+    });
+});
+
+describe('glideStep', () => {
+    const still = { ox: 0, oy: 0, vx: 0, vy: 0 };
+    const run = (g: typeof still, pushers: { x: number; y: number }[], steps: number, scale = 1) => {
+        for (let i = 0; i < steps; i++) g = glideStep(g, 100 + g.ox * scale, 100 + g.oy * scale, pushers, 40, scale, 16);
+        return g;
+    };
+
+    it('glider bort från pekaren', () => {
+        const g = run(still, [{ x: 80, y: 100 }], 30);
+        expect(g.ox).toBeGreaterThan(20);
+        expect(Math.abs(g.oy)).toBeLessThan(1);
+    });
+
+    it('stannar där den hamnar - fjädrar inte tillbaka när pekaren går', () => {
+        const knuffad = run(still, [{ x: 80, y: 100 }], 30);
+        const efter = run(knuffad, [], 200);
+        expect(efter.ox).toBeGreaterThanOrEqual(knuffad.ox);
+        expect(efter.vx).toBe(0);
+        expect(efter.vy).toBe(0);
+    });
+
+    it('rör inte moln utom räckhåll', () => {
+        expect(run(still, [{ x: 900, y: 900 }], 20)).toEqual(still);
+    });
+
+    it('förskjutningen räknas på molnets nivå, så den följer med vid zoom', () => {
+        const a = glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 1, 16);
+        const b = glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 2, 16);
+        expect(b.vx).toBeCloseTo(a.vx);
+        expect(b.ox).toBeCloseTo(a.ox / 2);
+    });
+
+    it('har en högsta fart', () => {
+        let g = still;
+        for (let i = 0; i < 60; i++) g = glideStep(g, 100, 100, [{ x: 99, y: 100 }], 40, 1, 16);
+        expect(Math.hypot(g.vx, g.vy)).toBeLessThanOrEqual(GLIDE_MAX_SPEED);
+    });
+
+    it('tål noll tid och skräp', () => {
+        expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 1, 0)).toBe(still);
+        expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 0, 16)).toBe(still);
     });
 });

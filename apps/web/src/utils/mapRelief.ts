@@ -16,9 +16,9 @@ import type * as maplibregl from 'maplibre-gl';
 //     brunaktiga och topparna ljusa
 //   - skuggning (hillshade): ljus från nordväst, skuggan i landets mörka grönt
 // Båda ligger under vatten, vägar och etiketter, är tydligast i Sverige-vyn och
-// tonar ut mot stadsvyn. Lagren slutar vid RELIEF_MAX_ZOOM (= molnens gräns,
-// CLOUD_GONE_ZOOM) så stadslandningen (~10,5) och stadssidornas kartor (11) ser
-// ut precis som förut och inte hämtar ett enda höjdkakel.
+// tonar ut mot stadsvyn. Lagren slutar vid RELIEF_MAX_ZOOM (10, före molnens
+// gräns CLOUD_GONE_ZOOM) så stadslandningen (~10,5) och stadssidornas kartor
+// (11) ser ut precis som förut och inte hämtar ett enda höjdkakel.
 export const RELIEF_DEM_ID = 'relief-dem';
 export const RELIEF_MAX_ZOOM = 10;
 // Höjdkaklens högsta zoom. Kaklen är 256 px, så kartzoom z hämtar kakel på

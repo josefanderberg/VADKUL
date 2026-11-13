@@ -1,5 +1,5 @@
 /**
- * Molnlagret på kartan (#191, #198): en 2D-canvas mellan GL-kartan och DOM-
+ * Molnlagret på kartan (#191, #198, #201): en 2D-canvas mellan GL-kartan och DOM-
  * brickorna som ritar vita moln över det som är GLEST - där eventen finns är
  * det klart väder. Var molnen står och hur de beter sig räknas i
  * utils/eventClouds (testad) - här finns bara ritning och rörelse. Molnen
@@ -9,9 +9,11 @@
  * Mjukheten kommer av tre saker:
  *  1. Under en kartrörelse ritas molnen i kartans EGEN bildruta ('render'),
  *     så de aldrig släpar efter panoreringen.
- *  2. Ingenting hoppar: knuffen från pekaren och det valda eventet dämpas mot
- *     sitt mål (exponentiell utjämning), och när indelningen byts vid ett
- *     zoomsteg tonar den gamla uppsättningen ut medan den nya tonar in.
+ *  2. Ingenting hoppar: knuffen från pekaren, trycket och det valda eventet är
+ *     en glidning med fart som bromsas in (glideStep, #201) - molnet glider
+ *     iväg och stannar där det hamnar tills molnen tonat bort helt eller
+ *     nivån byts, då står de på sina platser igen. När indelningen byts vid
+ *     ett zoomsteg tonar den gamla uppsättningen ut medan den nya tonar in.
  *  3. I vila driver molnen bara några pixlar, och då ritas de glest (~12
  *     bilder/s) så lagret inte kostar batteri. Över CLOUD_GONE_ZOOM står
  *     slingan helt still.
@@ -26,6 +28,7 @@ import {
     cloudLevelFor,
     cloudOpacityForZoom,
     cloudScaleFor,
+    glideStep,
     pushOffset,
     type Cloud,
     type CloudPoint,
@@ -42,7 +45,8 @@ export interface EventClouds {
     destroy(): void;
 }
 
-/** Tidskonstant för knuffen: hur sakta molnen glider undan och tillbaka. */
+/** Tidskonstant för uttunningen när något står tätt intill ett moln. Själva
+ *  knuffen är en glidning med fart (eventClouds.glideStep). */
 const PUSH_TAU_MS = 420;
 /** Hur länge två uppsättningar tonar över i varandra vid ett zoomsteg. */
 const SET_FADE_MS = 420;
@@ -57,18 +61,34 @@ const MAX_DPR = 2;
 
 const SPRITE_W = 256;
 const SPRITE_H = 168;
-/** Molnformerna: överlappande puffar (x, y, r) i spritens koordinater. */
+/** Molnformerna: överlappande puffar (x, y, r) i spritens koordinater. Åtta
+ *  former, och var och en ritas även spegelvänd - 16 varianter, så upprepningen
+ *  inte syns när molnen är många (#201, Josef 13/11: "Kanske mer varianter av moln"). */
 const SPRITE_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
+    // Bulliga stackmoln (de tre första formerna).
     [[70, 100, 46], [118, 78, 58], [170, 94, 50], [206, 112, 34], [40, 116, 30], [126, 114, 48]],
     [[60, 104, 40], [104, 86, 50], [152, 74, 54], [196, 100, 44], [128, 114, 50], [226, 118, 26]],
     [[84, 96, 52], [140, 82, 56], [190, 104, 42], [44, 114, 32], [120, 116, 44], [222, 120, 24]],
+    // Långt och flackt.
+    [[34, 112, 24], [70, 104, 32], [112, 98, 38], [156, 100, 36], [198, 106, 30], [232, 114, 20], [96, 118, 28], [150, 118, 28]],
+    // Liten rund tuss.
+    [[106, 102, 34], [144, 94, 40], [176, 108, 28], [86, 116, 24], [128, 118, 34]],
+    // Högt tornande.
+    [[128, 62, 44], [98, 88, 42], [160, 86, 44], [72, 112, 30], [188, 110, 32], [128, 108, 52]],
+    // Två toppar.
+    [[58, 106, 32], [92, 94, 38], [128, 110, 26], [164, 92, 40], [202, 104, 34], [108, 120, 24], [184, 120, 24]],
+    // Tunt och trasigt.
+    [[46, 114, 18], [80, 108, 24], [116, 102, 28], [152, 104, 26], [188, 108, 22], [222, 114, 16], [132, 116, 20], [96, 118, 16]],
 ];
 
 interface CloudState {
     cloud: Cloud;
-    /** Nuvarande knuff i px (dämpas mot målet). */
+    /** Knuffen: förskjutning i px PÅ MOLNETS NIVÅ (skalas med zoomen) och fart
+     *  i skärm-px/s. Ligger kvar tills molnen tonat bort helt eller nivån byts. */
     ox: number;
     oy: number;
+    vx: number;
+    vy: number;
     /** Nuvarande uttunning av knuffen (0-1). */
     fade: number;
     /** Molnets egen in-/uttoning (0-1). */
@@ -121,6 +141,18 @@ function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HT
     return cv;
 }
 
+function mirrorSprite(src: HTMLCanvasElement): HTMLCanvasElement {
+    const cv = document.createElement('canvas');
+    cv.width = src.width;
+    cv.height = src.height;
+    const ctx = cv.getContext('2d');
+    if (!ctx) return src;
+    ctx.translate(cv.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(src, 0, 0);
+    return cv;
+}
+
 /** Har enheten en riktig muspekare som kan hovra? Pekskärmar svarar nej. */
 export function cloudsCanHover(): boolean {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;
@@ -144,7 +176,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     // senare i samma behållare).
     glCanvas.after(canvas);
     const ctx = canvas.getContext('2d');
-    const sprites = SPRITE_PUFFS.map(makeSprite);
+    const baseSprites = SPRITE_PUFFS.map(makeSprite);
+    const sprites = [...baseSprites, ...baseSprites.map(mirrorSprite)];
     const reducedMotion =
         typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     // Pekskärmar saknar hovring. Webbläsaren skickar ändå en låtsad musrörelse
@@ -212,7 +245,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 const prev = old.get(cloud.id);
                 next.push(prev
                     ? { ...prev, cloud, present: true }
-                    : { cloud, ox: 0, oy: 0, fade: 0, vis: 0, present: true });
+                    : { cloud, ox: 0, oy: 0, vx: 0, vy: 0, fade: 0, vis: 0, present: true });
                 old.delete(cloud.id);
             }
             for (const st of old.values()) if (st.vis > 0.01) next.push({ ...st, present: false });
@@ -223,7 +256,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
             sets.push({
                 level: nextLevel,
                 // Hela uppsättningen tonar in via set.alpha - molnen själva står fullt.
-                states: built.map(cloud => ({ cloud, ox: 0, oy: 0, fade: 0, vis: 1, present: true })),
+                states: built.map(cloud => ({ cloud, ox: 0, oy: 0, vx: 0, vy: 0, fade: 0, vis: 1, present: true })),
                 // Allra första uppsättningen tonar också in - inget poppar.
                 alpha: 0,
                 leaving: false,
@@ -261,8 +294,19 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 ctx.clearRect(0, 0, cssW, cssH);
                 cleared = true;
             }
-            // Borta ur bild: nollställ övertoningen så nästa utzoomning börjar rent.
-            for (const s of sets) s.alpha = s.leaving ? 0 : 1;
+            // Borta ur bild: nollställ övertoningen så nästa utzoomning börjar rent,
+            // och ställ tillbaka varje knuffat moln på sin plats (Josef 13/11:
+            // "zoomar man in och sen ut så återställs deras defaultplatser").
+            for (const s of sets) {
+                s.alpha = s.leaving ? 0 : 1;
+                for (const st of s.states) {
+                    st.ox = 0;
+                    st.oy = 0;
+                    st.vx = 0;
+                    st.vy = 0;
+                    st.fade = 0;
+                }
+            }
             sets = sets.filter(s => !s.leaving);
             animating = false;
             return;
@@ -274,6 +318,10 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         const touchPx = touchPoint ? map.project([touchPoint.lng, touchPoint.lat]) : null;
         const ease = 1 - Math.exp(-dt / PUSH_TAU_MS);
         const t = reducedMotion ? 0 : now / 1000;
+        const pushers: { x: number; y: number }[] = [];
+        if (pointer) pushers.push(pointer);
+        if (focusPx) pushers.push(focusPx);
+        if (touchPx) pushers.push(touchPx);
 
         for (const set of sets) {
             const scale = cloudScaleFor(zoom, set.level);
@@ -292,41 +340,32 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 const c = st.cloud;
                 const p = map.project([c.lng, c.lat]);
                 const r = c.radius * scale;
-                if (p.x < -CULL_MARGIN_PX - r || p.x > cssW + CULL_MARGIN_PX + r
-                    || p.y < -CULL_MARGIN_PX - r || p.y > cssH + CULL_MARGIN_PX + r) {
-                    st.ox = 0;
-                    st.oy = 0;
+                // Knuffen följer molnet: ett undanknuffat moln ligger kvar
+                // förskjutet även när det panoreras ut och in i bild.
+                const px = p.x + st.ox * scale;
+                const py = p.y + st.oy * scale;
+                if (px < -CULL_MARGIN_PX - r || px > cssW + CULL_MARGIN_PX + r
+                    || py < -CULL_MARGIN_PX - r || py > cssH + CULL_MARGIN_PX + r) {
+                    st.vx = 0;
+                    st.vy = 0;
                     st.fade = 0;
                     continue;
                 }
-                // Målet: summan av knuffarna från pekaren och det valda eventet.
-                let tx = 0;
-                let ty = 0;
+                // Glidningen: pekaren, trycket och det valda eventet knuffar molnet
+                // undan, det bromsar in och STANNAR där det hamnar.
+                if (pushers.length > 0 || st.vx !== 0 || st.vy !== 0) {
+                    const g = glideStep(st, px, py, pushers, r, scale, dt);
+                    st.ox = g.ox;
+                    st.oy = g.oy;
+                    st.vx = g.vx;
+                    st.vy = g.vy;
+                    if (g.vx !== 0 || g.vy !== 0) moving = true;
+                }
+                // Tätt intill en knuffare tunnas molnet ut (tillfälligt).
                 let tf = 0;
-                if (pointer) {
-                    const o = pushOffset(p.x, p.y, pointer.x, pointer.y, r);
-                    tx += o.x;
-                    ty += o.y;
-                    tf = Math.max(tf, o.fade);
-                }
-                if (focusPx) {
-                    const o = pushOffset(p.x, p.y, focusPx.x, focusPx.y, r);
-                    tx += o.x;
-                    ty += o.y;
-                    tf = Math.max(tf, o.fade);
-                }
-                if (touchPx) {
-                    const o = pushOffset(p.x, p.y, touchPx.x, touchPx.y, r);
-                    tx += o.x;
-                    ty += o.y;
-                    tf = Math.max(tf, o.fade);
-                }
-                st.ox += (tx - st.ox) * ease;
-                st.oy += (ty - st.oy) * ease;
+                for (const q of pushers) tf = Math.max(tf, pushOffset(px, py, q.x, q.y, r).fade);
                 st.fade += (tf - st.fade) * ease;
-                if (Math.abs(tx - st.ox) > 0.3 || Math.abs(ty - st.oy) > 0.3 || Math.abs(tf - st.fade) > 0.01) {
-                    moving = true;
-                }
+                if (Math.abs(tf - st.fade) > 0.01) moving = true;
 
                 const alpha = c.alpha * zoomOpacity * set.alpha * st.vis * (1 - st.fade);
                 if (alpha <= 0.004) continue;
@@ -337,8 +376,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 const dx = Math.sin(t / (17 + c.seed * 14) * Math.PI * 2 + phase) * amp;
                 const dy = Math.cos(t / (23 + c.seed * 11) * Math.PI * 2 + phase * 1.7) * amp * 0.45;
 
-                const x = p.x + st.ox + dx;
-                const y = p.y + st.oy + dy;
+                const x = p.x + st.ox * scale + dx;
+                const y = p.y + st.oy * scale + dy;
                 const sprite = sprites[Math.floor(c.seed * sprites.length) % sprites.length];
                 const w = r * 2;
                 const h = w * (SPRITE_H / SPRITE_W);
