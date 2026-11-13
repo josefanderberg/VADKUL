@@ -6,7 +6,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
     addZoomedOutLandcover, COARSE_KINDS, COARSE_LAYER_ID, DETAIL_KINDS, DETAIL_LAYER_ID,
-    FOREST_KINDS, LANDCOVER_COARSE_MAX_ZOOM, LANDCOVER_COLORS, LANDCOVER_MAX_ZOOM,
+    FOREST_KINDS, LANDCOVER_COARSE_MAX_ZOOM, LANDCOVER_COLORS, LANDCOVER_FALT_FJARRAN, LANDCOVER_MAX_ZOOM,
 } from './mapLandcover';
 
 // Voyager i miniatyr, med lagren i samma ordning som den riktiga stilen (13/11).
@@ -183,5 +183,48 @@ describe('addZoomedOutLandcover', () => {
         };
         addZoomedOutLandcover(style);
         expect(style.layers.map(l => l.id)).toEqual(['background']);
+    });
+});
+
+// #211, Josef 13/11 om Sverige-vyn: "gör inte skåne så ljust. ha en grönare nyans."
+describe('åkrarna i Sverige-vyn är grönare än inzoomat', () => {
+    const kanal = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const ljushet = (hex: string) => kanal(hex).reduce((s, v) => s + v, 0);
+    // Grönt i förhållande till rött och blått: högre = grönare, mindre blekt.
+    const gronhet = (hex: string) => { const [r, g, b] = kanal(hex); return g / ((r + b) / 2); };
+    // Färgen ett match-uttryck ger en viss kind.
+    const fargFor = (match: unknown, kind: string) => {
+        const m = match as unknown[];
+        return m[m.indexOf(kind) + 1];
+    };
+
+    it('tonen är mörkare och grönare än den ljusa, men ljusare än landet', () => {
+        expect(ljushet(LANDCOVER_FALT_FJARRAN)).toBeLessThan(ljushet(LANDCOVER_COLORS.falt));
+        expect(gronhet(LANDCOVER_FALT_FJARRAN)).toBeGreaterThan(gronhet(LANDCOVER_COLORS.falt));
+        expect(ljushet(LANDCOVER_FALT_FJARRAN)).toBeGreaterThan(ljushet('#5b9b3b'));
+        // Fälten ska fortfarande gå att skilja från den öppna marken.
+        expect(LANDCOVER_FALT_FJARRAN).not.toBe(LANDCOVER_COLORS.oppenMark);
+    });
+
+    it('det grova lagret (Sverige-vyn) ritar åkern i den gröna tonen, övrigt som förut', () => {
+        const style = voyagerLike();
+        addZoomedOutLandcover(style);
+        const match = lager(style, COARSE_LAYER_ID).paint?.['fill-color'];
+        expect(fargFor(match, 'farmland')).toBe(LANDCOVER_FALT_FJARRAN);
+        expect(fargFor(match, 'grassland')).toBe(LANDCOVER_COLORS.oppenMark);
+        expect(fargFor(match, 'urban_area')).toBe(LANDCOVER_COLORS.ljus);
+    });
+
+    it('detaljlagret tar vid i samma ton och ljusnar till den gamla före stadsvyn', () => {
+        const style = voyagerLike();
+        addZoomedOutLandcover(style);
+        const uttryck = lager(style, DETAIL_LAYER_ID).paint?.['fill-color'] as unknown[];
+        expect(uttryck.slice(0, 3)).toEqual(['interpolate', ['linear'], ['zoom']]);
+        // Första stoppet = där korstoningen från det grova lagret är klar.
+        expect(fargFor(uttryck[4], 'farmland')).toBe(LANDCOVER_FALT_FJARRAN);
+        expect(fargFor(uttryck[4], 'meadow')).toBe(LANDCOVER_FALT_FJARRAN);
+        expect(uttryck[5]).toBe(LANDCOVER_MAX_ZOOM);
+        expect(fargFor(uttryck[6], 'farmland')).toBe(LANDCOVER_COLORS.falt);
+        expect(fargFor(uttryck[4], 'grassland')).toBe(fargFor(uttryck[6], 'grassland'));
     });
 });

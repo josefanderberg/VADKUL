@@ -57,6 +57,17 @@ export const LANDCOVER_COLORS = {
 } as const;
 type Ton = keyof typeof LANDCOVER_COLORS;
 
+// ── Åkrarna i Sverige-vyn: grönare (#211) ────────────────────────────────────
+// Josef 13/11, om Sverige-vyn: "gör inte skåne så ljust. ha en grönare nyans."
+// Åkermarken (Skåne, Västgötaslätten, Mälardalen) låg i landets LJUSA ton mot
+// det mörka utzoomade landet och blev en blek fläck. Utzoomat får fälten därför
+// en egen, grönare ton: fortfarande ljusare än landet (regeln från #203 står
+// kvar - inget mörkare än landet) men mörkare och mättare än den ljusa tonen.
+// Detaljlagret tonar sedan från den till den ljusa tonen i takt med att landet
+// självt ljusnar inzoomat, så inget hoppar i korstoningen vid zoom 7.
+// Det här är den ENDA tonen utanför nöjesfältets gamla palett.
+export const LANDCOVER_FALT_FJARRAN = '#70ac48';
+
 // Ritordning: fälten ovanpå den öppna marken, så en åker som överlappar en
 // gräsyta alltid syns.
 const ORDNING: Ton[] = ['oppenMark', 'falt', 'ljus'];
@@ -88,8 +99,10 @@ export const DETAIL_KINDS: Record<string, Ton> = {
 // match-uttrycken byggs ur tabellerna ovan. Typen kräver minst en gren på fast
 // position, vilket en spridd lista inte kan visa - därav vägen via unknown.
 // Formen valideras mot MapLibres stilspec i testet.
-function farg(kinds: Record<string, Ton>): maplibregl.ExpressionSpecification {
-    const grenar = Object.entries(kinds).flatMap(([kind, ton]) => [kind, LANDCOVER_COLORS[ton]]);
+// `fjarran`: fälten i Sverige-vyns grönare ton (#211).
+function farg(kinds: Record<string, Ton>, fjarran: boolean): maplibregl.ExpressionSpecification {
+    const grenar = Object.entries(kinds).flatMap(([kind, ton]) =>
+        [kind, fjarran && ton === 'falt' ? LANDCOVER_FALT_FJARRAN : LANDCOVER_COLORS[ton]]);
     return ['match', ['get', 'kind'], ...grenar, 'rgba(0,0,0,0)'] as unknown as maplibregl.ExpressionSpecification;
 }
 function sortering(kinds: Record<string, Ton>): maplibregl.ExpressionSpecification {
@@ -124,7 +137,7 @@ export function addZoomedOutLandcover(style: maplibregl.StyleSpecification) {
         filter: filter(COARSE_KINDS),
         layout: { 'fill-sort-key': sortering(COARSE_KINDS) },
         paint: {
-            'fill-color': farg(COARSE_KINDS),
+            'fill-color': farg(COARSE_KINDS, true),
             'fill-opacity': [
                 'interpolate', ['linear'], ['zoom'],
                 CROSSFADE_FROM, 1,
@@ -142,7 +155,12 @@ export function addZoomedOutLandcover(style: maplibregl.StyleSpecification) {
         filter: filter(DETAIL_KINDS),
         layout: { 'fill-sort-key': sortering(DETAIL_KINDS) },
         paint: {
-            'fill-color': farg(DETAIL_KINDS),
+            // Fälten börjar i Sverige-vyns grönare ton och ljusnar med landet.
+            'fill-color': [
+                'interpolate', ['linear'], ['zoom'],
+                CROSSFADE_TO, farg(DETAIL_KINDS, true),
+                LANDCOVER_MAX_ZOOM, farg(DETAIL_KINDS, false),
+            ],
             'fill-opacity': [
                 'interpolate', ['linear'], ['zoom'],
                 CROSSFADE_FROM, 0,
