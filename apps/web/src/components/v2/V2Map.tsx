@@ -29,6 +29,7 @@ import {
 } from './v2MapBricka';
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
+import { pickSpreadRevealKeys } from '../../utils/revealSpread';
 import {
     CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, pickCloudRevealKeys,
 } from '../../utils/eventClouds';
@@ -396,10 +397,18 @@ const REVEAL_SEED_COUNT = 50;         // KANDIDAT-taket: de N närmaste punkten 
 // "öppnas eventkorten" helt. URVALET rankas populära först (pop-flaggan/guld,
 // närmast först inom varje skikt) — pickRevealKeys. Sticky-brickorna (TM/
 // egna/gillade/stjärnor/boostar) lyser alltid, som förr.
-// (Detta ERSÄTTER 31/8-regeln "alla de 50 närmast mittpunkten ska visas".
-// Spridningstaket per skärmruta från 31/8 är fortfarande rivet — sprid inte.)
+// (Detta ERSÄTTER 31/8-regeln "alla de 50 närmast mittpunkten ska visas".)
+// SPRIDNINGEN UTZOOMAT (#200, Josef 13/11: "närmast mitten när det blir i ett
+// visst utzoom. så att det inte blir en klunga i göteborg bättre med
+// spridning ... eller någon skön uppdelning"): under REVEAL_SPREAD_MAX_ZOOM
+// väljs de tända utspritt över vyn (utils/revealSpread: en ruta i taget,
+// närmast mitten först, populärast inom rutan) i stället för populära först
+// bland de 50 närmaste - som klumpade ihop allt i den tätaste trakten. 31/8:s
+// spridningstak revs med "det gör inget om de är i en hög", men det var före
+// ransonen; inzoomat (≥ 12) gäller det fortfarande.
 const REVEAL_MIN_COUNT = 12;          // tända vid stadszoom (populärast först)
 const REVEAL_RAMP_START_ZOOM = 10.5;  // under/vid denna: bara REVEAL_MIN_COUNT
+const REVEAL_SPREAD_MAX_ZOOM = 12;    // under denna: urvalet sprids över vyn (#200)
 const revealAllowance = (zoom: number): number => {
     if (zoom >= LABEL_TITLE_MIN_ZOOM) return REVEAL_SEED_COUNT;
     if (zoom <= REVEAL_RAMP_START_ZOOM) return REVEAL_MIN_COUNT;
@@ -2258,7 +2267,16 @@ export default function V2Map({
     // (recomputeRevealSeed), tap-migrationen och isSameRevealTarget så alla
     // tre alltid pekar på samma uppsättning.
     const pickRevealKeys = useCallback((lng: number, lat: number): string[] => {
-        const zoom = mapRef.current?.getZoom() ?? START_ZOOM_MAX;
+        const map = mapRef.current;
+        const zoom = map?.getZoom() ?? START_ZOOM_MAX;
+        // Utzoomat: utspritt över vyn, inte en klunga i tätaste trakten (#200).
+        if (map && zoom < REVEAL_SPREAD_MAX_ZOOM) {
+            const cv = map.getCanvas();
+            return pickSpreadRevealKeys(
+                revealCoordsRef.current, { lng, lat }, zoom,
+                { width: cv.clientWidth, height: cv.clientHeight }, revealAllowance(zoom),
+            );
+        }
         const cand = nearestRevealCands(lng, lat);
         cand.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (a.d2 - b.d2));
         const picked = cand.slice(0, revealAllowance(zoom));
