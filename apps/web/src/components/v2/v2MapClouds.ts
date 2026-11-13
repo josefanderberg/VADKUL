@@ -66,22 +66,29 @@ const MAX_DPR = 2;
 
 const SPRITE_W = 256;
 const SPRITE_H = 168;
+/** Var i spriten molnet har sin mitt (andel av höjden). */
+const SPRITE_ANCHOR_Y = 0.5;
 /** Molnformerna: överlappande puffar (x, y, r) i spritens koordinater. Sex
  *  former, och var och en ritas även spegelvänd - 12 varianter, så upprepningen
- *  inte syns när molnen är många (#201, Josef 13/11: "Kanske mer varianter av
- *  moln"). De två smala formerna (långt-flackt och tunt-trasigt) prövades och
- *  togs bort samma dag (Josef: "ta bort de smala molnet") - inga smala former. */
+ *  inte syns när molnen är många (#201).
+ *  SEDDA UPPIFRÅN (#218, Josef 13/11: "skulle vi inte ändra så de ser mer ut
+ *  som uppifrån"): runda tussar kring spritens mitt, inga platta undersidor.
+ *  Före #218 var de stackmoln från sidan, som loggan - men med en markskugga
+ *  som faller bort från pekaren ser man molnen ovanifrån. Fortfarande inga
+ *  smala former (Josef 13/11: "ta bort de smala molnet"). */
 const SPRITE_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
-    // Bulliga stackmoln (de tre första formerna).
-    [[70, 100, 46], [118, 78, 58], [170, 94, 50], [206, 112, 34], [40, 116, 30], [126, 114, 48]],
-    [[60, 104, 40], [104, 86, 50], [152, 74, 54], [196, 100, 44], [128, 114, 50], [226, 118, 26]],
-    [[84, 96, 52], [140, 82, 56], [190, 104, 42], [44, 114, 32], [120, 116, 44], [222, 120, 24]],
+    // Stor rund tuss med flikar runt om.
+    [[128, 84, 50], [92, 70, 36], [164, 70, 38], [100, 106, 34], [158, 108, 36], [128, 52, 30], [128, 116, 30]],
+    // Rund med två sidoflikar.
+    [[128, 84, 46], [84, 84, 32], [172, 84, 32], [110, 56, 30], [150, 56, 28], [112, 114, 30], [150, 112, 30]],
     // Liten rund tuss.
-    [[106, 102, 34], [144, 94, 40], [176, 108, 28], [86, 116, 24], [128, 118, 34]],
-    // Högt tornande.
-    [[128, 62, 44], [98, 88, 42], [160, 86, 44], [72, 112, 30], [188, 110, 32], [128, 108, 52]],
-    // Två toppar.
-    [[58, 106, 32], [92, 94, 38], [128, 110, 26], [164, 92, 40], [202, 104, 34], [108, 120, 24], [184, 120, 24]],
+    [[128, 84, 38], [104, 74, 26], [152, 76, 26], [112, 102, 24], [146, 100, 26]],
+    // Oregelbunden.
+    [[118, 80, 44], [162, 92, 34], [86, 96, 30], [140, 54, 28], [100, 58, 26], [136, 116, 28]],
+    // Bred dubbeltuss.
+    [[104, 84, 40], [152, 84, 40], [128, 62, 32], [128, 108, 32], [74, 90, 24], [182, 80, 24]],
+    // Treklöver.
+    [[128, 62, 36], [100, 100, 36], [156, 100, 36], [128, 86, 34]],
 ];
 
 interface CloudState {
@@ -115,10 +122,12 @@ function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HT
     cv.height = SPRITE_H;
     const ctx = cv.getContext('2d');
     if (!ctx) return cv;
-    // Skuggan först: samma puffar en bit ner, i kartans blågrå. Den sticker
-    // fram under molnets nederkant och ger det kropp mot den ljusa kartan.
-    for (const [x, y, r] of puffs) {
-        const sy = y + r * 0.2;
+    // Kroppen först: samma puffar lite större, i kartans blågrå. Den syns som
+    // en mjuk kant runt HELA molnet (sett uppifrån, #218) och ger det kropp
+    // mot den ljusa kartan. Före #218 låg den en bit ner, som en undersida.
+    for (const [x, y, rr] of puffs) {
+        const sy = y;
+        const r = rr * 1.08;
         const g = ctx.createRadialGradient(x, sy, r * 0.3, x, sy, r);
         g.addColorStop(0, 'rgba(84,110,150,0.24)');
         g.addColorStop(0.7, 'rgba(84,110,150,0.12)');
@@ -357,6 +366,9 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         const touchPx = touchPoint ? map.project([touchPoint.lng, touchPoint.lat]) : null;
         const ease = 1 - Math.exp(-dt / PUSH_TAU_MS);
         const t = reducedMotion ? 0 : now / 1000;
+        // SOLEN (#218): där man pekar, på pekskärm där man senast tryckte.
+        // Markskuggorna faller bort därifrån - även medan knuffen är avväpnad.
+        const sunPx = pointer ?? touchPx;
         const pushers: { x: number; y: number }[] = [];
         if (pointer && pointerArmed) pushers.push(pointer);
         if (focusPx) pushers.push(focusPx);
@@ -422,13 +434,13 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                 const spriteIndex = Math.floor(c.seed * sprites.length) % sprites.length;
                 const w = r * 2;
                 const h = w * (SPRITE_H / SPRITE_W);
-                cloudStamps.push({ img: sprites[spriteIndex], x: x - w / 2, y: y - h * 0.58, w, h, a: alpha });
+                cloudStamps.push({ img: sprites[spriteIndex], x: x - w / 2, y: y - h * SPRITE_ANCHOR_Y, w, h, a: alpha });
                 // Markskuggan (#215): följer molnets toning, knuff och drift.
-                const shadow = cloudShadow(c.seed, r);
+                const shadow = cloudShadow(c.seed, r, sunPx ? { x: x - sunPx.x, y: y - sunPx.y } : null);
                 if (shadow) {
                     shadowStamps.push({
                         img: shadowSprites[spriteIndex],
-                        x: x - w / 2 + shadow.dx, y: y - h * 0.58 + shadow.dy, w, h,
+                        x: x - w / 2 + shadow.dx, y: y - h * SPRITE_ANCHOR_Y + shadow.dy, w, h,
                         a: alpha * shadow.opacity,
                     });
                 }
@@ -441,7 +453,7 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                     const ex = x + Math.cos(a) * r * 0.55 - dx * 0.5;
                     const ey = y + Math.sin(a) * r * 0.3 - dy * 0.5;
                     const other = sprites[(Math.floor(c.seed * sprites.length) + i + 1) % sprites.length];
-                    cloudStamps.push({ img: other, x: ex - ew / 2, y: ey - eh * 0.58, w: ew, h: eh, a: alpha * 0.8 });
+                    cloudStamps.push({ img: other, x: ex - ew / 2, y: ey - eh * SPRITE_ANCHOR_Y, w: ew, h: eh, a: alpha * 0.8 });
                 }
             }
         }
@@ -498,6 +510,11 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     const onMouseMove = (e: maplibregl.MapMouseEvent) => {
         if (!canHover) return;
         pointer = { x: e.point.x, y: e.point.y };
+        // Skuggorna följer pekaren (solen, #218) även när knuffen är avväpnad.
+        if (visible()) {
+            dirty = true;
+            schedule();
+        }
         if (!pointerArmed) {
             // Medan kartan rör sig (zoom, dragning, efterglid) väcks knuffen aldrig.
             if (map.isMoving() || !pushRearmed(pointerParked, pointer)) return;

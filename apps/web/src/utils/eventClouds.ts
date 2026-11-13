@@ -393,9 +393,14 @@ export function glideStep(
 export const CLOUD_SHADOW_SHARE = 0.6;
 /** Skuggans täthet i förhållande till molnets egen. */
 export const CLOUD_SHADOW_OPACITY = 0.3;
-/** Skuggans förskjutning som andel av molnets radie. */
+/** Skuggans förskjutning som andel av molnets radie. Utan sol faller den
+ *  snett nedåt höger (ljus uppifrån vänster). */
 const SHADOW_DX = 0.3;
 const SHADOW_DY = 0.5;
+const SHADOW_LENGTH = Math.hypot(SHADOW_DX, SHADOW_DY);
+/** Inom så här många radier från solen kortas skuggan - mitt under solen
+ *  ligger den rakt under molnet. */
+const SHADOW_FULL_AT_RADII = 2;
 
 export interface CloudShadow {
     /** Förskjutning från molnet i px. */
@@ -409,11 +414,26 @@ export interface CloudShadow {
  * Molnets markskugga, eller null för de moln som inte kastar någon. Urvalet
  * går på molnets frö, så samma moln har alltid (eller aldrig) skugga - den
  * blinkar inte till när molnen byggs om under en kartrörelse.
+ *
+ * SOLEN ÄR DÄR MAN PEKAR (#218, Josef 13/11: "skuggorna på molnet går det göra
+ * så dem är i riktning ifrån där man klickar så att vi är som solen"):
+ * `fromSun` är vektorn från pekaren (eller senaste trycket) till molnet i px,
+ * och skuggan faller åt det hållet - bort från solen. Precis intill solen
+ * kortas den, så den inte slår om tvärt när pekaren passerar molnet. Utan sol
+ * (ingen pekare över kartan, inget tryck) faller skuggan snett nedåt höger.
  */
-export function cloudShadow(seed: number, radius: number): CloudShadow | null {
+export function cloudShadow(
+    seed: number,
+    radius: number,
+    fromSun: { x: number; y: number } | null = null,
+): CloudShadow | null {
     const pick = (seed * 7.31) % 1;
     if (pick >= CLOUD_SHADOW_SHARE) return null;
-    return { dx: radius * SHADOW_DX, dy: radius * SHADOW_DY, opacity: CLOUD_SHADOW_OPACITY };
+    if (!fromSun) return { dx: radius * SHADOW_DX, dy: radius * SHADOW_DY, opacity: CLOUD_SHADOW_OPACITY };
+    const d = Math.hypot(fromSun.x, fromSun.y);
+    if (d < 0.5) return { dx: 0, dy: 0, opacity: CLOUD_SHADOW_OPACITY };
+    const length = radius * SHADOW_LENGTH * Math.min(1, d / (radius * SHADOW_FULL_AT_RADII));
+    return { dx: (fromSun.x / d) * length, dy: (fromSun.y / d) * length, opacity: CLOUD_SHADOW_OPACITY };
 }
 
 /** Så långt (px) måste pekaren flyttas efter en zoomning innan den knuffar igen. */

@@ -420,6 +420,46 @@ describe('cloudShadow', () => {
         expect(stor.dy).toBeLessThan(60);
     });
 
+    // #218, Josef 13/11: "i riktning ifrån där man klickar så att vi är som solen".
+    describe('solen är där man pekar', () => {
+        const frö = frön.find(s => cloudShadow(s, 40) !== null)!;
+        const längd = (sk: { dx: number; dy: number }) => Math.hypot(sk.dx, sk.dy);
+        const full = längd(cloudShadow(frö, 40)!);
+
+        it('skuggan faller bort från solen, åt alla håll', () => {
+            // fromSun = från pekaren till molnet.
+            const öster = cloudShadow(frö, 40, { x: 300, y: 0 })!;
+            expect(öster.dx).toBeGreaterThan(0);
+            expect(öster.dy).toBeCloseTo(0);
+            const norr = cloudShadow(frö, 40, { x: 0, y: -300 })!;
+            expect(norr.dy).toBeLessThan(0);
+            expect(norr.dx).toBeCloseTo(0);
+            const sydväst = cloudShadow(frö, 40, { x: -200, y: 200 })!;
+            expect(sydväst.dx).toBeLessThan(0);
+            expect(sydväst.dy).toBeGreaterThan(0);
+            expect(sydväst.dx).toBeCloseTo(-sydväst.dy);
+        });
+
+        it('långt från solen är skuggan lika lång som utan sol, oavsett avstånd', () => {
+            expect(längd(cloudShadow(frö, 40, { x: 300, y: 0 })!)).toBeCloseTo(full);
+            expect(längd(cloudShadow(frö, 40, { x: 0, y: 2000 })!)).toBeCloseTo(full);
+        });
+
+        it('intill solen kortas skuggan mjukt - den slår inte om tvärt när pekaren passerar', () => {
+            const nära = längd(cloudShadow(frö, 40, { x: 20, y: 0 })!);
+            const närmare = längd(cloudShadow(frö, 40, { x: 5, y: 0 })!);
+            expect(nära).toBeLessThan(full);
+            expect(närmare).toBeLessThan(nära);
+            expect(cloudShadow(frö, 40, { x: 0, y: 0 })).toMatchObject({ dx: 0, dy: 0 });
+        });
+
+        it('solen ändrar inte vilka moln som kastar skugga', () => {
+            for (const s of frön.slice(0, 200)) {
+                expect(cloudShadow(s, 40, { x: 100, y: 50 }) === null).toBe(cloudShadow(s, 40) === null);
+            }
+        });
+    });
+
     it('skuggan är svag - klart svagare än molnet', () => {
         expect(CLOUD_SHADOW_OPACITY).toBeLessThanOrEqual(0.35);
         expect(cloudShadow(frön.find(s => cloudShadow(s, 40) !== null)!, 40)!.opacity).toBe(CLOUD_SHADOW_OPACITY);
