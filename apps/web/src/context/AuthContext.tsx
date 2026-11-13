@@ -27,6 +27,7 @@ import { DERIVED_CITY_KEY } from '../hooks/useSaveUserCity';
 import { getCity } from '../lib/cityUtils';
 import { rememberForturFran } from '../utils/forturInbjudan';
 import { forgetDeviceToken } from '../utils/fcm';
+import { sharedAnonymousIdentity } from '../utils/anonymousIdentity';
 
 interface AuthContextType {
   /**
@@ -85,6 +86,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Modulglobal: den pågående anonyma inloggningen delas av ALLA anrop, även
+ *  mellan komponenter och omrenderingar (#164). */
+const tipIdentity = sharedAnonymousIdentity({
+  ready: () => auth.authStateReady(),
+  currentUid: () => auth.currentUser?.uid ?? null,
+  signInAnonymously: async () => (await signInAnonymously(auth)).user.uid,
+});
+
 /** Nytt konto: kom personen via en inbjudningslänk bokförs inbjudarens
  *  förtur (no-op annars). Best-effort och lat laddad som profilspeglingen. */
 function bookForturKonto(uid: string) {
@@ -119,11 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setUser = setRawUser;
 
-  const ensureTipIdentity = async (): Promise<string> => {
-    if (auth.currentUser) return auth.currentUser.uid;
-    const cred = await signInAnonymously(auth);
-    return cred.user.uid;
-  };
+  // Delad mellan samtidiga anrop och väntar in den sparade sessionen, så att
+  // två tryck aldrig skapar två anonyma konton (#164, se anonymousIdentity).
+  const ensureTipIdentity = tipIdentity;
 
   const logout = async () => {
     // Enhetens push-token hör till kontot som loggar ut: radera den INNAN
