@@ -16,12 +16,22 @@
  * components/v2/v2MapPoiSignImages när kartan ber om dem.
  */
 import type * as maplibregl from 'maplibre-gl';
+import { DEEP_NEAR_MIN_CHILD_ZOOM, DEEP_SOURCE_ID } from './deepTiles';
 
 export const POI_SIGN_LAYER_ID = 'vadkul-poi-signs';
 /** "När man zoomar in ganska nära": stadslandningen ligger på ~10,5. */
 export const POI_SIGN_MIN_ZOOM = 13;
 /** Härifrån står platsens namn under skylten. */
 export const POI_SIGN_NAME_ZOOM = 14.5;
+/**
+ * ETT ZOOMSTEG TIDIGARE (#222, Josef 13/11: "så man ser mer detaljer när man
+ * zoomar ut än man vanligtvis hade gjort"): finns den djupa källan (utils/
+ * deepTiles) hämtas skyltarnas punkter ur kakel ett steg djupare, och då syns
+ * badplatserna från zoom 12, museer och bibliotek från 13 och lekplatser från
+ * 14. Kaklen är små så här nära (24-54 kB över Växjö), så det kostar lite.
+ */
+export const POI_SIGN_DEEP_MIN_ZOOM = DEEP_NEAR_MIN_CHILD_ZOOM - 1;
+export const POI_SIGN_DEEP_NAME_ZOOM = POI_SIGN_NAME_ZOOM - 1;
 
 export interface PoiSign {
     /** kind-värden i kaklens pois-lager. */
@@ -78,8 +88,12 @@ export function addPoiSigns(style: maplibregl.StyleSpecification) {
     const withSource = style.layers.find(l => 'source-layer' in l && l['source-layer'] === 'pois')
         ?? style.layers.find(l => 'source-layer' in l && (l['source-layer'] === 'places' || l['source-layer'] === 'water'));
     if (!withSource || !('source' in withSource) || typeof withSource.source !== 'string') return;
-    const source = withSource.source;
-    if (style.sources[source]?.type !== 'vector') return;
+    if (style.sources[withSource.source]?.type !== 'vector') return;
+    // Den djupa källan när den finns (läggs in av addZoomedOutLandcover före oss).
+    const deep = style.sources[DEEP_SOURCE_ID]?.type === 'vector';
+    const source = deep ? DEEP_SOURCE_ID : withSource.source;
+    const minZoom = deep ? POI_SIGN_DEEP_MIN_ZOOM : POI_SIGN_MIN_ZOOM;
+    const nameZoom = deep ? POI_SIGN_DEEP_NAME_ZOOM : POI_SIGN_NAME_ZOOM;
 
     const park = style.layers.find(l => l.id === VOYAGER_PARK_LABEL_ID);
     const font = park?.type === 'symbol' && Array.isArray(park.layout?.['text-font'])
@@ -92,15 +106,15 @@ export function addPoiSigns(style: maplibregl.StyleSpecification) {
         type: 'symbol',
         source,
         'source-layer': 'pois',
-        minzoom: POI_SIGN_MIN_ZOOM,
+        minzoom: minZoom,
         filter: ['in', ['get', 'kind'], ['literal', KEYS.flatMap(k => [...POI_SIGNS[k].kinds])]],
         layout: {
             'icon-image': perKind(key => poiSignImageId(key), ''),
-            'icon-size': ['interpolate', ['linear'], ['zoom'], POI_SIGN_MIN_ZOOM, 0.8, 16, 1],
+            'icon-size': ['interpolate', ['linear'], ['zoom'], minZoom, 0.8, 16, 1],
             // Stolpens fot står på platsen.
             'icon-anchor': 'bottom',
             'symbol-sort-key': perKind((_, i) => i, KEYS.length),
-            'text-field': ['step', ['zoom'], '', POI_SIGN_NAME_ZOOM, ['coalesce', ['get', 'name'], '']],
+            'text-field': ['step', ['zoom'], '', nameZoom, ['coalesce', ['get', 'name'], '']],
             'text-font': font,
             'text-size': 11,
             'text-anchor': 'top',

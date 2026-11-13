@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type * as maplibregl from 'maplibre-gl';
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
-    addPoiSigns, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM, POI_SIGN_NAME_ZOOM, POI_SIGNS,
+    addPoiSigns, POI_SIGN_DEEP_MIN_ZOOM, POI_SIGN_DEEP_NAME_ZOOM, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM,
+    POI_SIGN_NAME_ZOOM, POI_SIGNS,
     poiSignImageId, poiSignKeyFromImageId, type PoiSignKey,
 } from './mapPoiSigns';
+import { DEEP_POI_KINDS, DEEP_SOURCE_ID, deepLayersFor } from './deepTiles';
+import { addZoomedOutLandcover } from './mapLandcover';
 
 const FONT = ['Montserrat SemiBold', 'Open Sans Bold'];
 // Voyager i miniatyr: etikettlagren i samma ordning som den riktiga stilen.
@@ -119,5 +122,41 @@ describe('addPoiSigns', () => {
         const tom: maplibregl.StyleSpecification = { version: 8, sources: {}, layers: [{ id: 'background', type: 'background' }] };
         addPoiSigns(tom);
         expect(tom.layers).toHaveLength(1);
+    });
+});
+
+// #222, Josef 13/11: "så man ser mer detaljer när man zoomar ut än man
+// vanligtvis hade gjort" - skyltarna ett zoomsteg tidigare via djupare kakel.
+describe('skyltarna ur de djupare kaklen', () => {
+    const medDjupKälla = () => {
+        const s = voyagerLike();
+        s.layers.splice(1, 0, { id: 'landuse', type: 'fill', source: 'protomaps', 'source-layer': 'landuse' });
+        addZoomedOutLandcover(s);
+        addPoiSigns(s);
+        return s;
+    };
+
+    it('finns den djupa källan hämtas skyltarna därifrån och syns ett zoomsteg tidigare', () => {
+        const s = medDjupKälla();
+        expect(s.sources[DEEP_SOURCE_ID]).toBeDefined();
+        const l = skyltlager(s);
+        expect(l).toMatchObject({ source: DEEP_SOURCE_ID, 'source-layer': 'pois', minzoom: POI_SIGN_DEEP_MIN_ZOOM });
+        expect(POI_SIGN_DEEP_MIN_ZOOM).toBe(POI_SIGN_MIN_ZOOM - 1);
+        expect((l.layout!['text-field'] as unknown[])[3]).toBe(POI_SIGN_DEEP_NAME_ZOOM);
+        expect(validateStyleMin(s)).toEqual([]);
+    });
+
+    it('kaklen som hämtas vid skyltarnas startzoom bär platserna', () => {
+        // Kartzoom 12 -> källkakel z12 -> barn z13.
+        expect(Object.keys(deepLayersFor(POI_SIGN_DEEP_MIN_ZOOM + 1))).toEqual(['pois']);
+    });
+
+    it('det hopslagna kaklet har exakt skyltarnas platstyper', () => {
+        expect([...DEEP_POI_KINDS].sort()).toEqual(Object.values(POI_SIGNS).flatMap(x => [...x.kinds]).sort());
+    });
+
+    it('utan djup källa ritas skyltarna ur baskartan från zoom 13, som förut', () => {
+        expect(skyltlager(färdig())).toMatchObject({ source: 'protomaps', minzoom: POI_SIGN_MIN_ZOOM });
+        expect((skyltlager(färdig()).layout!['text-field'] as unknown[])[3]).toBe(POI_SIGN_NAME_ZOOM);
     });
 });

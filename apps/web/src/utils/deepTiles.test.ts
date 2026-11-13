@@ -3,8 +3,8 @@ import { VectorTile } from '@mapbox/vector-tile';
 import { fromVectorTileJs, type VectorTileFeatureLike } from '@maplibre/vt-pbf';
 import { PbfReader } from 'pbf';
 import {
-    childTileUrls, DEEP_EXTENT, DEEP_PROTOCOL, deepTileError, deepTileTemplate,
-    loadDeepTile, mergeChildTiles, type TileFetch,
+    childTileUrls, DEEP_EXTENT, DEEP_FAR_MAX_CHILD_ZOOM, DEEP_NEAR_MIN_CHILD_ZOOM, DEEP_PROTOCOL,
+    deepLayersFor, deepTileError, deepTileTemplate, loadDeepTile, mergeChildTiles, type TileFetch,
 } from './deepTiles';
 import { isRetryableTileFetch } from '../components/v2/v2MapEngineHeal';
 
@@ -37,10 +37,10 @@ describe('childTileUrls', () => {
         const url = deepTileTemplate(MALL).replace('{z}', '5').replace('{x}', '17').replace('{y}', '9');
         expect(url.startsWith(`${DEEP_PROTOCOL}://https://`)).toBe(true);
         expect(childTileUrls(url)).toEqual([
-            { url: MALL.replace('{z}/{x}/{y}', '6/34/18'), dx: 0, dy: 0 },
-            { url: MALL.replace('{z}/{x}/{y}', '6/35/18'), dx: 1, dy: 0 },
-            { url: MALL.replace('{z}/{x}/{y}', '6/34/19'), dx: 0, dy: 1 },
-            { url: MALL.replace('{z}/{x}/{y}', '6/35/19'), dx: 1, dy: 1 },
+            { url: MALL.replace('{z}/{x}/{y}', '6/34/18'), z: 6, dx: 0, dy: 0 },
+            { url: MALL.replace('{z}/{x}/{y}', '6/35/18'), z: 6, dx: 1, dy: 0 },
+            { url: MALL.replace('{z}/{x}/{y}', '6/34/19'), z: 6, dx: 0, dy: 1 },
+            { url: MALL.replace('{z}/{x}/{y}', '6/35/19'), z: 6, dx: 1, dy: 1 },
         ]);
     });
 
@@ -85,12 +85,13 @@ describe('mergeChildTiles', () => {
         expect(ut.layers.landcover.feature(0).properties).toEqual({ kind: 'farmland' });
     });
 
-    it('tar bara ytor och bara de lager vi ritar - inga namnpunkter, vägar eller orter', () => {
+    it('tar ytorna och älvarnas linjer ur de lager vi ritar - inga namnpunkter, bäckar, vägar eller orter', () => {
         const ut = avkoda(mergeChildTiles([{
             data: tile({
                 water: [
                     feature(1, { kind: 'sea', name: 'Östersjön' }, [[[5, 5]]]),
-                    feature(2, { kind: 'river' }, [[[0, 0], [9, 9]]]),
+                    feature(2, { kind: 'stream' }, [[[0, 0], [9, 9]]]),
+                    feature(2, { kind: 'river' }, [[[10, 20], [30, 40], [50, 45]]]),
                     feature(3, { kind: 'ocean' }, [ruta(0, 0, 50, 50)]),
                 ],
                 roads: [feature(2, { kind: 'highway' }, [[[0, 0], [9, 9]]])],
@@ -99,8 +100,50 @@ describe('mergeChildTiles', () => {
             dx: 0, dy: 0,
         }]));
         expect(Object.keys(ut.layers)).toEqual(['water']);
-        expect(ut.layers.water.length).toBe(1);
-        expect(ut.layers.water.feature(0).properties.kind).toBe('ocean');
+        expect(ut.layers.water.length).toBe(2);
+        const [älv, hav] = [ut.layers.water.feature(0), ut.layers.water.feature(1)];
+        expect([älv.type, älv.properties.kind]).toEqual([2, 'river']);
+        expect(hörn(älv)).toEqual([[10, 20], [30, 40], [50, 45]]);
+        expect([hav.type, hav.properties.kind]).toEqual([3, 'ocean']);
+    });
+
+    // #222: inzoomat slås bara platsskyltarnas punkter ihop.
+    describe('inzoomat: platsskyltarnas punkter', () => {
+        const nära = deepLayersFor(DEEP_NEAR_MIN_CHILD_ZOOM);
+        const barn = (dx: 0 | 1, dy: 0 | 1, pois: VectorTileFeatureLike[]) => ({ data: tile({ pois, water: [feature(3, { kind: 'lake' }, [ruta(0, 0, 9, 9)])] }), dx, dy });
+
+        it('tar skyltarnas platstyper med namn, på rätt plats i fjärdedelen', () => {
+            const ut = avkoda(mergeChildTiles([
+                barn(1, 1, [
+                    feature(1, { kind: 'bathing_place', name: 'Evedal', min_zoom: 14 }, [[[100, 200]]]),
+                    feature(1, { kind: 'restaurant', name: 'Krogen' }, [[[5, 5]]]),
+                    feature(1, { kind: 'museum', name: 'Smålands Museum' }, [[[4000, 10]]]),
+                ]),
+            ], nära));
+            expect(Object.keys(ut.layers)).toEqual(['pois']);
+            const l = ut.layers.pois;
+            expect(l.length).toBe(2);
+            expect(l.feature(0).properties).toEqual({ kind: 'bathing_place', name: 'Evedal' });
+            expect(hörn(l.feature(0))).toEqual([[4196, 4296]]);
+            expect(l.feature(1).properties.name).toBe('Smålands Museum');
+        });
+
+        it('en punkt i kaklets marginal tas inte med - den finns i grannbarnet och skulle stå två gånger', () => {
+            const ut = avkoda(mergeChildTiles([
+                barn(0, 0, [feature(1, { kind: 'park', name: 'Kant' }, [[[4100, 50]]]), feature(1, { kind: 'park', name: 'Inne' }, [[[4095, 50]]])]),
+                barn(1, 0, [feature(1, { kind: 'park', name: 'Kant' }, [[[4, 50]]]), feature(1, { kind: 'park', name: 'Utanför' }, [[[-3, 50]]])]),
+            ], nära));
+            const namn = Array.from({ length: ut.layers.pois.length }, (_, i) => ut.layers.pois.feature(i).properties.name);
+            expect(namn.sort()).toEqual(['Inne', 'Kant']);
+        });
+    });
+
+    it('vad som slås ihop beror på barnkaklens zoom, och mellan lägena ingenting', () => {
+        expect(Object.keys(deepLayersFor(6)).sort()).toEqual(['landcover', 'landuse', 'water']);
+        expect(Object.keys(deepLayersFor(DEEP_FAR_MAX_CHILD_ZOOM)).sort()).toEqual(['landcover', 'landuse', 'water']);
+        expect(Object.keys(deepLayersFor(DEEP_FAR_MAX_CHILD_ZOOM + 1))).toEqual([]);
+        expect(Object.keys(deepLayersFor(DEEP_NEAR_MIN_CHILD_ZOOM - 1))).toEqual([]);
+        expect(Object.keys(deepLayersFor(15))).toEqual(['pois']);
     });
 
     it('av landuse följer bara skogen med', () => {
@@ -178,6 +221,18 @@ describe('loadDeepTile', () => {
         const e2 = await loadDeepTile(url, nät).catch(e => e);
         expect(isRetryableTileFetch(e2)).toBe(true);
         expect(isRetryableTileFetch(deepTileError(403, 'Forbidden', 'x'))).toBe(false);
+    });
+
+    it('väljer lager efter barnkaklens zoom: inzoomat bara skyltarna', async () => {
+        const allt = tile({
+            water: [feature(3, { kind: 'lake' }, [ruta(1, 1, 2, 2)])],
+            pois: [feature(1, { kind: 'library', name: 'Biblioteket' }, [[[10, 10]]])],
+        });
+        const fetchTile: TileFetch = async () => svar(200, allt);
+        const nära = avkoda(await loadDeepTile(`${DEEP_PROTOCOL}://https://a.invalid/v2/13/4433/2470.mvt`, fetchTile));
+        expect(Object.keys(nära.layers)).toEqual(['pois']);
+        const långt = avkoda(await loadDeepTile(url, fetchTile));
+        expect(Object.keys(långt.layers)).toEqual(['water']);
     });
 
     it('en avbruten hämtning (kaklet lämnade vyn) förblir ett avbrott, inget omförsök', async () => {

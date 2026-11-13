@@ -6,7 +6,9 @@
  * components/v2/v2MapBaseStyles (fetchAndTransformThemeParkStyle).
  */
 import type * as maplibregl from 'maplibre-gl';
-import { deepTileTemplate } from './deepTiles';
+import { DEEP_FAR_MAX_CHILD_ZOOM, DEEP_SOURCE_ID, deepTileTemplate } from './deepTiles';
+
+export { DEEP_SOURCE_ID };
 
 // ── Skog och öppna fält utzoomat (#203) ──────────────────────────────────────
 // Josef 13/11: "alltså när man är mycket utzoomad. det är inte bergen man ska
@@ -43,9 +45,20 @@ const FADE_OUT_FROM = 8.5;
 // den djupa källan används inte alls därifrån (inga hämtningar inzoomat).
 // Baskartans eget vatten ligger kvar under, så sjöarna finns även om ett djupt
 // kakel dröjer.
-export const DEEP_SOURCE_ID = 'vadkul-far-deep';
+// DEEP_MAX_ZOOM gäller sedan #222 bara det GROVA MARKTÄCKET (lagret 'landcover'
+// finns inte i kaklen över z7). Sjöar, älvar och skog tas ur de djupare kaklen
+// ända till DEEP_FAR_MAX_ZOOM (Josef 13/11: "kan vi göra det med sånt som syns
+// när man är nära inzoomad också? så man ser mer detaljer när man zoomar ut än
+// man vanligtvis hade gjort"): fler småsjöar och skarpare skog på mellanzoom,
+// och älvarna (som kaklen har först från z9) redan från kartzoom 8. Mätt över
+// Växjö 13/11: hopslagningen tar 70-210 ms per kakel på huvudtråden, tyngst
+// vid kartzoom 6-7 där barnkaklen bär 4000 skogsytor.
 export const DEEP_MAX_ZOOM = 6;
+export const DEEP_FAR_MAX_ZOOM = DEEP_FAR_MAX_CHILD_ZOOM;
+/** Källans högsta kakelzoom: barnen på z15 bär platsskyltarna (utils/mapPoiSigns). */
+export const DEEP_SOURCE_MAX_ZOOM = 14;
 export const DEEP_WATER_LAYER_ID = 'water-far-deep';
+export const DEEP_RIVER_LAYER_ID = 'river-far-deep';
 export const DEEP_COARSE_LAYER_ID = 'landcover-far-coarse-deep';
 
 // ── Skogens konturer längre ut (#211) ────────────────────────────────────────
@@ -239,10 +252,24 @@ export function addZoomedOutLandcover(style: maplibregl.StyleSpecification) {
         type: 'fill',
         source: DEEP_SOURCE_ID,
         'source-layer': 'water',
-        maxzoom: DEEP_MAX_ZOOM,
+        maxzoom: DEEP_FAR_MAX_ZOOM,
+        // Bara ytorna - älvarnas linjer ligger i samma lager och har ett eget.
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: waterColor === undefined ? {} : { 'fill-color': waterColor },
     };
-    style.layers.splice(waterAt + 1, 0, deepWater);
+    // Älvarna ett zoomsteg tidigare, i Voyager-älvarnas egen färg och bredd.
+    const waterway = style.layers.find(l => l.id === 'waterway');
+    const deepRiver: maplibregl.LineLayerSpecification = {
+        id: DEEP_RIVER_LAYER_ID,
+        type: 'line',
+        source: DEEP_SOURCE_ID,
+        'source-layer': 'water',
+        maxzoom: DEEP_FAR_MAX_ZOOM,
+        filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'kind'], 'river']],
+        paint: waterway?.type === 'line' && waterway.paint ? { ...waterway.paint } : {},
+    };
+    // Älven under sjöarna, så en sjö som älven rinner genom täcker linjen.
+    style.layers.splice(waterAt + 1, 0, deepRiver, deepWater);
 }
 
 // Skogens konturer under den zoom där Voyagers eget grönskelager tänds.
@@ -272,11 +299,13 @@ function forestLayers(
             ],
         },
     });
-    if (!deep || until <= DEEP_MAX_ZOOM) return [layer(FOREST_LAYER_ID, source, { maxzoom: until })];
-    return [
-        layer(FOREST_DEEP_LAYER_ID, DEEP_SOURCE_ID, { maxzoom: DEEP_MAX_ZOOM }),
-        layer(FOREST_LAYER_ID, source, { minzoom: DEEP_MAX_ZOOM, maxzoom: until }),
-    ];
+    if (!deep) return [layer(FOREST_LAYER_ID, source, { maxzoom: until })];
+    // De djupare kaklen bär skogen hela vägen till DEEP_FAR_MAX_ZOOM (#222):
+    // under Voyagers startzoom är den ensam, över den lägger den finare
+    // konturer ovanpå Voyagers grönska i samma färg.
+    const deepLayer = layer(FOREST_DEEP_LAYER_ID, DEEP_SOURCE_ID, { maxzoom: Math.max(until, DEEP_FAR_MAX_ZOOM) });
+    if (until <= DEEP_FAR_MAX_ZOOM) return [deepLayer];
+    return [deepLayer, layer(FOREST_LAYER_ID, source, { minzoom: DEEP_FAR_MAX_ZOOM, maxzoom: until })];
 }
 
 // Den djupa källan: baskartans egen kakelmall bakom vårt protokoll. Kräver att
@@ -289,8 +318,9 @@ function addDeepSource(style: maplibregl.StyleSpecification, baseId: string): bo
         type: 'vector',
         tiles: base.tiles.map(deepTileTemplate),
         minzoom: 0,
-        // Kakel z ger barnen på z+1: vid kartzoom 5-6 alltså z6-data.
-        maxzoom: DEEP_MAX_ZOOM - 1,
+        // Kakel z ger barnen på z+1. Lagren avgör var källan används: under
+        // DEEP_FAR_MAX_ZOOM (sjöar, skog) och från skyltarnas startzoom.
+        maxzoom: DEEP_SOURCE_MAX_ZOOM,
     };
     return true;
 }

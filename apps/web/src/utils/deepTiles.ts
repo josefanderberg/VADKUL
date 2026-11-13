@@ -11,6 +11,12 @@
  * på z+1, de lager vi vill ha plockas ut och läggs ihop till ETT kakel med
  * dubbla utsträckningen. MapLibre ser en vanlig vektorkälla.
  *
+ * Sedan #222 används samma knep även närmare in (Josef 13/11: "kan vi göra det
+ * med sånt som syns när man är nära inzoomad också? så man ser mer detaljer när
+ * man zoomar ut än man vanligtvis hade gjort"): sjöar, älvar och skog upp till
+ * kartzoom 9, och platsskyltarnas punkter från kartzoom 12. Vad som slås ihop
+ * beror på barnkaklens zoom (deepLayersFor).
+ *
  * Ren modul: ingen karta och inget DOM. Hämtningen skickas in, så hopslagningen
  * och adressräkningen går att testa. Protokollet registreras i
  * components/v2/v2MapBaseStyles, källan och lagren läggs in av utils/mapLandcover.
@@ -22,20 +28,61 @@ import { PbfReader } from 'pbf';
 export const DEEP_PROTOCOL = 'vadkuldjup';
 const PREFIX = `${DEEP_PROTOCOL}://`;
 
-/** Lagren som följer med i det hopslagna kaklet - resten (vägar, orter, gränser)
- *  läses aldrig. */
-export const DEEP_LAYERS = ['water', 'landcover', 'landuse'] as const;
+/** Källan i stilen som går via protokollet. */
+export const DEEP_SOURCE_ID = 'vadkul-far-deep';
+
+const POINT = 1;
+const LINE = 2;
+const POLYGON = 3;
+type GeomType = typeof POINT | typeof LINE | typeof POLYGON;
+
+/** Vad som tas med ur ett lager i barnkaklen. */
+export interface DeepLayerSpec {
+    /** Geometrityp -> tillåtna kinds ('*' = alla). Typer som saknas tas inte med. */
+    kinds: Partial<Record<GeomType, readonly string[] | '*'>>;
+    /** Attribut som följer med - resten släpps. */
+    props: readonly string[];
+}
 
 /** Av 'landuse' ritas bara skogen ur den djupa källan (skogens konturer, se
  *  utils/mapLandcover) - reservat, militärområden m.m. kodas aldrig om. */
 export const DEEP_KINDS: Readonly<Record<string, readonly string[]>> = {
     landuse: ['forest', 'wood'],
 };
+/** Platstyperna med skylt (utils/mapPoiSigns - testet där låser att listorna
+ *  är samma; de står här för att modulerna inte ska importera varandra i ring). */
+export const DEEP_POI_KINDS = [
+    'bathing_place', 'public_bath', 'beach', 'museum', 'library', 'nature_reserve',
+    'golf_course', 'playground', 'pitch', 'park',
+] as const;
+
+/** Utzoomat och på mellanzoom (#211, #222): sjöar, älvar, marktäcke och skog.
+ *  Resten (vägar, orter, gränser) läses aldrig. */
+const FAR_LAYERS: Readonly<Record<string, DeepLayerSpec>> = {
+    water: { kinds: { [POLYGON]: '*', [LINE]: ['river'] }, props: ['kind'] },
+    landcover: { kinds: { [POLYGON]: '*' }, props: ['kind'] },
+    landuse: { kinds: { [POLYGON]: DEEP_KINDS.landuse }, props: ['kind'] },
+};
+/** Inzoomat (#222): bara platsskyltarnas punkter, med namn. */
+const NEAR_LAYERS: Readonly<Record<string, DeepLayerSpec>> = {
+    pois: { kinds: { [POINT]: DEEP_POI_KINDS }, props: ['kind', 'name'] },
+};
+export const DEEP_LAYERS = Object.keys(FAR_LAYERS);
+/** Barnkakel t.o.m. den här zoomen ger sjöar/skog, från DEEP_NEAR_MIN_CHILD_ZOOM
+ *  ger de skyltar. Däremellan använder inget lager källan (inga hämtningar). */
+export const DEEP_FAR_MAX_CHILD_ZOOM = 9;
+export const DEEP_NEAR_MIN_CHILD_ZOOM = 13;
+
+/** Vilka lager som slås ihop för barnkakel på en viss zoom. */
+export function deepLayersFor(childZoom: number): Readonly<Record<string, DeepLayerSpec>> {
+    if (childZoom <= DEEP_FAR_MAX_CHILD_ZOOM) return FAR_LAYERS;
+    if (childZoom >= DEEP_NEAR_MIN_CHILD_ZOOM) return NEAR_LAYERS;
+    return {};
+}
 
 /** Ett barnkakel täcker en fjärdedel: halva utsträckningen per ledd. */
 const CHILD_SPAN = 4096;
 export const DEEP_EXTENT = CHILD_SPAN * 2;
-const POLYGON = 3;
 
 /** Kakelmallen för den djupa källan: baskartans egen mall bakom vårt protokoll. */
 export function deepTileTemplate(baseTemplate: string): string {
@@ -44,6 +91,8 @@ export function deepTileTemplate(baseTemplate: string): string {
 
 export interface ChildTile {
     url: string;
+    /** Barnkaklets zoom. */
+    z: number;
     /** Barnets plats i föräldern: 0 = väst/nord, 1 = öst/syd. */
     dx: 0 | 1;
     dy: 0 | 1;
@@ -65,7 +114,7 @@ export function childTileUrls(deepUrl: string): ChildTile[] | null {
     const out: ChildTile[] = [];
     for (const dy of [0, 1] as const) {
         for (const dx of [0, 1] as const) {
-            out.push({ url: `${head}${z}/${x + dx}/${y + dy}${ext}${query}`, dx, dy });
+            out.push({ url: `${head}${z}/${x + dx}/${y + dy}${ext}${query}`, z, dx, dy });
         }
     }
     return out;
@@ -91,51 +140,59 @@ function layerOf(name: string, features: VectorTileFeatureLike[]): VectorTileLay
 }
 
 /**
- * Slå ihop barnkaklens ytor till ett kakel med utsträckningen DEEP_EXTENT.
- * Bara ytor tas med (vattnets namnpunkter och linjer hör till andra lager i
- * stilen), och av attributen bara `kind` - det enda lagren filtrerar och färgar
- * på. Ytor som korsar gränsen mellan två barn finns i båda, klippta med
- * kaklens egen marginal, och överlappar därför sömlöst.
+ * Slå ihop barnkaklens geometri till ett kakel med utsträckningen DEEP_EXTENT.
+ * `layers` styr vad som tas med (deepLayersFor). Ytor och linjer som korsar
+ * gränsen mellan två barn finns i båda, klippta med kaklens egen marginal, och
+ * överlappar därför sömlöst. Punkter tas bara från barnets egen ruta - en punkt
+ * i marginalen finns också i grannbarnet och skulle annars stå två gånger.
  */
 export function mergeChildTiles(
     children: readonly ChildData[],
-    layerNames: readonly string[] = DEEP_LAYERS,
+    layers: Readonly<Record<string, DeepLayerSpec>> = FAR_LAYERS,
 ): Uint8Array {
-    const perLayer = new Map<string, VectorTileFeatureLike[]>(layerNames.map(n => [n, []]));
+    const names = Object.keys(layers);
+    const perLayer = new Map<string, VectorTileFeatureLike[]>(names.map(n => [n, []]));
     for (const child of children) {
         if (!child.data || child.data.byteLength === 0) continue;
         const bytes = child.data instanceof Uint8Array ? child.data : new Uint8Array(child.data);
         const tile = new VectorTile(new PbfReader(bytes));
-        for (const name of layerNames) {
+        for (const name of names) {
             const layer = tile.layers[name];
             if (!layer) continue;
+            const spec = layers[name];
             const k = CHILD_SPAN / layer.extent;
             const ox = child.dx * CHILD_SPAN;
             const oy = child.dy * CHILD_SPAN;
             const out = perLayer.get(name)!;
-            const kinds = DEEP_KINDS[name];
             for (let i = 0; i < layer.length; i++) {
                 const f = layer.feature(i);
-                if (f.type !== POLYGON) continue;
-                if (kinds && !kinds.includes(String(f.properties.kind))) continue;
-                const rings = f.loadGeometry().map(ring =>
+                const type = f.type as GeomType;
+                const allowed = spec.kinds[type];
+                if (!allowed) continue;
+                if (allowed !== '*' && !allowed.includes(String(f.properties.kind))) continue;
+                let geometry = f.loadGeometry();
+                if (type === POINT) {
+                    geometry = geometry
+                        .map(ring => ring.filter(p => p.x >= 0 && p.y >= 0 && p.x < layer.extent && p.y < layer.extent))
+                        .filter(ring => ring.length > 0);
+                    if (geometry.length === 0) continue;
+                }
+                const rings = geometry.map(ring =>
                     ring.map(p => ({ x: Math.round(p.x * k) + ox, y: Math.round(p.y * k) + oy })) as unknown as Ring);
-                const kind = f.properties.kind;
-                out.push({
-                    type: POLYGON,
-                    id: undefined,
-                    extent: DEEP_EXTENT,
-                    properties: typeof kind === 'string' ? { kind } : {},
-                    loadGeometry: () => rings,
-                });
+                const properties: Record<string, string | number | boolean> = {};
+                for (const key of spec.props) {
+                    const v = f.properties[key];
+                    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') properties[key] = v;
+                }
+                out.push({ type, id: undefined, extent: DEEP_EXTENT, properties, loadGeometry: () => rings });
             }
         }
     }
-    const layers: Record<string, VectorTileLayerLike> = {};
+    const merged: Record<string, VectorTileLayerLike> = {};
     for (const [name, features] of perLayer) {
-        if (features.length > 0) layers[name] = layerOf(name, features);
+        if (features.length > 0) merged[name] = layerOf(name, features);
     }
-    return fromVectorTileJs({ layers });
+    return fromVectorTileJs({ layers: merged });
 }
 
 /** Fel i samma form som MapLibres AJAXError, så omförsöken för kakel som inte
@@ -177,5 +234,5 @@ export async function loadDeepTile(deepUrl: string, fetchTile: TileFetch, signal
         if (!res.ok) throw deepTileError(res.status, res.statusText, url);
         return { data: await res.arrayBuffer(), dx, dy };
     }));
-    return mergeChildTiles(parts);
+    return mergeChildTiles(parts, deepLayersFor(children[0].z));
 }
