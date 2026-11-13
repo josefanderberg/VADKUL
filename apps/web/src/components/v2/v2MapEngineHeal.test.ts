@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-    createSourceHealer, FEATURE_INDEX_ERROR, HEAL_COOLDOWN_MAX_MS, HEAL_COOLDOWN_MS, HEAL_DEBOUNCE_MS,
-    isFeatureIndexError, type HealClock,
+    createSourceHealer, createTileRetrier, FEATURE_INDEX_ERROR, HEAL_COOLDOWN_MAX_MS, HEAL_COOLDOWN_MS,
+    HEAL_DEBOUNCE_MS, isFeatureIndexError, isRetryableTileFetch, TILE_RETRY_DELAYS_MS, TILE_RETRY_RESET_MS,
+    tileFetchStatus, type HealClock, type TileXYZ,
 } from './v2MapEngineHeal';
 
 // Motorbuggen "feature index out of bounds" (#206): ett trasigt kakel läks med
@@ -122,5 +123,88 @@ describe('createSourceHealer', () => {
         request('k');
         advance(HEAL_DEBOUNCE_MS);
         expect(healedAt[healedAt.length - 1] - fore).toBe(HEAL_DEBOUNCE_MS);
+    });
+});
+
+// Kakel som inte gick att hämta (#207). Samma form som MapLibres AJAXError.
+function ajaxError(status: number, text = 'Failed to fetch', withStatus = true) {
+    const url = 'https://tiles.basemaps.cartocdn.com/v/20261026-01/vectortiles/carto.streets/v2/11/1102/623.mvt';
+    const err = new Error(`AJAXError: ${text} (${status}): ${url}`);
+    if (withStatus) Object.assign(err, { status, statusText: text, url });
+    return err;
+}
+
+describe('isRetryableTileFetch', () => {
+    it('nätfel och tillfälligt överlastad server försöks igen', () => {
+        expect(isRetryableTileFetch(ajaxError(0))).toBe(true);
+        expect(isRetryableTileFetch(ajaxError(503, 'Service Unavailable'))).toBe(true);
+        expect(isRetryableTileFetch(ajaxError(429, 'Too Many Requests'))).toBe(true);
+        expect(isRetryableTileFetch(ajaxError(408, 'Request Timeout'))).toBe(true);
+    });
+
+    it('läser statusen ur meddelandet om fältet tappats på vägen från workern', () => {
+        expect(tileFetchStatus(ajaxError(0, 'Failed to fetch', false))).toBe(0);
+        expect(isRetryableTileFetch(ajaxError(502, 'Bad Gateway', false))).toBe(true);
+    });
+
+    it('bestående fel och andra fel försöks inte igen', () => {
+        expect(isRetryableTileFetch(ajaxError(403, 'Forbidden'))).toBe(false);
+        expect(isRetryableTileFetch(ajaxError(400, 'Bad Request'))).toBe(false);
+        expect(isRetryableTileFetch(new Error(FEATURE_INDEX_ERROR))).toBe(false);
+        expect(isRetryableTileFetch(new Error('Failed to fetch'))).toBe(false);
+        expect(isRetryableTileFetch('AJAXError: Failed to fetch (0): x')).toBe(false);
+    });
+});
+
+describe('createTileRetrier', () => {
+    const KAKEL: TileXYZ = { x: 1102, y: 623, z: 11 };
+
+    it('försöker igen efter en stund, högst två gånger, sedan ges kaklet upp', () => {
+        const { clock, advance } = fakeClock();
+        const forsok: string[] = [];
+        const request = createTileRetrier((id, t) => forsok.push(`${id} ${t.z}/${t.x}/${t.y}`), clock);
+        expect(request('protomaps', KAKEL)).toBe('retry');
+        advance(TILE_RETRY_DELAYS_MS[0] - 1);
+        expect(forsok).toEqual([]);
+        advance(1);
+        expect(forsok).toEqual(['protomaps 11/1102/623']);
+        // Försöket föll igen.
+        expect(request('protomaps', KAKEL)).toBe('retry');
+        advance(TILE_RETRY_DELAYS_MS[1]);
+        expect(forsok).toHaveLength(2);
+        // Och en tredje gång: nu ges det upp.
+        expect(request('protomaps', KAKEL)).toBe('gave-up');
+        advance(TILE_RETRY_RESET_MS / 2);
+        expect(forsok).toHaveLength(2);
+    });
+
+    it('slår ihop fel medan ett försök väntar', () => {
+        const { clock, advance } = fakeClock();
+        let n = 0;
+        const request = createTileRetrier(() => { n++; }, clock);
+        expect(request('protomaps', KAKEL)).toBe('retry');
+        expect(request('protomaps', KAKEL)).toBe('pending');
+        advance(TILE_RETRY_DELAYS_MS[0]);
+        expect(n).toBe(1);
+    });
+
+    it('kaklen och källorna räknas var för sig', () => {
+        const { clock } = fakeClock();
+        const request = createTileRetrier(() => {}, clock);
+        expect(request('protomaps', KAKEL)).toBe('retry');
+        expect(request('protomaps', { ...KAKEL, x: 1103 })).toBe('retry');
+        expect(request('plain-events', KAKEL)).toBe('retry');
+    });
+
+    it('ett kakel som fungerat en längre stund får nya försök', () => {
+        const { clock, advance } = fakeClock();
+        const request = createTileRetrier(() => {}, clock);
+        request('protomaps', KAKEL);
+        advance(TILE_RETRY_DELAYS_MS[0]);
+        request('protomaps', KAKEL);
+        advance(TILE_RETRY_DELAYS_MS[1]);
+        expect(request('protomaps', KAKEL)).toBe('gave-up');
+        advance(TILE_RETRY_RESET_MS + 1);
+        expect(request('protomaps', KAKEL)).toBe('retry');
     });
 });

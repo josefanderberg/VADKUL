@@ -32,7 +32,9 @@ import {
     LABEL_TEXT_SIZE_STOPS, eventLabels, labelFeaturesFrom, obstacleIcon, titleAnchorOffsets, wishLabels,
 } from './v2MapLabel';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
-import { createSourceHealer, isFeatureIndexError } from './v2MapEngineHeal';
+import {
+    createSourceHealer, createTileRetrier, isFeatureIndexError, isRetryableTileFetch, type TileXYZ,
+} from './v2MapEngineHeal';
 import { pickSpreadRevealKeys } from '../../utils/revealSpread';
 import {
     CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, pickCloudRevealKeys,
@@ -3501,10 +3503,26 @@ export default function V2Map({
                 .then(data => { if (map.getSource(sourceId) === src) src.setData(data); })
                 .catch(() => { /* källan riven under tiden - nästa syncPlainLayer bygger om */ });
         });
+        // KAKEL SOM INTE GICK ATT HÄMTA (#207, se v2MapEngineHeal): nätfel och
+        // tillfälligt överlastad server ger ett nytt försök för just det
+        // kaklet i stället för en ruta som saknas och en Console Error.
+        const retryTile = createTileRetrier((sourceId, tile) => {
+            try {
+                if (map.getSource(sourceId)) map.refreshTiles(sourceId, [tile]);
+            } catch { /* källan riven under tiden */ }
+        });
         map.on('error', (e) => {
             const sourceId = (e as { sourceId?: string }).sourceId;
             if (sourceId && isFeatureIndexError(e.error)) {
                 requestHeal(sourceId);
+                return;
+            }
+            const tile = (e as { tile?: { tileID?: { canonical?: TileXYZ } } }).tile?.tileID?.canonical;
+            if (sourceId && tile && isRetryableTileFetch(e.error)) {
+                const xyz = { x: tile.x, y: tile.y, z: tile.z };
+                if (retryTile(sourceId, xyz) === 'gave-up') {
+                    console.warn(`Kartkaklet ${xyz.z}/${xyz.x}/${xyz.y} i ${sourceId} gick inte att hämta`, e.error);
+                }
                 return;
             }
             console.error(e.error ?? e);

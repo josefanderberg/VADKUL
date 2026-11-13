@@ -85,3 +85,75 @@ export function createSourceHealer(heal: (sourceId: string) => void, clock: Heal
         return true;
     };
 }
+
+// ── Kakel som inte gick att hämta (#207) ─────────────────────────────────────
+// Faller hämtningen av ett kakel på nätet (AJAXError med status 0: tappad
+// uppkoppling eller avbruten anslutning) eller på en tillfälligt överlastad
+// server (408, 429, 5xx) markerar MapLibre kaklet som errored och försöker
+// ALDRIG igen - en ruta av kartan saknas tills man panorerar bort och tillbaka.
+// Josef 13/11 fick det som Console Error för ett av CARTO:s baskartskakel.
+// Läkningen: ladda om just det kaklet (map.refreshTiles, som hämtar det på nytt
+// eftersom kaklet då räknas som utgånget) efter en kort stund, högst
+// TILE_RETRY_DELAYS_MS.length gånger. Först när det ändå inte går loggas en
+// varning. 404 hoppar MapLibre redan över, andra fel loggas som förut.
+
+export interface TileXYZ { x: number; y: number; z: number }
+
+/** HTTP-status ur MapLibres AJAXError, eller null för andra fel. */
+export function tileFetchStatus(err: unknown): number | null {
+    if (!(err instanceof Error)) return null;
+    const status = (err as { status?: unknown }).status;
+    if (typeof status === 'number' && err.message.startsWith('AJAXError')) return status;
+    // Felet kommer från workern; skulle status-fältet ha tappats på vägen
+    // står den ändå i meddelandet: "AJAXError: <text> (<status>): <url>".
+    const m = err.message.match(/^AJAXError: .*?\((\d{1,3})\)/);
+    return m ? Number(m[1]) : null;
+}
+
+/** Tillfälligt fel som är värt ett nytt försök. */
+export function isRetryableTileFetch(err: unknown): boolean {
+    const status = tileFetchStatus(err);
+    if (status == null) return false;
+    return status === 0 || status === 408 || status === 429 || status >= 500;
+}
+
+/** Väntan före varje nytt försök. Två försök, sedan ges kaklet upp. */
+export const TILE_RETRY_DELAYS_MS = [2_000, 8_000] as const;
+/** Har kaklet fungerat så här länge börjar räkningen om. */
+export const TILE_RETRY_RESET_MS = 60_000;
+const TILE_RETRY_MAX_KEYS = 500;
+
+export type TileRetryOutcome = 'retry' | 'pending' | 'gave-up';
+
+/**
+ * Returnerar `request(sourceId, tile)`: be om ett nytt försök för kaklet.
+ * 'retry' = schemalagt, 'pending' = ett försök väntar redan, 'gave-up' = alla
+ * försök är förbrukade (logga då en varning).
+ */
+export function createTileRetrier(retry: (sourceId: string, tile: TileXYZ) => void, clock: HealClock = realClock) {
+    const state = new Map<string, { attempts: number; last: number; pending: boolean }>();
+
+    return function request(sourceId: string, tile: TileXYZ): TileRetryOutcome {
+        const key = `${sourceId}/${tile.z}/${tile.x}/${tile.y}`;
+        const now = clock.now();
+        if (state.size > TILE_RETRY_MAX_KEYS) {
+            for (const [k, s] of state) if (!s.pending && now - s.last > TILE_RETRY_RESET_MS) state.delete(k);
+        }
+        let s = state.get(key);
+        if (s && !s.pending && now - s.last > TILE_RETRY_RESET_MS) s = undefined;
+        if (s?.pending) return 'pending';
+        const attempts = s?.attempts ?? 0;
+        if (attempts >= TILE_RETRY_DELAYS_MS.length) {
+            state.set(key, { attempts, last: now, pending: false });
+            return 'gave-up';
+        }
+        const next = { attempts: attempts + 1, last: now, pending: true };
+        state.set(key, next);
+        clock.setTimeout(() => {
+            next.pending = false;
+            next.last = clock.now();
+            retry(sourceId, tile);
+        }, TILE_RETRY_DELAYS_MS[attempts]);
+        return 'retry';
+    };
+}
