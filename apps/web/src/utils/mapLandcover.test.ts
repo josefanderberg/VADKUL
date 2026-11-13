@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'fs';
+import path from 'path';
 import type * as maplibregl from 'maplibre-gl';
 // maplibre-gl:s egen stilspec (beroende till maplibre-gl) - samma validering som kartan kör.
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
     addZoomedOutLandcover, COARSE_KINDS, COARSE_LAYER_ID, DETAIL_KINDS, DETAIL_LAYER_ID,
-    LANDCOVER_COARSE_MAX_ZOOM, LANDCOVER_COLORS, LANDCOVER_MAX_ZOOM,
+    FOREST_KINDS, LANDCOVER_COARSE_MAX_ZOOM, LANDCOVER_COLORS, LANDCOVER_MAX_ZOOM,
 } from './mapLandcover';
 
 // Voyager i miniatyr, med lagren i samma ordning som den riktiga stilen (13/11).
@@ -102,18 +104,60 @@ describe('addZoomedOutLandcover', () => {
         }
     });
 
-    it('skogen är mörkare än fälten och fälten ritas ovanpå skogen', () => {
+    // Josef 13/11: "det ska inte vara mörkare karta än innan" och "nyanserna
+    // eller den färg shemat vi hade innan på kartan".
+    describe('färgerna är nöjesfältets gamla och aldrig mörkare än landet', () => {
+        // Paletten läses ur källtexten: grönskan och bostadsytorna är inte exporterade.
+        const bas = readFileSync(path.resolve(__dirname, '../components/v2/v2MapBaseStyles.ts'), 'utf8');
+        const konstant = (namn: string) => {
+            const m = bas.match(new RegExp(`const ${namn} = '(#[0-9a-f]{6})'`));
+            if (!m) throw new Error(`hittar inte ${namn} i v2MapBaseStyles`);
+            return m[1];
+        };
+        const bostad = bas.match(/landuse_residential'\) \{\s*paint\['fill-color'\] = '(#[0-9a-f]{6})'/)?.[1];
         const ljushet = (hex: string) => [1, 3, 5].reduce((s, i) => s + parseInt(hex.slice(i, i + 2), 16), 0);
-        expect(ljushet(LANDCOVER_COLORS.skog)).toBeLessThan(ljushet(LANDCOVER_COLORS.falt));
-        expect(ljushet(LANDCOVER_COLORS.skog)).toBeLessThan(ljushet(LANDCOVER_COLORS.oppenMark));
+
+        it('varje ton finns redan i nöjesfältets palett', () => {
+            const palett = [konstant('THEMEPARK_GREENERY_NEAR'), konstant('THEMEPARK_LAND_COLOR_NEAR'), bostad];
+            expect(bostad).toBeDefined();
+            for (const ton of Object.values(LANDCOVER_COLORS)) expect(palett).toContain(ton);
+        });
+
+        it('varje ton är ljusare än landet utzoomat', () => {
+            const land = konstant('THEMEPARK_LAND_COLOR');
+            for (const ton of Object.values(LANDCOVER_COLORS)) {
+                expect(ljushet(ton)).toBeGreaterThan(ljushet(land));
+            }
+        });
+
+        it('skogen ritas inte - den har landets gröna, som förut', () => {
+            const style = voyagerLike();
+            addZoomedOutLandcover(style);
+            for (const id of [COARSE_LAYER_ID, DETAIL_LAYER_ID]) {
+                const valda = (lager(style, id).filter as unknown[])[2] as ['literal', string[]];
+                for (const skog of FOREST_KINDS) expect(valda[1]).not.toContain(skog);
+            }
+            for (const skog of FOREST_KINDS) {
+                expect(COARSE_KINDS[skog]).toBeUndefined();
+                expect(DETAIL_KINDS[skog]).toBeUndefined();
+            }
+        });
+
+        it('skog, öppen mark och fält skiljs åt med olika nyanser', () => {
+            expect(new Set(Object.values(LANDCOVER_COLORS)).size).toBe(Object.keys(LANDCOVER_COLORS).length);
+            expect(COARSE_KINDS.farmland).toBe('falt');
+            expect(COARSE_KINDS.grassland).toBe('oppenMark');
+            expect(DETAIL_KINDS.meadow).toBe('falt');
+        });
+    });
+
+    it('fälten ritas ovanpå den öppna marken', () => {
         const style = voyagerLike();
         addZoomedOutLandcover(style);
-        for (const [id, kinds] of [[COARSE_LAYER_ID, COARSE_KINDS], [DETAIL_LAYER_ID, DETAIL_KINDS]] as const) {
+        for (const id of [COARSE_LAYER_ID, DETAIL_LAYER_ID]) {
             const sortKey = lager(style, id).layout?.['fill-sort-key'] as unknown[];
             const nyckel = (kind: string) => sortKey[sortKey.indexOf(kind) + 1] as number;
-            expect(nyckel('farmland')).toBeGreaterThan(nyckel('forest'));
-            expect(kinds.forest).toBe('skog');
-            expect(kinds.farmland).toBe('falt');
+            expect(nyckel('farmland')).toBeGreaterThan(nyckel('grassland'));
         }
     });
 

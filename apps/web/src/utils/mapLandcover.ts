@@ -1,7 +1,8 @@
 /**
- * Marktäcket i nöjesfältsstilen när kartan är utzoomad (#203): skog mörk grön,
- * öppna fält ljusa. Ren modul - bara MapLibre-TYPER, inga webbläsar- eller
- * kart-API:er, så insättningen i stilen går att testa. Anropas av
+ * Marktäcket i nöjesfältsstilen när kartan är utzoomad (#203): skogen har
+ * landets gröna, öppen mark och fält ljusare toner ur samma palett. Ren modul -
+ * bara MapLibre-TYPER, inga webbläsar- eller kart-API:er, så insättningen i
+ * stilen går att testa. Anropas av
  * components/v2/v2MapBaseStyles (fetchAndTransformThemeParkStyle).
  */
 import type * as maplibregl from 'maplibre-gl';
@@ -34,44 +35,54 @@ const FADE_OUT_FROM = 8.5;
 export const COARSE_LAYER_ID = 'landcover-far-coarse';
 export const DETAIL_LAYER_ID = 'landcover-far-detail';
 
-// Tonerna sitter i nöjesfältets gröna palett: skogen ett snäpp under landets
-// utzoomade grön (#5b9b3b), fälten en ljus gulgrön, kalfjället ljust grönt -
-// öppen mark, inte bruna berg.
+// ── Färgerna: nöjesfältets egna gröna (Josef 13/11) ──────────────────────────
+// Första versionen hade egna toner (skog mörkgrön #3d7a2a, åker gulgrön
+// #b3c76a). Josef samma kväll: "för mörkgrön färg, och inte den ljusgulgröna på
+// åkrarna", "det ska inte vara mörkare karta än innan" och "nyanserna eller den
+// färg shemat vi hade innan på kartan. men alltså att detlajer ska synas längre
+// utzoomat som nu."
+// Därför bara toner som nöjesfältet redan hade (kopior ur v2MapBaseStyles,
+// låsta av testet), och inget som är mörkare än landet:
+//   - SKOG RITAS INTE. Den har landets egen gröna (#5b9b3b utzoomat) precis som
+//     förut, och från zoom 7 Voyagers grönska precis som förut.
+//   - öppen mark (gräs, hed, kalfjäll, sly): grönskans ljusa ton
+//   - åker och äng: landets ljusa ton
+//   - tätort, hällar och glaciär: bostadsytornas ton
+// Alla tre är ljusare än landet utzoomat, så kartan blir aldrig mörkare än före
+// #203. Det enda nya är att skog och öppen mark skiljs åt redan i Sverige-vyn.
 export const LANDCOVER_COLORS = {
-    skog: '#3d7a2a',
-    sly: '#6f9f48',
-    oppenMark: '#8db560',
-    hall: '#b5bf98',
-    falt: '#b3c76a',
-    tatort: '#abcf84', // = landuse_residential i nöjesfältet
-    glaciar: '#eef3ec',
+    oppenMark: '#7eb152', // = THEMEPARK_GREENERY_NEAR
+    falt: '#93c46c', //      = THEMEPARK_LAND_COLOR_NEAR
+    ljus: '#abcf84', //      = landuse_residential
 } as const;
 type Ton = keyof typeof LANDCOVER_COLORS;
 
-// Ritordning: skogen underst, fälten ovanpå, så en åker som överlappar ett
-// skogsblock alltid syns.
-const ORDNING: Ton[] = ['skog', 'sly', 'oppenMark', 'hall', 'falt', 'tatort', 'glaciar'];
+// Ritordning: fälten ovanpå den öppna marken, så en åker som överlappar en
+// gräsyta alltid syns.
+const ORDNING: Ton[] = ['oppenMark', 'falt', 'ljus'];
 
-// kind -> ton per source-layer. Okända kinds ritas inte (landets grundton syns).
+// Skog i kakeldatan. Står här bara för att testet ska kunna låsa att den INTE
+// ritas - landets gröna under är skogens färg.
+export const FOREST_KINDS = ['forest', 'wood'] as const;
+
+// kind -> ton per source-layer. Okända kinds och skog ritas inte (landets
+// grundton syns).
 export const COARSE_KINDS: Record<string, Ton> = {
-    forest: 'skog',
-    scrub: 'sly',
+    scrub: 'oppenMark',
     grassland: 'oppenMark',
-    barren: 'hall',
+    barren: 'ljus',
     farmland: 'falt',
-    urban_area: 'tatort',
-    glacier: 'glaciar',
+    urban_area: 'ljus',
+    glacier: 'ljus',
 };
 export const DETAIL_KINDS: Record<string, Ton> = {
-    forest: 'skog',
-    wood: 'skog',
-    scrub: 'sly',
+    scrub: 'oppenMark',
     grassland: 'oppenMark',
     heath: 'oppenMark',
-    bare_rock: 'hall',
+    bare_rock: 'ljus',
     farmland: 'falt',
     meadow: 'falt',
-    glacier: 'glaciar',
+    glacier: 'ljus',
 };
 
 // match-uttrycken byggs ur tabellerna ovan. Typen kräver minst en gren på fast
