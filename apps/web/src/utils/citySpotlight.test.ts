@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
     composeSpotlightRows, spotDistKm, spotWhen, spotFrame, SPOTLIGHT_MAX_BOOSTED, SPOTLIGHT_MAX_VADKUL,
-    groupSpotEvents, spotSpanTag, spotRangeWhen, spotRangeDayLabel, type SpotEvent,
+    groupSpotEvents, spotSpanTag, spotRangeWhen, spotRangeDayLabel, spotlightCapPx, SPOTLIGHT_PEEK_PX,
+    type SpotEvent,
 } from './citySpotlight';
 
 const NOW = new Date('2026-09-04T18:00:00Z').getTime();
@@ -173,5 +174,32 @@ describe('bild först i spotlighten (22/9)', () => {
         expect(vadkul.map(e => e.id)).toEqual(['med', 'utan1', 'utan2']);
         const b = composeSpotlightRows(user, [], new Set(['utan1', 'med']), NOW);
         expect(b.boosted.map(e => e.id)).toEqual(['med', 'utan1']);
+    });
+});
+
+describe('spotlightCapPx (#172)', () => {
+    const box = (top: number, height: number) => ({ top, height });
+
+    it('för få rader = inget tak', () => {
+        expect(spotlightCapPx([])).toBeNull();
+        expect(spotlightCapPx([box(0, 112), box(120, 112)])).toBeNull();
+    });
+
+    it('exakt tre rader: botten av tredje raden, ingen skymt', () => {
+        expect(spotlightCapPx([box(0, 112), box(120, 60), box(188, 112)])).toBe(300);
+    });
+
+    it('fler rader: skymten av fjärde läggs på', () => {
+        expect(spotlightCapPx([box(0, 112), box(120, 60), box(188, 112), box(308, 112)]))
+            .toBe(300 + SPOTLIGHT_PEEK_PX);
+    });
+
+    it('mäter från första radens topp, inte från noll (listans padding/marginal)', () => {
+        expect(spotlightCapPx([box(8, 100), box(116, 100), box(224, 100)])).toBe(316);
+    });
+
+    it('hopklämda rader (höjd 0) ger inget tak i stället för ett tak som spiralerar ner', () => {
+        expect(spotlightCapPx([box(0, 0), box(0, 0), box(0, 0), box(0, 0)])).toBeNull();
+        expect(spotlightCapPx([box(0, 112), box(120, 0), box(120, 112)])).toBeNull();
     });
 });

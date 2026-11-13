@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import {
-    composeSpotlightRows, spotDistKm, spotWhen, spotFrame, SPOTLIGHT_VISIBLE_ROWS,
+    composeSpotlightRows, spotDistKm, spotWhen, spotFrame, SPOTLIGHT_VISIBLE_ROWS, spotlightCapPx,
     spotRangeWhen, spotRangeDayLabel, spotSpanTag,
     type SpotEvent, type SpotRow, type SpotFrame,
 } from '@/utils/citySpotlight';
@@ -408,13 +408,9 @@ export default function CityVadkulSpotlight(props: Props) {
         const el = listRef.current;
         if (!capped || !el) { setCapPx(null); return; }
         const kids = Array.from(el.children).slice(0, SPOTLIGHT_VISIBLE_ROWS + 1) as HTMLElement[];
-        const measure = () => {
-            const last = kids[SPOTLIGHT_VISIBLE_ROWS - 1];
-            if (!last) { setCapPx(null); return; }
-            const top = el.getBoundingClientRect().top;
-            const peek = kids[SPOTLIGHT_VISIBLE_ROWS] ? 18 : 0;
-            setCapPx(Math.round(last.getBoundingClientRect().bottom - top + peek));
-        };
+        // offsetTop/offsetHeight, inte getBoundingClientRect: måttet får inte
+        // bero på hur långt man scrollat inuti listan (#172, se spotlightCapPx).
+        const measure = () => setCapPx(spotlightCapPx(kids.map(k => ({ top: k.offsetTop, height: k.offsetHeight }))));
         measure();
         if (typeof ResizeObserver === 'undefined') return;
         const ro = new ResizeObserver(measure);

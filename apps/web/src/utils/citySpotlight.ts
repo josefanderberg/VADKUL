@@ -53,6 +53,28 @@ export function spotFrame(e: Pick<SpotRow, 'boosted' | 'hosted'>): SpotFrame {
  *  scrollar inuti (Josef 6/9: "bläddra genom dem innan man går till de andra"). */
 export const SPOTLIGHT_VISIBLE_ROWS = 3;
 
+/** Skymten av nästa rad under taket, så man ser att listan går att scrolla. */
+export const SPOTLIGHT_PEEK_PX = 18;
+
+/** Radens läge i listan: offsetTop/offsetHeight, alltså layoutmått som inte
+ *  påverkas av hur långt man har scrollat INUTI listan. */
+export interface SpotRowBox { top: number; height: number }
+
+/** Scroll-taket i px: från första radens topp till botten av rad nummer
+ *  SPOTLIGHT_VISIBLE_ROWS, plus skymten om det finns en rad till. null = inget
+ *  tak (för få rader). Mäts på offsetTop i stället för getBoundingClientRect:
+ *  rect.bottom krymper när man scrollat inuti listan, och ett tak mätt så blev
+ *  mindre för varje ommätning (#172). Rader med höjd 0 (hopklämda eller inte
+ *  layoutade än) ger inget tak hellre än ett tak som klämmer listan. */
+export function spotlightCapPx(rows: readonly SpotRowBox[]): number | null {
+    const first = rows[0];
+    const last = rows[SPOTLIGHT_VISIBLE_ROWS - 1];
+    if (!first || !last) return null;
+    if (rows.slice(0, SPOTLIGHT_VISIBLE_ROWS).some(r => r.height <= 0)) return null;
+    const peek = rows[SPOTLIGHT_VISIBLE_ROWS] ? SPOTLIGHT_PEEK_PX : 0;
+    return Math.round(last.top - first.top + last.height + peek);
+}
+
 export interface SpotRow extends SpotEvent {
     /** Skapad på VADKUL (userCreated) — nivå 2-markering. */
     vadkul: boolean;
