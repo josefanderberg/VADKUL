@@ -30,6 +30,7 @@ import {
     cloudLevelFor,
     cloudOpacityForZoom,
     cloudScaleFor,
+    cloudShadow,
     glideStep,
     pushOffset,
     pushRearmed,
@@ -142,6 +143,27 @@ function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HT
     return cv;
 }
 
+/** Markskuggan (#215): molnets egen form som en mjuk mörk fläck, i kartans
+ *  djupa gröna. Ritas förskjuten under molnet (eventClouds.cloudShadow). */
+function makeShadowSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HTMLCanvasElement {
+    const cv = document.createElement('canvas');
+    cv.width = SPRITE_W;
+    cv.height = SPRITE_H;
+    const ctx = cv.getContext('2d');
+    if (!ctx) return cv;
+    for (const [x, y, r] of puffs) {
+        const g = ctx.createRadialGradient(x, y, r * 0.1, x, y, r);
+        g.addColorStop(0, 'rgba(16,38,30,0.7)');
+        g.addColorStop(0.6, 'rgba(16,38,30,0.4)');
+        g.addColorStop(1, 'rgba(16,38,30,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    return cv;
+}
+
 function mirrorSprite(src: HTMLCanvasElement): HTMLCanvasElement {
     const cv = document.createElement('canvas');
     cv.width = src.width;
@@ -179,6 +201,14 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     const ctx = canvas.getContext('2d');
     const baseSprites = SPRITE_PUFFS.map(makeSprite);
     const sprites = [...baseSprites, ...baseSprites.map(mirrorSprite)];
+    // Skuggorna i samma ordning som molnen, så varje moln får sin egen form.
+    const baseShadows = SPRITE_PUFFS.map(makeShadowSprite);
+    const shadowSprites = [...baseShadows, ...baseShadows.map(mirrorSprite)];
+    // Vad som ska ritas i den här bildrutan: skuggorna först, molnen ovanpå,
+    // så en skugga aldrig hamnar över ett annat moln.
+    type Stamp = { img: HTMLCanvasElement; x: number; y: number; w: number; h: number; a: number };
+    const shadowStamps: Stamp[] = [];
+    const cloudStamps: Stamp[] = [];
     const reducedMotion =
         typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     // Pekskärmar saknar hovring. Webbläsaren skickar ändå en låtsad musrörelse
@@ -331,6 +361,8 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
         if (focusPx) pushers.push(focusPx);
         if (touchPx && touchArmed) pushers.push(touchPx);
 
+        shadowStamps.length = 0;
+        cloudStamps.length = 0;
         for (const set of sets) {
             const scale = cloudScaleFor(zoom, set.level);
             // Moln som kommit till eller försvunnit tonar i sin egen takt.
@@ -386,11 +418,19 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
 
                 const x = p.x + st.ox * scale + dx;
                 const y = p.y + st.oy * scale + dy;
-                const sprite = sprites[Math.floor(c.seed * sprites.length) % sprites.length];
+                const spriteIndex = Math.floor(c.seed * sprites.length) % sprites.length;
                 const w = r * 2;
                 const h = w * (SPRITE_H / SPRITE_W);
-                ctx.globalAlpha = alpha;
-                ctx.drawImage(sprite, x - w / 2, y - h * 0.58, w, h);
+                cloudStamps.push({ img: sprites[spriteIndex], x: x - w / 2, y: y - h * 0.58, w, h, a: alpha });
+                // Markskuggan (#215): följer molnets toning, knuff och drift.
+                const shadow = cloudShadow(c.seed, r);
+                if (shadow) {
+                    shadowStamps.push({
+                        img: shadowSprites[spriteIndex],
+                        x: x - w / 2 + shadow.dx, y: y - h * 0.58 + shadow.dy, w, h,
+                        a: alpha * shadow.opacity,
+                    });
+                }
                 // De tommaste trakterna får fler puffar runt sig - molnet blir en bank.
                 const extra = c.extra;
                 for (let i = 0; i < extra; i++) {
@@ -400,10 +440,17 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
                     const ex = x + Math.cos(a) * r * 0.55 - dx * 0.5;
                     const ey = y + Math.sin(a) * r * 0.3 - dy * 0.5;
                     const other = sprites[(Math.floor(c.seed * sprites.length) + i + 1) % sprites.length];
-                    ctx.globalAlpha = alpha * 0.8;
-                    ctx.drawImage(other, ex - ew / 2, ey - eh * 0.58, ew, eh);
+                    cloudStamps.push({ img: other, x: ex - ew / 2, y: ey - eh * 0.58, w: ew, h: eh, a: alpha * 0.8 });
                 }
             }
+        }
+        for (const s of shadowStamps) {
+            ctx.globalAlpha = s.a;
+            ctx.drawImage(s.img, s.x, s.y, s.w, s.h);
+        }
+        for (const s of cloudStamps) {
+            ctx.globalAlpha = s.a;
+            ctx.drawImage(s.img, s.x, s.y, s.w, s.h);
         }
         ctx.globalAlpha = 1;
         animating = moving;

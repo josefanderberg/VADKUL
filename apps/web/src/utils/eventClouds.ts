@@ -383,6 +383,39 @@ export function glideStep(
     return { ox: g.ox + (vx * dt) / scale, oy: g.oy + (vy * dt) / scale, vx, vy };
 }
 
+// ── Markskuggan (#215) ───────────────────────────────────────────────────────
+// Josef 13/11: "det kanske hade tillfört något om vissa moln har en skugga
+// under sig" -> "Ja, markskugga". En mjuk mörk fläck på kartan, en bit snett
+// nedanför molnet (ljuset kommer uppifrån vänster), så molnet ser ut att sväva.
+// Bara en del av molnen får den, och den är svag: kartan ska inte bli mörkare
+// eller stökigare. Molnens form (loggamolnen) rörs inte.
+/** Andel av molnen som kastar skugga. */
+export const CLOUD_SHADOW_SHARE = 0.6;
+/** Skuggans täthet i förhållande till molnets egen. */
+export const CLOUD_SHADOW_OPACITY = 0.3;
+/** Skuggans förskjutning som andel av molnets radie. */
+const SHADOW_DX = 0.3;
+const SHADOW_DY = 0.5;
+
+export interface CloudShadow {
+    /** Förskjutning från molnet i px. */
+    dx: number;
+    dy: number;
+    /** Faktor på molnets egen täthet. */
+    opacity: number;
+}
+
+/**
+ * Molnets markskugga, eller null för de moln som inte kastar någon. Urvalet
+ * går på molnets frö, så samma moln har alltid (eller aldrig) skugga - den
+ * blinkar inte till när molnen byggs om under en kartrörelse.
+ */
+export function cloudShadow(seed: number, radius: number): CloudShadow | null {
+    const pick = (seed * 7.31) % 1;
+    if (pick >= CLOUD_SHADOW_SHARE) return null;
+    return { dx: radius * SHADOW_DX, dy: radius * SHADOW_DY, opacity: CLOUD_SHADOW_OPACITY };
+}
+
 /** Så långt (px) måste pekaren flyttas efter en zoomning innan den knuffar igen. */
 export const PUSH_REARM_PX = 14;
 

@@ -26,6 +26,9 @@ import {
     pushOffset,
     pushRearmed,
     PUSH_REARM_PX,
+    cloudShadow,
+    CLOUD_SHADOW_OPACITY,
+    CLOUD_SHADOW_SHARE,
     type CloudRevealPoint,
     type CloudView,
 } from './eventClouds';
@@ -388,5 +391,37 @@ describe('pushRearmed', () => {
 
     it('pekaren var utanför kartan när zoomen började - första rörelsen in knuffar', () => {
         expect(pushRearmed(null, { x: 10, y: 10 })).toBe(true);
+    });
+});
+
+// #215, Josef 13/11: "vissa moln har en skugga under sig".
+describe('cloudShadow', () => {
+    const frön = Array.from({ length: 1000 }, (_, i) => (i + 0.5) / 1000);
+
+    it('bara en del av molnen kastar skugga', () => {
+        const andel = frön.filter(s => cloudShadow(s, 40) !== null).length / frön.length;
+        expect(andel).toBeGreaterThan(CLOUD_SHADOW_SHARE - 0.05);
+        expect(andel).toBeLessThan(CLOUD_SHADOW_SHARE + 0.05);
+    });
+
+    it('samma moln har alltid samma svar - skuggan blinkar inte när molnen byggs om', () => {
+        for (const s of [0.03, 0.4, 0.77]) expect(cloudShadow(s, 40)).toEqual(cloudShadow(s, 40));
+    });
+
+    it('skuggan ligger snett nedanför till höger och växer med molnet', () => {
+        const frö = frön.find(s => cloudShadow(s, 40) !== null)!;
+        const liten = cloudShadow(frö, 30)!;
+        const stor = cloudShadow(frö, 60)!;
+        expect(liten.dx).toBeGreaterThan(0);
+        expect(liten.dy).toBeGreaterThan(liten.dx);
+        expect(stor.dx).toBeCloseTo(liten.dx * 2);
+        expect(stor.dy).toBeCloseTo(liten.dy * 2);
+        // Skuggan stannar under molnet, den seglar inte iväg som ett eget moln.
+        expect(stor.dy).toBeLessThan(60);
+    });
+
+    it('skuggan är svag - klart svagare än molnet', () => {
+        expect(CLOUD_SHADOW_OPACITY).toBeLessThanOrEqual(0.35);
+        expect(cloudShadow(frön.find(s => cloudShadow(s, 40) !== null)!, 40)!.opacity).toBe(CLOUD_SHADOW_OPACITY);
     });
 });
