@@ -206,10 +206,17 @@ describe('pickCloudRevealKeys', () => {
         expect(pickCloudRevealKeys(points, havet, zoom, CLOUD_REVEAL_RADIUS_PX, CLOUD_REVEAL_MAX)).toEqual([]);
     });
 
-    it('tar som mest max stycken, populära först, och returnerar dem i avståndsordning', () => {
+    it('tar de närmaste pekaren, inte de populäraste i hålet', () => {
         const points = [pt('n1', 5), pt('n2', 10), pt('pop-langre', 80, true), pt('n3', 15)];
         expect(pickCloudRevealKeys(points, STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, 3))
-            .toEqual(['n1', 'n2', 'pop-langre']);
+            .toEqual(['n1', 'n2', 'n3']);
+    });
+
+    it('tänder bara några få när man hovrar, inte en hel stad', () => {
+        const many = Array.from({ length: 40 }, (_, i) => pt(`e${i}`, i));
+        expect(pickCloudRevealKeys(many, STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, CLOUD_REVEAL_MAX))
+            .toEqual(['e0', 'e1', 'e2']);
+        expect(CLOUD_REVEAL_MAX).toBeLessThanOrEqual(5);
     });
 
     it('radien räknas i skärmpixlar, så samma plats är utanför vid högre zoom', () => {

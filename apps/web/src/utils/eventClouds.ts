@@ -75,8 +75,11 @@ export const PUSH_MARGIN_PX = 110;
  *  eventen under tänds (px). Samma mått som knuffens räckvidd utanför
  *  molnkanten, så det som tänds är det man ser genom hålet. */
 export const CLOUD_REVEAL_RADIUS_PX = PUSH_MARGIN_PX;
-/** Så många event tänds som mest i hålet (Josef 13/11: "de 50 event som är över där"). */
-export const CLOUD_REVEAL_MAX = 50;
+/** Så många event tänds som mest i hålet - de NÄRMASTE pekaren. Var 50 först
+ *  samma dag; Josef 13/11: "Det blir kanske för stökigt att 50st händer med
+ *  när man hovrar. det rör sig lite för mycket. Kanske bara att 3 event ska
+ *  visas där man hovrar istället." */
+export const CLOUD_REVEAL_MAX = 3;
 /** Hur långt ett moln som mest flyttar sig, som andel av räckvidden. */
 const PUSH_STRENGTH = 0.55;
 /** Hur mycket ett knuffat moln som mest tunnas ut. */
@@ -203,15 +206,16 @@ export function buildClouds(points: readonly CloudPoint[], level: number, view: 
 
 export interface CloudRevealPoint extends CloudPoint {
     key: string;
-    /** Populär (🔥) eller guld - går före i urvalet. */
+    /** Populär (🔥) eller guld. Påverkar INTE hålets urval - det går bara på
+     *  avstånd, så det som tänds ligger där pekaren är (Josef 13/11: hovrar man
+     *  över Frölunda ska det inte tändas populära i centrala Göteborg). */
     pop: boolean;
 }
 
 /**
- * De event som tänds i ett hål i molnen: alla inom `radiusPx` från `center`
- * vid den här zoomen, populära först och närmast först inom varje skikt, max
- * `max` stycken. Ligger hålet i havet blir listan tom - de närmaste långt
- * bort tänds aldrig. Returen är sorterad på avstånd.
+ * De event som tänds i hålet runt pekaren: de `max` NÄRMASTE inom `radiusPx`
+ * från `center` vid den här zoomen. Ligger hålet i havet blir listan tom - de
+ * närmaste långt bort tänds aldrig. Returen är sorterad på avstånd.
  */
 export function pickCloudRevealKeys(
     points: readonly CloudRevealPoint[],
@@ -225,18 +229,16 @@ export function pickCloudRevealKeys(
     const cx = mercatorX(center.lng) * world;
     const cy = mercatorY(center.lat) * world;
     const r2 = radiusPx * radiusPx;
-    const inside: { key: string; d2: number; pop: boolean }[] = [];
+    const inside: { key: string; d2: number }[] = [];
     for (const p of points) {
         if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
         const dx = mercatorX(p.lng) * world - cx;
         const dy = mercatorY(p.lat) * world - cy;
         const d2 = dx * dx + dy * dy;
-        if (d2 <= r2) inside.push({ key: p.key, d2, pop: p.pop });
+        if (d2 <= r2) inside.push({ key: p.key, d2 });
     }
-    inside.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (a.d2 - b.d2));
-    const picked = inside.slice(0, max);
-    picked.sort((a, b) => a.d2 - b.d2);
-    return picked.map(p => p.key);
+    inside.sort((a, b) => a.d2 - b.d2 || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    return inside.slice(0, max).map(p => p.key);
 }
 
 /**
