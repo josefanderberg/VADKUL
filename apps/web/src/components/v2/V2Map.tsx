@@ -30,7 +30,7 @@ import {
 import { eventLabels, labelFeaturesFrom, wishLabels } from './v2MapLabel';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
 import {
-    CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, cloudOpacityForZoom, pickCloudRevealKeys,
+    CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, pickCloudRevealKeys,
 } from '../../utils/eventClouds';
 // Multi-event-listan (panelen som öppnas vid brickor med flera event).
 import CitySignposts, { type SignpostCity } from './CitySignposts';
@@ -1400,9 +1400,8 @@ export default function V2Map({
     // MOLNHÅLET (#195, Josef 13/11: "där man hovrar ... ska också visas de 50
     // event som är över där ... bara där molnen skingrar sig"): brickorna i
     // hålet där molnen viker undan - runt muspekaren på datorn, runt senaste
-    // trycket på pekskärm. Muspekarens hål gäller på ALLA zoomar (Josef 13/11:
-    // "även om det inte finns några moln"), tryckets bara medan molnen syns.
-    // Tänds av pumpReveal precis som seedet.
+    // trycket på pekskärm. Gäller på ALLA zoomar (Josef 13/11: "även om det
+    // inte finns några moln", "även mobil"). Tänds av pumpReveal som seedet.
     const revealHoverRef = useRef<Set<string>>(new Set());
     const cloudPointerPxRef = useRef<{ x: number; y: number } | null>(null);
     const cloudTouchPtRef = useRef<{ lng: number; lat: number } | null>(null);
@@ -2390,23 +2389,20 @@ export default function V2Map({
     // MOLNHÅLET (#195): brickorna i hålet runt muspekaren (datorn) eller
     // senaste trycket (pekskärm), upp till CLOUD_REVEAL_MAX, populära först.
     // Ligger hålet i havet blir mängden tom - de närmaste långt bort tänds
-    // aldrig. Muspekarens hål finns på alla zoomar; tryckets bara under molnen.
+    // aldrig. Hålet finns på alla zoomar, med eller utan moln.
     const cloudHoverKeys = useCallback((): Set<string> => {
         const map = mapRef.current;
         if (!map) return new Set();
         const zoom = map.getZoom();
-        // Muspekaren tänder på ALLA zoomar, även inzoomat där molnen är borta
+        // Hålet tänder på ALLA zoomar, även inzoomat där molnen är borta
         // (Josef 13/11: "så att de syns när man hovrar och är lite närmare
-        // inzoomat. även om det inte finns några moln"). Trycket på pekskärm
-        // gäller bara medan molnen syns - inzoomat är ett tryck på tom karta
-        // fortfarande bara "stäng kortet".
-        let origin: { lng: number; lat: number } | null = null;
+        // inzoomat. även om det inte finns några moln" - och "även mobil"):
+        // runt muspekaren på datorn, runt senaste trycket på pekskärm.
+        let origin = cloudTouchPtRef.current;
         const px = cloudPointerPxRef.current;
         if (px) {
             const ll = map.unproject([px.x, px.y]);
             origin = { lng: ll.lng, lat: ll.lat };
-        } else if (cloudTouchPtRef.current && cloudOpacityForZoom(zoom) > 0.002) {
-            origin = cloudTouchPtRef.current;
         }
         if (!origin) return new Set();
         return new Set(pickCloudRevealKeys(revealCoordsRef.current, origin, zoom, CLOUD_REVEAL_RADIUS_PX, CLOUD_REVEAL_MAX));
@@ -2493,7 +2489,6 @@ export default function V2Map({
         };
         const onTap = (e: maplibregl.MapMouseEvent) => {
             if (canHover) return;
-            if (cloudOpacityForZoom(map.getZoom()) <= 0.002) return;
             const pt = { lng: e.lngLat.lng, lat: e.lngLat.lat };
             cloudTouchPtRef.current = pt;
             cloudsRef.current?.setTouchPoint(pt);
