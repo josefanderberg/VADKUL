@@ -59,6 +59,7 @@ import { FRIEND_INVITE_KEY, FRIEND_INVITE_PARAM, INVITE_LANDING_KEY, parseParked
 import { useAuth } from '@/context/AuthContext';
 import { useSaveUserCity } from '@/hooks/useSaveUserCity';
 import { useSidePanelMode } from '@/hooks/useSidePanelMode';
+import { useCityWeather } from '@/hooks/useCityWeather';
 import { SIDE_PANEL_W } from '@/utils/sidePanel';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -3793,6 +3794,25 @@ export default function HomePage() {
         ? 'Alla'
         : getDayLabel(dayOffset, mapOrganizer ? organizerDays : effectiveRangeDays);
 
+    // VÄDRET I PLATTAN (#202, Josef 13/11: "hämta in vädret på den givna
+    // platsen och tempratur. som vi kan visa uppe stadssida knappen"): SMHI:s
+    // punktprognos för ORTEN i plattan (samma ort som namnet - aldrig
+    // besökarens position), i dagchipet: "IDAG · ⛅ 3°". Bara när plattan
+    // visar en ort och en enskild dag - inte "Sverige", veckan eller
+    // arrangörsläget. Hämtas direkt från SMHI (hooks/useCityWeather).
+    const plattaWeatherPoint = useMemo(() => {
+        if (!liveCityName || liveCityName === 'Sverige') return null;
+        if (cityTourTarget && boundsCityKey !== cityTourTarget.key) return { lat: cityTourTarget.lat, lng: cityTourTarget.lng };
+        if (!mapCenter) return null;
+        const city = nearestCityPoint(mapCenter.lat, mapCenter.lng);
+        return { lat: city.lat, lng: city.lng };
+    }, [liveCityName, cityTourTarget, boundsCityKey, mapCenter]);
+    const plattaWeather = useCityWeather(
+        plattaWeatherPoint,
+        dayOffset,
+        !mapOrganizer && effectiveRangeDays === 1 && dayOffset >= 0,
+    );
+
     // ── Var kartan LANDAR ────────────────────────────────────────────────────
     // I staden du är i, inte Stockholm (Josef 9/8). Ligger här nere för att
     // effekten behöver userPos; själva bildspelet bor långt ovanför.
@@ -4964,7 +4984,9 @@ export default function HomePage() {
             key={cityTourTarget?.key ?? 0}
             href={cityLink.href}
             title={cityLink.label}
-            aria-label={cityLink.aria}
+            aria-label={plattaWeather
+                ? `${cityLink.aria}. Väder ${plattaDayLabel.toLowerCase()}: ${plattaWeather.text}, ${plattaWeather.temp} (SMHI)`
+                : cityLink.aria}
             // hover:scale-105 som skapa-knappen (Josef 10/9: "så fattar man att
             // de går att klicka på"). transitionDuration inline: duration-500
             // styr inflygningens animation OCH övergångarna — hovern ska vara
@@ -5022,6 +5044,13 @@ export default function HomePage() {
                         className={`block whitespace-nowrap text-[11px] font-black uppercase tracking-wider text-white/90 leading-none${dayFlashNonce > 0 ? ' day-flash-text' : ''}`}
                     >
                         {plattaDayLabel}
+                        {plattaWeather && (
+                            <span title={`${plattaWeather.text}, ${plattaWeather.temp} - väder från SMHI`}>
+                                {' · '}
+                                <span aria-hidden className="normal-case">{plattaWeather.emoji}</span>
+                                {' '}{plattaWeather.temp}
+                            </span>
+                        )}
                     </span>
                 </span>
             </span>

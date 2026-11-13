@@ -364,6 +364,11 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                             <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" className="underline hover:text-slate-600">OpenStreetMap</a>
                             {' '}· ©{' '}
                             <a href="https://carto.com/attributions" target="_blank" rel="noopener" className="underline hover:text-slate-600">CARTO</a>
+                            {/* Höjdreliefen (#197) och vädret i stadsplattan (#202) - båda CC BY. */}
+                            {' '}· Höjddata{' '}
+                            <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener" className="underline hover:text-slate-600">Mapzen</a>
+                            {' '}· Väder{' '}
+                            <a href="https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning" target="_blank" rel="noopener" className="underline hover:text-slate-600">SMHI</a>
                         </span>
                     </p>
                 </div>
