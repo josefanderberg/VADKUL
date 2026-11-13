@@ -4,7 +4,9 @@ Uppföljaren till Lund-inlägget från september ("Hur många gånger har man in
 upptäckt något kul i efterhand"). Samma röst, granne som tipsar, men med det
 som hänt sedan dess: appen finns för iPhone, Android är på gång.
 
-Postas från **privata kontot** i "Vad händer i [stad]"-grupperna. Reglerna i
+Postas från **VADKUL-sidans profil** (inte privata kontot, ägarbeslut 7/11) i
+"Vad händer i [stad]"-grupperna. Vilka grupper som redan fått inlägg står i
+[facebook-grupper-postade-2026-11-07.md](facebook-grupper-postade-2026-11-07.md). Reglerna i
 [facebook-grupper.md](facebook-grupper.md) gäller fullt ut:
 
 - Admin-DM först i grupper där vi inte postat förut (mallen ligger där).
