@@ -11,7 +11,8 @@
  *    beskrivningar, featured.ts = boost-regeln och boostCredit.ts =
  *    kreditdagarna för outnyttjad boost, 4/11 2026, eventClouds.ts =
  *    kartans molnlager: var molnen står, zoomkurvan, knuffen och skuggan,
- *    14/11 2026)
+ *    14/11 2026, poiSigns.ts = kartans platsskyltar: vilka som finns, när de
+ *    tänds, lagren i stilen och vilken skylt ett tryck träffar, 14/11 2026)
  *
  * REGLER: paketet får aldrig bero på firebase, react eller node-API:er —
  * det ska gå att importera oförändrat i Next, Cloud Functions och React
@@ -31,3 +32,4 @@ export * from './textLinks';
 export * from './featured';
 export * from './boostCredit';
 export * from './eventClouds';
+export * from './poiSigns';

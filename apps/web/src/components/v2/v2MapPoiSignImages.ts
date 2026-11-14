@@ -47,13 +47,21 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
     ctx.closePath();
 }
 
-function drawSign(key: PoiSignKey): ImageData | null {
+/** Skyltbildens mått i CSS-px (stolpens fot står mitt i nederkanten). */
+export const POI_SIGN_IMAGE = { width: W, height: H } as const;
+
+/**
+ * Rita skylten på en egen canvas. Exporterad för appens bakning
+ * (vadkul-app/scripts/baka-skyltar.mjs, #234): appen har ingen canvas, så
+ * samma ritkod sparas där som PNG i telefonens pixeltäthet.
+ */
+export function drawSignCanvas(key: PoiSignKey, pixelRatio: number = PIXEL_RATIO): HTMLCanvasElement | null {
     const cv = document.createElement('canvas');
-    cv.width = W * PIXEL_RATIO;
-    cv.height = H * PIXEL_RATIO;
+    cv.width = W * pixelRatio;
+    cv.height = H * pixelRatio;
     const ctx = cv.getContext('2d');
     if (!ctx) return null;
-    ctx.scale(PIXEL_RATIO, PIXEL_RATIO);
+    ctx.scale(pixelRatio, pixelRatio);
     const cx = W / 2;
     const foot = H - FOOT_PAD;
     // Luta allt kring stolpens fot.
@@ -119,7 +127,13 @@ function drawSign(key: PoiSignKey): ImageData | null {
         }
     }
     ctx.restore();
-    return ctx.getImageData(0, 0, cv.width, cv.height);
+    return cv;
+}
+
+function drawSign(key: PoiSignKey): ImageData | null {
+    const cv = drawSignCanvas(key);
+    if (!cv) return null;
+    return cv.getContext('2d')?.getImageData(0, 0, cv.width, cv.height) ?? null;
 }
 
 /** Koppla skyltbilderna till kartan. Returnerar en städfunktion. */

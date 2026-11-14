@@ -109,7 +109,8 @@ describe('addPoiSigns', () => {
         const s = färdig();
         const kinds = [POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID].flatMap(id => {
             const filter = (s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification).filter as unknown[];
-            return (filter[2] as ['literal', string[]])[1];
+            // ['match', ['get', 'kind'], [kinds], true, false] (kontraktets poiSigns).
+            return filter[2] as string[];
         });
         expect(kinds.sort()).toEqual(Object.values(POI_SIGNS).flatMap(s => [...s.kinds]).sort());
         for (const inte of ['restaurant', 'supermarket', 'crossing', 'parking', 'school']) expect(kinds).not.toContain(inte);
@@ -118,7 +119,7 @@ describe('addPoiSigns', () => {
     it('lekplatser, idrottsplaner och parker tänds först på kvartersnivå (#225)', () => {
         // Josef 13/11: "eller brir det för stökigt med massa skyltar?"
         const s = färdig();
-        const kindsIn = (id: string) => (((s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification).filter as unknown[])[2] as ['literal', string[]])[1];
+        const kindsIn = (id: string) => ((s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification).filter as unknown[])[2] as string[];
         expect(kindsIn(POI_SIGN_NEAR_LAYER_ID).sort()).toEqual(['park', 'pitch', 'playground']);
         for (const nära of ['park', 'pitch', 'playground']) expect(kindsIn(POI_SIGN_LAYER_ID)).not.toContain(nära);
         expect(kindsIn(POI_SIGN_LAYER_ID)).toEqual(expect.arrayContaining(['bathing_place', 'nature_reserve', 'golf_course', 'museum', 'library']));
