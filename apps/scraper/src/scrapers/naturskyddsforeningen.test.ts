@@ -50,6 +50,24 @@ describe('mapNsfEvent', () => {
         expect(e.url).toBe('https://www.naturskyddsforeningen.se/engagera-dig/kalender/kalmar-sygrupp-lappa-laga-2026-09-09-97344/');
     });
 
+    // 14/11 2026: id-suffixet är HEXADECIMALT. Regexen från 1/11 tog bara
+    // siffror, så bara vart tionde event (idel-siffer-suffix) kom igenom: 27
+    // av 239, bl.a. föll Växjökretsens julverkstad (…-306c9) bort.
+    it('hexadecimalt id-suffix (…-2026-11-14-306c9/, …-a0768/) ger datumet', () => {
+        for (const [slug, day] of [
+            ['vaxjo-julverkstad-2026-11-14-306c9', 14],
+            ['vaxjo-lagningsverkstad-2026-11-26-4feed', 26],
+            ['trollhattan-kladbytardag-i-sjuntorp-2026-11-15-a0768', 15],
+            ['blekinge-lan-konferens-om-biologisk-mangfald-i-blekinge-2026-11-14-0044c', 14],
+        ] as const) {
+            const e = mapNsfEvent({ ...baseResult, url: `/engagera-dig/kalender/${slug}/` })!;
+            expect(e, slug).not.toBeNull();
+            expect([e.startDate.getFullYear(), e.startDate.getMonth(), e.startDate.getDate()]).toEqual([2026, 10, day]);
+        }
+        // Ett datum mitt i slugen följt av ord är fortfarande inget eventdatum.
+        expect(mapNsfEvent({ ...baseResult, url: '/engagera-dig/kalender/arsmote-2026-03-01-flyttat-till-varen/' })).toBeNull();
+    });
+
     it('utan timeString blir starttiden 00:00 (runnerns heldags-heuristik tar över)', () => {
         const e = mapNsfEvent({ ...baseResult, timeString: '' })!;
         expect(e.startDate.getHours()).toBe(0);

@@ -14,8 +14,9 @@ import path from 'path';
 import Database from 'better-sqlite3';
 import { getSqlitePath } from '../utils/sqliteHelper';
 import { SOURCES } from '../sources/registry';
+import { PROVENANCE } from '../sources/data/provenance';
 import {
-    detectRunProblems, detectDayClusters, detectNullIsland, detectForeignCoords, quarantineAlerts, sortAlerts,
+    detectRunProblems, detectVolumeDrops, detectDayClusters, detectNullIsland, detectForeignCoords, quarantineAlerts, sortAlerts,
     type Alert, type RunRow,
 } from '../utils/scraperAlerts';
 
@@ -41,6 +42,25 @@ function main() {
         const list = bySource.get(r.source_id) ?? [];
         list.push(r);
         bySource.set(r.source_id, list);
+    }
+
+    // 1b. Volymras: längre historik (90 d) så källans egen nivå går att
+    // jämföra mot, och registrets golv (expectedMinEvents, annars provenance).
+    const longRuns = sqlite.prepare(`
+        SELECT source_id, host_name, started_at, found, skipped_duplicate, error_count, first_error
+        FROM scrape_runs WHERE started_at >= datetime('now', '-90 days')
+        ORDER BY source_id, started_at DESC
+    `).all() as RunRow[];
+    const longBySource = new Map<string, RunRow[]>();
+    for (const r of longRuns) {
+        const list = longBySource.get(r.source_id) ?? [];
+        list.push(r);
+        longBySource.set(r.source_id, list);
+    }
+    const floors = new Map<string, number>();
+    for (const s of SOURCES) {
+        const floor = s.expectedMinEvents ?? PROVENANCE[s.id]?.expectedMinEvents;
+        if (typeof floor === 'number' && floor > 0) floors.set(s.id, floor);
     }
 
     // 2. Kommande synliga event (30 d) — datumkluster, 0,0 och utlandskoordinater.
@@ -70,6 +90,7 @@ function main() {
 
     const alerts = sortAlerts([
         ...detectRunProblems(bySource, skip),
+        ...detectVolumeDrops(longBySource, skip, floors),
         ...detectDayClusters(withHost),
         ...nullIsland.alerts,
         ...foreignCoords,

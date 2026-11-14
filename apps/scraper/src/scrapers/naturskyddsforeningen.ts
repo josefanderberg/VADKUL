@@ -70,7 +70,10 @@ export function mapNsfEvent(e: any): RawEvent | null {
     // ISO-datum ur slugen (…-YYYY-MM-DD, sedan hösten 2026 med ett id-suffix:
     // …-2026-09-09-97344/). Annars hoppa (intervall/oklart). Suffixet gjorde
     // att ALLA 291 event föll bort i en månad (karantän 30/9–1/11).
-    const dm = path.match(/(\d{4})-(\d{2})-(\d{2})(?:-\d+)?\/?$/);
+    // Suffixet är HEXADECIMALT (…-2026-11-14-306c9/, …-a0768/): fixen 1/11
+    // släppte bara igenom dem som råkade vara idel siffror — vart tionde. 27
+    // av 239 event kom in i två veckor utan att något larmade (14/11 2026).
+    const dm = path.match(/(\d{4})-(\d{2})-(\d{2})(?:-[0-9a-z]{1,12})?\/?$/i);
     if (!dm) return null;
     const dateStr = `${dm[1]}-${dm[2]}-${dm[3]}`;
 
