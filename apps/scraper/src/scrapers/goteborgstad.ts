@@ -27,6 +27,12 @@
  *  - Koordinater ligger i location.latitude/longitude (92 % täckning) —
  *    bounds-valideras mot Göteborgsområdet innan de används.
  *  - image = { host, path } → konkatenera; template=true = mall, hoppa över.
+ *  - priceInformation saknas på ~97 % av raderna, och då är eventet GRATIS:
+ *    stadens egen detaljsida skriver "Kostnad: Gratis" och sätter
+ *    isAccessibleForFree=true i JSON-LD för just de raderna, och utelämnar
+ *    kostnadsraden (isAccessibleForFree=false) när fältet har text
+ *    (kontrollerat mot fem sidor 14/11 2026). 93 % av källans event saknade
+ *    pris innan dess.
  *  - Publik detaljsida: goteborg.se/wps/portal/kalendarium/kalendarium-start
  *    ?activityId=<id> (robots.txt vitlistar mönstret uttryckligen).
  */
@@ -124,7 +130,8 @@ export function mapKalendarietActivity(
         description,
         imageUrl,
         category,
-        price: typeof a.priceInformation === 'string' ? a.priceInformation.trim() || undefined : undefined,
+        // Tomt prisfält = gratis, som stadens egen sida visar det (se filhuvudet).
+        price: (typeof a.priceInformation === 'string' && a.priceInformation.trim()) || 'Gratis',
         hostName: a.unit?.name?.trim() || undefined,
         hasSpecificTime: start.hasClock ? true : undefined,
     };

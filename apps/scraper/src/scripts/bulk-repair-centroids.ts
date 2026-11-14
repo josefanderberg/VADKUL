@@ -31,11 +31,11 @@ import fs from 'fs';
 import { db } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
 import {
-    sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart, lookupTatortNear,
+    sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart, lookupVenueNear, lookupTatortNear,
 } from '../utils/sqliteHelper';
 import {
     geocodeVenueSweden, geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode,
-    isInNordic, deGenitiveFirstWord, distanceKm, geocodeCityCentroid,
+    isInNordic, deGenitiveFirstWord, distanceKm, geocodeCityCentroid, KNOWN_VENUE_NEAR_KM,
 } from '../utils/venueCoordinates';
 import { resolveVenueOverpass } from '../utils/overpassVenue';
 import { extractStreetAddress } from '../utils/swedishAddress';
@@ -87,10 +87,14 @@ async function resolveName(
     const head = name.split(',')[0].trim();
     const deGen = deGenitiveFirstWord(head);
 
-    // 0. Registret
+    // 0. Registret — på stadsnamn, och när det inte går att jämföra (klustrets
+    //    "Botkyrka" mot registrets postort "Norsborg") på närhet till klustret.
     const kv = lookupVenueSmart(name, city ?? undefined)
         ?? lookupVenueSmart(head, city ?? undefined)
-        ?? (deGen ? lookupVenueSmart(deGen, city ?? undefined) : null);
+        ?? (deGen ? lookupVenueSmart(deGen, city ?? undefined) : null)
+        ?? lookupVenueNear(name, cLat, cLng, KNOWN_VENUE_NEAR_KM)
+        ?? lookupVenueNear(head, cLat, cLng, KNOWN_VENUE_NEAR_KM)
+        ?? (deGen ? lookupVenueNear(deGen, cLat, cLng, KNOWN_VENUE_NEAR_KM) : null);
     if (ok(kv)) return [kv[0], kv[1], `venue-register: ${head.slice(0, 50)}`, 'poi'];
 
     // 1. Gatuadress ur upp till tre exempelrader

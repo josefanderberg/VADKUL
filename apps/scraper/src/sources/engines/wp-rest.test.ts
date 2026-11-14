@@ -229,3 +229,39 @@ describe('placeFromDetailHtml (vemdalen.se:s event-location-block)', () => {
         expect(placeFromDetailHtml('<p>Ingen plats här</p>', rx)).toEqual({});
     });
 });
+
+describe('wpRestEngine — detailDateFallback: false (Helsingborg 14/11)', () => {
+    afterEach(() => { vi.unstubAllGlobals(); });
+    const ctx: EngineContext = {
+        windowStart: new Date(2026, 9, 12),
+        windowEnd: new Date(2026, 11, 31),
+        log: () => {},
+    };
+    const dated = { id: 1, date: '2026-01-01T10:00:00', link: 'https://stad.test/event/a/', title: { rendered: 'Julmarknad 15 november 2026' }, content: { rendered: '<p>Plats: Stortorget</p>' }, excerpt: { rendered: '<p>Marknad på torget.</p>' }, featured_media_url: 'https://stad.test/a.jpg' };
+    const undated = { id: 2, date: '2026-01-01T10:00:00', link: 'https://stad.test/event/b/', title: { rendered: 'Öppen verkstad' }, content: { rendered: '<p>Välkommen in.</p>' } };
+
+    const stub = () => {
+        const calls: string[] = [];
+        vi.stubGlobal('fetch', vi.fn(async (url: unknown) => {
+            calls.push(String(url));
+            return String(url).includes('/wp-json/')
+                ? new Response(JSON.stringify([dated, undated]), { status: 200, headers: { 'content-type': 'application/json' } })
+                : new Response('<html><body><p>Datum: 20 november 2026</p></body></html>', { status: 200, headers: { 'content-type': 'text/html' } });
+        }));
+        return calls;
+    };
+
+    it('poster utan datum hämtas inte när detaljsidan bara är till för platsen', async () => {
+        const calls = stub();
+        const evs = await wpRestEngine({ baseUrl: 'https://stad.test', variant: 'wp-v2', embed: false, maxPages: 1, fetchDetailPage: true, detailDateFallback: false }, ctx);
+        expect(evs.map((e) => e.title)).toEqual(['Julmarknad 15 november 2026']);
+        expect(calls.some((u) => u.includes('/event/b/'))).toBe(false);
+    });
+
+    it('utan flaggan är detaljsidan datumreserv som förut', async () => {
+        const calls = stub();
+        const evs = await wpRestEngine({ baseUrl: 'https://stad.test', variant: 'wp-v2', embed: false, maxPages: 1, fetchDetailPage: true }, ctx);
+        expect(calls.some((u) => u.includes('/event/b/'))).toBe(true);
+        expect(evs.map((e) => e.title)).toContain('Öppen verkstad');
+    });
+});

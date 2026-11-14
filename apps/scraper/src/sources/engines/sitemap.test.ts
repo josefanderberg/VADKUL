@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord, isRememberedGone, nextGoneMemory } from './sitemap';
 import type { RawEvent } from '../types';
 import { SOURCES } from '../registry';
+import { placeFromDetailHtml } from './wp-rest';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
 function ev(partial: Partial<RawEvent> = {}): RawEvent {
@@ -1025,6 +1026,18 @@ describe('platsfältet på kommunernas detaljsidor', () => {
         expect(place('gavle-kommun', html, 'Gävle')).toEqual({ venue: 'Bomhus Hembygdsgård', address: 'Furuviksvägen 5', city: 'Gävle' });
     });
 
+    it('Gävle: postorten på raden under gatan följer med (riktiga sidor 14/11)', () => {
+        const agnes = '<p class="event-place-information">\n <b>Agnes Kulturhus</b><br>\n Slottstorget 1<br>802 50 Gävle </p>';
+        expect(place('gavle-kommun', agnes, 'Gävle')).toEqual({ venue: 'Agnes Kulturhus', address: 'Slottstorget 1 802 50 Gävle', city: 'Gävle' });
+        // Orten utanför Gävle är hela poängen: kyrkan i Bergby ska inte geokodas i stan.
+        const bergby = '<p class="event-place-information"><b>Hamrånge kyrka</b><br> Kyrkvägen 2<br>817 40 Bergby</p>';
+        expect(place('gavle-kommun', bergby, 'Gävle')).toMatchObject({ venue: 'Hamrånge kyrka', city: 'Bergby' });
+        const tullbom = '<p class="event-place-information"> <b>Tullbomsgården</b><br> Södra Kopparslagargatan 7, Gävle. </p>';
+        expect(place('gavle-kommun', tullbom, 'Gävle')).toMatchObject({ venue: 'Tullbomsgården', address: 'Södra Kopparslagargatan 7, Gävle' });
+        // Utan lokal i fetstil (digitalt evenemang) läses ingenting.
+        expect(place('gavle-kommun', '<p class="event-place-information">Digitalt evenemang</p>', 'Gävle')).toEqual({ venue: undefined, address: undefined, city: 'Gävle' });
+    });
+
     it('Upplands-Bro: lokal, gata och postort före "Hitta hit"', () => {
         const html = '<span>Ekhammarhallen, Skolvägen 20, 196 34, Kungsängen </span> <a href="https://www.google.com/maps?q=Ekhammarhallen" target="_blank"> Hitta hit </a>';
         expect(place('upplands-bro', html, 'Upplands-Bro')).toEqual({ venue: 'Ekhammarhallen', address: 'Skolvägen 20, 196 34 Kungsängen', city: 'Kungsängen' });
@@ -1044,5 +1057,159 @@ describe('platsfältet på kommunernas detaljsidor', () => {
     it('Varberg: länkad lokal och adress på nästa rad', () => {
         const html = '<h2 class="vbg-event-info__heading"> Plats </h2> <ul> <li> <a href="/kulturhuset-komedianten/stadsbiblioteket"> Stadsbiblioteket </a> </li> <li> Engelbrektsgatan 7, 432 41 Varberg </li> </ul>';
         expect(place('sb-varberg-se', html, 'Varberg')).toEqual({ venue: 'Stadsbiblioteket', address: 'Engelbrektsgatan 7, 432 41 Varberg', city: 'Varberg' });
+    });
+});
+
+// Mittpunkts-svepet 14/11 2026: källor som lade nästan alla event på ortens
+// mittpunkt fast detaljsidan bär lokal, adress eller koordinater. Configen
+// läses ur registret (som ovan) och körs mot utsnitt ur de riktiga sidorna,
+// i motorns ordning: detailPlaceSelector → detailPlaceRegex → titlePlaces →
+// defaultVenue.
+describe('platsfälten i mittpunkts-svepet 14/11', () => {
+    const cfgOf = (id: string): any => (SOURCES as any[]).find(s => s.id === id)!.config;
+    const place = (id: string, html: string) => {
+        const cfg = cfgOf(id);
+        const e = ev({ city: cfg.defaultCity });
+        if (cfg.detailPlaceSelector) applyDetailPlace(html, cfg.detailPlaceSelector, e);
+        const rx = cfg.detailPlaceRegex ?? cfg.detailPlace;
+        if (rx) applyDetailPlaceRegex(html, rx, e);
+        if (cfg.titlePlaces) applyTitlePlaces(e, cfg.titlePlaces, cfg.defaultCity);
+        if (!e.venueName && cfg.defaultVenue) e.venueName = cfg.defaultVenue;
+        return { venue: e.venueName, address: e.address, city: e.city, coords: e.coords };
+    };
+
+    it('Visit Ystad & Österlen: "Var:"-komponenten ger lokal, gata och postort', () => {
+        const html = '<div id="comp-lesmkhog" class="UwkEpO comp-lesmkhog wixui-rich-text" data-testid="richTextElement"><p class="font_8 wixui-rich-text__text"><span class="wixui-rich-text__text">Glimmingehus<br> Borgvägen 6<br> 27556 Hammenhög</span></p></div>';
+        expect(place('visitystadosterlen', html)).toEqual({ venue: 'Glimmingehus', address: 'Borgvägen 6 27556 Hammenhög', city: 'Hammenhög', coords: undefined });
+    });
+
+    it('Norrtälje: "Ort, Lokal" sätter orten; "Norrtälje," kapas ur namnet', () => {
+        const page = (plats: string) => `<dt>Plats:</dt> <dd>${plats}</dd> <div class="address"> <h2>Hitta hit</h2> <p>Liestav&#228;gen 44</p> <p>Skylt finns l&#228;ngs v&#228;g 77</p> </div>`;
+        expect(place('norrtalje', page('Rimbo, Tolvmansg&#229;rden'))).toEqual({ venue: 'Rimbo, Tolvmansgården', address: 'Liestavägen 44', city: 'Rimbo', coords: undefined });
+        expect(place('norrtalje', page('Norrt&#228;lje, Kapellet'))).toMatchObject({ venue: 'Kapellet', city: 'Norrtälje' });
+        // Orten måste stå FÖRST: en lokal som bara nämner en ort flyttar inget.
+        expect(place('norrtalje', page('Norrt&#228;lje, Rimbo-salen')).city).toBe('Norrtälje');
+    });
+
+    it('Upplands-Bro: orten ur lokalnamnet när raden saknar postort', () => {
+        const row = (text: string) => `<span>${text}</span> <a href="https://www.google.com/maps?q=x" target="_blank"> Hitta hit </a>`;
+        expect(place('upplands-bro', row('Brohuset/Biblioteket, Bro'))).toMatchObject({ venue: 'Brohuset/Biblioteket', city: 'Bro' });
+        expect(place('upplands-bro', row('Kungsängens bibliotek'))).toMatchObject({ venue: 'Kungsängens bibliotek', city: 'Kungsängen' });
+        // Postorten vinner när den finns, och kommunnamnet är ingen ort.
+        expect(place('upplands-bro', row('Ekhammarhallen, Skolvägen 20, 196 34, Kungsängen')).city).toBe('Kungsängen');
+        expect(place('upplands-bro', row('Kommunhuset')).city).toBe('Upplands-Bro');
+    });
+
+    it('Norrtälje: lokalens punkt ur JSON-LD, skriven med decimalkomma', () => {
+        // Riktig rad 14/11 (Recall The Sixties, Kapellet). parseFloat stannade
+        // vid kommat och gav 59 / 18 — en punkt i Östersjön.
+        const html = '<dt>Plats:</dt> <dd>Norrt&#228;lje, Kapellet</dd> <script type="application/ld+json">{ "schema:geo": { "@type": "schema:GeoCoordinates", "schema:latitude": "59,7571716", "schema:longitude": "18,6954447" }, "@type": "schema:Event" }</script>';
+        expect(place('norrtalje', html)).toMatchObject({ venue: 'Kapellet', coords: [59.7571716, 18.6954447] });
+        // Punkt som decimaltecken fungerar som förut (Vemdalen).
+        const e = ev({});
+        applyDetailPlaceRegex('mapLat:62.4461,mapLng:13.8612', { coords: /mapLat:([\d.]+),mapLng:([\d.]+)/ }, e);
+        expect(e.coords).toEqual([62.4461, 13.8612]);
+    });
+
+    it('Visit Östersund: platsfält med postnummer blir adress, lokalnamn lämnas', () => {
+        expect(place('visit-ostersund', '<div class="plats data-field"> Arenavägen 27, 83132 Östersund, Sweden </div>'))
+            .toMatchObject({ address: 'Arenavägen 27, 83132 Östersund', city: 'Östersund' });
+        expect(place('visit-ostersund', '<div class="plats data-field"> Lillänge Köpcentrum </div>').address).toBeUndefined();
+    });
+
+    it('Västervik: adressraden ger gata och postort', () => {
+        const html = '<li class="location-info-holder"> <strong>Adress: </strong><span>Västerviksvägen 4B, 59430 Gamleby</span> </li>';
+        expect(place('vastervik', html)).toMatchObject({ address: 'Västerviksvägen 4B, 59430 Gamleby', city: 'Gamleby' });
+    });
+
+    it('Ängelholms kommun: skärmläsaretiketten "Plats:" följer inte med i namnet', () => {
+        const html = '<div class="location information-ikqgj1"><i class="fa-light fa-location-dot" aria-hidden="true"></i> <span class="env-assistive-text" data-svelte-h="svelte-16nbpa8">Plats: </span>Hjärnarps bibliotek</div>';
+        expect(place('angelholm', html).venue).toBe('Hjärnarps bibliotek');
+    });
+
+    it('Dansens Hus (båda källorna): adress och kartnål per spelplats', () => {
+        const html = '<strong>Spelas på</strong></p><p>\n<a class="flexLink" href="https://www.google.com/maps/place/Dansens+Hus+Elverket/@59.3358041,18.0859156,17z/data=!3m1!4b1!4m5!3m4!1s0x465f9d5cd4cc76e9:0xbd5cb91953b0c8b8!8m2!3d59.3358014!4d18.0881043" target="_blank" rel="nofollow noopener noreferrer">Elverket, Linnégatan 69<svg width="25" height="25"></svg></a></p>';
+        for (const id of ['dansenshus', 'dansens-hus']) {
+            // Nålen (!3d/!4d), inte kartvyns mittpunkt (@59.3358041,18.0859156).
+            expect(place(id, html), id).toEqual({ venue: 'Dansens Hus', address: 'Linnégatan 69', city: 'Stockholm', coords: [59.3358014, 18.0881043] });
+        }
+    });
+
+    it('Jamtli: sidfotens adress och kartnål; sidans egen platsrad behålls som namn', () => {
+        const html = '<p>Museiplan 2, 831 31 Östersund</p>\n<a target="_blank" href="https://www.google.se/maps/place/Jamtli/@63.1815642,14.6422702,16.35z/data=!4m8!3m7!1s0x0:0x5a2b93bd2f10262e!5m2!4m1!1i2!8m2!3d63.1874871!4d14.6366452">Hitta hit</a>';
+        expect(place('jamtli', html)).toEqual({ venue: 'Jamtli', address: 'Museiplan 2, 831 31 Östersund', city: 'Östersund', coords: [63.1874871, 14.6366452] });
+    });
+
+    it('Landskrona: lokal under <h3>Plats</h3>, adress ur dragspelets <address>', () => {
+        const html = '<h3 class="h5"> <span class="Icon-module--component--t781L"></span> Plats</h3><p>Häljarps bibliotek</p>'
+            + '<a href="https://www.google.com/maps/search/?api=1&amp;query=Sandåkerskolan+26173+Landskrona&amp;zoom=18" class="Link-module--component--AwBbM">Häljarps bibliotek</a><address><p>Sandåkerskolan</p><p>26173</p><p>Landskrona</p></address>';
+        expect(place('landskrona', html)).toEqual({ venue: 'Häljarps bibliotek', address: 'Sandåkerskolan 26173 Landskrona', city: 'Landskrona', coords: undefined });
+    });
+
+    it('Tyresö: namnet är ledet före kommat, hela platsraden blir adress', () => {
+        const html = '<div class="sol-event-info-field"> <span>Plats:</span> Biblioteket i Tyresö centrum, Östangränd 7 </div>';
+        expect(place('tyreso', html)).toMatchObject({ venue: 'Biblioteket i Tyresö centrum', address: 'Biblioteket i Tyresö centrum, Östangränd 7', city: 'Tyresö' });
+    });
+
+    it('Nässjö: värdet står i textrutan EFTER Plats-rubrikens ruta', () => {
+        const html = '<div id="Plats"><!-- Plats --></div><div class="sv-text-portlet-content"><p class="sv-font-sidopanel-rubrik">Plats</p></div></div>\n<div class="sv-text-portlet sv-use-margins" id="svid12_aa25"><div id="Text"><!-- Text --></div><div class="sv-text-portlet-content"><p class="normal">Kulturhuset Pigalle<br>Mariagatan 2, Nässjö</p></div></div>';
+        expect(place('nassjo', html)).toMatchObject({ venue: 'Kulturhuset Pigalle', address: 'Mariagatan 2, Nässjö', city: 'Nässjö' });
+    });
+
+    it('Folkets Hus Kulturhuset: husets egen platspost i RSC-strömmen', () => {
+        const html = String.raw`{\"title\":\"Konferera\",\"id\":\"Gc8w\",\"geolocation\":{\"latitude\":58.2861747,\"longitude\":12.2917679},\"address\":\"Kungsgatan 25\"},{\"__typename\":\"GeographicalLocationRecord\",\"title\":\"Folkets Hus Kulturhuset\",\"id\":\"Gvow5AX4QP-5pUktflamNQ\",\"geolocation\":{\"latitude\":58.286293,\"longitude\":12.291213},\"address\":\"Kungsgatan 25\",\"city\":\"Trollhättan\"}`;
+        expect(place('folkets-hus-trollhattan', html)).toEqual({ venue: 'Folkets Hus Kulturhuset', address: 'Kungsgatan 25', city: 'Trollhättan', coords: [58.286293, 12.291213] });
+    });
+
+    it('Visit Hallstahammar: faktarutans "Plats:" när API:t saknar lokal', () => {
+        const html = '<p class="hiq-p hiq-event-facts__text"> <strong>Plats:</strong> Kulturhuset, biblioteket </p>';
+        expect(place('visithallstahammar', html).venue).toBe('Kulturhuset, biblioteket');
+    });
+
+    // wp-rest-källorna tolkas av motorns egen placeFromDetailHtml.
+    const wpPlace = (id: string, html: string) => placeFromDetailHtml(html, cfgOf(id).detailPlace);
+
+    it('Visit Ängelholm: "Hitta hit"-blockets namn, adress och ACF-markör', () => {
+        const html = '<div class="ui-accordion__map-place">Ängelholms Stadsbibliotek</div><div class="ui-accordion__map-address">Stortorget 2, 26232, Ängelholm, Sverige</div>'
+            + '<div class="acf-map" data-zoom="16"> <div class="marker" data-lat="56.243092" data-lng="12.860295"></div> </div>';
+        expect(wpPlace('sb-visitangelholm-se', html)).toEqual({ venueName: 'Ängelholms Stadsbibliotek', address: 'Stortorget 2, 26232, Ängelholm', coords: [56.243092, 12.860295] });
+        // En e-postadress i namnfältet är inget platsnamn.
+        expect(wpPlace('sb-visitangelholm-se', '<div class="ui-accordion__map-place">info@hembygdsparken</div>').venueName).toBeUndefined();
+    });
+
+    it('Visit Piteå: Plats-kortets namn; utan kort blir adressraden namn', () => {
+        const address = '<div class="font-semibold" data-component="heading">\n    Storgatan 44\n</div>\n<a class="inline-flex" data-component="link" href="https://www.google.com/maps/search/?api=1&amp;query=65.31628,21.48264" target="_blank">Open in Google Maps</a>';
+        const card = '<div class="font-semibold text-lg" data-component="heading"> Plats </div> <div data-component="media"><div class="text-base" data-component="heading"> <a class="x" href="https://visitpitea.se/platser/kaleido/"> Kaleido </a> </div></div>';
+        // Adressraden står FÖRE Plats-kortet i sidan - kortet ska ändå vinna.
+        expect(wpPlace('sb-visitpitea-se', `<main>${address}${card}</main>`)).toEqual({ venueName: 'Kaleido', address: 'Storgatan 44', coords: [65.31628, 21.48264] });
+        expect(wpPlace('sb-visitpitea-se', `<main>${address}</main>`)).toEqual({ venueName: 'Storgatan 44', address: 'Storgatan 44', coords: [65.31628, 21.48264] });
+    });
+
+    it('Municipio-kommunerna (Helsingborg, Eslöv, Alingsås): Plats-kortet och JSON-LD', () => {
+        const card = (inner: string) => `<h2 class="c-typography c-card__heading" data-uid="6af8" data-component="typography"> Plats </h2> </div> </div> <div class="c-element c-card__content" data-uid="6af9" data-component="element"> ${inner} </div><a class="c-link" href="https://www.google.com/maps/search/?api=1&amp;query=x">Hitta hit</a>`;
+        const ld = '"location":[{"@type":"Place","address":"Östergatan 5, 241 39, Eslöv","latitude":55.839555400000002,"longitude":13.3052853,"name":"Eslöfs museiförening"}]';
+        expect(wpPlace('eslov', card('Eslöfs museiförening<br>Östergatan 5, 241 39, Eslöv') + ld))
+            .toEqual({ venueName: 'Eslöfs museiförening', address: 'Östergatan 5, 241 39, Eslöv', coords: [55.8395554, 13.3052853] });
+        // Alingsås saknar oftast koordinater; ", Sverige" hör inte till adressen.
+        expect(wpPlace('alingsas', card('Sollebrunns bibliotek<br>Skolgatan 4f, 441 70, Sollebrunn, Sverige')))
+            .toEqual({ venueName: 'Sollebrunns bibliotek', address: 'Skolgatan 4f, 441 70, Sollebrunn' });
+        expect(wpPlace('helsingborg', card('Aktivitetshuset Tryckeriet<br> Vasatorpsvägen 1A, Helsingborg, Sverige')))
+            .toEqual({ venueName: 'Aktivitetshuset Tryckeriet', address: 'Vasatorpsvägen 1A, Helsingborg' });
+    });
+
+    it('Helsingborg: platsfixen slår inte på detaljsidans datumgissning', () => {
+        // fetchDetailPage krävs för platsen men aktiverar också datum-reserven.
+        // detailDateFallback: false håller datumurvalet oförändrat OCH sparar
+        // hämtningen av de ~450 poster som saknar datum (se wp-rest.test.ts).
+        const cfg = cfgOf('helsingborg');
+        expect(cfg.fetchDetailPage).toBe(true);
+        expect(cfg.detailDateFallback).toBe(false);
+        expect(cfg.detailDateRegex).toBeUndefined();
+    });
+
+    it('Stora Teatern: en lokal - namn ur JSON-LD, adress och kartlänk ur sidfoten', () => {
+        const html = '"location": {\n        "@type": "Place",\n        "name": "Stora Teatern",\n        "address": {"@type": "PostalAddress", "streetAddress": "Stora Teatern\\r\\nKungsparken 1"},\n        "url": "http:\\/\\/maps.google.com\\/?q=57.70260450000001,11.97059319999994"\n    }'
+            + '<span> Stora Teatern<br />\nKungsparken 1<br>\n<a class="border-a" target="_blank" href="http://maps.google.com/?q=57.70260450000001,11.97059319999994"> Hitta hit</a></span>';
+        expect(wpPlace('stora-teatern-gbg', html)).toEqual({ venueName: 'Stora Teatern', address: 'Kungsparken 1', coords: [57.70260450000001, 11.97059319999994] });
     });
 });

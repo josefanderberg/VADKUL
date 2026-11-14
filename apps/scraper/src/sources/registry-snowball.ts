@@ -23,7 +23,25 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Visit Piteå',
         region: 'pitea',
         engine: 'wp-rest' as const,
-        config: { baseUrl: 'https://visitpitea.se', variant: 'wp-v2', defaultCity: 'Piteå', fetchDetailPage: true, maxPages: 5 },
+        config: {
+            baseUrl: 'https://visitpitea.se', variant: 'wp-v2', defaultCity: 'Piteå', fetchDetailPage: true, maxPages: 5,
+            // Detaljsidans platskort och kartlänk (14/11 2026). Utan dem låg
+            // 99 kommande event på Piteås mittpunkt, och fritextgissningen
+            // gav platsnamn som "Datum" ur sidans "Datum och tid"-rubrik.
+            //   Plats-kortet: <a href="https://visitpitea.se/platser/kaleido/"> Kaleido </a>
+            //   Adressraden:  <div … data-component="heading"> Storgatan 44 </div>
+            //                 <a … href="https://www.google.com/maps/search/?api=1&amp;query=65.31628,21.48264">
+            // Platsnamnet: Plats-kortets länk. Sidor UTAN Plats-kort (andra
+            // grenen, förankrad i ^ + negativ lookahead) får adressraden som
+            // namn — annars vinner fritextgissningen ("Spotify", "Datum och tid").
+            detailPlace: {
+                venue: /(?:data-component="heading">\s*Plats\s*<\/div>[\s\S]{0,8000}?<a[^>]+href="[^"]*\/platser\/[^"]+"[^>]*>|^(?![\s\S]*data-component="heading">\s*Plats\s*<\/div>)[\s\S]*?data-component="heading">(?=\s*[^<]+<\/div>\s*<a[^>]+maps\/search\/))\s*([^<]+?)\s*</,
+                address: /data-component="heading">\s*([^<]+?)\s*<\/div>\s*<a[^>]+href="https:\/\/www\.google\.com\/maps\/search\/\?api=1&(?:amp;)?query=/,
+                coords: /google\.com\/maps\/search\/\?api=1&(?:amp;)?query=(-?\d+\.\d+),(-?\d+\.\d+)/,
+            },
+        },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {
@@ -480,7 +498,23 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Visit Ängelholm',
         region: 'angelholm',
         engine: 'wp-rest' as const,
-        config: { baseUrl: 'https://visitangelholm.se', variant: 'wp-v2', defaultCity: 'Ängelholm', fetchDetailPage: true, maxPages: 5 },
+        config: {
+            baseUrl: 'https://visitangelholm.se', variant: 'wp-v2', defaultCity: 'Ängelholm', fetchDetailPage: true, maxPages: 5,
+            // "Hitta hit"-blocket på detaljsidan (14/11 2026): platsnamn,
+            // adress och ACF-kartans markör. Utan det låg 139 av 145
+            // kommande event på Ängelholms mittpunkt.
+            //   <div class="ui-accordion__map-place">Ängelholms Stadsbibliotek</div>
+            //   <div class="ui-accordion__map-address">Stortorget 2, 26232, Ängelholm, Sverige</div>
+            //   <div class="marker" data-lat="56.243092" data-lng="12.860295"></div>
+            detailPlace: {
+                // [^<@]: en post har e-postadressen i namnfältet ("info@hembygdsparken").
+                venue: /class="ui-accordion__map-place">\s*([^<@]+?)\s*</,
+                address: /class="ui-accordion__map-address">\s*([^<]+?)(?:,\s*Sverige)?\s*</,
+                coords: /class="marker"\s+data-lat="(-?\d+\.\d+)"\s+data-lng="(-?\d+\.\d+)"/,
+            },
+        },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {

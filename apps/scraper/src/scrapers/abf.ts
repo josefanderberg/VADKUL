@@ -20,6 +20,7 @@ import * as cheerio from 'cheerio';
 import { RawEvent, Engine } from '../sources/types';
 import { cleanDescription } from '../utils/text';
 import { mapPool } from '../utils/mapPool';
+import { priceFromMarkup } from '../utils/priceFromMarkup';
 
 const SEARCH = 'https://www.abf.se/kurs-sok/';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -42,16 +43,21 @@ export function parseAbfDescription(html: string): string | undefined {
     return d.length >= 20 ? d : undefined;
 }
 
-async function fetchAbfDescription(url: string, signal?: AbortSignal): Promise<string | undefined> {
+/**
+ * Detaljsidan: beskrivningen och faktarutans pris (<dt>Pris</dt><dd>Gratis</dd>).
+ * 95 % av ABF-eventen saknade pris 14/11 2026 fast varje detaljsida bär det.
+ */
+async function fetchAbfDetail(url: string, signal?: AbortSignal): Promise<{ description?: string; price?: string }> {
     try {
         const res = await fetch(url, {
             headers: { 'User-Agent': UA, 'Accept': 'text/html' },
             signal: signal ?? AbortSignal.timeout(20_000),
         });
-        if (!res.ok) return undefined;
-        return parseAbfDescription(await res.text());
+        if (!res.ok) return {};
+        const html = await res.text();
+        return { description: parseAbfDescription(html), price: priceFromMarkup(html) };
     } catch {
-        return undefined;
+        return {};
     }
 }
 
@@ -130,11 +136,13 @@ export const abfEngine: Engine = async (_config, ctx) => {
     }
     if (nya.length) {
         let enriched = 0;
+        let priced = 0;
         await mapPool(nya, DETAIL_CONCURRENCY, async (e) => {
-            const desc = await fetchAbfDescription(e.url, ctx.signal);
-            if (desc) { e.description = desc; enriched++; }
+            const detail = await fetchAbfDetail(e.url, ctx.signal);
+            if (detail.description) { e.description = detail.description; enriched++; }
+            if (detail.price && !e.price) { e.price = detail.price; priced++; }
         });
-        ctx.log(`${enriched}/${nya.length} nya event fick beskrivning från detaljsidan`);
+        ctx.log(`${enriched}/${nya.length} nya event fick beskrivning från detaljsidan, ${priced} fick pris`);
     }
     return all;
 };

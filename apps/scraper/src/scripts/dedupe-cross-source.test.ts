@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows, stableIdKey, renameGhosts, sharesTitleTail, sameVenue, dateOnlyTwinLinks, compareScored } from './dedupe-cross-source';
+import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows, stableIdKey, renameGhosts, sharesTitleTail, sameVenue, dateOnlyTwinLinks, compareScored, inheritedPrices, priceKey } from './dedupe-cross-source';
 
 const base = {
     url: 'https://example.se/e/1',
@@ -383,5 +383,56 @@ describe('compareScored — utslag vid lika poäng', () => {
         expect([dateOnly, nortic].sort(compareScored)[0]).toBe(nortic);
         // högre poäng vinner alltid
         expect([own, { ...dateOnly, s: 27 }].sort(compareScored)[0].s).toBe(27);
+    });
+});
+
+describe('prisarv mellan tvillingar', () => {
+    const ev = (url: string, price: string | null, over: Partial<{ title: string; time: string; lat: number; lng: number }> = {}) => ({
+        url, price,
+        title: 'Carl-Johan Vallgren LIVE i Black Box',
+        time: '2026-11-14T19:00:00.000Z',
+        lat: 56.9044, lng: 12.4922,
+        ...over,
+    });
+
+    it('biljettsajtens prislösa rad ärver kommunsajtens pris (samma titel, dag, plats)', () => {
+        const tickster = ev('https://www.tickster.com/se/sv/events/abc/2026-11-14/vallgren', null);
+        const kommun = ev('https://falkenberg.se/evenemang/vallgren/', '420 kr', { lat: 56.9048, lng: 12.4913 });
+        expect(inheritedPrices([tickster], [tickster, kommun])).toEqual(new Map([[tickster.url, '420 kr']]));
+    });
+
+    it('titeln jämförs normaliserad, dagen i svensk tid', () => {
+        const a = ev('https://a/1', null, { title: 'CARL-JOHAN VALLGREN – live i Black Box!', time: '2026-11-14T22:30:00.000Z' });
+        const b = ev('https://b/1', 'Gratis', { time: '2026-11-14T08:00:00.000Z' });
+        expect(inheritedPrices([a], [b]).get(a.url)).toBe('Gratis');
+        // 23:30 UTC är nästa dag i Sverige — inte samma event.
+        const late = ev('https://a/2', null, { time: '2026-11-14T23:30:00.000Z' });
+        expect(inheritedPrices([late], [b]).size).toBe(0);
+    });
+
+    it('oeniga tvillingar ärvs inte; samma pris i olika skrivning gör det', () => {
+        const need = ev('https://a/1', null);
+        expect(inheritedPrices([need], [ev('https://b/1', '420 kr'), ev('https://c/1', '395 kr')]).size).toBe(0);
+        expect(inheritedPrices([need], [ev('https://b/1', 'Fri entré'), ev('https://c/1', 'Gratis')]).get(need.url)).toBe('Fri entré');
+        expect(inheritedPrices([need], [ev('https://b/1', '100kr'), ev('https://c/1', '100 kr')]).get(need.url)).toBe('100kr');
+    });
+
+    it('annan ort, kort titel, ogeokodat eller redan prissatt: inget arv', () => {
+        const priced = ev('https://b/1', '420 kr');
+        expect(inheritedPrices([ev('https://a/1', null, { lat: 57.1056, lng: 12.2508 })], [priced]).size).toBe(0);   // Varberg, 27 km
+        expect(inheritedPrices([ev('https://a/2', null, { lat: 0, lng: 0 })], [priced]).size).toBe(0);
+        expect(inheritedPrices([ev('https://a/3', '395 kr')], [priced]).size).toBe(0);
+        const quizA = ev('https://a/4', null, { title: 'Quiz' });
+        const quizB = ev('https://b/4', '50 kr', { title: 'Quiz' });
+        expect(inheritedPrices([quizA], [quizB]).size).toBe(0);
+        expect(inheritedPrices([priced], [priced]).size).toBe(0);                                                     // sig själv
+    });
+
+    it('priceKey: gratis-orden är samma pris', () => {
+        expect(priceKey('Gratis')).toBe(priceKey('Fri entré'));
+        expect(priceKey('Kostnadsfritt')).toBe(priceKey('0 kr'));
+        expect(priceKey('150 kr')).toBe(priceKey('150kr'));
+        expect(priceKey('150 SEK')).toBe(priceKey('150 kr'));
+        expect(priceKey('150 kr')).not.toBe(priceKey('250 kr'));
     });
 });

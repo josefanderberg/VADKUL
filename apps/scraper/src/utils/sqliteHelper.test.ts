@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import {
     upsertEvent, sqliteEventExists, getSqliteEvent, setEventStatus,
-    recordScrapeRun, getRunsBySource, upsertKnownVenue, lookupVenueExact,
+    recordScrapeRun, getRunsBySource, upsertKnownVenue, lookupVenueExact, lookupVenueSmart, lookupVenueNear,
     getSyncMeta, setSyncMeta, deleteEventsByFirestoreIds,
 } from './sqliteHelper';
 
@@ -81,6 +81,61 @@ describe('known_venues', () => {
         upsertKnownVenue('Vida Arena', 56.8797, 14.7736, 'Växjö');
         expect(lookupVenueExact('Vida Arena')).toEqual([56.8797, 14.7736]);
         expect(lookupVenueExact('Okänd Arena')).toBeNull();
+    });
+});
+
+describe('lookupVenueNear — registerträff på närhet när stadsnamnen inte går att jämföra', () => {
+    // Botkyrkas mittpunkt (Tumba) — dit eventen föll.
+    const BOTKYRKA: [number, number] = [59.2006, 17.8343];
+
+    it('kommunen i frågan, postorten i registret: Fittja bibliotek hittas', () => {
+        upsertKnownVenue('Fittja Bibliotek', 59.2484, 17.8604, 'Norsborg');
+        expect(lookupVenueSmart('Fittja bibliotek', 'Botkyrka')).toBeNull();          // stadskravet missar
+        expect(lookupVenueNear('Fittja bibliotek', ...BOTKYRKA, 25)).toEqual([59.2484, 17.8604]);
+    });
+
+    it('en namne i en annan del av landet godtas inte', () => {
+        upsertKnownVenue('Sagabiografen Testort', 65.32, 21.47, 'Piteå');
+        expect(lookupVenueNear('Sagabiografen Testort', ...BOTKYRKA, 25)).toBeNull();
+    });
+
+    it('generiska namn matchas aldrig på närhet — grannkommunens ligger också inom radien', () => {
+        upsertKnownVenue('Stadsbiblioteket', 59.2001, 17.8301, 'Tumba');
+        expect(lookupVenueNear('Stadsbiblioteket', ...BOTKYRKA, 25)).toBeNull();
+        expect(lookupVenueNear('Bio', ...BOTKYRKA, 25)).toBeNull();                    // för kort
+    });
+
+    it('rums- och scennamn är delar av en lokal, inte en plats', () => {
+        upsertKnownVenue('Stora Scen', 59.21, 17.84, 'Tumba');
+        upsertKnownVenue('Hörsalen', 59.21, 17.84, 'Tumba');
+        upsertKnownVenue('Scen 2', 59.21, 17.84, 'Tumba');
+        expect(lookupVenueNear('Stora Scen', ...BOTKYRKA, 25)).toBeNull();
+        expect(lookupVenueNear('Hörsalen', ...BOTKYRKA, 25)).toBeNull();
+        expect(lookupVenueNear('Scen 2', ...BOTKYRKA, 25)).toBeNull();
+        expect(lookupVenueNear('Huvudbiblioteket', ...BOTKYRKA, 25)).toBeNull();
+    });
+
+    it('föreningsnamn är ingen plats', () => {
+        upsertKnownVenue('PRO Tumba', 59.2100, 17.8400, 'Tumba');
+        expect(lookupVenueNear('PRO Tumba', ...BOTKYRKA, 25)).toBeNull();
+    });
+
+    it('rena ortnamn är mittpunkten själv, och kyrkonamn kräver snävare radie', () => {
+        // Kräver tätortstabellen — tom i testdatabasen, så ortsspärren prövas
+        // här bara genom att ett vanligt namn INTE spärras av misstag.
+        upsertKnownVenue('S:t Mikaels kyrka', 59.3300, 17.9600, 'Ekerö');              // 16 km från Tumba
+        expect(lookupVenueNear('S:t Mikaels kyrka', ...BOTKYRKA, 25)).toBeNull();
+        upsertKnownVenue('Tumba kyrka', 59.2050, 17.8200, 'Tumba');                    // 1 km
+        expect(lookupVenueNear('Tumba kyrka', ...BOTKYRKA, 25)).toEqual([59.2050, 17.8200]);
+    });
+
+    it('två rader med samma namn: samma plats godtas, olika platser är tvetydigt', () => {
+        upsertKnownVenue('Hallunda Kulturhus', 59.2440, 17.8250, 'Norsborg');
+        upsertKnownVenue('Hallunda kulturhus', 59.2441, 17.8251, 'Botkyrka');          // samma hus, annan seed
+        expect(lookupVenueNear('Hallunda kulturhus', ...BOTKYRKA, 25)).toEqual([59.2440, 17.8250]);
+        upsertKnownVenue('Bygdegården Testby', 59.25, 17.80, 'Norsborg');
+        upsertKnownVenue('bygdegården testby', 59.15, 17.95, 'Tumba');                 // 14 km bort
+        expect(lookupVenueNear('Bygdegården Testby', ...BOTKYRKA, 25)).toBeNull();
     });
 });
 

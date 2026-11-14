@@ -86,6 +86,56 @@ export function dedupKey(r: Pick<Row, 'title' | 'time' | 'lat' | 'lng' | 'locati
     return `${normalizeTitle(r.title)}|${localDay(r.time)}|${locationKey(r)}`;
 }
 
+// ─── Prisarv mellan tvillingar ──────────────────────────────────────────────
+
+export interface PriceTwinRow {
+    url: string; title: string; time: string; lat: number; lng: number; price: string | null;
+}
+
+/** Samma pris skrivet på olika sätt: "Gratis" = "Fri entré" = "0 kr", "100kr" = "100 kr". */
+export function priceKey(price: string): string {
+    const p = price.toLowerCase().replace(/\s+/g, '');
+    if (/^(?:gratis|frientr[ée]|kostnadsfri(?:tt)?|0(?:kr|:-)?)$/.test(p)) return 'gratis';
+    return p.replace(/kronor|sek|:-/g, 'kr');
+}
+
+/**
+ * Prisarv: ett prislöst event ärver priset från sin tvilling i en annan källa
+ * (samma titel, samma dag, inom 5 km — samma tolerans som dedupen själv).
+ *
+ * Dedupen behåller EN rad per event, och vinnaren väljs på affiliatelänk, bild
+ * och beskrivning — inte pris. Biljettsajtens rad (Tickster: inget pris på
+ * sidan) vann över kommunsajtens som bar priset, och kortet blev prislöst:
+ * 273 synliga event hade 14/11 2026 en GÖMD tvilling med pris.
+ *
+ * Säkerhet: titeln måste vara minst 8 tecken ("Quiz" på två krogar är inte
+ * samma event), och alla tvillingar med pris måste vara överens — två olika
+ * belopp ärvs inte. Returnerar url → pris.
+ */
+export function inheritedPrices(needing: PriceTwinRow[], priced: PriceTwinRow[]): Map<string, string> {
+    const byKey = new Map<string, PriceTwinRow[]>();
+    for (const r of priced) {
+        if (!r.price?.trim() || !r.title || !r.time) continue;
+        const title = normalizeTitle(r.title);
+        if (title.length < 8) continue;
+        const k = `${title}|${localDay(r.time)}`;
+        byKey.set(k, [...(byKey.get(k) ?? []), r]);
+    }
+    const out = new Map<string, string>();
+    for (const r of needing) {
+        if (r.price?.trim() || !r.title || !r.time || (r.lat === 0 && r.lng === 0)) continue;
+        const twins = (byKey.get(`${normalizeTitle(r.title)}|${localDay(r.time)}`) ?? []).filter((t) => {
+            if (t.url === r.url || (t.lat === 0 && t.lng === 0)) return false;
+            const km = Math.hypot((t.lat - r.lat) * 110.57, (t.lng - r.lng) * 111.32 * Math.cos((r.lat * Math.PI) / 180));
+            return km <= 5;
+        });
+        if (twins.length === 0) continue;
+        if (new Set(twins.map((t) => priceKey(t.price!))).size !== 1) continue;
+        out.set(r.url, twins[0].price!.trim());
+    }
+    return out;
+}
+
 /** Ord (>2 tecken) ur normaliserad locationName — för tvilling-matchning. */
 function locationTokens(name: string): Set<string> {
     return new Set(normalizeTitle(name).split(' ').filter((t) => t.length > 2));
@@ -532,6 +582,23 @@ async function main() {
         toHide.push(...losers);
     }
 
+    // Prisarv: de som blir kvar ärver priset från en tvilling som bär det —
+    // även en som redan är gömd (se inheritedPrices). Bara framtida event.
+    const nowIso = new Date().toISOString();
+    const priceRows = sqliteDb.prepare(`
+        SELECT url, title, time, lat, lng, price, hidden, firestoreId
+        FROM link_events
+        WHERE time >= ? AND title IS NOT NULL AND firestoreId IS NOT NULL
+    `).all(nowIso) as Array<PriceTwinRow & { hidden: number; firestoreId: string }>;
+    const hideUrls = new Set(toHide.map((r) => r.url));
+    const staying = priceRows.filter((r) => r.hidden === 0 && !hideUrls.has(r.url));
+    const inherit = inheritedPrices(staying, priceRows);
+    console.log(`\n💰 Prisarv: ${inherit.size} prislösa event har en tvilling med pris`);
+    for (const [url, price] of [...inherit].slice(0, 12)) {
+        const r = staying.find((x) => x.url === url)!;
+        console.log(`     ${price.padEnd(14)} ${r.title.slice(0, 50)}  ${url.slice(0, 50)}`);
+    }
+
     if (!apply) {
         console.log(`\n${toHide.length} events skulle gömmas (dry-run). Kör med --apply för att aktivera.`);
         process.exit(0);
@@ -563,9 +630,24 @@ async function main() {
     const writeDb = new Database(path.resolve(__dirname, '../../events.db'));
     const stmt = writeDb.prepare(`UPDATE link_events SET hidden = 1 WHERE firestoreId = ?`);
     for (const r of toHide) stmt.run(r.firestoreId);
+
+    // Prisarvet: Firestore först (stamped), sedan spegeln.
+    const priceStmt = writeDb.prepare(`UPDATE link_events SET price = ?, updatedAt = ? WHERE url = ? AND (price IS NULL OR TRIM(price) = '')`);
+    let inherited = 0;
+    for (const [url, price] of inherit) {
+        const row = staying.find((x) => x.url === url);
+        if (!row) continue;
+        try {
+            await db.collection('linkEvents').doc(row.firestoreId).update(stamped({ price }));
+            priceStmt.run(price, new Date().toISOString(), url);
+            inherited++;
+        } catch (e: any) {
+            if (!(e.code === 5 || /NOT_FOUND/.test(e.message ?? ''))) console.error(`  ❌ prisarv ${row.title.slice(0, 40)}: ${e.message}`);
+        }
+    }
     writeDb.close();
 
-    console.log(`\n✅ ${updated} events gömda i Firestore + SQLite`);
+    console.log(`\n✅ ${updated} events gömda i Firestore + SQLite · ${inherited} ärvde pris från en tvilling`);
     process.exit(0);
 }
 

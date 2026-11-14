@@ -58,6 +58,15 @@ export interface WpRestConfig {
      */
     fetchDetailPage?: boolean;
     /**
+     * Sätt till false när fetchDetailPage är på för PLATSENS skull (detailPlace)
+     * och detaljsidan inte ska vara datumreserv. Poster utan datum i API:t
+     * hoppas då över direkt i stället för att hämtas vid varje körning: de blir
+     * aldrig kända event, så känd-URL-vakten skyddar dem inte. Helsingborg
+     * 14/11 2026: ca 450 av 1 000 poster saknar datum = 12 minuter per natt
+     * för hämtningar som inte ger något.
+     */
+    detailDateFallback?: boolean;
+    /**
      * Riktad datum-extraktion ur detaljsidans HTML: regex vars CAPTURE-GRUPP 1
      * pekar ut texten med eventdatumet (t.ex. JetEngine:s
      * jet-listing-dynamic-field-div på blacksheeparms). När satt används
@@ -432,7 +441,7 @@ async function wpV2ToRawEvent(
     //    (inte med contentDateRegex — rutan var enda datumkällan).
     let detailHtml: string | null = null;
     let detailVenue: string | undefined;
-    if ((!start || isNaN(start.getTime())) && cfg.fetchDetailPage && e.link && !cfg.contentDateRegex) {
+    if ((!start || isNaN(start.getTime())) && cfg.fetchDetailPage && cfg.detailDateFallback !== false && e.link && !cfg.contentDateRegex) {
         detailHtml = await fetchDetailHtml(e.link, cfg, signal);
         if (detailHtml) {
             if (cfg.detailDateRegex) {

@@ -36,6 +36,7 @@ import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import { extractJsonLdBlocks, collectEvents, jsonLdToRawEvent, DEFAULT_EVENT_TYPES } from './json-ld';
 import { findFirstDateInText, rangeToStartText } from '../../utils/swedishDate';
 import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
+import { priceFromMarkup } from '../../utils/priceFromMarkup';
 import { extractStreetAddress, placeFromLines, postalTown } from '../../utils/swedishAddress';
 import { isInNordic } from '../../utils/venueCoordinates';
 import { getSyncMeta, setSyncMeta } from '../../utils/sqliteHelper';
@@ -271,6 +272,13 @@ export interface SitemapConfig {
      */
     detailPriceSelector?: string;
     /**
+     * Stäng av den generella prisläsningen ur detaljsidans faktaruta och
+     * JSON-LD (utils/priceFromMarkup), som annars fyller ett tomt prisfält på
+     * alla sitemap-källor. För en sajt där faktarutan bär något annat än
+     * eventets pris (årskort, hyra) och inget annat hjälper.
+     */
+    noMarkupPrice?: boolean;
+    /**
      * Katalogen hämtas med POST (Episerver-block som Konserthusets
      * /CalendarSlideBlock/LoadMore/ — GET ger 405). Kroppen skickas som
      * application/x-www-form-urlencoded; `{{today}}` byts mot dagens lokala
@@ -399,8 +407,10 @@ export function applyDetailPlaceRegex(
         if (town) ev.city = town;
     }
     const cm = rx.coords ? html.match(rx.coords) : null;
-    const lat = cm ? parseFloat(cm[1]) : NaN;
-    const lng = cm ? parseFloat(cm[2]) : NaN;
+    // Decimalkomma: Norrtäljes JSON-LD skriver "schema:latitude": "59,6858121",
+    // och parseFloat stannar vid kommat (59 / 18 = en punkt i Östersjön).
+    const lat = cm ? parseFloat(cm[1].replace(',', '.')) : NaN;
+    const lng = cm ? parseFloat(cm[2].replace(',', '.')) : NaN;
     if (Number.isFinite(lat) && Number.isFinite(lng) && isInNordic(lat, lng)) { ev.coords = [lat, lng]; hit = true; }
     return hit;
 }
@@ -1770,6 +1780,12 @@ export const sitemapEngine = async (
             if (isPlaceholderCoord(ev.coords, config.placeholderCoords)) ev.coords = undefined;
             if (config.detailPriceSelector && !ev.price) {
                 const p = priceFromDetailSelector(html, config.detailPriceSelector);
+                if (p) ev.price = p;
+            }
+            // Faktarutans pris ("Pris: 90 kr", <dt>Kostnad</dt><dd>Gratis</dd>) och
+            // JSON-LD isAccessibleForFree — står på sidan men sällan i brödtexten.
+            if (!ev.price && !config.noMarkupPrice) {
+                const p = priceFromMarkup(html);
                 if (p) ev.price = p;
             }
             if (config.detailDescSelector) {

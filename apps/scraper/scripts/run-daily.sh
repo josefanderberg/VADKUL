@@ -394,6 +394,22 @@ else
     echo "⚠️ Content-quality misslyckades — fortsätter ändå." >> "$LOG_FILE"
 fi
 
+# ─── K10: Pris ur detaljsidan — faktarutan och JSON-LD ─────────────────────
+# K9 läser bara brödtexten. Hos de flesta kommun-, besöks- och förbundskällor
+# står priset i sidans faktaruta ("Pris: 90 kr", <dt>Kostnad</dt><dd>Gratis</dd>),
+# som bara sitemap-motorn ser vid inläsningen. price-refine hämtar detaljsidan
+# för event som fortfarande saknar pris (snarast först, varvat mellan värdarna,
+# högst 2 försök per event, värdar utan träffar vilar 30 dagar). Taket håller
+# steget kring en kvart. Körs FÖRE K4 och slutaggregatet. Ett fel här får
+# aldrig stoppa kedjan.
+echo "" >> "$LOG_FILE"
+echo "── K10: PRICE-REFINE (pris ur detaljsidans faktaruta) ──" >> "$LOG_FILE"
+if npm run price-refine -- --apply --limit=1500 --per-host=150 >> "$LOG_FILE" 2>&1; then
+    echo "Price-refine OK" >> "$LOG_FILE"
+else
+    echo "⚠️ Price-refine misslyckades — fortsätter ändå." >> "$LOG_FILE"
+fi
+
 # ─── K4: LLM-enrichment (Ollama) ────────────────────────────────────────────
 echo "" >> "$LOG_FILE"
 echo "── K4: LLM-ENRICHMENT ──" >> "$LOG_FILE"

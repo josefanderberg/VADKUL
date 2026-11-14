@@ -29,11 +29,11 @@
  */
 
 import { db } from '../config/firebase';
-import { sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart } from '../utils/sqliteHelper';
+import { sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart, lookupVenueNear } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import {
     geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode, isInNordic,
-    deGenitiveFirstWord,
+    deGenitiveFirstWord, KNOWN_VENUE_NEAR_KM,
 } from '../utils/venueCoordinates';
 import { resolveVenueOverpass } from '../utils/overpassVenue';
 
@@ -180,9 +180,15 @@ async function refineEvent(r: Row, cluster: Cluster, city: string | null): Promi
     // Genitivvarianten fångar "Ingelstads bibliotek" mot OSM:s "Ingelstad bibliotek".
     if (loc && !locIsJustCity) {
         const deGen = deGenitiveFirstWord(loc);
+        const head = loc.includes(',') ? loc.split(',')[0].trim() : null;
         const kv = lookupVenueSmart(loc, city ?? undefined)
             ?? (deGen ? lookupVenueSmart(deGen, city ?? undefined) : null)
-            ?? (loc.includes(',') ? lookupVenueSmart(loc.split(',')[0], city ?? undefined) : null);
+            ?? (head ? lookupVenueSmart(head, city ?? undefined) : null)
+            // Stadsnamnen går inte alltid att jämföra (klustrets "Botkyrka" mot
+            // registrets postort "Norsborg") — då avgör närheten till klustret.
+            ?? lookupVenueNear(loc, cluster.lat, cluster.lng, KNOWN_VENUE_NEAR_KM)
+            ?? (deGen ? lookupVenueNear(deGen, cluster.lat, cluster.lng, KNOWN_VENUE_NEAR_KM) : null)
+            ?? (head ? lookupVenueNear(head, cluster.lat, cluster.lng, KNOWN_VENUE_NEAR_KM) : null);
         if (kv && acceptable(kv, cluster)) return [kv[0], kv[1], `venue-register: ${loc.slice(0, 60)}`, 'poi'];
     }
 

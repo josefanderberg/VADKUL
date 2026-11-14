@@ -1,4 +1,4 @@
-import { upsertKnownVenue, lookupVenueExact, lookupVenueSmart, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet, lookupTatortNear, findTatortInText } from './sqliteHelper';
+import { upsertKnownVenue, lookupVenueExact, lookupVenueSmart, lookupVenueNear, getAllKnownVenues, countKnownVenues, geocodeCacheGet, geocodeCacheSet, lookupTatortNear, findTatortInText } from './sqliteHelper';
 import { cleanLocationName } from './text';
 
 // Växjö venue coordinates lookup table — källa för initial DB-seedning.
@@ -528,6 +528,13 @@ export function distanceKm(lat1: number, lng1: number, lat2: number, lng2: numbe
 export const NEAR_CITY_MAX_KM = 60;
 
 /**
+ * Radie för registerträff på namn utan stadsmatch (lookupVenueNear). Snävare
+ * än Nominatim-valideringen: namnet är allt som binder träffen till orten, så
+ * den ska ligga i kommunen, inte i grannstaden.
+ */
+export const KNOWN_VENUE_NEAR_KM = 25;
+
+/**
  * Geokoda en STAD (stadsnivå-precision). Cachas i geocode_cache med egen
  * "city:"-nyckel så centroiderna aldrig blandas med venue-svar. Används av
  * nearCity-valideringen — en centroid per stad, sedan lokala lookups.
@@ -729,6 +736,17 @@ export async function geocodeVenueSweden(
     const accept = cityCenter
         ? (lat: number, lng: number) => distanceKm(lat, lng, cityCenter[0], cityCenter[1]) <= NEAR_CITY_MAX_KM
         : undefined;
+
+    // 0b. Registret igen, nu på NÄRHET i stället för stadsnamn. Källan anger
+    // ofta kommunen ("Fittja bibliotek, Botkyrka") medan registret bär
+    // postorten (Norsborg) — stadskravet i steg 0 missade då en plats som
+    // redan var känd, och eventet föll till kommunens mittpunkt.
+    if (cityCenter) {
+        const nearHit = lookupVenueNear(cleaned, cityCenter[0], cityCenter[1], KNOWN_VENUE_NEAR_KM)
+            ?? (head !== cleaned ? lookupVenueNear(head, cityCenter[0], cityCenter[1], KNOWN_VENUE_NEAR_KM) : null)
+            ?? (headDeGen ? lookupVenueNear(headDeGen, cityCenter[0], cityCenter[1], KNOWN_VENUE_NEAR_KM) : null);
+        if (nearHit) return [nearHit[0], nearHit[1], 'poi'];
+    }
 
     if (!accept) {
         // Bakåtkompatibla vägen — exakt gamla beteendet.

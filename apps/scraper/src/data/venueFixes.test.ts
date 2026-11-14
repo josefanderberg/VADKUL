@@ -138,3 +138,21 @@ describe('Växjö/Linköping-granskningen i venueFixes (ägarrapport 2/10)', () 
         });
     });
 });
+
+describe('Folkets Hus Kulturhuset i Trollhättan (mittpunkts-svepet 14/11)', () => {
+    it('husets namn och salongsnamnen landar på Kungsgatan 25', () => {
+        for (const name of ['Folkets Hus Kulturhuset', 'Hebeteatern, Folkets Hus Kulturhuset',
+            'Clio, Folkets Hus Kulturhuset', 'Folkets Hus Kulturhuset, Clio, Trollhättan']) {
+            const fix = matchVenueFix(name);
+            expect(fix?.city, name).toBe('Trollhättan');
+            expect(fix?.lat, name).toBeCloseTo(58.2863, 4);
+            expect(fix?.lng, name).toBeCloseTo(12.2912, 4);
+        }
+    });
+
+    it('andra orters Folkets Hus och bara "Kulturhuset" matchar inte', () => {
+        for (const other of ['Folkets Hus', 'Kulturhuset', 'Folkets Hus Trollhättan', 'Hebeteatern', 'Ersboda Folkets Hus Kulturhuset']) {
+            expect(matchVenueFix(other)?.city === 'Trollhättan', other).toBe(false);
+        }
+    });
+});

@@ -75,6 +75,15 @@ describe('mapKalendarietActivity', () => {
         expect(mapKalendarietActivity({ ...act, startTime: undefined }, PAGE, 'Göteborg')).toBeNull();
     });
 
+    it('pris: fältets text när den finns, annars Gratis (så visar stadens egen sida det)', () => {
+        expect(mapKalendarietActivity(act, PAGE, 'Göteborg')!.price).toBe('Gratis');
+        expect(mapKalendarietActivity({ ...act, priceInformation: null }, PAGE, 'Göteborg')!.price).toBe('Gratis');
+        expect(mapKalendarietActivity({ ...act, priceInformation: '  ' }, PAGE, 'Göteborg')!.price).toBe('Gratis');
+        expect(mapKalendarietActivity({ ...act, priceInformation: '50kr' }, PAGE, 'Göteborg')!.price).toBe('50kr');
+        expect(mapKalendarietActivity({ ...act, priceInformation: 'Entré 110kr på plats och 80kr i förköp.\r\n' }, PAGE, 'Göteborg')!.price)
+            .toBe('Entré 110kr på plats och 80kr i förköp.');
+    });
+
     it('location saknas → unit.name som venue', () => {
         const ev = mapKalendarietActivity({ ...act, location: undefined }, PAGE, 'Göteborg')!;
         expect(ev.venueName).toBe('Positivparken');

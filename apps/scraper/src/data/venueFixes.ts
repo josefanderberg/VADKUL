@@ -424,6 +424,27 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 13.58983,
         note: 'Hestra Handsken, Äspåsvägen 5, Hestra (Gislaved) — Nominatim; Värnamo-Cruncho lade den vid Rydaholm (13/11, #199)',
     },
+    {
+        // Folkets Hus Kulturhuset, Kungsgatan 25, 461 30 Trollhättan. Husets
+        // egen källa (trollhattan.fh.se) sätter namnet på alla sina event, men
+        // "Folkets Hus Kulturhuset, Trollhättan" geokodade aldrig till huset:
+        // 54 kommande event låg på två olika mittpunkter (58.2828, 12.2909 och
+        // 58.2913, 12.2953), ~400 m åt var sitt håll (14/11). Salongerna
+        // (Hebeteatern, Clio, Kulturbaren, Apollon) ligger alla i huset; så
+        // heter venuen i sajtens Tickster-poster och hos Riksteatern.
+        // Koordinat: husets egen platspost på trollhattan.fh.se
+        // (geoLocations → "Folkets Hus Kulturhuset", latitude/longitude).
+        names: [
+            'Folkets Hus Kulturhuset', 'Folkets Hus Kulturhuset, Trollhättan',
+            'Hebeteatern, Folkets Hus Kulturhuset', 'Hebeteatern (Onumrerad), Folkets Hus Kulturhuset',
+            'Clio, Folkets Hus Kulturhuset', 'Kulturbaren, Folkets Hus Kulturhuset', 'Apollon, Folkets Hus Kulturhuset',
+            'Folkets Hus Kulturhuset, Clio, Trollhättan',
+        ],
+        city: 'Trollhättan',
+        lat: 58.286293,
+        lng: 12.291213,
+        note: 'Folkets Hus Kulturhuset, Kungsgatan 25, Trollhättan — sajtens egen platspost (trollhattan.fh.se); 54 event låg på ortens mittpunkter (14/11)',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */

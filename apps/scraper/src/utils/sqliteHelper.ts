@@ -144,6 +144,10 @@ addColumnIfMissing('link_events', 'timeFixAttempts', 'INTEGER DEFAULT 0');
 // geoRefineAttempts: hur många nätter geo-refine försökt förfina eventets
 // koordinater utan träff — efter 3 hoppas raden så budgeten når nya event.
 addColumnIfMissing('link_events', 'geoRefineAttempts', 'INTEGER DEFAULT 0');
+// priceRefineAttempts: hur många gånger price-refine hämtat detaljsidan utan
+// att hitta ett pris i faktarutan/JSON-LD — efter 2 hoppas raden (sidan bär
+// inget pris). Bara SQLite, som de andra försöksräknarna.
+addColumnIfMissing('link_events', 'priceRefineAttempts', 'INTEGER DEFAULT 0');
 // geoPrecision: sanningsmärkning av koordinatens kvalitet (ägarbeslut 24/8):
 //   'kallkoordinat'  källan levererade egna koordinater
 //   'poi'            namngiven plats träffad (known_venues eller Nominatim)
@@ -597,6 +601,64 @@ export function lookupVenueSmart(name: string, city?: string): [number, number] 
     return row && row.n === 1 ? [row.lat, row.lng] : null;
 }
 
+const venueByNameStmt = sqlite.prepare('SELECT lat, lng FROM known_venues WHERE LOWER(name) = LOWER(?)');
+/** Är namnet en tätort eller en kommun? (Index på name; kommun-jämförelsen går över 2 000 rader.) */
+const placeNameStmt = sqlite.prepare(
+    'SELECT 1 FROM tatorter WHERE name = ? COLLATE NOCASE OR kommun = ? COLLATE NOCASE LIMIT 1',
+);
+
+const CHURCH_NAME_RE = /kyrka|kapell|församlingshem|församlingsgård|s:t(?:a)?\s|sankt(?:a)?\s/i;
+
+/**
+ * Föreningsnamn som platsnamn ("PRO Vallentuna"): eventet saknar lokal, och
+ * registrets rad med samma namn är en punkt geo-refine lärt sig av ETT event
+ * (9 km från Vallentuna centrum), inte föreningens hus.
+ */
+const ORG_NAME_RE = /^(?:PRO|SPF|SKPF|Korpen|ABF|NBV|Sensus|Bilda|Friluftsfrämjandet|Naturskyddsföreningen|Röda Korset|Studiefrämjandet|Medborgarskolan|Vuxenskolan|Rotary|Lions)\s/i;
+
+/** Rum, scener och salar — delar av en lokal, inte en plats ("Stora Scen", "Hörsalen", "Scen 2"). */
+const ROOM_NAME_RE = /^(?:(?:stora|lilla|nya|gamla|övre|nedre)\s+)?(?:scen(?:en)?|sal(?:en)?|salong(?:en)?|foaj[ée]n?|hörsal(?:en)?|studio(?:n)?|aulan?|matsal(?:en)?|caf[ée](?:et)?|restaurang(?:en)?|entr[ée]n?|huvudbiblioteket|bibliotek(?:et)?|kyrkan|kapellet|bygdegården|hembygdsgården|idrottshallen|skolan|torget|parken|black\s?box(?:en)?)(?:\s*\d+)?$/i;
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const h = Math.sin(toRad(lat2 - lat1) / 2) ** 2
+        + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(toRad(lng2 - lng1) / 2) ** 2;
+    return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+/**
+ * Registeruppslag på NAMN inom en radie från en punkt — för när stadsnamnen
+ * inte går att jämföra som text. Källan anger kommunen ("Fittja bibliotek,
+ * Botkyrka") medan registret bär postorten (Norsborg), så lookupVenueSmart:s
+ * stadskrav missade och 77 event låg på Botkyrkas mittpunkt (14/11 2026).
+ * Närheten till ortens mittpunkt är samma skydd mot namnar i fel stad.
+ *
+ * Matchas ALDRIG så här (mätt mot 13 420 mittpunktsevent 14/11):
+ *   - generiska namn (Stadsbiblioteket, Folkets Hus): grannkommunens ligger
+ *     också inom radien,
+ *   - rums- och scennamn ("Stora Scen", "Hörsalen", "Scen 2"): 19 event hade
+ *     flyttat till en annan teaters stora scen,
+ *   - rena ortnamn ("Gustavsberg", "Norrtälje"): ett platsnamn som bara är
+ *     orten ÄR mittpunkten — registrets rad med samma namn är en inlärd
+ *     punkt, inte eventets lokal (253 event hade flyttat).
+ * Flera rader med samma namn godtas bara om de är samma plats (inom 300 m
+ * från varandra).
+ */
+export function lookupVenueNear(name: string, lat: number, lng: number, maxKm: number): [number, number] | null {
+    const n = name.trim();
+    if (n.length < 4 || isGenericLookupName(n) || ROOM_NAME_RE.test(n) || ORG_NAME_RE.test(n)) return null;
+    if (placeNameStmt.get(n, n)) return null;
+    // Kyrkonamn återkommer från ort till ort ("S:t Mikaels kyrka") och registret
+    // rymmer bara EN rad per namn — grannortens får inte duga. Snävare radie.
+    if (CHURCH_NAME_RE.test(n)) maxKm = Math.min(maxKm, 10);
+    const near = (venueByNameStmt.all(n) as Array<{ lat: number; lng: number }>)
+        .filter((r) => haversineKm(r.lat, r.lng, lat, lng) <= maxKm);
+    if (near.length === 0) return null;
+    const first = near[0];
+    if (near.some((r) => haversineKm(r.lat, r.lng, first.lat, first.lng) > 0.3)) return null;
+    return [first.lat, first.lng];
+}
+
 export function getAllKnownVenues(): KnownVenueRow[] {
     return venueAllStmt.all() as KnownVenueRow[];
 }
@@ -675,6 +737,15 @@ const bumpGeoRefineStmt = sqlite.prepare(
 /** Räkna upp antalet resultatlösa geo-refine-försök (ger upp efter 3). */
 export function bumpGeoRefineAttempts(url: string): void {
     bumpGeoRefineStmt.run(url);
+}
+
+const bumpPriceRefineStmt = sqlite.prepare(
+    'UPDATE link_events SET priceRefineAttempts = COALESCE(priceRefineAttempts, 0) + 1 WHERE url = ?',
+);
+
+/** Räkna upp antalet resultatlösa price-refine-försök (ger upp efter 2). */
+export function bumpPriceRefineAttempts(url: string): void {
+    bumpPriceRefineStmt.run(url);
 }
 
 const setCoordsStmt = sqlite.prepare(`

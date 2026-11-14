@@ -96,6 +96,23 @@ const TICKSTER_DESC = {
 /** Engångssvep: kända Tickster-event får texten (contentRefresh byter mallen). */
 const TICKSTER_DESC_SWEEP = '2026-10-21';
 
+/**
+ * Kommunsajter på Municipio-temat (helsingborg.se, eslov.se, alingsas.se):
+ * wp/v2-API:t bär ingen plats, men detaljsidan har ett Plats-kort och, på
+ * helsingborg.se och eslov.se, koordinater i sin JSON-LD (alingsas.se oftast
+ * bara namn + adress). Utan det låg i stort sett alla deras event på stadens
+ * mittpunkt, och fritextgissningen gav namn som "Dunkers" (14/11 2026).
+ *   <h2 …> Plats </h2></div></div><div class="c-element c-card__content" …>
+ *   Sollebrunns bibliotek<br>Skolgatan 4f, 441 70, Sollebrunn, Sverige </div>
+ *   JSON-LD: "location":[{"@type":"Place",…,"latitude":56.0628971,"longitude":12.7128959,…}]
+ * Kräver fetchDetailPage på källan.
+ */
+const MUNICIPIO_DETAIL_PLACE = {
+    venue: />\s*Plats\s*<\/h2>\s*<\/div>\s*<\/div>\s*<div class="c-element c-card__content"[^>]*>\s*([^<]+?)\s*(?:<br\s*\/?>|<\/div>)/,
+    address: />\s*Plats\s*<\/h2>\s*<\/div>\s*<\/div>\s*<div class="c-element c-card__content"[^>]*>[^<]*<br\s*\/?>\s*([^<]+?)(?:,\s*Sverige)?\s*<\/div>/,
+    coords: /"latitude":\s*(-?\d+\.\d+),\s*"longitude":\s*(-?\d+\.\d+)/,
+};
+
 export const SOURCES: Source[] = [
     // ─── BILJETTPLATTFORMAR (sitemap → detaljsidans JSON-LD Event) ───────────
     {
@@ -157,7 +174,14 @@ export const SOURCES: Source[] = [
             urlBlacklist: [/\/filter/i],
             defaultCity: 'Stockholm',
             maxUrls: 100,
+            // Filialen står som länk i eventets sidhuvud (14/11 2026):
+            //   <a href="/bibliotek/kungsholmens-bibliotek-internationella-biblioteket">
+            //   <span>Kungsholmens bibliotek Internationella biblioteket</span></a>
+            // Utan den låg alla 47 event på Stockholms mittpunkt.
+            detailVenueSelector: 'article a[href^="/bibliotek/"]',
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         status: 'experimental',
         notes: 'Probe 2026-06-10: JS-renderad katalog (21 event-länkar via isHtmlCatalog+useBrowser). Detaljsidor date-i-text ("10 juni"), date-only.',
@@ -889,7 +913,17 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
             defaultCity: 'Östersund',
             maxUrls: 300,
+            // Fakta-rutans platsfält (14/11 2026) bär lokalnamnet ("Storsjö-
+            // teatern") ELLER, när lokalen saknar namn, hela adressen:
+            //   <div class="plats data-field"> Arenavägen 27, 83132 Östersund, Sweden </div>
+            // Adressformen (postnummer i fältet) läses som gatuadress, så
+            // hockeymatcherna m.fl. geokodas på gatan i stället för på orten.
+            detailPlaceRegex: {
+                address: /<div class="plats data-field">\s*([^<]*?\b\d{3} ?\d{2} [^<,]+?)(?:,\s*Sweden)?\s*<\/div>/,
+            },
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         // Fokusstad 2026-08-09: 129 av 137 hittade event låg utanför 30d-fönstret.
         windowDays: 180,
         updateFrequency: 'every-3d',
@@ -953,7 +987,20 @@ export const SOURCES: Source[] = [
             urlBlacklist: [/\/en\//i],
             defaultCity: 'Östersund',
             maxUrls: 200,
+            // EN anläggning (14/11 2026): adress och kartnål står i sidfoten
+            // på varje sida - "Museiplan 2, 831 31 Östersund" och länken
+            // google.se/maps/place/Jamtli/@…!3d63.1874871!4d14.6366452.
+            // Utan dem låg 39 av 42 event på Östersunds mittpunkt. Sidans
+            // egen "Plats:"-rad ("Start på Torget, friluftsmuseet.") behålls
+            // som namn när den finns.
+            defaultVenue: 'Jamtli',
+            detailPlaceRegex: {
+                address: /(Museiplan 2, 831 31 Östersund)/,
+                coords: /google\.se\/maps\/place\/Jamtli\/[^"]*!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+            },
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         // Fokusstad 2026-08-09: 87 av 89 hittade event låg utanför 30d-fönstret.
         windowDays: 180,
         updateFrequency: 'every-3d',
@@ -1006,7 +1053,21 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/program\/[^/]+\/?$/i],
             urlBlacklist: [/\/en\//i],
             defaultCity: 'Stockholm',
+            // "Spelas på" (14/11 2026) pekar ut scenen per föreställning, med
+            // husets egen kartnål i länken (!3d<lat>!4d<lng>):
+            //   <strong>Spelas på</strong></p><p> <a href="https://www.google.com/maps/place/
+            //   Dansens+Hus+Elverket/@…!3d59.3358014!4d18.0881043">Elverket, Linnégatan 69 </a>
+            // Spelplatserna är FLERA (Barnhusgatan 12-14, Elverket på Linnégatan
+            // 69, Mårbackagatan 11), så adress och nål läses per sida. Namnet
+            // är alltid "Dansens Hus". Alla 44 låg på Stockholms mittpunkt.
+            defaultVenue: 'Dansens Hus',
+            detailPlaceRegex: {
+                address: /<strong>\s*Spelas på\s*<\/strong>\s*<\/p>\s*<p>\s*<a[^>]*>\s*[^<,]+,\s*([^<]+?)\s*</,
+                coords: /<strong>\s*Spelas på\s*<\/strong>\s*<\/p>\s*<p>\s*<a[^>]*href="https:\/\/www\.google\.com\/maps\/place\/[^"]*!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)"/,
+            },
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06-08: 1338 URLs i sitemap-post-type-dh_event.xml (sv + en).',
         lastVerified: '2026-06-08',
@@ -1048,10 +1109,20 @@ export const SOURCES: Source[] = [
             // datum desc → nyast publicerat = aktuell/kommande säsong. Cap 5 sidor
             // (250) räcker för det kommande programmet; resten är passerade.
             maxPages: 5,
+            // EN lokal (14/11 2026): namn ur sidans JSON-LD ("location": Place,
+            // "name": "Stora Teatern"), adress och kartlänk ur sidfoten:
+            //   Stora Teatern<br />Kungsparken 1<br> <a href="http://maps.google.com/?q=57.70260450000001,11.97059319999994">
+            // Utan dem låg 39 av 52 event på Göteborgs mittpunkt.
+            detailPlace: {
+                venue: /"@type":\s*"Place",\s*"name":\s*"(Stora Teatern)"/,
+                address: /Stora Teatern<br\s*\/?>\s*([^<]+?)\s*<br/,
+                coords: /maps\.google\.com\/\?q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+            },
         },
         updateFrequency: 'every-3d',
-        // Engångssvep 12/10: kända kommande event får rätt dag + klockslag.
-        contentSweep: '2026-10-12',
+        // Engångssvep 14/11: kända event får lokal och koordinater (förra
+        // svepet 12/10 gällde dag + klockslag).
+        contentSweep: '2026-11-14',
         status: 'experimental',
         notes: 'Probe 2026-06-30: /wp-json/wp/v2/event (1345 poster, mest arkiv). Ingen användbar XML-sitemap (sitemap.xml=HTML). API-date=publiceringsdatum → fetchDetailPage extraherar riktigt event-datum ur detaljsidans text ("22 aug 2026"). maxPages=5 (nyast publicerat = kommande säsong). Spelhus i Göteborg.',
         lastVerified: '2026-06-30',
@@ -1428,6 +1499,11 @@ export const SOURCES: Source[] = [
             fetchDetailPage: true,
             maxPages: 6,  // 300 events max — annars tar fetch-loopen 30+ min
         },
+        // 14/11: 238-245 av 300 hämtade poster föll utanför 30-dagarsfönstret
+        // (volymlarmet: 300 mot golvet 608). Uppsala är orten där Happymap
+        // leder mest (945 mot 336 i förvalet) - julens och vårens program
+        // ligger i API:t men kastades. Samma spak som fokusstäderna 9/8.
+        windowDays: 180,
         updateFrequency: 'every-3d',
         lastVerified: '2026-11-01',
         notes: 'Probe 2026-06: 1217 events totalt. fetchDetailPage cap=300 för rimlig körtid. API:t (wp/v2) har TOMT excerpt/content/featuredmedia — bild hämtas via detalj-sidans og:image (event-specifik). Beskrivning saknas helt på sidorna (ingen og:description/JSON-LD). '
@@ -1442,9 +1518,24 @@ export const SOURCES: Source[] = [
             baseUrl: 'https://www.helsingborg.se',
             variant: 'wp-v2',
             defaultCity: 'Helsingborg',
+            // Plats ur detaljsidan (14/11 2026, se MUNICIPIO_DETAIL_PLACE):
+            // 120 kommande event låg på stadens mittpunkt.
+            fetchDetailPage: true,
+            detailPlace: MUNICIPIO_DETAIL_PLACE,
+            // fetchDetailPage slår annars också på detaljsidans DATUM-reserv
+            // för poster utan datum i API-texten (ca 45 av 100) — då hämtas
+            // de sidorna vid VARJE körning, ~12 min per natt. Av här: datum-
+            // urvalet ska vara oförändrat av platsfixen. (Sidans JSON-LD bär
+            // "startDate" - se notes om man vill ta in de eventen.)
+            detailDateFallback: false,
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'daily',
-        notes: 'Probe 2026-06: 369 events. wp/v2 + content-parser + _embed (image + terms).',
+        notes: 'Probe 2026-06: 369 events. wp/v2 + content-parser + _embed (image + terms). '
+            + '14/11: plats ur detaljsidan (detailPlace), med detailDateFallback: false så de ~450 av 1 000 poster som saknar datum i '
+            + 'API-texten inte hämtas varje natt. De posterna har riktigt datum i sidans JSON-LD ("startDate"): en detailDateRegex mot '
+            + 'den skulle kunna ge upp till ~450 event till (ej gjort: ändrar urvalet, och kräver ett sätt att minnas passerade poster).',
     },
     {
         id: 'dunkers-kulturhus',
@@ -1596,7 +1687,11 @@ export const SOURCES: Source[] = [
             variant: 'wp-v2',
             defaultCity: 'Eslöv',
             fetchDetailPage: true,
+            // Plats ur detaljsidan (14/11 2026): 38 av 47 låg på mittpunkten.
+            detailPlace: MUNICIPIO_DETAIL_PLACE,
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06: 141 events. fetchDetailPage extraherar datum från HTML.',
     },
@@ -1610,7 +1705,12 @@ export const SOURCES: Source[] = [
             variant: 'wp-v2',
             defaultCity: 'Alingsås',
             fetchDetailPage: true,
+            // Plats ur detaljsidan (14/11 2026): 41 av 42 låg på mittpunkten,
+            // även biblioteken i Sollebrunn.
+            detailPlace: MUNICIPIO_DETAIL_PLACE,
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06: 108 events. fetchDetailPage.',
     },
@@ -2342,7 +2442,19 @@ export const SOURCES: Source[] = [
             sitemapUrl: 'https://www.landskrona.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
             defaultCity: 'Landskrona',
+            // Platsrutan och dragspelets adress (14/11 2026):
+            //   <h3 class="h5">…Plats</h3><p>Häljarps bibliotek</p>
+            //   <a href="…maps/search/?api=1&amp;query=…">Häljarps bibliotek</a>
+            //   <address><p>Sandåkerskolan</p><p>26173</p><p>Landskrona</p></address>
+            // Rubriken är en <h3> utan kolon, så motorns "Plats:"-letare såg
+            // den aldrig: 41 av 44 event låg på Landskronas mittpunkt.
+            detailPlaceRegex: {
+                venue: /Plats<\/h3>\s*<p>\s*([^<]+?)\s*<\/p>/,
+                address: /maps\/search\/\?api=1[^>]*>[^<]*<\/a>\s*<address>([\s\S]*?)<\/address>/,
+            },
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         notes: 'Probe-sitemap 2026-06-03: 180 evenemang-URLs. <time datetime>.',
         lastVerified: '2026-06-04',
@@ -2690,7 +2802,19 @@ export const SOURCES: Source[] = [
                     urlDateRegex: /\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
                     maxUrls: 250,
                     defaultCity: 'Nässjö',
+                    // Sidopanelens Plats-rubrik följs av en EGEN textruta (14/11 2026):
+                    //   <p class="sv-font-sidopanel-rubrik">Plats</p></div></div>
+                    //   <div …><div id="Text">…</div><div class="sv-text-portlet-content">
+                    //   <p class="normal">Kulturhuset Pigalle<br>Mariagatan 2, Nässjö</p>
+                    // Rubrik och värde ligger i skilda block, så motorn såg
+                    // ingen plats: 38 av 40 event låg på Nässjös mittpunkt.
+                    detailPlaceRegex: {
+                        venue: /<p class="sv-font-sidopanel-rubrik">\s*Plats\s*<\/p>[\s\S]{0,400}?<div class="sv-text-portlet-content">\s*<p[^>]*>\s*([^<]+?)\s*(?:<br\s*\/?>|<\/p>)/,
+                        address: /<p class="sv-font-sidopanel-rubrik">\s*Plats\s*<\/p>[\s\S]{0,400}?<div class="sv-text-portlet-content">\s*<p[^>]*>[^<]*<br\s*\/?>\s*([^<]+?)\s*<\/p>/,
+                    },
                 },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         notes: 'Om-probad 7/9 2026 i runtknuten-svepet: eventen ligger djupt i arkivet med '
             + 'datum-prefixad slug (…/evenemang/ÅÅÅÅ-MM-DD-slug), inte på /evenemang/<slug> som '
@@ -2891,6 +3015,16 @@ export const SOURCES: Source[] = [
             // som inte går ihop med något närliggande år KASTAS.
             detailDateSelector: 'div:has(> h2:contains("När")) + div',
             defaultCity: 'Ystad',
+            // "Var:"-fältets värde (14/11 2026) ligger INTE intill sin rubrik
+            // i DOM:en utan i mallens egen komponent, samma id på varje
+            // eventsida: <div id="comp-lesmkhog"><p><span>Glimmingehus<br>
+            // Borgvägen 6<br> 27556 Hammenhög</span></p></div>. Selektorn ger
+            // lokal + postort, regexen lägger till gatan. Utan dem låg alla
+            // 78 event på Ystads mittpunkt, även de i Simrishamn/Tomelilla.
+            detailPlaceSelector: '#comp-lesmkhog',
+            detailPlaceRegex: {
+                address: /id="comp-lesmkhog"[^>]*>\s*<p[^>]*>\s*<span[^>]*>[^<]*<br\s*\/?>\s*([\s\S]*?)\s*<\/span>/,
+            },
             // SPÖK-URL-FARAN (probe 13/9): Wix återanvänder/behåller gamla
             // item-URL:er som svarar 200 med ETT ANNAT events innehåll
             // (medeltidsläger-slug visade Late Night Comedy). lastmod-desc-
@@ -2899,6 +3033,8 @@ export const SOURCES: Source[] = [
             // oprövat — då börjar svansen av döda URLs skrapas.
             maxUrls: 120,
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'weekly',
         status: 'experimental',
         windowDays: 120,
@@ -2980,7 +3116,15 @@ export const SOURCES: Source[] = [
                     sitemapUrl: 'https://www.engelholm.se/sitemap.xml',
                     urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
                     defaultCity: 'Ängelholm',
+                    // Platsraden bär en skärmläsaretikett som följde med i
+                    // namnet ("Plats: Hjärnarps bibliotek" → ingen geokodträff):
+                    //   <div class="location …"><i …></i> <span class="env-assistive-text" …>Plats: </span>Hjärnarps bibliotek</div>
+                    detailPlaceRegex: {
+                        venue: /<span class="env-assistive-text"[^>]*>\s*Plats:\s*<\/span>\s*([^<]+?)\s*<\/div>/,
+                    },
                 },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         notes: 'Probe-sitemap 2026-06-04: 92 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
@@ -3001,6 +3145,14 @@ export const SOURCES: Source[] = [
                         venue: /<span>\s*([^<,]+?)\s*(?:,[^<]*)?<\/span>\s*<a href="https:\/\/www\.google\.com\/maps\?q=/,
                         address: /<span>[^<,]+,\s*([^<]*\d[^<]*?)\s*<\/span>\s*<a href="https:\/\/www\.google\.com\/maps\?q=/,
                     },
+                    // Kommunens två tätorter, när lokalen bär ortsnamnet
+                    // ("Danssalen Brohuset", "Kungsängens bibliotek") och raden
+                    // saknar postort. Bro skiftlägeskänsligt och inte efter
+                    // bindestreck, så varken "bro" eller "Upplands-Bro" träffar.
+                    titlePlaces: [
+                        { re: /\bKungsängen/i, city: 'Kungsängen' },
+                        { re: /(?<![\wåäöÅÄÖ-])Bro(?:huset)?(?![\wåäö])/, city: 'Bro' },
+                    ],
                 },
         contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
@@ -3044,7 +3196,20 @@ export const SOURCES: Source[] = [
                     sitemapUrl: 'https://www.tyreso.se/sitemap.xml',
                     urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
                     defaultCity: 'Tyresö',
+                    // Faktarutans platsrad (14/11 2026):
+                    //   <div class="sol-event-info-field"><span>Plats:</span> Biblioteket i Tyresö centrum, Östangränd 7 </div>
+                    // Motorn läste den aldrig (etiketten är en <span>), och
+                    // adressgissningen tog i stället SIDFOTENS besöksadress:
+                    // 39 event hade "Marknadsgränd 2" (kommunhuset) som adress.
+                    // Namnet är ledet före första kommat; HELA raden sätts som
+                    // adress så att sidfoten aldrig vinner när raden finns.
+                    detailPlaceRegex: {
+                        venue: /<span>\s*Plats:\s*<\/span>\s*([^<,]+?)\s*[,<]/,
+                        address: /<span>\s*Plats:\s*<\/span>\s*([^<]+?)\s*<\/div>/,
+                    },
                 },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         notes: 'Probe-sitemap 2026-06-04: 53 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
@@ -4034,7 +4199,34 @@ export const SOURCES: Source[] = [
                     urlPatterns: [/\/evenemang\/\d{4}\/[a-zåäö]+\/[^/]+\/?$/i],
                     defaultCity: 'Norrtälje',
                     maxUrls: 200,
+                    // Faktarutans platsrad skrivs "Ort, Lokal" (14/11 2026):
+                    //   <dt>Plats:</dt> <dd>Rimbo, Tolvmansgården</dd>
+                    //   <div class="address"><h2>Hitta hit</h2><p>Liestavägen 44</p>…
+                    // Motorns nyckel/värde-letare kräver etiketten "Plats" utan
+                    // kolon, så ingen plats lästes: alla event hette "Norrtälje",
+                    // även de i Rimbo, Hallstavik och på Blidö. Orten
+                    // "Norrtälje," kapas ur namnet (den är defaultCity); övriga
+                    // orter står kvar först i namnet och sätter city nedan.
+                    // Gatan ur "Hitta hit"-blockets första rad (ersätter motorns
+                    // gissning, som tog med rubriken "Hitta hit" i adressen).
+                    detailPlaceRegex: {
+                        // Sidan skriver å/ä/ö som entiteter ("Norrt&#228;lje, Kapellet").
+                        venue: /<dt>\s*Plats:?\s*<\/dt>\s*<dd>\s*(?:Norrt(?:ä|&#228;|&auml;)lje,\s*)?([^<]+?)\s*<\/dd>/,
+                        address: /<div class="address">\s*<h2>\s*Hitta hit\s*<\/h2>\s*<p>\s*([^<]+?)\s*<\/p>/,
+                        // Lokalens egen punkt i sidans JSON-LD, med decimalkomma:
+                        //   "schema:latitude": "59,7571716", "schema:longitude": "18,6954447"
+                        // (Kapellet i Norrtälje; Grosshandlartorget på Marholmen har 59,6858 / 18,7045).
+                        coords: /"schema:latitude":\s*"([\d.,]+)",\s*"schema:longitude":\s*"([\d.,]+)"/,
+                    },
+                    // Orterna som förekom först i platsraden på de 180
+                    // eventsidorna 14/11 - förankrat i början ("Rimbo, …").
+                    titlePlaces: ['Rimbo', 'Hallstavik', 'Lohärad', 'Blidö', 'Skebobruk', 'Rådmansö', 'Älmsta',
+                        'Marholmen', 'Röksta', 'Grisslehamn', 'Herräng', 'Singö', 'Yxlan', 'Rånäs', 'Kapellskär',
+                        'Överby', 'Bergshamra', 'Furusund', 'Väddö', 'Edsbro',
+                    ].map(city => ({ re: new RegExp(`^${city}(?:,|$)`, 'i'), city })),
                 },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         // Sitemapen hämtas i sin helhet oavsett fönster — 30 dagar hade kastat
         // höstens spelningar efter att sidorna redan var hämtade.
         windowDays: 180,
@@ -5237,7 +5429,22 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/(?:sv\/)?program\/[^/]+\/?$/i],
             defaultCity: 'Stockholm',
             maxUrls: 300,
+            // Samma platsläsning som källan dansenshus ovan: "Spelas på" pekar
+            // ut scenen per föreställning (14/11 2026), med
+            // husets egen kartnål i länken (!3d<lat>!4d<lng>):
+            //   <strong>Spelas på</strong></p><p> <a href="https://www.google.com/maps/place/
+            //   Dansens+Hus+Elverket/@…!3d59.3358014!4d18.0881043">Elverket, Linnégatan 69 </a>
+            // Spelplatserna är FLERA (Barnhusgatan 12-14, Elverket på Linnégatan
+            // 69, Mårbackagatan 11), så adress och nål läses per sida. Namnet
+            // är alltid "Dansens Hus". Alla 44 låg på Stockholms mittpunkt.
+            defaultVenue: 'Dansens Hus',
+            detailPlaceRegex: {
+                address: /<strong>\s*Spelas på\s*<\/strong>\s*<\/p>\s*<p>\s*<a[^>]*>\s*[^<,]+,\s*([^<]+?)\s*</,
+                coords: /<strong>\s*Spelas på\s*<\/strong>\s*<\/p>\s*<p>\s*<a[^>]*href="https:\/\/www\.google\.com\/maps\/place\/[^"]*!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)"/,
+            },
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         status: 'active',
         lastVerified: '2026-06-09',
@@ -5890,7 +6097,20 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
             defaultCity: 'Västervik',
             maxUrls: 200,
+            // Informationsrutans adressrad (14/11 2026):
+            //   <li class="location-info-holder"><strong>Adress: </strong>
+            //   <span>Västerviksvägen 4B, 59430 Gamleby</span></li>
+            // Lokalnamnet ("Plats:") lästes redan, men utan adressen föll
+            // namn som Nominatim inte känner till stadens mittpunkt, och
+            // postorten (t.ex. Gamleby) gick förlorad.
+            // OBS kartans lat/lng i sidans skript (57.756084, 16.634746) är
+            // samma på varje sida: kartans startläge, ingen plats.
+            detailPlaceRegex: {
+                address: /<strong>\s*Adress:\s*<\/strong>\s*<span>\s*([^<]+?)\s*<\/span>/,
+            },
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         // Fönstret vidgat 3/9 2026: dry-run visade +36 event mellan 30 och 180
         // dagar fram som 30-dagarsfiltret slängde (småortssvepet).
@@ -6763,9 +6983,12 @@ export const SOURCES: Source[] = [
             defaultCity: 'Gävle',
             maxUrls: 250,
             // Platsrutan: <b>Bomhus Hembygdsgård</b><br>Furuviksvägen 5 (#229).
+            // Adressen läses till rutans slut, så postorten på raden under
+            // följer med: <b>Agnes Kulturhus</b><br> Slottstorget 1<br>802 50
+            // Gävle. Utan den geokodas Hamrånge kyrka (817 40 Bergby) i Gävle.
             detailPlaceRegex: {
                 venue: /event-place-information">\s*<b>\s*([^<]+?)\s*<\/b>/,
-                address: /event-place-information">\s*<b>[^<]*<\/b>\s*<br\s*\/?>\s*([^<]*\d[^<]*?)\s*</,
+                address: /event-place-information">\s*<b>[^<]*<\/b>\s*<br\s*\/?>\s*((?:[^<]|<br\s*\/?>)*?\d(?:[^<]|<br\s*\/?>)*?)[\s.]*<\/p>/,
             },
         },
         contentSweep: '2026-11-14',
@@ -6888,7 +7111,15 @@ export const SOURCES: Source[] = [
             // Meta-desc = eventtiteln (falsk) — brödtexten är beskrivningen.
             detailBodyDesc: true,
             defaultCity: 'Hallstahammar',
+            // API:t saknar plats för en del event (15 av 61 hette bara
+            // "Hallstahammar" 14/11) fast faktarutan på sidan har den:
+            //   <strong>Plats:</strong> Kulturhuset, biblioteket </p>
+            // Bara NAMNET finns - varken adress eller koordinater - så
+            // punkten på kartan hänger på att namnet går att geokoda.
+            detailPlace: { venue: /<strong>\s*Plats:\s*<\/strong>\s*([^<]+?)\s*<\/p>/ },
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         status: 'experimental',
         notes: 'Hallstahammars turistsajt, samma RESTApp-motor som Visit Västra Mälardalen men rutten heter events-rest. 61 event, 59 framtida.',
@@ -7562,7 +7793,19 @@ export const SOURCES: Source[] = [
             defaultCity: 'Trollhättan',
             defaultVenue: 'Folkets Hus Kulturhuset',
             maxUrls: 120,
+            // Husets egen platspost i RSC-strömmen (14/11 2026):
+            //   \"title\":\"Folkets Hus Kulturhuset\",\"id\":\"…\",\"geolocation\":{\"latitude\":58.286293,
+            //   \"longitude\":12.291213},\"address\":\"Kungsgatan 25\",\"city\":\"Trollhättan\"
+            // Alla salonger (Hebeteatern, Clio, Kulturbaren, Apollon) ligger i
+            // huset. "Folkets Hus Kulturhuset, Trollhättan" geokodade annars
+            // bara till ortens mittpunkt (54 event). Se även venueFixes.ts.
+            detailPlaceRegex: {
+                address: /\\"title\\":\\"Folkets Hus Kulturhuset\\",\\"id\\":\\"[^"\\]+\\",\\"geolocation\\":\{[^}]*\},\\"address\\":\\"([^"\\]+)\\"/,
+                coords: /\\"title\\":\\"Folkets Hus Kulturhuset\\",\\"id\\":\\"[^"\\]+\\",\\"geolocation\\":\{\\"latitude\\":(-?\d+\.\d+),\\"longitude\\":(-?\d+\.\d+)\}/,
+            },
         },
+        // Läker de kända eventen efter platsfixen 14/11.
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         status: 'experimental',
         // Scenen släpper hela höst- och julsäsongen på en gång. Med default-
