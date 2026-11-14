@@ -390,7 +390,9 @@ export function applyDetailPlaceRegex(
     const venue = grab(rx.venue);
     if (venue && venue.length <= 80) { ev.venueName = venue; hit = true; }
     // "Torggatan 10 - Falkenberg - 31147" (Falkenberg) → kommaseparerad adress.
-    const address = grab(rx.address)?.replace(/\s+-\s+/g, ', ');
+    // Även "Skolvägen 20, 196 34, Kungsängen" (Upplands-Bro) → "196 34 Kungsängen",
+    // så postorten går att läsa.
+    const address = grab(rx.address)?.replace(/\s+-\s+/g, ', ').replace(/(\d{3} ?\d{2}),\s*(?=\p{L})/u, '$1 ');
     if (address) {
         ev.address = address; hit = true;
         const town = postalTown(address);

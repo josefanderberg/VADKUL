@@ -26,7 +26,7 @@ import { domainLimiter } from '../rateLimiter';
 import * as cheerio from 'cheerio';
 import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
 import { findFirstDateInText } from '../../utils/swedishDate';
-import { getSharedBrowser } from './sitemap';
+import { getSharedBrowser, applyDetailPlaceRegex } from './sitemap';
 
 const DEFAULT_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -167,6 +167,15 @@ export interface SiteVisionConfig {
      * Samma app kör degerfors.se; c-parametern (kategori) utelämnas där.
      */
     pageApi?: { pageId: string; portletId: string };
+    /**
+     * Platsen ur DETALJSIDAN när listsvaret saknar venue (#229, 14/11 2026):
+     * venue och adress ur capture-grupp 1, samma tolkning som sitemap-motorns
+     * detailPlaceRegex. Hämtas bara för event utan venue, och bara nya event
+     * (kända på refresh-körningar). Värmdö hade 153 av 154 event på
+     * Gustavsbergs mittpunkt fast sidan säger "Plats: Gustavsbergs
+     * Porslinsmuseum"; Varberg 73 av 73.
+     */
+    detailPlace?: { venue?: RegExp; address?: RegExp };
     /**
      * SiteVision RESTApp "EventService" (Dalarna-mallen — vansbro.se,
      * morakommun.se, orsa.se, alvdalen.se; upptäckt 2026-08-26):
@@ -1224,7 +1233,9 @@ async function backfillDetails(
 ): Promise<void> {
     const wantDesc = !!(config.fetchDetailDesc || config.detailBodyDesc);
     const wantOrganizer = !!config.detailOrganizer;
-    if (!wantDesc && !wantOrganizer) return;
+    const wantPlace = !!config.detailPlace;
+    if (!wantDesc && !wantOrganizer && !wantPlace) return;
+    let placed = 0;
     let filled = 0;
     let retitled = 0;
     let organized = 0;
@@ -1235,9 +1246,13 @@ async function backfillDetails(
         const needsTitle = wantDesc && isTruncatedTitle(ev.title);
         const needsOrganizer = wantOrganizer && !ev.hostName
             && (!!ctx.refreshKnown || !ctx.isKnownUrl || !(await ctx.isKnownUrl(ev.url)));
-        if (!needsDesc && !needsTitle && !needsOrganizer) continue;
+        const needsPlace = wantPlace && !ev.venueName && !ev.coords
+            && (!!ctx.refreshKnown || !ctx.isKnownUrl || !(await ctx.isKnownUrl(ev.url)));
+        if (!needsDesc && !needsTitle && !needsOrganizer && !needsPlace) continue;
         const html = await fetchHtml(ev.url, config);
         if (!html) continue;
+
+        if (needsPlace && applyDetailPlaceRegex(html, config.detailPlace!, ev)) placed++;
 
         if (needsOrganizer) {
             const organizer = organizerFromRestAppHtml(html);
@@ -1266,6 +1281,7 @@ async function backfillDetails(
             }
         }
     }
+    if (placed) ctx.log(`  detalj-plats: ${placed} platser ur detaljsidan`);
     if (filled) ctx.log(`  detalj-desc: ${filled} beskrivningar ur ${config.detailBodyDesc ? 'brödtexten' : 'meta-taggar'}`);
     if (retitled) ctx.log(`  detalj-titel: ${retitled} kapade titlar lagade ur og:title`);
     if (organized || noOrganizer) {

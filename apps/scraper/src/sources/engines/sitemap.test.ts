@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord, isRememberedGone, nextGoneMemory } from './sitemap';
 import type { RawEvent } from '../types';
+import { SOURCES } from '../registry';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
 function ev(partial: Partial<RawEvent> = {}): RawEvent {
@@ -1003,5 +1004,45 @@ describe('borta-minnet', () => {
         const old = { [A]: '2026-06-16T10:00:00.000Z', [B]: '', 'https://falkenberg.se/evenemang/utgangen/': '' };
         const next = nextGoneMemory(old, [at(A), at(B), at(C)], [at(C, '2026-10-01T00:00:00Z')], [B]);
         expect(next).toEqual({ [A]: '2026-06-16T10:00:00.000Z', [C]: '2026-10-01T00:00:00.000Z' });
+    });
+});
+
+// Kommunkällor som låg på ortens mittpunkt (#229, 14/11 2026): utsnitt ur
+// riktiga detaljsidor, tolkade med källornas egna regexar ur registret.
+describe('platsfältet på kommunernas detaljsidor', () => {
+    const rxOf = (id: string) => {
+        const cfg: any = (SOURCES as any[]).find(s => s.id === id)!.config;
+        return cfg.detailPlaceRegex ?? cfg.detailPlace;
+    };
+    const place = (id: string, html: string, city: string) => {
+        const e = ev({ city });
+        applyDetailPlaceRegex(html, rxOf(id), e);
+        return { venue: e.venueName, address: e.address, city: e.city };
+    };
+
+    it('Gävle: lokal i fetstil, gatan på raden under', () => {
+        const html = '<p class="event-place-information">\n <b>Bomhus Hembygdsgård</b><br>\n Furuviksvägen 5 </p>';
+        expect(place('gavle-kommun', html, 'Gävle')).toEqual({ venue: 'Bomhus Hembygdsgård', address: 'Furuviksvägen 5', city: 'Gävle' });
+    });
+
+    it('Upplands-Bro: lokal, gata och postort före "Hitta hit"', () => {
+        const html = '<span>Ekhammarhallen, Skolvägen 20, 196 34, Kungsängen </span> <a href="https://www.google.com/maps?q=Ekhammarhallen" target="_blank"> Hitta hit </a>';
+        expect(place('upplands-bro', html, 'Upplands-Bro')).toEqual({ venue: 'Ekhammarhallen', address: 'Skolvägen 20, 196 34 Kungsängen', city: 'Kungsängen' });
+    });
+
+    it('Upplands-Bro: bara lokal och ort ger ingen adress', () => {
+        const html = '<span>Brohuset/Biblioteket, Bro</span> <a href="https://www.google.com/maps?q=Brohuset%2FBiblioteket%2C%20Bro" target="_blank"> Hitta hit </a>';
+        expect(place('upplands-bro', html, 'Upplands-Bro')).toEqual({ venue: 'Brohuset/Biblioteket', address: undefined, city: 'Upplands-Bro' });
+    });
+
+    it('Värmdö: bara lokalen, gatan lämnas (ort saknas)', () => {
+        const html = '<p class="env-ui-text-overline"> Plats: Seniorcenter Diamanten Stavsnäs, Skolvägen 17 </p>';
+        expect(place('varmdo-kommun', html, 'Gustavsberg')).toEqual({ venue: 'Seniorcenter Diamanten Stavsnäs', address: undefined, city: 'Gustavsberg' });
+        expect(place('varmdo-kommun', '<p class="env-ui-text-overline"> Plats: Gustavsbergs Porslinsmuseum </p>', 'Gustavsberg').venue).toBe('Gustavsbergs Porslinsmuseum');
+    });
+
+    it('Varberg: länkad lokal och adress på nästa rad', () => {
+        const html = '<h2 class="vbg-event-info__heading"> Plats </h2> <ul> <li> <a href="/kulturhuset-komedianten/stadsbiblioteket"> Stadsbiblioteket </a> </li> <li> Engelbrektsgatan 7, 432 41 Varberg </li> </ul>';
+        expect(place('sb-varberg-se', html, 'Varberg')).toEqual({ venue: 'Stadsbiblioteket', address: 'Engelbrektsgatan 7, 432 41 Varberg', city: 'Varberg' });
     });
 });

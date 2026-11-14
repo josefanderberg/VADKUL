@@ -2994,7 +2994,15 @@ export const SOURCES: Source[] = [
                     sitemapUrl: 'https://www.upplands-bro.se/sitemap.xml',
                     urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
                     defaultCity: 'Upplands-Bro',
+                    // Platsraden i sidhuvudet, före "Hitta hit"-länken:
+                    // "Ekhammarhallen, Skolvägen 20, 196 34, Kungsängen" eller
+                    // bara "Brohuset/Biblioteket, Bro" (#229).
+                    detailPlaceRegex: {
+                        venue: /<span>\s*([^<,]+?)\s*(?:,[^<]*)?<\/span>\s*<a href="https:\/\/www\.google\.com\/maps\?q=/,
+                        address: /<span>[^<,]+,\s*([^<]*\d[^<]*?)\s*<\/span>\s*<a href="https:\/\/www\.google\.com\/maps\?q=/,
+                    },
                 },
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         notes: 'Probe-sitemap 2026-06-04: 79 event-URLs (evenemang-mönster).',
         lastVerified: '2026-06-04',
@@ -6754,7 +6762,13 @@ export const SOURCES: Source[] = [
             urlPatterns: [/\/evenemang\/[a-z0-9][a-z0-9-]{2,}/i],
             defaultCity: 'Gävle',
             maxUrls: 250,
+            // Platsrutan: <b>Bomhus Hembygdsgård</b><br>Furuviksvägen 5 (#229).
+            detailPlaceRegex: {
+                venue: /event-place-information">\s*<b>\s*([^<]+?)\s*<\/b>/,
+                address: /event-place-information">\s*<b>[^<]*<\/b>\s*<br\s*\/?>\s*([^<]*\d[^<]*?)\s*</,
+            },
         },
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         status: 'active',
         discovery: { method: 'probe-sitemap', probeUrl: 'https://www.gavle.se/wp-sitemap-posts-gk_event-1.xml', date: '2026-06-12', rawEventCount: 171, notes: 'Dedikerad event-post-type-sitemap (gk_event) — bra signal.' },
@@ -7122,7 +7136,12 @@ export const SOURCES: Source[] = [
             pageApi: { pageId: '4.62b6567e177d2c33d13c3489', portletId: '12.467d267619ed4689c71a97c' },
             defaultCity: 'Gustavsberg',
             maxItems: 400,
+            // "Plats: Seniorcenter Diamanten Stavsnäs, Skolvägen 17" (#229). Bara
+            // lokalen: gatan saknar ort och skulle geokodas i Gustavsberg fast
+            // lokalen ligger i Stavsnäs eller Hemmesta.
+            detailPlace: { venue: /env-ui-text-overline">\s*Plats:\s*([^<,]+?)\s*[,<]/ },
         },
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d',
         status: 'experimental',
         notes: 'Värmdös kalender är en JS-webapp mot SiteVisions /page-route — 274 event i kalendern, störst av svansens JS-väggar. startDate/endDate är epoch-ms med riktig tid. Ingen venue i listsvaret; geokodas mot Gustavsberg (centralorten).',

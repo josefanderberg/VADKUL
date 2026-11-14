@@ -214,7 +214,16 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Varberg Kommun',
         region: 'varberg',
         engine: 'sitevision' as const,
-        config: { urls: ["https://www.varberg.se/kalender"], defaultCity: 'Varberg' },
+        config: {
+            urls: ["https://www.varberg.se/kalender"], defaultCity: 'Varberg',
+            // Platslistan: lokalen (ofta en länk) och på nästa rad adressen
+            // "Engelbrektsgatan 7, 432 41 Varberg" (#229).
+            detailPlace: {
+                venue: /vbg-event-info__heading">\s*Plats\s*<\/h2>\s*<ul>\s*<li>\s*(?:<a[^>]*>)?\s*([^<]+?)\s*</,
+                address: /vbg-event-info__heading">\s*Plats\s*<\/h2>\s*<ul>\s*<li>[\s\S]*?<\/li>\s*<li>\s*([^<]*\d[^<]*?)\s*<\/li>/,
+            },
+        },
+        contentSweep: '2026-11-14',
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {
