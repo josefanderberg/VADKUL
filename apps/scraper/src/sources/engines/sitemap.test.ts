@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord, isRememberedGone, nextGoneMemory } from './sitemap';
 import type { RawEvent } from '../types';
 
 /** Minimal RawEvent-fabrik — bara fälten som backfillPlaceFromHtml rör. */
@@ -973,5 +973,35 @@ describe('Falkenbergs detaljsidor', () => {
         expect(priceFromDetailSelector(page('x', '<tr><td>Alla</td><td>0 SEK</td></tr>'), PRICE_SEL)).toBe('Gratis');
         expect(priceFromDetailSelector(page('x', '<tr><td>Info</td><td>Begränsat antal platser</td></tr>'), PRICE_SEL)).toBeUndefined();
         expect(priceFromDetailSelector('<p>Ingen tabell</p>', PRICE_SEL)).toBeUndefined();
+    });
+});
+
+// Borta-minnet (#228): 404-sidor som ligger kvar i sitemapen ska inte äta taket.
+describe('borta-minnet', () => {
+    const A = 'https://falkenberg.se/evenemang/a/';
+    const B = 'https://falkenberg.se/evenemang/b/';
+    const C = 'https://falkenberg.se/evenemang/c/';
+    const at = (url: string, iso?: string) => ({ url, lastmod: iso ? new Date(iso) : undefined });
+
+    it('hoppar över en URL som setts borta med samma lastmod', () => {
+        const gone = { [A]: '2026-06-16T10:00:00.000Z' };
+        expect(isRememberedGone(at(A, '2026-06-16T10:00:00Z'), gone)).toBe(true);
+        expect(isRememberedGone(at(B, '2026-06-16T10:00:00Z'), gone)).toBe(false);
+    });
+
+    it('prövar igen när sitemapen ger ett nyare lastmod', () => {
+        const gone = { [A]: '2026-06-16T10:00:00.000Z' };
+        expect(isRememberedGone(at(A, '2026-11-01T08:00:00Z'), gone)).toBe(false);
+    });
+
+    it('URL utan lastmod: borta tills den får ett', () => {
+        expect(isRememberedGone(at(A), { [A]: '' })).toBe(true);
+        expect(isRememberedGone(at(A, '2026-11-01T08:00:00Z'), { [A]: '' })).toBe(false);
+    });
+
+    it('nästa minne: lägger till nya 404, rensar det som lämnat sitemapen eller svarar igen', () => {
+        const old = { [A]: '2026-06-16T10:00:00.000Z', [B]: '', 'https://falkenberg.se/evenemang/utgangen/': '' };
+        const next = nextGoneMemory(old, [at(A), at(B), at(C)], [at(C, '2026-10-01T00:00:00Z')], [B]);
+        expect(next).toEqual({ [A]: '2026-06-16T10:00:00.000Z', [C]: '2026-10-01T00:00:00.000Z' });
     });
 });

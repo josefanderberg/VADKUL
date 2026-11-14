@@ -38,6 +38,7 @@ import { findFirstDateInText, rangeToStartText } from '../../utils/swedishDate';
 import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../../utils/text';
 import { extractStreetAddress, placeFromLines, postalTown } from '../../utils/swedishAddress';
 import { isInNordic } from '../../utils/venueCoordinates';
+import { getSyncMeta, setSyncMeta } from '../../utils/sqliteHelper';
 
 const gunzip = promisify(zlib.gunzip);
 
@@ -647,7 +648,7 @@ async function fetchRenderedHtml(url: string, cfg: SitemapConfig): Promise<strin
  *
  * Returnerar HTML/XML-strängen eller null om alla försök misslyckas.
  */
-async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal): Promise<string | null> {
+async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal, onStatus?: (status: number) => void): Promise<string | null> {
     const isGzUrl = url.toLowerCase().endsWith('.gz');
     await domainLimiter.wait(url);
     try {
@@ -671,6 +672,7 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
             redirect: 'follow',
         }, { signal, timeoutPerAttemptMs: cfg.timeoutMs ?? DEFAULT_TIMEOUT, label: url });
 
+        onStatus?.(res.status);
         if (!res.ok) return null;
 
         const ct = (res.headers.get('content-type') || '').toLowerCase();
@@ -690,6 +692,56 @@ async function fetchText(url: string, cfg: SitemapConfig, signal?: AbortSignal):
     } catch {
         return null;
     }
+}
+
+/**
+ * BORTA-MINNET (#228, 13/11 2026). Sajter låter passerade event ligga kvar i
+ * sitemapen fast sidan är borttagen: Falkenberg hade 575 event-URL:er varav
+ * ~500 svarade 404. De nyaste 300 (taket) hämtades varje körning, 224 av dem
+ * i onödan, och levande event längre ner i listan nåddes aldrig.
+ *
+ * Motorn minns därför vilka URL:er som svarat 404/410 (sync_meta, per
+ * sitemap) och hoppar över dem FÖRE taket, så taket går till sidor som kan
+ * finnas. En URL prövas igen om sitemapen ger den ett nyare lastmod, och
+ * minnet rensas på URL:er som lämnat sitemapen. Värdet är URL → lastmod (ISO,
+ * tom sträng utan lastmod) när sidan sågs borta.
+ */
+export type GoneMemory = Record<string, string>;
+
+const goneKey = (cfg: SitemapConfig): string => `sitemapGone.${cfg.sitemapUrl}`;
+
+function loadGone(cfg: SitemapConfig): GoneMemory {
+    try {
+        const parsed = JSON.parse(getSyncMeta(goneKey(cfg)) ?? '{}');
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+/** Är URL:en känd som borta, med samma (eller äldre) lastmod som då? */
+export function isRememberedGone(entry: SitemapEntry, gone: GoneMemory): boolean {
+    const seen = gone[entry.url];
+    if (seen === undefined) return false;
+    const now = entry.lastmod?.toISOString() ?? '';
+    return now <= seen;
+}
+
+/**
+ * Nästa minne: det gamla + körningens nya 404:or, minus URL:er som lämnat
+ * sitemapen eller som svarade igen. Ren funktion.
+ */
+export function nextGoneMemory(
+    old: GoneMemory, inSitemap: SitemapEntry[], newlyGone: SitemapEntry[], alive: string[],
+): GoneMemory {
+    const present = new Set(inSitemap.map(e => e.url));
+    const back = new Set(alive);
+    const out: GoneMemory = {};
+    for (const [url, lastmod] of Object.entries(old)) {
+        if (present.has(url) && !back.has(url)) out[url] = lastmod;
+    }
+    for (const e of newlyGone) out[e.url] = e.lastmod?.toISOString() ?? '';
+    return out;
 }
 
 export interface SitemapEntry {
@@ -925,12 +977,22 @@ async function discoverEntries(cfg: SitemapConfig, ctx: EngineContext): Promise<
         return tb - ta;
     });
 
+    // Borta-minnet: kända 404:or tar ingen plats under taket (se GoneMemory).
+    const gone = loadGone(cfg);
+    const live = filtered.filter(e => !isRememberedGone(e, gone));
+    const skippedGone = filtered.length - live.length;
+    discoveredInSitemap.set(cfg, filtered);
+
     const cap = cfg.maxUrls ?? DEFAULT_MAX_URLS;
-    const final = filtered.slice(0, cap);
+    const final = live.slice(0, cap);
     const withLastmod = final.filter(e => e.lastmod).length;
-    ctx.log(`sitemap: ${candidates.length} totalt → ${matching.length} matchande → ${filtered.length} efter blacklist → ${final.length} efter cap (${withLastmod} med lastmod)`);
+    const goneNote = skippedGone > 0 ? ` → ${live.length} utan ${skippedGone} kända 404` : '';
+    ctx.log(`sitemap: ${candidates.length} totalt → ${matching.length} matchande → ${filtered.length} efter blacklist${goneNote} → ${final.length} efter cap (${withLastmod} med lastmod)`);
     return final;
 }
+
+/** Körningens hela URL-lista (före borta-filter och tak) - underlag när minnet rensas. */
+const discoveredInSitemap = new WeakMap<SitemapConfig, SitemapEntry[]>();
 
 /**
  * Cheerio-fallback för sidor utan JSON-LD. Plockar h1 + og:title/description/image,
@@ -1631,6 +1693,7 @@ export const sitemapEngine = async (
     const concurrency = config.concurrency ?? DEFAULT_CONCURRENCY;
     let extracted = 0;
     let failed = 0;
+    let gone = 0;
     let noEvent = 0;
     let fetched = 0;
     let skippedKnown = 0;
@@ -1643,7 +1706,11 @@ export const sitemapEngine = async (
     // Puppeteer för SPAer — singleton browser, mindre concurrency för stabilitet
     const detailFetch = config.useBrowser
         ? (url: string) => fetchRenderedHtml(url, config)
-        : (url: string) => fetchText(url, config, ctx.signal);
+        : (url: string) => fetchText(url, config, ctx.signal, status => { lastStatus.set(url, status); });
+    // Borta-minnet: 404/410 är inget fel, sidan är borttagen (se GoneMemory).
+    const lastStatus = new Map<string, number>();
+    const newlyGone: SitemapEntry[] = [];
+    const alive: string[] = [];
 
     async function worker() {
         while (queue.length > 0 && !aborted) {
@@ -1659,7 +1726,13 @@ export const sitemapEngine = async (
             }
             const html = await detailFetch(entry.url);
             fetched++;
-            if (!html) { failed++; events.push(null); continue; }
+            if (!html) {
+                const status = lastStatus.get(entry.url);
+                if (status === 404 || status === 410) { gone++; newlyGone.push(entry); } else failed++;
+                events.push(null);
+                continue;
+            }
+            alive.push(entry.url);
             // Sidans eget datumfält (selektor eller regex) är sanningen — ingen fritext-fallback.
             const own = config.detailDateSelector
                 ? dateFromDetailSelector(html, config.detailDateSelector, new Date(), { rangeStart: config.detailDateRangeStart })
@@ -1742,6 +1815,15 @@ export const sitemapEngine = async (
 
     const exitNote = aborted ? ` [early-exit ${fetched}/${entries.length}]` : '';
     const knownNote = skippedKnown > 0 ? `, ${skippedKnown} kända URL:er skippade före fetch` : '';
-    ctx.log(`sitemap: ${extracted} events extraherade (${failed} fetch-fel, ${noEvent} utan event-struktur${knownNote})${exitNote}`);
+    const goneNote = gone > 0 ? `, ${gone} borttagna sidor (404) ihågkomna` : '';
+    ctx.log(`sitemap: ${extracted} events extraherade (${failed} fetch-fel${goneNote}, ${noEvent} utan event-struktur${knownNote})${exitNote}`);
+    if (newlyGone.length > 0 || alive.length > 0) {
+        try {
+            const next = nextGoneMemory(loadGone(config), discoveredInSitemap.get(config) ?? entries, newlyGone, alive);
+            setSyncMeta(goneKey(config), JSON.stringify(next));
+        } catch (e) {
+            ctx.log(`sitemap: borta-minnet kunde inte sparas (${(e as Error).message})`);
+        }
+    }
     return events.filter((e): e is RawEvent => e !== null);
 };
