@@ -7,7 +7,9 @@
  *   npm run web-snowball -- --dry        # proba + smoke, skriv INGEN registry-fil
  *   npm run web-snowball -- --max=10     # cappa antal kandidater (default 40)
  *   npm run web-snowball -- --candidates=fil.txt   # riktat svep: egen lista i
- *       stället för skörd; rad = "Namn|region|https://bas|Stad" (stad valfri)
+ *       stället för skörd; rad = "Namn|region|https://bas|Stad" (stad valfri).
+ *       En femte kolumn "ställe" säger att sajten är EN lokal (krog, scen):
+ *       namnet blir då defaultVenue. `npm run venue-candidates` skriver sådana.
  *
  * Kedjan (allt måste passera innan en källa går live):
  *   1. SKÖRD    — domäner ur event-beskrivningarnas länkar (hög precision:
@@ -42,6 +44,7 @@ import { SOURCES } from '../sources/registry';
 import { SNOWBALL_SOURCES } from '../sources/registry-snowball';
 import { Source, RawEvent, EngineContext } from '../sources/types';
 import { getSqlitePath } from '../utils/sqliteHelper';
+import { judgeEvents, type SmokeVerdict } from '../utils/snowballSmoke';
 import { closeJsonLdBrowser } from '../sources/engines/json-ld';
 import { closeXhrDiscoveryBrowser } from '../sources/engines/xhr-discovery';
 import { closeSitemapBrowser } from '../sources/engines/sitemap';
@@ -54,7 +57,6 @@ const MAX_CANDIDATES = 40;        // per veckokörning
 const MAX_SLUG_GUESSES = 12;      // lågprecisions-delen cappas hårdare
 const RETRY_FAILED_DAYS = 90;     // re-proba FAIL-domäner först efter ~kvartal
 const SMOKE_WINDOW_DAYS = 180;
-const SMOKE_MIN_EVENTS = 3;
 
 // Domäner som aldrig är kandidater: sociala medier, biljett-plattformar vi
 // redan täcker via egna källor, länkkortare, kartor, myndighets-generiskt.
@@ -120,7 +122,12 @@ function prettyName(domain: string): string {
     return stem.charAt(0).toUpperCase() + stem.slice(1);
 }
 
-interface Candidate { name: string; region: string; base: string; domain: string; refs: number; via: 'beskrivning' | 'slug-gissning' | 'fil'; sample?: string; city?: string }
+interface Candidate {
+    name: string; region: string; base: string; domain: string; refs: number;
+    via: 'beskrivning' | 'slug-gissning' | 'fil'; sample?: string; city?: string;
+    /** Sajten ÄR en enda lokal (krog, scen) — namnet blir defaultVenue. Kolumn 5 = "ställe" i kandidatfilen. */
+    isVenue?: boolean;
+}
 
 // ─── 1. SKÖRD ────────────────────────────────────────────────────────────────
 
@@ -211,14 +218,17 @@ function candidatesFromFile(file: string, max: number): Candidate[] {
     const out: Candidate[] = [];
     const lines = fs.readFileSync(file, 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
     for (const line of lines) {
-        const [name, region, base, city] = line.split('|').map((p) => p.trim());
+        const [name, region, base, city, kind] = line.split('|').map((p) => p.trim());
         if (!base) { console.log(`   hoppar rad utan bas-URL: "${line}"`); continue; }
         const domain = domainFromUrl(base);
         if (existing.has(domain) || existing.has('www.' + domain)) { console.log(`   redan i registry: ${domain}`); continue; }
         if (DOMAIN_BLOCKLIST.test(domain)) { console.log(`   blocklistad: ${domain}`); continue; }
         const st = state.domains[domain];
         if (st && (st.verdict === 'DUPE' || daysSince(st.date) < RETRY_FAILED_DAYS)) { console.log(`   nyligen probad (${st.verdict} ${st.date}): ${domain}`); continue; }
-        out.push({ name: name || prettyName(domain), region: region || 'national', base, domain, refs: 0, via: 'fil', city: city || undefined });
+        out.push({
+            name: name || prettyName(domain), region: region || 'national', base, domain, refs: 0, via: 'fil',
+            city: city || undefined, isVenue: /^st[äa]lle$/i.test(kind ?? ''),
+        });
     }
     return out.slice(0, max);
 }
@@ -230,46 +240,6 @@ function parseRegexLiteral(s: unknown): RegExp | unknown {
     if (typeof s !== 'string') return s;
     const m = s.match(/^\/(.*)\/([a-z]*)$/s);
     return m ? new RegExp(m[1], m[2]) : s;
-}
-
-interface SmokeVerdict { ok: boolean; reasons: string[]; events: number; sampleTitles: string[]; allTitles: string[] }
-
-export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date, domain: string): SmokeVerdict {
-    const reasons: string[] = [];
-    const future = raw.filter((e) => e.startDate instanceof Date && !isNaN(+e.startDate)
-        && e.startDate >= windowStart && e.startDate < windowEnd);
-
-    if (future.length < SMOKE_MIN_EVENTS) {
-        return { ok: false, reasons: [`bara ${future.length} framtida event (kräver ≥${SMOKE_MIN_EVENTS})`], events: future.length, sampleTitles: [], allTitles: [] };
-    }
-    const titles = future.map((e) => (e.title ?? '').trim());
-
-    const okLen = titles.filter((t) => t.length >= 3 && t.length <= 120).length;
-    if (okLen / titles.length < 0.8) reasons.push(`titellängder orimliga (${okLen}/${titles.length} inom 3–120 tecken)`);
-
-    const hasLetters = titles.filter((t) => /\p{L}{2}/u.test(t)).length;
-    if (hasLetters / titles.length < 0.9) reasons.push('titlar utan bokstäver');
-
-    const distinct = new Set(titles.map((t) => t.toLowerCase())).size;
-    if (distinct / titles.length < 0.5) reasons.push(`titlar repeteras (${distinct} unika av ${titles.length})`);
-
-    const JUNK = /cookie|integritetspolicy|personuppgift|logga in|meny|sök|404|not found|error|javascript|until\b|read more|läs mer$/i;
-    const junky = titles.filter((t) => JUNK.test(t)).length;
-    if (junky / titles.length > 0.2) reasons.push(`junk-ord i ${junky} titlar (navigation/cookies?)`);
-
-    // Sverige-signal: .se/.nu-domän räcker; annars kräv svenska tecken/ord i innehållet
-    const swedishDomain = /\.(se|nu)$/.test(domain);
-    if (!swedishDomain) {
-        const sv = future.filter((e) =>
-            /[åäöÅÄÖ]/.test(`${e.title} ${e.city ?? ''} ${e.address ?? ''} ${e.description ?? ''}`)).length;
-        if (sv / future.length < 0.3) reasons.push('ingen Sverige-signal (utländsk domän + inga svenska tecken)');
-    }
-
-    // Datumspridning: allt på exakt samma timestamp ⇒ trolig parse-artefakt
-    const stamps = new Set(future.map((e) => +e.startDate));
-    if (stamps.size === 1 && future.length >= 5) reasons.push('alla event på samma timestamp (datumparse trasig?)');
-
-    return { ok: reasons.length === 0, reasons, events: future.length, sampleTitles: titles.slice(0, 3), allTitles: titles };
 }
 
 async function smokeTest(suggestion: any): Promise<SmokeVerdict> {
@@ -421,6 +391,11 @@ async function main() {
         // Undantag: fil-kandidater där vi angett stad explicit.
         const displayName = cand?.via === 'beskrivning' ? prettyName(domain) : (cand?.name ?? prettyName(domain));
         sug.config = { ...sug.config, defaultCity: cand?.city ?? '' };
+        // En krog eller scen är sin egen lokal: utan defaultVenue hamnar varje
+        // event på ortens mittpunkt med ortsnamnet som plats (Slottsstallarna
+        // och PM & Vänner 14/11 — Tribe-flödet bär ingen venue). Kommun- och
+        // besökskalendrar (ingen "ställe"-markering) får aldrig en.
+        if (cand?.isVenue && cand.name) sug.config = { ...sug.config, defaultVenue: cand.name };
 
         process.stdout.write(`   smoke: ${domain.padEnd(32)} `);
         const v = await smokeTest(sug);
