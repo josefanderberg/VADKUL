@@ -9,7 +9,9 @@
  *    troféerna och deras utdelning, search.ts + cityPoints.ts = eventsöket
  *    och dess 291 orter, 21/10 2026, textLinks.ts = klickbara länkar i
  *    beskrivningar, featured.ts = boost-regeln och boostCredit.ts =
- *    kreditdagarna för outnyttjad boost, 4/11 2026)
+ *    kreditdagarna för outnyttjad boost, 4/11 2026, eventClouds.ts =
+ *    kartans molnlager: var molnen står, zoomkurvan, knuffen och skuggan,
+ *    14/11 2026)
  *
  * REGLER: paketet får aldrig bero på firebase, react eller node-API:er —
  * det ska gå att importera oförändrat i Next, Cloud Functions och React
@@ -28,3 +30,4 @@ export * from './search';
 export * from './textLinks';
 export * from './featured';
 export * from './boostCredit';
+export * from './eventClouds';

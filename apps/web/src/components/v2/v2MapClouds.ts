@@ -65,12 +65,15 @@ const CULL_MARGIN_PX = 220;
 const MOVE_REBUILD_MS = 200;
 const MAX_DPR = 2;
 
-const SPRITE_W = 256;
-const SPRITE_H = 168;
+// Formerna och ritkoden nedan är EXPORTERADE för appens bakning (#233):
+// vadkul-app/scripts/baka-moln.mjs ritar samma moln till PNG med just den här
+// koden, så appens moln är webbens. Ändras en form eller en färg: baka om.
+export const SPRITE_W = 256;
+export const SPRITE_H = 168;
 /** Var i spriten molnet har sin mitt (andel av höjden): sidomolnen står på
  *  sin platta undersida, molnen uppifrån är runda kring mitten. */
-const SIDE_ANCHOR_Y = 0.58;
-const TOP_ANCHOR_Y = 0.5;
+export const SIDE_ANCHOR_Y = 0.58;
+export const TOP_ANCHOR_Y = 0.5;
 /** Molnformerna: överlappande puffar (x, y, r) i spritens koordinater. Sex
  *  former, och var och en ritas även spegelvänd - 12 varianter, så upprepningen
  *  inte syns när molnen är många (#201, Josef 13/11: "Kanske mer varianter av
@@ -78,7 +81,7 @@ const TOP_ANCHOR_Y = 0.5;
  *  togs bort samma dag (Josef: "ta bort de smala molnet") - inga smala former.
  *  STACKMOLN FRÅN SIDAN, som loggan: runda tussar sedda uppifrån prövades i
  *  #218 och backades samma kväll (Josef: "det var bättre med sidomoln"). */
-const SPRITE_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
+export const SPRITE_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
     // Bulliga stackmoln (de tre första formerna).
     [[70, 100, 46], [118, 78, 58], [170, 94, 50], [206, 112, 34], [40, 116, 30], [126, 114, 48]],
     [[60, 104, 40], [104, 86, 50], [152, 74, 54], [196, 100, 44], [128, 114, 50], [226, 118, 26]],
@@ -96,7 +99,7 @@ const SPRITE_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number
  *  några som är ifrån ovan"): två runda tussar kring spritens mitt, utan platt
  *  undersida. Med speglingarna 4 av 16 varianter - en fjärdedel av molnen.
  *  Sidomolnen ska förbli i majoritet. */
-const TOP_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
+export const TOP_PUFFS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
     // Stor rund tuss med flikar runt om.
     [[128, 84, 50], [92, 70, 36], [164, 70, 38], [100, 106, 34], [158, 108, 36], [128, 52, 30], [128, 116, 30]],
     // Oregelbunden.
@@ -136,7 +139,7 @@ interface CloudSet {
     leaving: boolean;
 }
 
-function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>, top = false): HTMLCanvasElement {
+export function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>, top = false): HTMLCanvasElement {
     const cv = document.createElement('canvas');
     cv.width = SPRITE_W;
     cv.height = SPRITE_H;
@@ -174,7 +177,7 @@ function makeSprite(puffs: ReadonlyArray<readonly [number, number, number]>, top
 
 /** Markskuggan (#215): molnets egen form som en mjuk mörk fläck, i kartans
  *  djupa gröna. Ritas förskjuten under molnet (eventClouds.cloudShadow). */
-function makeShadowSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HTMLCanvasElement {
+export function makeShadowSprite(puffs: ReadonlyArray<readonly [number, number, number]>): HTMLCanvasElement {
     const cv = document.createElement('canvas');
     cv.width = SPRITE_W;
     cv.height = SPRITE_H;
