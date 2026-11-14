@@ -3849,11 +3849,17 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             kant i kant längs VÄNSTERKANTEN, topp till botten, i stället för
             centrerat bottenark - kartan ligger fri till höger. Kolumnen
             släpper då sin px-4 så panelen når skärmkanten. */}
-        <div className={`fixed bottom-0 left-0 right-0 z-[1250] flex flex-col ${sideNav ? 'items-start px-0' : 'items-center px-4'} pointer-events-none`} style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
+        {/* KANT I KANT PÅ MOBILEN (ägarbeslut 14/11, Josef: "eventkortet på
+            mobilen. att det går hela vägen ut till kanterna. varför har vi
+            en margin på sidorna"): under sm har kolumnen ingen sidluft, så
+            arket når skärmens kanter. Navraden ovanför kortet bär i stället
+            sin egen px-4 där, så Nästa och verktygen står kvar 16 px från
+            kanten. Från sm är allt som förut. */}
+        <div className={`fixed bottom-0 left-0 right-0 z-[1250] flex flex-col ${sideNav ? 'items-start px-0' : 'items-center px-0 sm:px-4'} pointer-events-none`} style={{ minHeight: '100vh', justifyContent: 'flex-end' }}>
             <div
                 className={sideNav
                     ? 'absolute bottom-4 flex flex-col items-start gap-2'
-                    : 'w-full max-w-4xl flex justify-between items-center mb-4'}
+                    : 'w-full max-w-4xl flex justify-between items-center mb-4 px-4 sm:px-0'}
                 // Panelen + 16 px luft.
                 style={sideNav ? { left: SIDE_PANEL_W + 16 } : undefined}
             >
