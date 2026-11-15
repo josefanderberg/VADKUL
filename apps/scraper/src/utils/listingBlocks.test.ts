@@ -331,6 +331,13 @@ describe('parseListing — det som inte är ett program', () => {
         expect(brief(html)).toEqual([]);
     });
 
+    it('en månadsrubrik är ingen titel (Hälsinglands Museum 15/11)', () => {
+        const html = `<html><body><main><h2>November 2026</h2>
+            <div class="ev"><p>Lördag 21 november kl 13:00</p><h3>Visning: Hälsingegårdar</h3></div>
+            <div class="ev"><p>Söndag 22 november kl 14:00</p><h3>Sagostund</h3></div></main></body></html>`;
+        expect(brief(html)).toEqual(['2026-11-21 13:00 Visning: Hälsingegårdar', '2026-11-22 14:00 Sagostund']);
+    });
+
     it('biografens statusrad är ingen filmtitel (Kino i Lund 15/11)', () => {
         const html = `<html><body><main>
             <div class="film"><h3>Visas</h3><p>Söndag 22 november</p><h4>Wild Horse Nine</h4></div>

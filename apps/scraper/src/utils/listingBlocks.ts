@@ -364,8 +364,12 @@ const OPENING_RE = /(?<![a-zåäö])(?:öppet|stängt|öppettider|closed|open|he
 
 const BARE_PRICE_RE = /^(?:(?:från|fr\.?|pris:?)\s+)?\d[\d ]*\s*(?:kr|:-|sek|kronor)\b.{0,20}$/i;
 
+/** En månadsrubrik ("November 2026", "december") delar in programmet — den är ingen titel. */
+const MONTH_HEADING_RE = new RegExp(`^(?:${MONTH_SRC})\\.?(?:\\s+20\\d{2})?$`, 'i');
+
 function titleOk(text: string): boolean {
     if (text.length < 3 || text.length > 110 || letters(text) < 3) return false;
+    if (MONTH_HEADING_RE.test(text.trim())) return false;
     if (CTA_RE.test(text) || GENERIC_RE.test(text)) return false;
     if (/[▼▾▸►⌄]/.test(text) || letters(text.replace(STATUS_WORDS_RE, ' ')) < 3) return false;   // menyrad eller bara status
     if (/[@:]$|@\S+\.\w{2,}/.test(text)) return false;                  // etikett eller e-postadress
