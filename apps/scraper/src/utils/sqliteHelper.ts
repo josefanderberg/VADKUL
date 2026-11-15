@@ -306,10 +306,17 @@ export function setEventAudit(url: string, verdict: string, confidence: string):
     }
 }
 
+// Priset FYLLS bara: källans pris (strukturerat, ur sidans eget fält) vinner
+// alltid över LLM:ens gissning ur beskrivningen. Förr stod här `price = ?` —
+// då nollade varje granskning källans pris när LLM:en inte hittade något i
+// texten, och nya event gick ut prislösa tills nästa sync läkte spegeln
+// (Sensus 15/11: 203 rader med "Gratis" i källan, NULL i spegeln).
 const setAuditFullStmt = sqlite.prepare(
     `UPDATE link_events
      SET aiVerdict = ?, aiConfidence = ?, category = ?, category_confidence = ?,
-         emoji = ?, price = ?, updatedAt = ?
+         emoji = ?,
+         price = CASE WHEN price IS NULL OR TRIM(price) = '' THEN ? ELSE price END,
+         updatedAt = ?
      WHERE url = ?`,
 );
 
@@ -322,7 +329,10 @@ export interface EventAuditWrite {
     price: string | null;
 }
 
-/** Skriver hela LLM-auditresultatet (verdict + kategori + emoji + pris) atomiskt. */
+/**
+ * Skriver hela LLM-auditresultatet (verdict + kategori + emoji + pris) atomiskt.
+ * Priset skrivs bara där raden saknar pris — källans pris skrivs aldrig över.
+ */
 export function setEventAuditWithCategory(url: string, a: EventAuditWrite): void {
     try {
         setAuditFullStmt.run(

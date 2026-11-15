@@ -8,7 +8,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import {
     upsertEvent, sqliteEventExists, getSqliteEvent, setEventStatus,
     recordScrapeRun, getRunsBySource, upsertKnownVenue, lookupVenueExact, lookupVenueSmart, lookupVenueNear,
-    getSyncMeta, setSyncMeta, deleteEventsByFirestoreIds,
+    getSyncMeta, setSyncMeta, deleteEventsByFirestoreIds, setEventAuditWithCategory,
 } from './sqliteHelper';
 
 beforeAll(() => {
@@ -58,6 +58,33 @@ describe('upsertEvent', () => {
         upsertEvent(ev('https://t.se/4', { firestoreId: 'fs-abc' }));
         upsertEvent(ev('https://t.se/4'));
         expect(getSqliteEvent('https://t.se/4').firestoreId).toBe('fs-abc');
+    });
+});
+
+describe('setEventAuditWithCategory — LLM-priset fyller bara luckor', () => {
+    const audit = (price: string | null) => ({
+        verdict: 'ok', confidence: 'high', category: 'stage', categoryConfidence: 'high', emoji: '🎭', price,
+    });
+
+    it('källans pris överlever en granskning som inte hittade något pris', () => {
+        upsertEvent(ev('https://t.se/audit-1', { price: 'Gratis' }));
+        setEventAuditWithCategory('https://t.se/audit-1', audit(null));
+        const row = getSqliteEvent('https://t.se/audit-1');
+        expect(row.price).toBe('Gratis');
+        expect(row.aiVerdict).toBe('ok');
+        expect(row.emoji).toBe('🎭');
+    });
+
+    it('källans pris vinner över LLM:ens gissning', () => {
+        upsertEvent(ev('https://t.se/audit-2', { price: '250 kr' }));
+        setEventAuditWithCategory('https://t.se/audit-2', audit('100 kr'));
+        expect(getSqliteEvent('https://t.se/audit-2').price).toBe('250 kr');
+    });
+
+    it('LLM:ens pris fyller i där källan saknade pris', () => {
+        upsertEvent(ev('https://t.se/audit-3'));
+        setEventAuditWithCategory('https://t.se/audit-3', audit('120 kr'));
+        expect(getSqliteEvent('https://t.se/audit-3').price).toBe('120 kr');
     });
 });
 

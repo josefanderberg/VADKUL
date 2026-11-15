@@ -69,6 +69,7 @@ interface Row {
     extractedAddress: string | null;
     description: string | null;
     hostName: string | null;
+    price: string | null;
 }
 
 let running = true;
@@ -93,7 +94,7 @@ function fetchBatch(limit: number): Row[] {
     const rdb = new Database(DB_PATH, { readonly: true });
     try {
         return rdb.prepare<[number], Row>(`
-            SELECT url, firestoreId, title, locationName, extractedAddress, description, hostName
+            SELECT url, firestoreId, title, locationName, extractedAddress, description, hostName, price
             FROM link_events
             WHERE time >= datetime('now')
               AND hidden = 0
@@ -167,7 +168,8 @@ async function processBatch(rows: Row[]): Promise<number> {
                         await firestoreDb.collection('linkEvents').doc(r.firestoreId).update(stamped({
                             category: result.category,
                             emoji: result.emoji,
-                            ...(result.price ? { price: result.price } : {}),
+                            // Bara där källan inte gav pris — samma regel som i spegeln.
+                            ...(result.price && !r.price?.trim() ? { price: result.price } : {}),
                             ...(autoHide ? { hidden: 1 } : {}),
                         }));
                     } catch (err) {
