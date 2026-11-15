@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { parseSvPage } from './sv';
+import { parseSvPage, parseSvCatalogPage } from './sv';
 
 // Nedtrimmat äkta kort från sv.se/kurser-och-evenemang?g_EventType=culture (2026-07-02).
-const card = (over: { href?: string; title?: string; date?: string; time?: string; loc?: string; price?: string } = {}) => `
+const card = (over: { href?: string; title?: string; date?: string; time?: string; loc?: string; price?: string; occasions?: number | null } = {}) => `
 <article itemscope itemtype="http://schema.org/Product" class="event-list__event-item">
     <figure class="event-list__figure">
         <a href="${over.href ?? '/kurser-och-evenemang/dans/lindy-hop-socialdans-med-livemusik-62924'}" itemprop="url" class="event-list__image-link" tabindex="-1">
@@ -32,7 +32,7 @@ const card = (over: { href?: string; title?: string; date?: string; time?: strin
             <span class="event-list__time" aria-label="Tid: ">
                 ${over.time ?? '19:00'}
             </span>
-            <span class="event-list__occasions" aria-label="1 Tillf&#xE4;llen">1 Tillf&#xE4;llen</span>
+            ${over.occasions === null ? '' : `<span class="event-list__occasions" aria-label="${over.occasions ?? 1} Tillf&#xE4;llen">${over.occasions ?? 1} Tillf&#xE4;llen</span>`}
         </div>
     </div>
 </article>`;
@@ -75,5 +75,33 @@ describe('parseSvPage', () => {
 
     it('tom sida → []', () => {
         expect(parseSvPage('<html><body><div>Inga träffar</div></body></html>')).toEqual([]);
+    });
+});
+
+describe('parseSvCatalogPage — hela katalogens engångsarrangemang (15/11)', () => {
+    it('ett tillfälle = ett arrangemang; studiecirklar med flera träffar hoppas', () => {
+        const evs = parseSvCatalogPage(page(
+            card({ href: '/kurser-och-evenemang/data-it/ai-for-foreningsarbete-umea-(kvall)-80154', title: 'AI - För föreningsarbete, Umeå (kväll)', loc: 'Umeå', date: 'ons 2026-11-18', time: '18:15', occasions: 1 }),
+            card({ href: '/kurser-och-evenemang/sprak/spanska-1-12345', title: 'Spanska 1', occasions: 10 }),
+            card({ href: '/kurser-och-evenemang/x/utan-tillfallen-1', title: 'Okänt antal', occasions: null }),
+        ));
+        expect(evs.map((e) => e.title)).toEqual(['AI - För föreningsarbete, Umeå (kväll)']);
+        expect(evs[0]).toMatchObject({ city: 'Umeå', price: 'Kostnadsfri', hasSpecificTime: true, url: 'https://www.sv.se/kurser-och-evenemang/data-it/ai-for-foreningsarbete-umea-(kvall)-80154' });
+        expect(evs[0].description).toBe('Arrangemang med Studieförbundet Vuxenskolan i Umeå.');
+    });
+
+    it('kulturlistan behåller sina kort oavsett antal tillfällen', () => {
+        expect(parseSvPage(page(card({ occasions: null }), card({ href: '/a-2', occasions: 3 })))).toHaveLength(2);
+    });
+});
+
+describe('distansarrangemang har ingen plats på kartan (15/11)', () => {
+    it('kort med ort "Distans" eller "Online" hoppas', () => {
+        const evs = parseSvCatalogPage(page(
+            card({ href: '/a-1', title: 'Webbinarium: Individuell plan', loc: 'Distans' }),
+            card({ href: '/a-2', title: 'Mullbänk och torpargrund - Online', loc: 'Online' }),
+            card({ href: '/a-3', title: 'Silversmide - Heldag', loc: 'Växjö' }),
+        ));
+        expect(evs.map((e) => e.title)).toEqual(['Silversmide - Heldag']);
     });
 });

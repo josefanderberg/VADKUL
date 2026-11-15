@@ -25,10 +25,31 @@ const LIST = `${SITE}/kurser-och-evenemang`;
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const MAX_PAGES = 60;
 
+/**
+ * Hela katalogen (utan eventtypfilter) bär föreläsningar och endagskurser som
+ * kulturfiltret missar: "AI för föreningsarbete" i Umeå, Uppsala och Vindeln
+ * 15/11 2026 fanns bara där (Josef såg dem hos Happymap). Katalogens kort har
+ * "N Tillfällen"; ett tillfälle = ett enskilt arrangemang med adress och pris.
+ * Studiecirklar med flera träffar hoppas.
+ */
+const MAX_CATALOG_PAGES = 150;
+const CATALOG_PAUSE_MS = 400;
+
+interface SvCard { ev: RawEvent; occasions?: number }
+
 /** Parsa en listsidas HTML → RawEvents. Exporterad för test. */
 export function parseSvPage(html: string): RawEvent[] {
+    return parseSvCards(html, 'Kulturarrangemang').map((c) => c.ev);
+}
+
+/** Katalogsidans kort med exakt ett tillfälle → RawEvents. Exporterad för test. */
+export function parseSvCatalogPage(html: string): RawEvent[] {
+    return parseSvCards(html, 'Arrangemang').filter((c) => c.occasions === 1).map((c) => c.ev);
+}
+
+function parseSvCards(html: string, kind: string): SvCard[] {
     const $ = cheerio.load(html);
-    const out: RawEvent[] = [];
+    const out: SvCard[] = [];
     $('article.event-list__event-item').each((_i, el) => {
         const card = $(el);
         const titleEl = card.find('.event-list__title').first();
@@ -46,11 +67,15 @@ export function parseSvPage(html: string): RawEvent[] {
         if (isNaN(startDate.getTime())) return;
 
         const city = card.find('.event-list__location').first().text().replace(/\s+/g, ' ').trim() || undefined;
+        // Distans- och webbarrangemang har ingen plats — "Distans" geokodades
+        // som en ort och 12 webbinarier hamnade i Göteborg (15/11 2026).
+        if (city && /^(?:distans|digital(?:t)?|online|webb(?:inarium)?|zoom|teams)\b/i.test(city)) return;
         const price = card.find('.event-list__price').first().text().replace(/\s+/g, ' ').trim() || undefined;
         const img = card.find('img.event-list__image').first().attr('src') || undefined;
         const idM = href.match(/-(\d+)\/?$/);   // slug slutar "-<id>"
+        const occM = card.find('.event-list__occasions').first().text().match(/(\d+)/);
 
-        out.push({
+        out.push({ occasions: occM ? Number(occM[1]) : undefined, ev: {
             externalId: idM ? idM[1] : undefined,
             title,
             startDate,
@@ -58,11 +83,11 @@ export function parseSvPage(html: string): RawEvent[] {
             city,
             venueName: city,
             imageUrl: img && !img.startsWith('http') ? `${SITE}${img}` : img,
-            description: `Kulturarrangemang med Studieförbundet Vuxenskolan${city ? ` i ${city}` : ''}.`,
+            description: `${kind} med Studieförbundet Vuxenskolan${city ? ` i ${city}` : ''}.`,
             price,
             hostName: 'Studieförbundet Vuxenskolan',
             hasSpecificTime: !!t,
-        });
+        } });
     });
     return out;
 }
@@ -95,5 +120,37 @@ export const svVuxenskolanEngine: Engine = async (_config, ctx) => {
         page++;
     }
     ctx.log(`${all.length} kulturarrangemang över ${page > MAX_PAGES ? MAX_PAGES : page} sidor`);
+
+    // Pass 2: hela katalogen, bara kort med ett tillfälle (föreläsningar, endagskurser).
+    const seen = new Set(all.map((e) => e.url));
+    let added = 0;
+    let past = 0;
+    let cpage = 1;
+    for (; cpage <= MAX_CATALOG_PAGES; cpage++) {
+        if (cpage > 1) await new Promise((r) => setTimeout(r, CATALOG_PAUSE_MS));
+        let html: string;
+        try {
+            const res = await fetch(`${LIST}?sort_by=startdate&page=${cpage}`, {
+                headers: { 'User-Agent': UA, 'Accept': 'text/html' },
+                signal: ctx.signal ?? AbortSignal.timeout(30_000),
+            });
+            if (!res.ok) { ctx.log(`katalog: HTTP ${res.status} på sida ${cpage}`); break; }
+            html = await res.text();
+        } catch (err) {
+            ctx.log(`katalog sida ${cpage}: ${(err as Error).message}`);
+            break;
+        }
+        const cards = parseSvCards(html, 'Arrangemang');
+        if (cards.length === 0) break;
+        for (const c of cards) {
+            if (c.ev.startDate > ctx.windowEnd) past++;
+            if (c.occasions !== 1 || seen.has(c.ev.url)) continue;
+            seen.add(c.ev.url);
+            all.push(c.ev);
+            added++;
+        }
+        if (past > 32) break;
+    }
+    ctx.log(`katalogen: ${added} arrangemang med ett tillfälle över ${cpage} sidor`);
     return all;
 };
