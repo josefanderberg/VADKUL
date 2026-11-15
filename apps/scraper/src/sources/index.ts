@@ -56,6 +56,7 @@ import { sweHockeyEngine } from '../scrapers/swehockey';
 import { hockeyAllsvenskanEngine } from '../scrapers/hockeyallsvenskan';
 import { sportomediaEngine } from '../scrapers/sportomedia';
 import { gotEventEngine } from '../scrapers/gotevent';
+import { nationsguidenEngine } from '../scrapers/nationsguiden';
 import { visitLuleaEngine } from '../scrapers/visitlulea';
 import { SOURCES as RAW_SOURCES } from './registry';
 import { PROVENANCE } from './data/provenance';
@@ -135,5 +136,6 @@ export const ENGINES: Record<string, Engine> = {
     'hockeyallsvenskan': hockeyAllsvenskanEngine,
     'sportomedia': sportomediaEngine,
     'gotevent': gotEventEngine,
+    'nationsguiden': nationsguidenEngine,
     'visitlulea': visitLuleaEngine,
 };
