@@ -407,6 +407,46 @@ describe('glideStep', () => {
     });
 
     it('tål noll tid och skräp', () => {
+    // #238: det valda eventet står kvar som knuffare så länge kortet är öppet.
+    // Ett moln nära räckviddens kant får en svag knuff, glider sakta utåt och
+    // kom förr aldrig till ro: farten gick mot noll utan att bli noll, och
+    // ritlagret kom aldrig ner i vilotakt.
+    describe('med knuffaren kvar', () => {
+        const reach = 40 + PUSH_MARGIN_PX;
+        // Molnet står på (100, 100): knuffaren 90 % av räckvidden därifrån.
+        const kvar = [{ x: 100 - 0.9 * reach, y: 100 }];
+        const avstånd = (g: typeof still) => 100 + g.ox - kvar[0].x;
+
+        it('kommer molnet till ro inom några sekunder', () => {
+            const efter = run(still, kvar, 60 * 4); // ~4 s
+            expect(efter.vx).toBe(0);
+            expect(efter.vy).toBe(0);
+        });
+
+        it('står det sedan still, bildruta efter bildruta', () => {
+            const efter = run(still, kvar, 60 * 4);
+            expect(run(efter, kvar, 600)).toEqual(efter);
+        });
+
+        it('har det glidit utåt nästan ända till räckviddens kant', () => {
+            const efter = run(still, kvar, 60 * 4);
+            expect(avstånd(efter)).toBeGreaterThan(0.95 * reach);
+            expect(avstånd(efter)).toBeLessThanOrEqual(reach);
+        });
+
+        it('sätter en knuff för svag för att synas inte molnet i rörelse', () => {
+            const svag = [{ x: 100 - reach + 2, y: 100 }];
+            expect(run(still, svag, 120)).toEqual(still);
+        });
+
+        it('glider ett moln mitt i räckvidden iväg som förut', () => {
+            // Stark knuff: stoppet får inte nolla farten medan den byggs upp.
+            const nära = [{ x: 100 - 0.5 * reach, y: 100 }];
+            const g = run(still, nära, 60);
+            expect(g.ox).toBeGreaterThan(30);
+        });
+    });
+
         expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 1, 0)).toBe(still);
         expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 0, 16)).toBe(still);
     });

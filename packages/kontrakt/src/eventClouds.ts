@@ -409,9 +409,16 @@ export function glideStep(
     vy *= brake;
     // Under GLIDE_STOP_SPEED återstår bara ett par pixlar av glidningen -
     // stanna, så ritlagret kan gå tillbaka till vilotakten.
-    // Bara när ingen knuffar: med den mjuka starten (#220) är farten låg de
-    // första bildrutorna, och då får den inte nollas medan den byggs upp.
-    if (ax === 0 && ay === 0 && Math.hypot(vx, vy) < GLIDE_STOP_SPEED) {
+    // Bara när knuffen inte orkar hålla farten uppe: med den mjuka starten
+    // (#220) är farten låg de första bildrutorna, och då får den inte nollas
+    // medan den byggs upp. Måttet är farten knuffen som mest kan ge
+    // (accelerationen gånger bromsens tidskonstant), INTE att ingen knuffar
+    // alls (#238): en knuffare som står kvar - det valda eventet, ett tryck,
+    // en pekare i vila - ger ett moln i räckviddens kant en acceleration nära
+    // noll. Då kröp molnet i all evighet utan att farten någonsin blev exakt
+    // noll, och ritlagret ritade varje bildruta så länge eventkortet var öppet.
+    const reachable = Math.hypot(ax, ay) * (GLIDE_TAU_MS / 1000);
+    if (reachable < GLIDE_STOP_SPEED && Math.hypot(vx, vy) < GLIDE_STOP_SPEED) {
         vx = 0;
         vy = 0;
     }
