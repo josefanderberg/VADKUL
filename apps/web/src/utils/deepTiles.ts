@@ -53,7 +53,8 @@ export const DEEP_KINDS: Readonly<Record<string, readonly string[]>> = {
  *  är samma; de står här för att modulerna inte ska importera varandra i ring). */
 export const DEEP_POI_KINDS = [
     'bathing_place', 'public_bath', 'beach', 'museum', 'library', 'nature_reserve',
-    'golf_course', 'playground', 'pitch', 'park',
+    'golf_course', 'cinema', 'theatre', 'stadium', 'sports_centre', 'sports_hall', 'ice_rink',
+    'playground', 'pitch', 'park', 'restaurant', 'fast_food', 'cafe',
 ] as const;
 
 /** Utzoomat och på mellanzoom (#211, #222): sjöar, älvar, marktäcke och skog.

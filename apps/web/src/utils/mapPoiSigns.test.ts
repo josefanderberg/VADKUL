@@ -4,7 +4,7 @@ import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
     addPoiSigns, POI_SIGN_DEEP_MIN_ZOOM, POI_SIGN_DEEP_NAME_ZOOM, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM,
     POI_SIGN_NAME_ZOOM, POI_SIGNS,
-    POI_SIGN_HIT, POI_SIGN_LABELS, POI_SIGN_LAYER_IDS, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_MIN_ZOOM, pickPoiSignHit, poiSignInfo, poiSignKeyForKind,
+    POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_CLOSE_MIN_ZOOM, POI_SIGN_HIT, POI_SIGN_LABELS, POI_SIGN_LAYER_IDS, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_MIN_ZOOM, pickPoiSignHit, poiSignInfo, poiSignKeyForKind,
     poiSignImageId, poiSignKeyFromImageId, type PoiSignKey,
 } from './mapPoiSigns';
 import { DEEP_POI_KINDS, DEEP_SOURCE_ID, deepLayersFor } from './deepTiles';
@@ -44,8 +44,9 @@ function matchFor(uttryck: unknown, kind: string): unknown {
 // man zoomar in ganska nära".
 describe('platsskyltarna', () => {
     it('har en skylt för var och en av platstyperna Josef räknade upp', () => {
-        expect(Object.keys(POI_SIGNS).sort()).toEqual(
-            ['bad', 'bibliotek', 'bollplan', 'golf', 'lekplats', 'museum', 'naturreservat', 'park'].sort());
+        // Plus aktivitetsställena från #231 (bio, teater, arena, idrottsanläggning)
+        // och matställena från #242 (restaurang, kafé).
+        expect(Object.keys(POI_SIGNS).sort()).toEqual(['arena', 'bad', 'bibliotek', 'bio', 'bollplan', 'golf', 'idrott', 'kafe', 'lekplats', 'museum', 'naturreservat', 'park', 'restaurang', 'teater']);
         // Badplatser finns under flera namn i kaklen.
         expect(POI_SIGNS.bad.kinds).toEqual(expect.arrayContaining(['bathing_place', 'public_bath', 'beach']));
     });
@@ -79,6 +80,24 @@ describe('platsskyltarna', () => {
         expect(POI_SIGN_PICTOGRAMS.naturreservat.original).toBe('H16');
         expect(POI_SIGN_PICTOGRAMS.golf.original).toBe('H20');
         expect(POI_SIGN_PICTOGRAMS.museum.original).toBe('H22');
+        // #242: restaurang och servering (kafé) finns också som servicemärken.
+        expect(POI_SIGN_PICTOGRAMS.restaurang.original).toBe('H6');
+        expect(POI_SIGN_PICTOGRAMS.kafe.original).toBe('H5');
+        // Alla original ligger i vägmärkesfilernas gemensamma vita fält.
+        for (const p of Object.values(POI_SIGN_PICTOGRAMS)) {
+            if (p.original) expect(p.box).toEqual(POI_SIGN_PICTOGRAMS.bad.box);
+        }
+    });
+
+    it('aktivitetsställena har egna motiv i samma stil, inga påhittade vägmärken (#231)', () => {
+        // Bio, teater, arena och idrottsanläggning finns inte bland servicemärkena.
+        for (const key of ['bio', 'teater', 'arena', 'idrott'] as const) {
+            expect(POI_SIGN_PICTOGRAMS[key].original).toBeUndefined();
+            expect(POI_SIGN_PICTOGRAMS[key].box).toEqual([0, 0, 24]);
+            expect(POI_SIGN_LABELS[key]).toBeTruthy();
+        }
+        expect(POI_SIGN_LABELS.idrott).toBe('Idrottsanläggning');
+        expect(POI_SIGNS.idrott.kinds).toEqual(expect.arrayContaining(['sports_centre', 'sports_hall', 'ice_rink']));
     });
 
     it('bild-id:t går att läsa tillbaka, och främmande bilder är inte våra', () => {
@@ -93,7 +112,7 @@ describe('platsskyltarna', () => {
 describe('addPoiSigns', () => {
     it('lägger skyltarna under ortsnamnen (som vinner en krock) och över sjönamnen', () => {
         expect(färdig().layers.map(l => l.id)).toEqual([
-            'background', 'water', 'watername_lake', POI_SIGN_NEAR_LAYER_ID, POI_SIGN_LAYER_ID,
+            'background', 'water', 'watername_lake', POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_LAYER_ID,
             'place_hamlet', 'place_town', 'poi_park', 'roadname_minor',
         ]);
     });
@@ -107,27 +126,43 @@ describe('addPoiSigns', () => {
 
     it('filtret släpper bara igenom platstyperna med skylt', () => {
         const s = färdig();
-        const kinds = [POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID].flatMap(id => {
+        const kinds = POI_SIGN_LAYER_IDS.flatMap(id => {
             const filter = (s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification).filter as unknown[];
             // ['match', ['get', 'kind'], [kinds], true, false] (kontraktets poiSigns).
             return filter[2] as string[];
         });
         expect(kinds.sort()).toEqual(Object.values(POI_SIGNS).flatMap(s => [...s.kinds]).sort());
-        for (const inte of ['restaurant', 'supermarket', 'crossing', 'parking', 'school']) expect(kinds).not.toContain(inte);
+        for (const inte of ['bar', 'supermarket', 'crossing', 'parking', 'school']) expect(kinds).not.toContain(inte);
     });
 
-    it('lekplatser, idrottsplaner och parker tänds först på kvartersnivå (#225)', () => {
+    it('lekplatser, idrottsplaner, parker och idrottsanläggningar tänds först på kvartersnivå (#225, #231)', () => {
         // Josef 13/11: "eller brir det för stökigt med massa skyltar?"
         const s = färdig();
         const kindsIn = (id: string) => ((s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification).filter as unknown[])[2] as string[];
-        expect(kindsIn(POI_SIGN_NEAR_LAYER_ID).sort()).toEqual(['park', 'pitch', 'playground']);
-        for (const nära of ['park', 'pitch', 'playground']) expect(kindsIn(POI_SIGN_LAYER_ID)).not.toContain(nära);
-        expect(kindsIn(POI_SIGN_LAYER_ID)).toEqual(expect.arrayContaining(['bathing_place', 'nature_reserve', 'golf_course', 'museum', 'library']));
+        // Idrottsanläggningarna kom med i #231 (Josef 14/11: "Ja, nära lagret").
+        const nära = ['ice_rink', 'park', 'pitch', 'playground', 'sports_centre', 'sports_hall'];
+        expect(kindsIn(POI_SIGN_NEAR_LAYER_ID).sort()).toEqual(nära);
+        for (const kind of nära) expect(kindsIn(POI_SIGN_LAYER_ID)).not.toContain(kind);
+        expect(kindsIn(POI_SIGN_LAYER_ID)).toEqual(expect.arrayContaining(
+            ['bathing_place', 'nature_reserve', 'golf_course', 'museum', 'library', 'cinema', 'theatre', 'stadium']));
         const near = s.layers.find(l => l.id === POI_SIGN_NEAR_LAYER_ID) as maplibregl.SymbolLayerSpecification;
         expect(near.minzoom).toBe(POI_SIGN_NEAR_MIN_ZOOM);
         expect(POI_SIGN_NEAR_MIN_ZOOM).toBeGreaterThan(POI_SIGN_MIN_ZOOM);
-        expect([...POI_SIGN_NEAR_KEYS].sort()).toEqual(['bollplan', 'lekplats', 'park']);
-        expect(POI_SIGN_LAYER_IDS).toEqual([POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID]);
+        expect([...POI_SIGN_NEAR_KEYS].sort()).toEqual(['bollplan', 'idrott', 'lekplats', 'park']);
+        expect(POI_SIGN_LAYER_IDS).toEqual([POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_CLOSE_LAYER_ID]);
+    });
+
+    it('restauranger och kaféer tänds först på gatunivå, zoom 16 (#242)', () => {
+        // Josef 15/11: "Ja, lägg ut dem" - med vanliga vägmärket, från zoom 16.
+        const s = färdig();
+        const close = s.layers.find(l => l.id === POI_SIGN_CLOSE_LAYER_ID) as maplibregl.SymbolLayerSpecification;
+        expect(close).toMatchObject({ type: 'symbol', source: 'protomaps', 'source-layer': 'pois', minzoom: POI_SIGN_CLOSE_MIN_ZOOM });
+        expect(POI_SIGN_CLOSE_MIN_ZOOM).toBe(16);
+        expect(((close.filter as unknown[])[2] as string[]).sort()).toEqual(['cafe', 'fast_food', 'restaurant']);
+        // Kartans källa slutar vid kakelzoom 15, där matställena finns.
+        expect(matchFor(close.layout?.['icon-image'], 'restaurant')).toBe(poiSignImageId('restaurang'));
+        expect(matchFor(close.layout?.['icon-image'], 'fast_food')).toBe(poiSignImageId('restaurang'));
+        expect(matchFor(close.layout?.['icon-image'], 'cafe')).toBe(poiSignImageId('kafe'));
     });
 
     it('varje platstyp får sin egen skyltbild', () => {
@@ -136,7 +171,11 @@ describe('addPoiSigns', () => {
         expect(matchFor(bild, 'beach')).toBe(poiSignImageId('bad'));
         expect(matchFor(bild, 'museum')).toBe(poiSignImageId('museum'));
         expect(matchFor(bild, 'playground')).toBe(poiSignImageId('lekplats'));
-        expect(matchFor(bild, 'restaurant')).toBe('');
+        expect(matchFor(bild, 'cinema')).toBe(poiSignImageId('bio'));
+        expect(matchFor(bild, 'theatre')).toBe(poiSignImageId('teater'));
+        expect(matchFor(bild, 'stadium')).toBe(poiSignImageId('arena'));
+        expect(matchFor(bild, 'ice_rink')).toBe(poiSignImageId('idrott'));
+        expect(matchFor(bild, 'supermarket')).toBe('');
     });
 
     it('badplatsen går före parken när två skyltar krockar', () => {
@@ -227,7 +266,8 @@ describe('tryck på en skylt (#225)', () => {
         expect(poiSignInfo('nature_reserve', 'Bokhultet')).toEqual({ key: 'naturreservat', type: 'Naturreservat', name: 'Bokhultet' });
         expect(poiSignInfo('playground', undefined)).toEqual({ key: 'lekplats', type: 'Lekplats', name: null });
         expect(poiSignInfo('playground', '  ')?.name).toBeNull();
-        expect(poiSignInfo('restaurant', 'Pizzeria')).toBeNull();
+        expect(poiSignInfo('restaurant', 'Pizzeria')).toEqual({ key: 'restaurang', type: 'Restaurang', name: 'Pizzeria' });
+        expect(poiSignInfo('supermarket', 'Coop')).toBeNull();
         expect(poiSignInfo(undefined, 'x')).toBeNull();
         expect(poiSignKeyForKind('golf_course')).toBe('golf');
     });

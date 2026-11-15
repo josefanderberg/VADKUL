@@ -9,9 +9,11 @@
  * (H16, står för naturreservat), golfbana (H20) och sevärdhet (H22, står för
  * museum) är Transportstyrelsens egna, hämtade ur vägmärkenas SVG-filer på
  * Wikimedia Commons ("Sweden road sign H15.svg" osv.) och bara avrundade till
- * en decimal. Rita inte om dem för hand. Bibliotek, lekplats, idrottsplan och
+ * en decimal. Detsamma gäller matställena från #242: restaurang (H6) och
+ * servering (H5, står för kafé). Rita inte om dem för hand. Bibliotek, lekplats, idrottsplan och
  * park har inget svenskt vägmärke och är ritade i samma stil (Josef 13/11:
- * "Egna motiv i samma stil").
+ * "Egna motiv i samma stil"). Detsamma gäller aktivitetsställena från #231:
+ * bio, teater, arena och idrottsanläggning finns inte bland servicemärkena.
  *
  * Varje symbol ritas i sin egen ruta (`box`), som motsvarar skyltens vita fält.
  * Ren modul: bara data. Ritas av components/v2/v2MapPoiSignImages.
@@ -39,6 +41,18 @@ export interface Pictogram {
 const ORIGINAL_BOX = [-2460.944, -3638.7388, 312.5] as const;
 /** Rutan för de egna motiven. */
 const OWN_BOX = [0, 0, 24] as const;
+
+/** Ellips som SVG-bana. */
+function ellipse(cx: number, cy: number, rx: number, ry: number): string {
+    return `M${cx - rx} ${cy}a${rx} ${ry} 0 1 0 ${rx * 2} 0a${rx} ${ry} 0 1 0 ${-rx * 2} 0Z`;
+}
+
+/** Teatermask: rak överkant, rundad haka. */
+function mask(x: number, y: number, w: number, h: number): string {
+    const r = (n: number) => Math.round(n * 10) / 10;
+    return `M${x} ${y}H${r(x + w)}V${r(y + h * 0.5)}C${r(x + w)} ${r(y + h * 0.85)} ${r(x + w * 0.76)} ${r(y + h)} ${r(x + w / 2)} ${r(y + h)}`
+        + `C${r(x + w * 0.24)} ${r(y + h)} ${x} ${r(y + h * 0.85)} ${x} ${r(y + h * 0.5)}Z`;
+}
 
 /** Cirkel som SVG-bana. */
 function circle(cx: number, cy: number, r: number): string {
@@ -134,6 +148,77 @@ export const POI_SIGN_PICTOGRAMS: Readonly<Record<PoiSignKey, Pictogram>> = {
             { d: 'M14 12.4 H21.2', stroke: 2 },
             { d: 'M13.4 16 H21.6', stroke: 2 },
             { d: 'M14.6 12.4 V20.2 M20.6 12.4 V20.2', stroke: 1.5 },
+        ],
+    },
+    // H6 Restaurang (#242).
+    restaurang: {
+        box: ORIGINAL_BOX,
+        original: 'H6',
+        shapes: [
+            { d: 'm -2192.9,-3393.6 -88.6,-82 -3.2,-2.9 28.4,-30.1 c 11.5,4.7 24.7,3.2 34.9,-3.9 1.5,-1.3 3,-2.6 4.4,-3.9 l 39.2,-38.7 c 3.3,-3.6 3.3,-9.3 -0.2,-12.8 -3.4,-3.5 -9,-3.8 -12.8,-0.6 l -40,39.8 c -0.3,0.3 -0.7,0.5 -1.2,0.7 -2,0.6 -4.3,-0 -5.7,-1.7 -1.4,-1.6 -1.6,-4 -0.7,-5.9 0.1,-0.2 0.2,-0.4 0.4,-0.5 l 40.4,-40.2 c 0.1,-0.1 0.1,-0.1 0.2,-0.2 2.3,-3.7 1.8,-8.5 -1.2,-11.6 -3.1,-2.9 -7.7,-3.5 -11.4,-1.4 -0.2,0.1 -0.4,0.3 -0.6,0.5 l -39.8,39.7 c -0.5,0.4 -1,0.8 -1.6,1 -2,0.7 -4.1,0.2 -5.6,-1.3 -1.5,-1.5 -1.9,-3.7 -1.2,-5.6 0.2,-0.4 0.4,-0.7 0.7,-1 l 39.9,-39.8 c 3.2,-3.7 3,-9.3 -0.5,-12.8 -3.5,-3.5 -9.1,-3.6 -12.8,-0.2 l -39.5,39.7 c -1.4,1.4 -2.7,2.9 -3.8,4.5 -6.8,10.1 -8.1,22.9 -3.6,34.1 l -31.2,29.2 -18.6,-17.2 c 6.1,-16.6 0.6,-35.2 -13.5,-45.8 -17.1,-15.8 -37.9,-27 -60.5,-32.8 -0.8,-0.2 -1.6,-0.3 -2.4,-0.4 -4.5,-0.3 -9,0.5 -13.1,2.4 -1,0.5 -2,1 -2.9,1.6 -2.2,1.5 -4,3.5 -5.4,5.8 -2.5,4.6 -3.6,9.7 -3.2,14.9 0.1,0.7 0.2,1.5 0.3,2.2 5.8,22.6 17.1,43.4 33,60.6 10.7,14.1 29.3,19.6 45.9,13.4 l 16.5,17.7 -95.4,89.2 c -1,1.2 -2,2.5 -2.8,3.9 -4.4,8.5 -2.5,19 4.6,25.4 6.7,7.4 17.6,9.1 26.3,4.2 1.1,-0.7 2.2,-1.4 3.1,-2.3 l 88.8,-94.2 3.3,3.5 81.2,87.4 c 0.7,0.7 1.4,1.3 2.2,1.8 8.9,5.5 20.5,3.8 27.4,-4 7.6,-6.7 9.4,-17.8 4.4,-26.6 -0.7,-1 -1.5,-2 -2.3,-3 z' },
+        ],
+    },
+    // H5 Servering (#242), står för kafé.
+    kafe: {
+        box: ORIGINAL_BOX,
+        original: 'H5',
+        shapes: [
+            { d: 'm -2249.5,-3420.5 c 6.6,-10.7 11.8,-22.3 15.4,-34.4 28.9,-2.2 51.7,-25.7 52.9,-54.7 l 0,-48.4 -44.3,0 1.3,-30.7 -80.5,0 -81.5,0 4.4,101.6 c 1.2,23.6 8.4,46.6 20.8,66.7 l -83.3,0 c -2.3,0.9 -4.1,2.8 -4.7,5.2 -0.6,2.4 -0,4.9 1.6,6.8 19.3,19 44.8,30.5 71.9,32.3 l 70.8,0 70.8,0 c 27.1,-1.8 52.6,-13.2 71.9,-32.3 1.6,-1.9 2.2,-4.4 1.6,-6.8 -0.6,-2.4 -2.4,-4.3 -4.7,-5.2 l -84.4,0 z' },
+            { d: 'm -2229.9,-3474.7 c 16,-4.3 27.6,-18.3 28.9,-34.9 l 0,-28.6 -25.4,0 -2.2,51 c -0.2,4.2 -0.6,8.3 -1.2,12.5 0,0 -0,0 -0,0 -0,0 -0,0 -0,-0 z', white: true },
+        ],
+    },
+    // ── Aktivitetsställen (#231), egna motiv ────────────────────────────────
+    // Bio: filmkamera med två rullar.
+    bio: {
+        box: OWN_BOX,
+        shapes: [
+            { d: circle(7.4, 7.2, 3.7) },
+            { d: circle(15.2, 6.4, 4.4) },
+            { d: circle(7.4, 7.2, 1.2), white: true },
+            { d: circle(15.2, 6.4, 1.5), white: true },
+            { d: 'M3.2 11.6 H16.8 V20.2 H3.2 Z' },
+            { d: 'M16.8 15 L21.6 11.8 V20 L16.8 16.8 Z' },
+        ],
+    },
+    // Teater: de två maskerna, den glada framför den ledsna.
+    teater: {
+        box: OWN_BOX,
+        shapes: [
+            { d: mask(11.4, 2.6, 10.4, 11.8) },
+            { d: circle(14.7, 6.5, 1.05), white: true },
+            { d: circle(18.9, 6.5, 1.05), white: true },
+            { d: 'M14.7 11.6 Q16.8 9.3 18.9 11.6', stroke: 1.3, white: true },
+            // Vit glipa runt den främre masken, så de två går isär.
+            { d: mask(2.2, 8.8, 10.6, 12.6), stroke: 2.2, white: true },
+            { d: mask(2.2, 8.8, 10.6, 12.6) },
+            { d: circle(5.4, 13, 1.05), white: true },
+            { d: circle(9.6, 13, 1.05), white: true },
+            { d: 'M4.8 16.2 Q7.5 20.4 10.2 16.2 Z', white: true },
+        ],
+    },
+    // Arena: läktarskålen sedd snett uppifrån, med valv i fasaden och flaggor
+    // på krönet (utan flaggorna läses skålen som en puck).
+    arena: {
+        box: OWN_BOX,
+        shapes: [
+            { d: 'M2.2 12.2 C2.2 9.2 6.6 7.2 12 7.2 C17.4 7.2 21.8 9.2 21.8 12.2 V15.6 C21.8 18.8 17.4 21.2 12 21.2 C6.6 21.2 2.2 18.8 2.2 15.6 Z' },
+            { d: ellipse(12, 12, 7.4, 2.9), white: true },
+            { d: 'M5.2 16.6 V18 M8.5 17.6 V19.4 M12 18 V19.9 M15.5 17.6 V19.4 M18.8 16.6 V18', stroke: 1.5, white: true },
+            { d: 'M5 8.6 V2.8 M12 6.6 V1.6 M19 8.6 V2.8', stroke: 1 },
+            { d: 'M5 2.6 L8.4 3.8 L5 5 Z M12 1.4 L15.4 2.6 L12 3.8 Z M19 2.6 L22.4 3.8 L19 5 Z' },
+        ],
+    },
+    // Idrottsanläggning: löpare. Ingen boll - kaklens 'sports_centre' är allt
+    // från ishallar till judoklubbar (jfr idrottsplanen ovan).
+    idrott: {
+        box: OWN_BOX,
+        shapes: [
+            { d: circle(15.2, 4.6, 2.3) },
+            { d: 'M13.6 8.6 L10.6 14', stroke: 3 },
+            { d: 'M13.4 9 L17 11.6 L19.6 9.8', stroke: 2 },
+            { d: 'M13.2 8.8 L9.2 9.4 L7 12.6', stroke: 2 },
+            { d: 'M10.8 14 L15 15.6 L14.4 20.8', stroke: 2.4 },
+            { d: 'M10.6 14 L7.8 17.4 L3.6 17.6', stroke: 2.4 },
         ],
     },
 };

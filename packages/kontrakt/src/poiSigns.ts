@@ -15,6 +15,20 @@
  * components/v2/v2MapPoiSignImages och bakas till PNG för appen
  * (vadkul-app/scripts/baka-skyltar.mjs).
  *
+ * AKTIVITETSSTÄLLEN (#231, Josef 14/11: "hade vi kunna hämta alla restauranger
+ * och sådana aktivitetställen också? alltså så att man lätt hade kunnat se som
+ * sådana skyltar"): bio, teater, arena och idrottsanläggning är första steget.
+ * Mätt 14/11 i z15-kaklen: hela Växjö har 2 biografer, 2 teatrar, 4 arenor och
+ * 11 idrottsanläggningar, centrala Göteborg 7, 27, 4 och 41. Bio och teater
+ * finns bara i z15-kaklen. Restaurangerna (112 i Växjö, 1356 i centrala
+ * Göteborg) fick först inga skyltar - se MATSTÄLLENA nedan.
+ *
+ * MATSTÄLLENA (#242, Josef 15/11 på frågan om restauranger och kaféer ska ut
+ * nu med vanliga vägmärket från zoom 16: "Ja, lägg ut dem"): restauranger och
+ * kaféer i ett TREDJE, ännu närmare lager. Loggorna och boosten ("vi kan hämta
+ * loggan åt dem. men de kan ju köpa boost för att bli större eller synas
+ * tidigare", #232) ersätter sedan skylten.
+ *
  * Allt kommer ur baskartans EGNA kakel (source-layer 'pois', OpenStreetMap via
  * CARTO) - även badplatserna, så ingenting extra hämtas och ingen egen datafil
  * behöver underhållas. Kaklen bär platserna olika djupt (mätt över Växjö
@@ -42,9 +56,20 @@ export const POI_SIGNS = {
     bibliotek: { kinds: ['library'] },
     naturreservat: { kinds: ['nature_reserve'] },
     golf: { kinds: ['golf_course'] },
+    // Aktivitetsställen (#231).
+    bio: { kinds: ['cinema'] },
+    teater: { kinds: ['theatre'] },
+    arena: { kinds: ['stadium'] },
+    // Kaklens 'sports_centre' är allt från ishallar och simhallar till
+    // judoklubbar och idrottsplatser - därav det breda namnet.
+    idrott: { kinds: ['sports_centre', 'sports_hall', 'ice_rink'] },
     lekplats: { kinds: ['playground'] },
     bollplan: { kinds: ['pitch'] },
     park: { kinds: ['park'] },
+    // Matställen (#242), sist: allt annat vinner en krock mot dem. Snabbmaten
+    // (pizzerior, hamburgerkedjor) bär restaurangskylten.
+    restaurang: { kinds: ['restaurant', 'fast_food'] },
+    kafe: { kinds: ['cafe'] },
 } as const satisfies Record<string, PoiSign>;
 export type PoiSignKey = keyof typeof POI_SIGNS;
 
@@ -69,12 +94,23 @@ const KEYS = POI_SIGN_KEYS;
 // saknar oftast namn. De får därför ett EGET lager som tänds först på
 // kvartersnivå, så stadsvyn bara bär de få resmålen (bad, naturreservat, golf,
 // museum, bibliotek) och eventens brickor får dominera.
+// IDROTTSANLÄGGNINGARNA hör också hit (#231, Josef 14/11 på frågan om de ska
+// ligga i det nära lagret som lekplatserna: "Ja, nära lagret") - 41 stycken i
+// centrala Göteborg. Bio, teater och arena är resmål och ligger i det vanliga.
 export const POI_SIGN_NEAR_LAYER_ID = 'vadkul-poi-signs-near';
 export const POI_SIGN_NEAR_MIN_ZOOM = 15;
-export const POI_SIGN_NEAR_KEYS: readonly PoiSignKey[] = ['lekplats', 'bollplan', 'park'];
-/** Båda skyltlagren - det som frågar efter skyltar (trycket) ska fråga båda. */
-export const POI_SIGN_LAYER_IDS = [POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID] as const;
-const FAR_KEYS = KEYS.filter(key => !POI_SIGN_NEAR_KEYS.includes(key));
+export const POI_SIGN_NEAR_KEYS: readonly PoiSignKey[] = ['idrott', 'lekplats', 'bollplan', 'park'];
+// ── Tredje zoomsteget: matställena (#242) ───────────────────────────────────
+// Restauranger och kaféer är så många (mätt 14/11: 104 i hela Växjö, 1217 i
+// centrala Göteborg) att de får ett eget lager som tänds först på gatunivå.
+// Sänk inte gränsen utan att fråga - en boostad skylt ska kunna synas
+// tidigare än de andra (#232), och det bygger på att de vanliga syns sent.
+export const POI_SIGN_CLOSE_LAYER_ID = 'vadkul-poi-signs-close';
+export const POI_SIGN_CLOSE_MIN_ZOOM = 16;
+export const POI_SIGN_CLOSE_KEYS: readonly PoiSignKey[] = ['restaurang', 'kafe'];
+/** Alla skyltlagren - det som frågar efter skyltar (trycket) ska fråga alla. */
+export const POI_SIGN_LAYER_IDS = [POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_CLOSE_LAYER_ID] as const;
+const FAR_KEYS = KEYS.filter(key => !POI_SIGN_NEAR_KEYS.includes(key) && !POI_SIGN_CLOSE_KEYS.includes(key));
 const kindsOf = (keys: readonly PoiSignKey[]) => keys.flatMap(k => [...POI_SIGNS[k].kinds]);
 
 // ── Tryck på en skylt (#225) ─────────────────────────────────────────────────
@@ -88,10 +124,16 @@ export const POI_SIGN_LABELS: Readonly<Record<PoiSignKey, string>> = {
     bibliotek: 'Bibliotek',
     naturreservat: 'Naturreservat',
     golf: 'Golfbana',
+    bio: 'Bio',
+    teater: 'Teater',
+    arena: 'Arena',
+    idrott: 'Idrottsanläggning',
     lekplats: 'Lekplats',
     // Kaklens 'pitch' är alla slags planer, inte bara bollplaner.
     bollplan: 'Idrottsplan',
     park: 'Park',
+    restaurang: 'Restaurang',
+    kafe: 'Kafé',
 };
 
 /** Skylten för ett kind-värde ur kaklen, eller null om platstypen saknar skylt. */
@@ -253,9 +295,12 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
     });
     // Kvartersnivån: texten står där direkt.
     const near = signLayer(POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_MIN_ZOOM, { 'text-field': label });
+    // Gatunivån (#242): matställena, också med texten direkt.
+    const close = signLayer(POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_CLOSE_KEYS, POI_SIGN_CLOSE_MIN_ZOOM, { 'text-field': label });
     const firstPlace = style.layers.findIndex(l => l.type === 'symbol' && l['source-layer'] === 'places');
-    // Det nära lagret UNDER det vanliga: symboler placeras uppifrån, så ett
-    // bad eller museum vinner en krock mot en lekplats.
-    style.layers.splice(firstPlace >= 0 ? firstPlace : style.layers.length, 0, near, layer);
+    // Det nära lagret UNDER det vanliga, och matställena underst: symboler
+    // placeras uppifrån, så ett bad eller museum vinner en krock mot en
+    // lekplats, och lekplatsen mot en restaurang.
+    style.layers.splice(firstPlace >= 0 ? firstPlace : style.layers.length, 0, close, near, layer);
     return true;
 }

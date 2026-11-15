@@ -116,7 +116,8 @@ describe('mergeChildTiles', () => {
             const ut = avkoda(mergeChildTiles([
                 barn(1, 1, [
                     feature(1, { kind: 'bathing_place', name: 'Evedal', min_zoom: 14 }, [[[100, 200]]]),
-                    feature(1, { kind: 'restaurant', name: 'Krogen' }, [[[5, 5]]]),
+                    // Utan skylt (restauranger har en sedan #242).
+                    feature(1, { kind: 'supermarket', name: 'Coop' }, [[[5, 5]]]),
                     feature(1, { kind: 'museum', name: 'Smålands Museum' }, [[[4000, 10]]]),
                 ]),
             ], nära));

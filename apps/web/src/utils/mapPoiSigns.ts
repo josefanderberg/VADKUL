@@ -15,6 +15,9 @@ import { DEEP_NEAR_MIN_CHILD_ZOOM, DEEP_SOURCE_ID } from './deepTiles';
 
 export {
     pickPoiSignHit,
+    POI_SIGN_CLOSE_KEYS,
+    POI_SIGN_CLOSE_LAYER_ID,
+    POI_SIGN_CLOSE_MIN_ZOOM,
     POI_SIGN_HIT,
     POI_SIGN_LABELS,
     POI_SIGN_LAYER_ID,
