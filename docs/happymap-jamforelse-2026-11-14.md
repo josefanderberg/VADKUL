@@ -225,13 +225,44 @@ sajter med färre event, eller falsklarm.
 Kvar: Örnsköldsvik (Overpass svarade inte), resten av landets tätorter (utbytet per stad sjunker
 med storleken), och beslutet i josefanderberg/VADKUL#240 om att visa kyrkan och PRO vid inzoomning.
 
-## 5. Vad som krävs för att vara minst lika bra
+## 5. Plan: minst Happymaps precision (läge 15/11)
 
-| | Läge | Nästa steg | Vem |
+Alla tal gäller förvalet (det en ny besökare ser, utan kyrkan/PRO/Korpen) i ett tvåveckorsfönster,
+mätt på samma sätt varje gång (avsnitt 6).
+
+| Mått | Happymap | Vi 14/11 | Vi 15/11 | Mål |
+|---|---|---|---|---|
+| Antal | 16 837 (14-27/11) | 14 580 | 15 207 | minst deras siffra samma dag |
+| Med pris | 45-66 % i ortsstickproven, 90 % i Stockholms utvalda | 41,7 % | 43,7 % | 60 % |
+| På sin lokal | lokalnamn på nära varje rad (Stockholm 15/11: ett fåtal av 50 saknade) | 66,7 % | 68,1 % | 85 % |
+| På ortens mittpunkt | - | 24,0 % | 23,5 % | under 10 % |
+
+**Var prisluckan ligger** (förvalet 15-28/11, event utan pris): biblioteken 1 957 av 2 765,
+Tickster 983 av 1 089, Facebook 956 av 1 615, hockeymatcherna (swehockey) 653 av 653, Uppsalas
+nationer 340 av 340, Ticketmaster 157 av 158. Biblioteken är den största enskilda luckan, inte
+Tickster.
+
+**Var platsluckan ligger** (på mittpunkten): biblioteken 598, Facebook 359, hockeymatcherna 270,
+Tickster 265, nationerna 98.
+
+**Vägen dit**
+
+| Mått | Ticket | Vad | Vem |
 |---|---|---|---|
-| Pris | 42 % i förvalet mot deras 45-65 % | Tickster-nyckeln. Bibliotekens API. | Josef (nyckeln), minin |
-| Plats | 67 % exakt, 24 % på mittpunkt (var 64 / 28) | venueFixes för de namngivna. Arenaregistret för matcherna. | minin |
-| Antal, förvalet | 87 % av deras (14 580 mot 16 837) | Lägg in de torrkörda ställena, sedan `venue-candidates` ort för ort (cirka tre ställen per stad). nationsguiden.se, Sensus, Biljettkiosken. De tolv volymrasen. Och frågan om kyrkan/PRO/Korpen ska vara dolda som förval - 10 098 event i fönstret. | Josef (beslutet), minin |
+| Antal | #240 | Kyrkan, PRO och Korpen vid inzoomning (10 000 event i fönstret) | MacBooken |
+| Antal | #244 | Stockholms biografer: Zita, Fågel Blå, Capitol | minin |
+| Antal | #245 | Stadssvepet: 19 städer kvar, sedan resten av tätorterna | minin |
+| Antal | #246 | Frikyrkorna (cirka 150 församlingar hos Happymap) | minin, Josef (förval) |
+| Antal | #248 | Biljettkiosken | minin |
+| Pris, plats | #243 | Tickster Event API (ansökan skickad 15/11); Event Dump API ger alla kommande event i ett anrop per dygn | Josef (nyckeln), minin |
+| Pris | ny | Pris utöver Tickster: biblioteken, nationerna, Ticketmasters Discovery API (`priceRanges`), Sensus "Kostnadsfritt" | minin |
+| Plats | #247 | Källorna på mittpunkten, källa för källa; arenaregistret för hockeymatcherna | minin |
+
+Facebook-eventen saknar strukturerat pris och plats; de rättas bara genom att samma event hittas
+i en bättre källa (dedupe-cross ärver pris och plats).
+
+Arbetsregel (15/11): saknar en stor källa pris eller plats, leta först efter ett officiellt API för
+aggregatorer innan vi nöjer oss med att skrapa sidorna. Tickster-API:t missades i fem månader.
 
 ## 6. Mätmetod, för nästa gång
 
@@ -240,6 +271,12 @@ med storleken), och beslutet i josefanderberg/VADKUL#240 om att visa kyrkan och 
   `data-original-src`.
 - Vårt: `npm run quality-coverage` (pris per källa), `SELECT geoPrecision, COUNT(*)`, och
   `npm run price-refine -- --sample` (sex sidor per värd, visar vilka värdar som bär pris i markupen).
+- Förvalet i SQLite: `hidden = 0`, tvåveckorsfönstret från i dag, och utan adresser som innehåller
+  `svenskakyrkan.se`, `pro.se` (värd eller underdomän), `zoezi` eller `korpen`. Pris = `price` ej
+  tomt; plats = `geoPrecision` i (`poi`, `gata`, `kallkoordinat`); mittpunkt = `ort-centroid` eller
+  `stad-centroid`.
+- Deras platsandel: på en ortssida, hur många av raderna under "Allt i programmet" som har en
+  lokalrad.
 - `npm run alerts` - raderna `[volymras]` är källor som lever men tappat det mesta.
 - Mätfälla: räkna aldrig bara `hidden = 0`. Opt-in-källorna (`isOptInSource`) är 40 % av raderna
   men syns inte för en ny besökare.
