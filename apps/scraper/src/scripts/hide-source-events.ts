@@ -5,6 +5,7 @@
  *   npx ts-node src/scripts/hide-source-events.ts --host='Oceanen'           # dry-run
  *   npx ts-node src/scripts/hide-source-events.ts --host='Oceanen' --apply
  *   npm run hide-source -- --url-like=clubrunner.ca --apply   # per URL-domän (Rotary: 110 klubb-värdar)
+ *   npm run hide-source -- --url-like=kino.nu --title-like='Visas%' --apply   # bara vissa titlar (SQL LIKE)
  *
  * Idempotent (hidden=0-filter) — körs nattligt för clubrunner.ca (ägarbeslut 2026-09-04).
  */
@@ -18,15 +19,17 @@ const hostArg = process.argv.find((a) => a.startsWith('--host='));
 const host = hostArg ? hostArg.split('=').slice(1).join('=') : '';
 const urlArg = process.argv.find((a) => a.startsWith('--url-like='));
 const urlLike = urlArg ? urlArg.split('=').slice(1).join('=') : '';
+const titleArg = process.argv.find((a) => a.startsWith('--title-like='));
+const titleLike = titleArg ? titleArg.split('=').slice(1).join('=') : '';
 
 async function main() {
     if (!host && !urlLike) { console.error("Ange --host='Källans hostName' eller --url-like=<domän>"); process.exit(1); }
-    const label = host || `url~${urlLike}`;
+    const label = (host || `url~${urlLike}`) + (titleLike ? ` titel~${titleLike}` : '');
     const sqlite = new Database(path.resolve(__dirname, '../../events.db'));
     const rows = sqlite.prepare(`
         SELECT firestoreId, substr(time,1,10) AS day, title FROM link_events
-        WHERE ((? != '' AND hostName = ?) OR (? != '' AND url LIKE ?)) AND hidden = 0 AND firestoreId IS NOT NULL
-    `).all(host, host, urlLike, `%${urlLike}%`) as { firestoreId: string; day: string; title: string }[];
+        WHERE ((? != '' AND hostName = ?) OR (? != '' AND url LIKE ?)) AND (? = '' OR title LIKE ?) AND hidden = 0 AND firestoreId IS NOT NULL
+    `).all(host, host, urlLike, `%${urlLike}%`, titleLike, titleLike) as { firestoreId: string; day: string; title: string }[];
 
     console.log(`${apply ? '🔧 APPLY' : '🔍 DRY-RUN'} — ${label}: ${rows.length} synliga events att gömma`);
     const days = new Set(rows.map((r) => r.day));

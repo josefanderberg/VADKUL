@@ -331,6 +331,14 @@ describe('parseListing — det som inte är ett program', () => {
         expect(brief(html)).toEqual([]);
     });
 
+    it('biografens statusrad är ingen filmtitel (Kino i Lund 15/11)', () => {
+        const html = `<html><body><main>
+            <div class="film"><h3>Visas</h3><p>Söndag 22 november</p><h4>Wild Horse Nine</h4></div>
+            <div class="film"><h3>Visas på Kino fr.o.m.</h3><p>Fredag 27 november</p><h4>Woman and Child</h4></div>
+            </main></body></html>`;
+        expect(brief(html).join(' ')).not.toMatch(/Visas/);
+    });
+
     it('sidhuvud, meny och sidfot läses inte; ett <header> inne i kortet står kvar', () => {
         const html = `<html><body>
             <header class="site-header"><h2>Krogen</h2><nav><a href="/x">Fredag 20 november</a></nav></header>

@@ -177,3 +177,18 @@ describe('judgeEvents — föreningens interna kalender (Hestra IF 15/11)', () =
         expect(judgeEvents(events, START, END, 'x.se').ok).toBe(true);
     });
 });
+
+describe('judgeEvents — datumkluster (Droskan, Skissernas museum 15/11)', () => {
+    it('hälften eller mer samma dag fälls, även med olika klockslag', () => {
+        const events = Array.from({ length: 12 }, (_, i) => ev(`Konsert ${i}`, i < 9 ? 21 : 22 + i, 10 + (i % 8)));
+        const v = judgeEvents(events, START, END, 'x.se');
+        expect(v.ok).toBe(false);
+        expect(v.reasons.join(' ')).toMatch(/datumkluster \(9 av 12/);
+    });
+
+    it('en festival med flera akter en dag men resten utspritt går igenom', () => {
+        const events = [...Array.from({ length: 4 }, (_, i) => ev(`Festivalakt ${i}`, 20, 14 + i)),
+            ...Array.from({ length: 6 }, (_, i) => ev(`Kväll ${i}`, 22 + i))];
+        expect(judgeEvents(events, START, END, 'x.se').ok).toBe(true);
+    });
+});

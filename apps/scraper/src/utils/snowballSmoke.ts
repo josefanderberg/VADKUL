@@ -144,6 +144,15 @@ export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date,
     // Datumspridning: allt på exakt samma timestamp ⇒ trolig parse-artefakt
     const stamps = new Set(future.map((e) => +e.startDate));
     if (stamps.size === 1 && future.length >= 5) reasons.push('alla event på samma timestamp (datumparse trasig?)');
+    // Datumkluster: hälften eller mer på SAMMA DAG, med olika klockslag. Sajtens
+    // eget datum (en banner, dagens datum) har vunnit över eventens. Droskan
+    // 15/11: 187 av 187 på 21 november; Skissernas museum: 78 av 106 i dag.
+    else if (future.length >= 8) {
+        const perDay = new Map<string, number>();
+        for (const e of future) perDay.set(dayOf(e.startDate), (perDay.get(dayOf(e.startDate)) ?? 0) + 1);
+        const top = Math.max(...perDay.values());
+        if (top / future.length >= 0.5) reasons.push(`datumkluster (${top} av ${future.length} event samma dag)`);
+    }
 
     return { ok: reasons.length === 0, reasons, events: upcoming.length, sampleTitles: titles.slice(0, 3), allTitles: titles };
 }
