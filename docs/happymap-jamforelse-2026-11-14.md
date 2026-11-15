@@ -242,8 +242,13 @@ mätt på samma sätt varje gång (avsnitt 6).
 **Var prisluckan ligger** (förvalet 15-28/11, event utan pris): biblioteken 1 957 av 2 765,
 Tickster 983 av 1 089, Facebook 956 av 1 615, hockeymatcherna (swehockey) 653 av 653, Uppsalas
 nationer 340 av 340, Ticketmaster 157 av 158. Biblioteken är den största enskilda luckan, inte
-Tickster. Bara 140 av bibliotekens 2 052 prislösa event säger "gratis" i beskrivningen, så
-priset måste läsas ur detaljsidornas fält (eller fri entré som standard, om Josef säger ja).
+Tickster. Bibliotekens pris går INTE att läsa ur något fält (undersökt 15/11): Axiells
+eventmodell saknar prisfält helt, både i sökningen och i detaljanropet
+(`/customers/<id>/events/<uuid>`), och bibliotekens kalendersidor är en klientapp som visar
+samma data. Av 2 205 biblioteksevent i tvåveckorsfönstret har 529 pris hos oss (ur texten och
+AI-granskningen); textparsern hittar redan allt som står (5 missade). Bara 30 nämner ett
+belopp i kronor över huvud taget. Resten, cirka 1 670, saknar prisuppgift hos källan.
+Luckan stängs bara med ett ägarbeslut om hur ett biblioteksevent utan prisuppgift ska visas.
 Ticketmaster läses redan via Discovery API; det är `priceRanges` som saknas i svaren.
 
 **Ett fel som åt priser (rättat 15/11):** AI-granskningen skrev sitt eget prisförslag över
@@ -265,7 +270,7 @@ Tickster 265, nationerna 98.
 | Antal | #246 | Frikyrkorna (cirka 150 församlingar hos Happymap) | minin, Josef (förval) |
 | Antal | #248 | Biljettkiosken | minin |
 | Pris, plats | #243 | Tickster Event API (ansökan skickad 15/11); Event Dump API ger alla kommande event i ett anrop per dygn | Josef (nyckeln), minin |
-| Pris | #249 | Pris utöver Tickster: biblioteken (detaljsidornas fält), nationerna, hockeyn, Ticketmaster (`priceRanges` saknas i Discovery-svaren) | minin, Josef (fri entré som standard?) |
+| Pris | #249 | Pris utöver Tickster: biblioteken (inget prisfält finns; ägarbeslut), nationerna, hockeyn, Ticketmaster (`priceRanges` saknas i Discovery-svaren) | minin, Josef (biblioteken) |
 | Plats | #247 | Källorna på mittpunkten, källa för källa; arenaregistret för hockeymatcherna | minin |
 
 Facebook-eventen saknar strukturerat pris och plats; de rättas bara genom att samma event hittas
