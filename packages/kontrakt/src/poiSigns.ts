@@ -212,6 +212,14 @@ export interface PoiSignLayerOptions {
     /** Härifrån står namnet under resmålens skyltar. */
     nameZoom?: number;
     /**
+     * Startzoom för kvarterets lager (idrott, lekplats, plan, park) och för
+     * matställenas (restaurang, kafé). Utelämnade = POI_SIGN_NEAR_MIN_ZOOM och
+     * POI_SIGN_CLOSE_MIN_ZOOM. Appen tänder dem ett steg tidigare (#251, Josef
+     * 15/11: "blir bättre så på en mobil").
+     */
+    nearMinZoom?: number;
+    closeMinZoom?: number;
+    /**
      * Faktor på skyltens storlek. Webben ritar bilden med egen pixeltäthet
      * (1); appen bakar den i högre upplösning och skalar ner lika mycket.
      */
@@ -245,6 +253,8 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
     const source = options.source ?? withSource.source;
     const minZoom = options.minZoom ?? POI_SIGN_MIN_ZOOM;
     const nameZoom = options.nameZoom ?? POI_SIGN_NAME_ZOOM;
+    const nearMinZoom = options.nearMinZoom ?? POI_SIGN_NEAR_MIN_ZOOM;
+    const closeMinZoom = options.closeMinZoom ?? POI_SIGN_CLOSE_MIN_ZOOM;
     const scale = options.iconScale ?? 1;
 
     const park = style.layers.find(l => l.id === VOYAGER_PARK_LABEL_ID);
@@ -294,9 +304,9 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
         'text-field': ['step', ['zoom'], '', nameZoom, label],
     });
     // Kvartersnivån: texten står där direkt.
-    const near = signLayer(POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_MIN_ZOOM, { 'text-field': label });
+    const near = signLayer(POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_KEYS, nearMinZoom, { 'text-field': label });
     // Gatunivån (#242): matställena, också med texten direkt.
-    const close = signLayer(POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_CLOSE_KEYS, POI_SIGN_CLOSE_MIN_ZOOM, { 'text-field': label });
+    const close = signLayer(POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_CLOSE_KEYS, closeMinZoom, { 'text-field': label });
     const firstPlace = style.layers.findIndex(l => l.type === 'symbol' && l['source-layer'] === 'places');
     // Det nära lagret UNDER det vanliga, och matställena underst: symboler
     // placeras uppifrån, så ett bad eller museum vinner en krock mot en

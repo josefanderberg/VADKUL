@@ -175,6 +175,22 @@ describe('addPoiSignLayers', () => {
         addPoiSignLayers(w);
         expect(lager(w, POI_SIGN_LAYER_ID).layout!['icon-size']).toEqual(['interpolate', ['linear'], ['zoom'], 13, 0.8, 16, 1]);
         expect(lager(w, POI_SIGN_NEAR_LAYER_ID).layout!['icon-size']).toEqual(['interpolate', ['linear'], ['zoom'], 15, 0.8, 16, 1]);
+        expect(lager(w, POI_SIGN_NEAR_LAYER_ID).minzoom).toBe(POI_SIGN_NEAR_MIN_ZOOM);
+        expect(lager(w, POI_SIGN_CLOSE_LAYER_ID).minzoom).toBe(POI_SIGN_CLOSE_MIN_ZOOM);
+    });
+
+    it('kvarterets och matställenas startzoom går att flytta (appen tänder dem ett steg tidigare, #251)', () => {
+        const s = voyagerLik();
+        addPoiSignLayers(s, { nearMinZoom: 14, closeMinZoom: 15 });
+        const near = lager(s, POI_SIGN_NEAR_LAYER_ID);
+        const close = lager(s, POI_SIGN_CLOSE_LAYER_ID);
+        expect(near.minzoom).toBe(14);
+        expect(close.minzoom).toBe(15);
+        // Storleken växer från lagrets egen startzoom.
+        expect(near.layout!['icon-size']).toEqual(['interpolate', ['linear'], ['zoom'], 14, 0.8, 16, 1]);
+        expect(close.layout!['icon-size']).toEqual(['interpolate', ['linear'], ['zoom'], 15, 0.8, 16, 1]);
+        // Resmålen rörs inte av valen.
+        expect(lager(s, POI_SIGN_LAYER_ID).minzoom).toBe(POI_SIGN_MIN_ZOOM);
     });
 
     it('läggs inte till två gånger och rör inget utan vektorkälla', () => {
