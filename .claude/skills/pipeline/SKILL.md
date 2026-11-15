@@ -43,6 +43,8 @@ Hoppar man över syncen aggregerar man gammal data och undrar var de nya eventen
 - Karantän (`quarantine.json`) släpps genom att ta bort källans post när den är fixad — annars står den pausad tills veckoretryn ser liv.
 - `npm run price-refine -- --sample` — sex detaljsidor per värd, torrkört: visar vilka värdar som bär pris i markupen och vilka som hålls tillbaka (sidmallens belopp, obevisad gratisflagga). `--host=<värd>` för en källa, `--apply` skriver.
 - `npm run venue-candidates -- --city=Ort` → `npm run web-snowball -- --candidates=venue-candidates.txt --max=N --dry` — ortens krogar, scener och caféer ur OSM genom snöbollens vanliga kedja (prob, rimlighetskontroll, tsc-vakt). Utan `--dry` skrivs godkända källor till `registry-snowball.ts`. Lär sig proben något nytt: höj `PROBE_VERSION` i `utils/snowballSmoke.ts`, så provas gamla FAIL om utan att `web-snowball-state.json` töms för hand.
+- Refresh rör aldrig TITLAR. Avkapade titlar efter en fix i titelstädningen ("Föreläsning" i stället för "Föreläsning - AI för föreningsarbete", 15/11): `npx ts-node src/scripts/refresh-truncated-titles.ts --ids=<källa> [--apply]` skriver bara om där den sparade titeln är början av den färska.
+- AI-granskningen fyller bara i pris där källan inte gav något (sedan 15/11; förr nollade den källans pris i spegeln). Ger en källa pris i torrkörning men spegeln saknar det: kolla granskningen först.
 - `SCRAPE_FORCE_REFRESH=1` — tvinga refresh av kända URL:er (rättar tid/plats efter en motorfix). Rättar INTE event motorn slutat returnera; de kräver en riktad döljning (se `oneoff-hide-stale-dateclusters.ts`).
 
 ## Nattjobbet på Mac minin
