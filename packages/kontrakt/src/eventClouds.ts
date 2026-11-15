@@ -231,6 +231,29 @@ export interface CloudView {
 }
 
 /**
+ * Området som rymmer alla `corners` - skärmens fyra hörn (plus marginal) som
+ * platser på kartan. ALLA FYRA behövs (#239): på en vriden karta är skärmens
+ * övre vänstra hörn inte längre nordväst. Med bara två hörn blev rutan för
+ * smal eller ut och in, och då byggdes inga moln alls - på en telefonskärm
+ * försvann de helt vid drygt 30 graders vridning. Ogiltiga hörn hoppas över;
+ * utan ett enda giltigt blir området oändligt och buildClouds bygger inget.
+ */
+export function cloudViewOf(corners: readonly CloudPoint[]): CloudView {
+    let west = Infinity;
+    let east = -Infinity;
+    let south = Infinity;
+    let north = -Infinity;
+    for (const c of corners) {
+        if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
+        west = Math.min(west, c.lng);
+        east = Math.max(east, c.lng);
+        south = Math.min(south, c.lat);
+        north = Math.max(north, c.lat);
+    }
+    return { west, south, east, north };
+}
+
+/**
  * Molnen för vyn: rutnätet på molnens nivå läggs över `view`, och varje ruta
  * får ett moln efter hur GLEST det är där. Tätheten är rutans event plus
  * halva grannarnas och en fjärdedel av hörnens, så en stad blir klar även i

@@ -31,6 +31,7 @@ export {
     cloudOpacityForZoom,
     cloudScaleFor,
     cloudShadow,
+    cloudViewOf,
     GLIDE_MAX_SPEED,
     GLIDE_PUSH_ACCEL,
     GLIDE_TAU_MS,

@@ -33,6 +33,7 @@ import {
     cloudApproachFor,
     cloudScaleFor,
     cloudShadow,
+    cloudViewOf,
     glideStep,
     pushOffset,
     pushRearmed,
@@ -298,11 +299,13 @@ export function attachEventClouds(map: maplibregl.Map): EventClouds {
     const activeSet = () => sets.find(s => !s.leaving) ?? null;
     let lastBuildAt = 0;
 
-    /** Vyn plus marginalen, i grader. */
+    /** Vyn plus marginalen, i grader. Alla fyra hörnen (#239): på en vriden
+     *  karta är övre vänstra hörnet inte längre nordväst, och med bara två
+     *  hörn byggdes då inga moln alls. */
     const viewWithMargin = (): CloudView => {
-        const nw = map.unproject([-CULL_MARGIN_PX, -CULL_MARGIN_PX]);
-        const se = map.unproject([cssW + CULL_MARGIN_PX, cssH + CULL_MARGIN_PX]);
-        return { west: nw.lng, north: nw.lat, east: se.lng, south: se.lat };
+        const m = CULL_MARGIN_PX;
+        const corners: [number, number][] = [[-m, -m], [cssW + m, -m], [cssW + m, cssH + m], [-m, cssH + m]];
+        return cloudViewOf(corners.map(c => map.unproject(c)));
     };
 
     /** Bygg (om) den aktiva uppsättningen. Samma nivå = byt på plats, behåll

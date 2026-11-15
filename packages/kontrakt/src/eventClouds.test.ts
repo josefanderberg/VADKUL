@@ -28,6 +28,7 @@ import {
     pushRearmed,
     PUSH_REARM_PX,
     cloudShadow,
+    cloudViewOf,
     CLOUD_SHADOW_OPACITY,
     CLOUD_SHADOW_SHARE,
     type CloudRevealPoint,
@@ -406,7 +407,6 @@ describe('glideStep', () => {
         expect(GLIDE_MAX_SPEED).toBeLessThanOrEqual(300);
     });
 
-    it('tål noll tid och skräp', () => {
     // #238: det valda eventet står kvar som knuffare så länge kortet är öppet.
     // Ett moln nära räckviddens kant får en svag knuff, glider sakta utåt och
     // kom förr aldrig till ro: farten gick mot noll utan att bli noll, och
@@ -447,8 +447,38 @@ describe('glideStep', () => {
         });
     });
 
+    it('tål noll tid och skräp', () => {
         expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 1, 0)).toBe(still);
         expect(glideStep(still, 100, 100, [{ x: 90, y: 100 }], 40, 0, 16)).toBe(still);
+    });
+});
+
+// #239: molnen försvann när kartan vreds.
+describe('cloudViewOf', () => {
+    it('ovriden karta: samma ruta som övre vänstra och nedre högra hörnet', () => {
+        const v = cloudViewOf([
+            { lat: 58, lng: 13 }, { lat: 58, lng: 16 }, { lat: 56, lng: 16 }, { lat: 56, lng: 13 },
+        ]);
+        expect(v).toEqual({ west: 13, south: 56, east: 16, north: 58 });
+    });
+
+    it('vriden karta: rutan rymmer alla fyra hörnen', () => {
+        // Skärmens hörn i ordningen övre vänster, övre höger, nedre höger,
+        // nedre vänster - efter en vridning ligger övre vänster ÖSTER om nedre höger.
+        const hörn = [
+            { lat: 58.2, lng: 15.1 }, { lat: 57.6, lng: 16.4 }, { lat: 55.8, lng: 14.9 }, { lat: 56.4, lng: 13.6 },
+        ];
+        const v = cloudViewOf(hörn);
+        expect(v).toEqual({ west: 13.6, south: 55.8, east: 16.4, north: 58.2 });
+        // Och den rutan ger moln - med bara två hörn blev den ut och in.
+        expect(buildClouds([], 8, v).length).toBeGreaterThan(0);
+        expect(buildClouds([], 8, { west: hörn[0].lng, north: hörn[0].lat, east: hörn[2].lng, south: hörn[2].lat })).toEqual([]);
+    });
+
+    it('hoppar över ogiltiga hörn, och bygger inget utan giltiga', () => {
+        const v = cloudViewOf([{ lat: NaN, lng: 13 }, { lat: 57, lng: 14 }, { lat: 56, lng: 15 }]);
+        expect(v).toEqual({ west: 14, south: 56, east: 15, north: 57 });
+        expect(buildClouds([], 8, cloudViewOf([]))).toEqual([]);
     });
 });
 
