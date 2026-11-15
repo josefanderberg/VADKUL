@@ -52,8 +52,8 @@
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-08",
-      "emptyRetries": 8
+      "lastRetry": "2026-11-15",
+      "emptyRetries": 9
     },
     "staffanstorp": {
       "since": "2026-08-19",
@@ -76,6 +76,10 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-11-13",
       "emptyRetries": 3
+    },
+    "tickster-ort-jonkoping-3": {
+      "since": "2026-11-15",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "tickster-ort-linkoping-2": {
       "since": "2026-11-04",
