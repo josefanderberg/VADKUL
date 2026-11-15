@@ -62,7 +62,10 @@ const SMOKE_WINDOW_DAYS = 180;
 
 // Domäner som aldrig är kandidater: sociala medier, biljett-plattformar vi
 // redan täcker via egna källor, länkkortare, kartor, myndighets-generiskt.
-const DOMAIN_BLOCKLIST = /(?:^|\.)(facebook|fb|instagram|youtube|youtu|spotify|tiktok|linkedin|twitter|x|google|goo|maps|bit|tinyurl|mailchi|forms|docs|drive|apple|microsoft|teams|zoom|live|eventbrite|ticketmaster|tickster|billetto|nortic|axs|dice|simplesignup|visitsweden|wikipedia|eduadmin|sportadmin|hembygd|svenskakyrkan|naturskyddsforeningen|rodakorset|friluftsframjandet|korpen|riksteatern|bilda|medborgarskolan|studieframjandet|raceid|pro|abf|sv|kulturhusetstadsteatern)\.(?:com|se|nu|org|net|ly|be|fm|me|co)$/i;
+// Hotellkedjor och rikstäckande organisationer (15/11): kedjans eventsidor
+// gör reklam för andras evenemang, och en rikskalender fick ortens
+// hotell eller café som plats för hela landets event.
+const DOMAIN_BLOCKLIST = /(?:^|\.)(facebook|fb|instagram|youtube|youtu|spotify|tiktok|linkedin|twitter|x|google|goo|maps|bit|tinyurl|mailchi|forms|docs|drive|apple|microsoft|teams|zoom|live|eventbrite|ticketmaster|tickster|billetto|nortic|axs|dice|simplesignup|strawberry|strawberryhotels|scandichotels|nordicchoicehotels|elite|bishopsarms|erikshjalpen|ifsuede|visitsweden|wikipedia|eduadmin|sportadmin|hembygd|svenskakyrkan|naturskyddsforeningen|rodakorset|friluftsframjandet|korpen|riksteatern|bilda|medborgarskolan|studieframjandet|raceid|pro|abf|sv|kulturhusetstadsteatern)\.(?:com|se|nu|org|net|ly|be|fm|me|co)$/i;
 
 type StateEntry = ProbeMemory;
 interface StateFile { version: 1; domains: Record<string, StateEntry> }
@@ -116,6 +119,11 @@ function domainFromUrl(url: string): string {
 /** Probe-configens huvud-URL oavsett engine-typ (wp-rest: baseUrl, sitemap: sitemapUrl, sitevision: urls[0]). */
 function configMainUrl(config: any): string {
     return String(config?.baseUrl ?? config?.sitemapUrl ?? config?.urls?.[0] ?? '');
+}
+
+/** "https://www.foo.se/x" → "foo.se" — värden utan www, för att skilja ställen som delar basdomän. */
+function bareHostOf(url: string): string {
+    return String(url).replace(/^https?:\/\//, '').split('/')[0].toLowerCase().replace(/^www\./, '');
 }
 
 /** "vastsverige.com" → "Vastsverige" — visningsnamn när sajten själv är okänd. */
@@ -409,7 +417,10 @@ async function main() {
     }
     for (const sug of suggestions) {
         const domain = domainFromUrl(configMainUrl(sug.config));
-        const cand = candidates.find((c) => c.domain === domain);
+        // Två ställen kan dela basdomän (bildmuseet.umu.se och curiosum.umu.se
+        // 15/11: Curiosum fick Bildmuseets namn och lokal). Exakt värd först.
+        const host = bareHostOf(configMainUrl(sug.config));
+        const cand = candidates.find((c) => bareHostOf(c.base) === host) ?? candidates.find((c) => c.domain === domain);
         let id = `sb-${domain.replace(/\./g, '-')}`;
         if (existingIds.has(id)) id = `${id}-2`;
 

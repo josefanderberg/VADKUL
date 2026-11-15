@@ -69,6 +69,9 @@ const LISTING_WORD_RE = /evenemang|(?<![a-zåäö])events?(?![a-zåäö])|kalend
 /** Sidor som säljer lokalen eller hör till sajtens drift — aldrig programmet. */
 const NOT_LISTING_RE = /boka|bokning|hyr[-/]|hyra|konferens|catering|privat|f[oö]retag|anordna|arrangera|br[oö]llop|festv[aå]ning|kontakt|presentkort|jobb|karri[aä]r|shop|butik|login|logga-?in|cart|varukorg|integritet|cookie|villkor|policy|\.(?:pdf|jpe?g|png|ics|zip)$/i;
 
+/** Sista segmentet ser ut som ett enskilt event: tre ord eller fler, eller datum/id i slugen. */
+const EVENT_SLUG_RE = /^(?:[^-]+-){2,}[^-]+$|\d{4}-\d{2}-\d{2}|-\d{3,}$/;
+
 const bareHost = (h: string): string => h.toLowerCase().replace(/^www\./, '');
 
 /**
@@ -92,6 +95,14 @@ export function listingCandidates(homeHtml: string, homeUrl: string, max = 5): s
         let path: string;
         try { path = decodeURIComponent(u.pathname); } catch { path = u.pathname; }
         if (NOT_LISTING_RE.test(path)) return;
+        // Ett enskilt event (/events/concert-trinix-en-tournee/) är ingen listsida:
+        // dess "fler event"-länkar försvinner med eventet (ifsuede.com 15/11).
+        // Katalogen ovanför provas i stället.
+        if (segs.length >= 2 && EVENT_SLUG_RE.test(segs[segs.length - 1])) {
+            const parent = `${u.origin}/${segs.slice(0, -1).join('/')}/`;
+            scored.set(parent, Math.max(scored.get(parent) ?? 0, 3 * 10 - (segs.length - 1)));
+            return;
+        }
         const text = $(el).text().replace(/\s+/g, ' ').trim();
         const score = STRONG_PATH_RE.test(path) ? 3 : LISTING_WORD_RE.test(path) ? 2 : (text.length <= 40 && LISTING_WORD_RE.test(text) && !NOT_LISTING_RE.test(text)) ? 1 : 0;
         if (score === 0) return;

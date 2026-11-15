@@ -77,6 +77,9 @@ export function remembersVerdict(entry: ProbeMemory | undefined, ageDays: number
 
 export interface SmokeVerdict { ok: boolean; reasons: string[]; events: number; sampleTitles: string[]; allTitles: string[] }
 
+/** Möten och lokalbokningar — en förenings egen planering, inte publika event. */
+const INTERNAL_RE = /(?<![a-zåäö])(?:styrelsemöte|sektionsmöte|sektions?\s+möte|uppföljningsmöte|årsmöte|medlemsmöte|planeringsmöte|möte|stugbokning|lokalbokning|bokning|bokad|upptaget)(?![a-zåäö])/i;
+
 const dayOf = (d: Date): string => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 
 export interface JudgeOptions {
@@ -120,6 +123,11 @@ export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date,
     const pairs = new Set(future.map((e) => `${(e.title ?? '').trim().toLowerCase()}|${dayOf(e.startDate)}`)).size;
     if (distinct < 2) reasons.push(`alla ${titles.length} event har samma titel`);
     else if (pairs / titles.length < 0.8) reasons.push(`titlar repeteras samma dag (${pairs} unika titel+dag av ${titles.length})`);
+
+    // Föreningens interna kalender: möten och lokalbokningar, inga publika
+    // event (Hestra IF 15/11: "Stugbokning: Konferensrummet", "OL-sektion möte").
+    const internal = future.filter((e) => INTERNAL_RE.test(`${e.title ?? ''} ${e.venueName ?? ''}`)).length;
+    if (internal / future.length >= 0.5) reasons.push(`internt kalendarium (${internal} av ${future.length} är möten eller bokningar)`);
 
     const JUNK = /cookie|integritetspolicy|personuppgift|logga in|meny|sök|404|not found|error|javascript|until\b|read more|läs mer$/i;
     const junky = titles.filter((t) => JUNK.test(t)).length;

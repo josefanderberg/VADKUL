@@ -73,6 +73,18 @@ describe('listingCandidates', () => {
             'https://chapterhouse.se/sida-7/',
         ]);
     });
+
+    it('ett enskilt event är ingen listsida — katalogen ovanför provas i stället (ifsuede.com 15/11)', () => {
+        const home = `<html><body>
+            <a href="/events/concert-trinix-en-tournee/">Concert Trinix</a>
+            <a href="/kalender/2026-11-21-julmarknad/">Julmarknad</a>
+            <a href="/om-oss/">Om oss</a>
+            </body></html>`;
+        const got = listingCandidates(home, 'https://ifsuede.com');
+        expect(got).toContain('https://ifsuede.com/events/');
+        expect(got).toContain('https://ifsuede.com/kalender/');
+        expect(got.some((u) => /trinix|julmarknad/.test(u))).toBe(false);
+    });
 });
 
 describe('detailLinkFamily', () => {

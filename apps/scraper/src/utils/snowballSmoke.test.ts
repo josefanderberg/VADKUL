@@ -160,3 +160,20 @@ describe('titlesNear — dubblettkontrollen ser bara ortens egna event (Växjö 
         expect(near.has('utan koordinat')).toBe(false);
     });
 });
+
+describe('judgeEvents — föreningens interna kalender (Hestra IF 15/11)', () => {
+    it('möten och lokalbokningar fälls', () => {
+        const events = [
+            ev('OL-sektion Möte 18.00', 15), ev('Uppföljningsmöte O-event', 16), ev('Uppföljningsmöte Downhill 2026', 16, 20),
+            ev('Skidsektionsmöte', 18), ev('Julfest för medlemmar', 20),
+        ].map((e) => ({ ...e, venueName: 'Stugbokning: Konferensrummet' }));
+        const v = judgeEvents(events, START, END, 'x.se');
+        expect(v.ok).toBe(false);
+        expect(v.reasons.join(' ')).toMatch(/internt kalendarium/);
+    });
+
+    it('ett publikt program med något enstaka möte går igenom', () => {
+        const events = [ev('Jazzkväll', 15), ev('Författarmöte med Kerstin', 16), ev('Vernissage', 18), ev('Quiz', 20)];
+        expect(judgeEvents(events, START, END, 'x.se').ok).toBe(true);
+    });
+});
