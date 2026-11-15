@@ -30,6 +30,7 @@ import { passesPopularFilter } from '@/utils/popularFilter';
 import { inListWindow, isPopularListed } from '@/utils/popularList';
 import { LIST_ZOOM_OUT_FLOOR, nearestOutsideBounds } from '@/utils/listZoomRings';
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
+import { emptyPromptAllowedAt } from '@/utils/emptyPrompt';
 import { zoomInCenter } from '@/utils/zoomInCenter';
 import { isFromOrganizer, organizerHref, organizerNameFromSlug, organizerPageSlug } from '@/utils/organizerPages';
 import { markActive, readShouldAutoShowWelcome } from '@/utils/welcomeGate';
@@ -6142,96 +6143,52 @@ export default function HomePage() {
                 som väljaren (se nearbyIsEmpty). Sitter strax OVANFÖR dag/vecka-
                 väljaren i botten (bottom-[228px] klarar väljarens ~130px från
                 bottom-[92px]) så de inte täcker varandra — rutan pekar ju på
-                växeln man i så fall ska trycka på. */}
-            {nearbyIsEmpty && (
+                växeln man i så fall ska trycka på.
+                EN RAD SOM ALLT HAR VARIT-PROMPTEN, OCH TYST PÅ KVARTERSNIVÅ
+                (#252, Josef 15/11: "den täcker för mycket av skärmen. och är
+                ivägen när man kanske letar efter restaurangen"): förklarings-
+                raden under rubriken är borta, knapparna sitter i samma rad, och
+                från zoomen där kvarterets platsskyltar tänds visas den inte alls
+                (utils/emptyPrompt). Valen är desamma som förut: 🔥/kategori/källa
+                → Visa alla (och veckan om den har något), tom dag → Visa veckan,
+                tom vecka → Tipsa. */}
+            {nearbyIsEmpty && emptyPromptAllowedAt(mapZoom) && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
-                    <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl border border-white/50 px-4 py-3 max-w-md">
-                        <span className="text-2xl" aria-hidden>{popularOnly ? '🔥' : mapCategories.size > 0 ? EVENT_CATEGORIES[[...mapCategories][0]].emoji : canOfferWeek ? '📅' : '🤷'}</span>
-                        <div className="min-w-0">
-                            {/* 🔥-läget först: siffran är noll för att FILTRET smalnat
-                                bort allt — svaret är då "släpp filtret", inte "zooma
-                                ut" (samma ribba överallt är ägarbeslut 10/9, tom vy i
-                                småstad är ärlig men ska förklara sig). */}
-                            {filterActive ? (
-                                canOfferWeek ? (
-                                    // Veckan HAR populära event (areaCounts.week räknar
-                                    // genom matchesFilter, alltså 🔥-smalnat) — förstavalet
-                                    // är då att vidga tidsfönstret MED filtret kvar
-                                    // (Josef 10/9), inte att släppa det.
-                                    <>
-                                        <p className="text-sm font-bold text-slate-800">
-                                            {filterPhrase} här {promptDayLabel} — men {areaCounts?.week} i veckan.
-                                        </p>
-                                        <p className="text-xs text-slate-500">
-                                            Byt till hela veckan med filtret kvar — eller visa alla event.
-                                        </p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="text-sm font-bold text-slate-800">
-                                            {filterPhrase} här {promptDayLabel}.
-                                        </p>
-                                        <p className="text-xs text-slate-500">
-                                            Visa alla event, byt dag — eller zooma ut.
-                                        </p>
-                                    </>
-                                )
-                            ) : canOfferWeek ? (
-                                <>
-                                    <p className="text-sm font-bold text-slate-800">
-                                        Inget här {promptDayLabel} — men {areaCounts?.week} i veckan.
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        Byt till hela veckan så syns de direkt — eller
-                                        zooma ut för att se mer.
-                                    </p>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-sm font-bold text-slate-800">
-                                        Inget här {promptDayLabel}.
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        Zooma ut för att se mer — eller tipsa om något du
-                                        vet händer. Tar en halvminut, inget konto.
-                                    </p>
-                                </>
-                            )}
-                        </div>
-                        {filterActive ? (
-                            <div className="shrink-0 flex flex-col items-stretch gap-1.5">
-                                {canOfferWeek && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDayRangeChange(0, 7)}
-                                        className="px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
-                                    >
-                                        Visa veckan
-                                    </button>
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={handleClearFilters}
-                                    className={canOfferWeek
-                                        ? 'px-4 py-2 rounded-full bg-white border border-slate-300 text-slate-700 text-sm font-bold hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors'
-                                        : 'px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors'}
-                                >
-                                    Visa alla
-                                </button>
-                            </div>
-                        ) : canOfferWeek ? (
+                    <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-white/50 pl-3 pr-1.5 py-1.5 text-sm animate-in fade-in duration-300">
+                        <span aria-hidden>{popularOnly ? '🔥' : mapCategories.size > 0 ? EVENT_CATEGORIES[[...mapCategories][0]].emoji : canOfferWeek ? '📅' : '🤷'}</span>
+                        {/* 🔥-läget först: siffran är noll för att FILTRET smalnat
+                            bort allt — svaret är då "släpp filtret", inte "zooma
+                            ut" (samma ribba överallt är ägarbeslut 10/9). Har
+                            veckan något med filtret kvar erbjuds den först
+                            (Josef 10/9). */}
+                        <span className="min-w-0 truncate font-bold text-slate-700">
+                            {filterActive ? filterPhrase : 'Inget'} här {promptDayLabel}
+                            {canOfferWeek && <span className="font-semibold text-slate-500"> · {areaCounts?.week} i veckan</span>}
+                        </span>
+                        {canOfferWeek && (
                             <button
                                 type="button"
                                 onClick={() => handleDayRangeChange(0, 7)}
-                                className="shrink-0 px-4 py-2 rounded-full bg-[#006AA7] text-white text-sm font-bold hover:bg-[#00589a] transition-colors"
+                                className="shrink-0 px-3 py-1.5 rounded-full bg-[#006AA7] text-white text-xs font-bold hover:bg-[#00589a] transition-colors"
                             >
                                 Visa veckan
                             </button>
-                        ) : (
+                        )}
+                        {filterActive ? (
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className={canOfferWeek
+                                    ? 'shrink-0 px-3 py-1.5 rounded-full bg-white border border-slate-300 text-slate-700 text-xs font-bold hover:border-[#006AA7]/40 hover:text-[#006AA7] transition-colors'
+                                    : 'shrink-0 px-3 py-1.5 rounded-full bg-[#006AA7] text-white text-xs font-bold hover:bg-[#00589a] transition-colors'}
+                            >
+                                Visa alla
+                            </button>
+                        ) : !canOfferWeek && (
                             <button
                                 type="button"
                                 onClick={startTipHere}
-                                className="shrink-0 px-4 py-2 rounded-full bg-green-600 text-white text-sm font-bold hover:bg-green-500 transition-colors"
+                                className="shrink-0 px-3 py-1.5 rounded-full bg-green-600 text-white text-xs font-bold hover:bg-green-500 transition-colors"
                             >
                                 Tipsa 💡
                             </button>
