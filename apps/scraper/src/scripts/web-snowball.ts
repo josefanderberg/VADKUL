@@ -65,7 +65,7 @@ const SMOKE_WINDOW_DAYS = 180;
 // Hotellkedjor och rikstäckande organisationer (15/11): kedjans eventsidor
 // gör reklam för andras evenemang, och en rikskalender fick ortens
 // hotell eller café som plats för hela landets event.
-const DOMAIN_BLOCKLIST = /(?:^|\.)(facebook|fb|instagram|youtube|youtu|spotify|tiktok|linkedin|twitter|x|google|goo|maps|bit|tinyurl|mailchi|forms|docs|drive|apple|microsoft|teams|zoom|live|eventbrite|ticketmaster|tickster|billetto|nortic|axs|dice|simplesignup|strawberry|strawberryhotels|scandichotels|nordicchoicehotels|elite|bishopsarms|erikshjalpen|ifsuede|naturvardsverket|visitsweden|wikipedia|eduadmin|sportadmin|hembygd|svenskakyrkan|naturskyddsforeningen|rodakorset|friluftsframjandet|korpen|riksteatern|bilda|medborgarskolan|studieframjandet|raceid|pro|abf|sv|kulturhusetstadsteatern)\.(?:com|se|nu|org|net|ly|be|fm|me|co)$/i;
+const DOMAIN_BLOCKLIST = /(?:^|\.)(facebook|fb|instagram|youtube|youtu|spotify|tiktok|linkedin|twitter|x|google|goo|maps|bit|tinyurl|mailchi|forms|docs|drive|apple|microsoft|teams|zoom|live|eventbrite|ticketmaster|tickster|billetto|nortic|axs|dice|simplesignup|strawberry|strawberryhotels|scandichotels|nordicchoicehotels|elite|bishopsarms|erikshjalpen|ifsuede|naturvardsverket|tacobar|visitsweden|wikipedia|eduadmin|sportadmin|hembygd|svenskakyrkan|naturskyddsforeningen|rodakorset|friluftsframjandet|korpen|riksteatern|bilda|medborgarskolan|studieframjandet|raceid|pro|abf|sv|kulturhusetstadsteatern)\.(?:com|se|nu|org|net|ly|be|fm|me|co)$/i;
 
 type StateEntry = ProbeMemory;
 interface StateFile { version: 1; domains: Record<string, StateEntry> }
@@ -426,6 +426,14 @@ async function main() {
         const stem = `sb-${domain.replace(/\./g, '-')}`;
         let id = stem;
         for (let n = 2; existingIds.has(id); n++) id = `${stem}-${n}`;
+
+        // Proben följer omdirigeringar: kandidaten hotelxyz.se kan landa på
+        // kedjans strawberry.se (15/11). Spärrlistan och registret gäller även
+        // den domän proben hamnade på, inte bara den vi skickade in.
+        if (DOMAIN_BLOCKLIST.test(domain) || (cand?.domain !== domain && existingDomains().has(domain))) {
+            console.log(`   hoppar: ${domain.padEnd(32)} proben landade på en spärrad eller redan känd domän`);
+            continue;
+        }
 
         // Program på en enda sida: bara för utpekade ställen (se inlineListingAllowed).
         if (!inlineListingAllowed(sug.method, cand?.isVenue)) {
