@@ -168,6 +168,22 @@ export interface SiteVisionConfig {
      */
     pageApi?: { pageId: string; portletId: string };
     /**
+     * Consids "calendar-list"-webapp och dess `/getPages`-route (upptäckt på
+     * vallentuna.se 15/11 2026):
+     *   GET <origin>/appresource/<pageId>/<portletId>/getPages
+     *       ?filters=%5B%5D&combinedFilters=%5B%5D&structureFilter=%5B%5D&pageNum=<N>
+     *   → { numHits, pages: [{ linkHtml, fromDateIso, toDateIso, preamble,
+     *                          place, categories, image: { uri } }] }
+     *
+     * Sidan själv bär bara de nio första korten; resten laddas med "Visa
+     * fler". Vallentuna hade 69 event och vi läste 11 (Puppeteer såg bara det
+     * som hunnit ritas). linkHtml är en färdig <a href>Titel</a>. Datumen är
+     * ÅÅÅÅ-MM-DD utan klockslag — tiden står bara på detaljsidan. 9 per sida,
+     * pageNum är 1-indexerad och INTE kumulativ. `filters` måste vara "[]":
+     * "{}" och null ger 500.
+     */
+    calendarListApi?: { pageId: string; portletId: string };
+    /**
      * Platsen ur DETALJSIDAN när listsvaret saknar venue (#229, 14/11 2026):
      * venue och adress ur capture-grupp 1, samma tolkning som sitemap-motorns
      * detailPlaceRegex. Hämtas bara för event utan venue, och bara nya event
@@ -682,6 +698,94 @@ async function scrapePageApi(
         if (page * items.length >= hitCount) break;
     }
     ctx.log(`/page-API: ${events.length} event (hitCount=${hitCount})`);
+    return events;
+}
+
+/** Rått kort ur calendar-list-appens /getPages (bara fälten vi läser). */
+interface CalendarListItem {
+    linkHtml?: string;
+    fromDateIso?: string;
+    toDateIso?: string;
+    preamble?: string;
+    place?: string;
+    categories?: string[];
+    image?: { uri?: string };
+}
+
+/** "2026-11-18" → lokal midnatt. Datumet saknar klockslag, så ingen tidszon ska in i det. */
+function localDay(iso: string | undefined): Date | null {
+    const m = (iso ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3]) ? d : null;
+}
+
+/** Mappa ett calendar-list-kort → RawEvent. Exporterad för test. */
+export function mapCalendarListItem(
+    item: CalendarListItem,
+    baseUrl: string,
+    defaultCity: string | undefined,
+): RawEvent | null {
+    const href = decodeHtmlEntities(item.linkHtml?.match(/href="([^"]+)"/)?.[1] ?? '');
+    const title = decodeHtmlEntities((item.linkHtml ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+    const eventUrl = makeAbsoluteUrl(href || undefined, baseUrl);
+    const start = localDay(item.fromDateIso);
+    if (!title || !eventUrl || !start) return null;
+    const end = localDay(item.toDateIso);
+    const place = item.place?.trim();
+    const categories = (item.categories ?? []).filter((c) => typeof c === 'string' && c.trim());
+    return {
+        title,
+        startDate: start,
+        endDate: end && end > start ? end : undefined,
+        url: eventUrl,
+        // Platsfältet bär ibland en webbadress ("www.vallentuna.se" på digitala
+        // evenemang) — det är ingen lokal.
+        venueName: place && !/^(?:https?:\/\/|www\.)|^\S+\.(?:se|nu|com|org|net)$/i.test(place) ? place : undefined,
+        city: defaultCity,
+        description: item.preamble?.trim() || undefined,
+        imageUrl: makeAbsoluteUrl(item.image?.uri, baseUrl),
+        classifyHints: categories.length ? categories.join(' ') : undefined,
+    };
+}
+
+/** calendar-list-appens /getPages — bläddra igenom (9/sida, ej kumulativ). */
+async function scrapeCalendarListApi(
+    config: SiteVisionConfig,
+    ctx: EngineContext,
+): Promise<RawEvent[]> {
+    const base = config.urls[0];
+    const origin = new URL(base).origin;
+    const { pageId, portletId } = config.calendarListApi!;
+    const cap = config.maxItems ?? 400;
+    const events: RawEvent[] = [];
+    const seenUrls = new Set<string>();
+
+    let numHits = Infinity;
+    let fetched = 0;
+    for (let page = 1; events.length < cap && page <= 80; page++) {
+        const url = `${origin}/appresource/${pageId}/${portletId}/getPages`
+            + `?filters=%5B%5D&combinedFilters=%5B%5D&structureFilter=%5B%5D&pageNum=${page}`;
+        const body = await fetchHtml(url, config, { 'X-Requested-With': 'XMLHttpRequest' });
+        if (!body) { ctx.log(`  /getPages svarade inte (pageNum=${page})`); break; }
+
+        let data: { numHits?: number; pages?: CalendarListItem[] };
+        try { data = JSON.parse(body); } catch { ctx.log('  /getPages gav icke-JSON'); break; }
+        if (typeof data.numHits === 'number') numHits = data.numHits;
+
+        const items = data.pages ?? [];
+        if (items.length === 0) break;
+        fetched += items.length;
+        for (const it of items) {
+            const ev = mapCalendarListItem(it, base, config.defaultCity);
+            if (!ev || seenUrls.has(ev.url)) continue;
+            if (config.dropMunicipalMeetings && isMunicipalMeeting(ev.title, ev.url)) continue;
+            seenUrls.add(ev.url);
+            events.push(ev);
+        }
+        if (fetched >= numHits) break;
+    }
+    ctx.log(`/getPages-API: ${events.length} event (numHits=${numHits})`);
     return events;
 }
 
@@ -1303,6 +1407,7 @@ export const sitevisionEngine = async (
                     : config.guideApi ? scrapeGuideApi
                         : config.searchAppApi ? scrapeSearchAppApi
                             : config.pageApi ? scrapePageApi
+                                : config.calendarListApi ? scrapeCalendarListApi
                                 : config.eventServiceApi ? scrapeEventServiceApi
                                     : null;
     if (apiScraper) {

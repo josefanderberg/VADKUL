@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     parseSoleilDate, mapSoleilItem, parseRestAppDate, mapRestAppHit, pickCityFromVenue, cleanCardTitle, mapPageApiItem, mapEventServiceItem, isMunicipalMeeting,
     parseSearchAppDate, mapSearchAppHit, parseSearchAppDetail, bodyDescFromHtml, organizerFromRestAppHtml,
+    mapCalendarListItem,
 } from './sitevision';
 
 describe('parseSoleilDate', () => {
@@ -590,5 +591,50 @@ describe('bodyDescFromHtml', () => {
     it('inget dugligt block → tom sträng', () => {
         expect(bodyDescFromHtml(portlet('<p>Kontakt</p>'), 'Event')).toBe('');
         expect(bodyDescFromHtml('<div class="annat">Lång text som inte ligger i en text-portlet alls, trettio+ tecken.</div>', 'Event')).toBe('');
+    });
+});
+
+describe('mapCalendarListItem — Consids calendar-list-app (Vallentuna 15/11)', () => {
+    const BASE = 'https://www.vallentuna.se/uppleva-och-gora/evenemang-och-motesplatser/evenemang';
+    const item = {
+        linkHtml: '<a href="/uppleva-och-gora/evenemang-och-motesplatser/evenemang/evenemang/2026-09-23-film-brand" class="con-event-archive__item-link">Film: Br&auml;nd</a>',
+        fromDate: 'Söndag 15 november',
+        fromDateIso: '2026-11-15',
+        toDateIso: '',
+        place: 'Kulturrummet, Vallentuna Kulturhus',
+        categories: ['Film'],
+        preamble: 'Välkommen på gratis film i Kulturhuset på Tema MAT!',
+        image: { uri: '/images/200.61a7/1791202414674/Br%C3%A4nd%20liggande.webp' },
+    };
+
+    it('titel och adress ur linkHtml, plats och kategori ur kortet, datumet som lokal dag', () => {
+        const ev = mapCalendarListItem(item, BASE, 'Vallentuna')!;
+        expect(ev.title).toBe('Film: Bränd');
+        expect(ev.url).toBe('https://www.vallentuna.se/uppleva-och-gora/evenemang-och-motesplatser/evenemang/evenemang/2026-09-23-film-brand');
+        expect([ev.startDate.getFullYear(), ev.startDate.getMonth(), ev.startDate.getDate(), ev.startDate.getHours()]).toEqual([2026, 10, 15, 0]);
+        expect(ev.endDate).toBeUndefined();
+        expect(ev.venueName).toBe('Kulturrummet, Vallentuna Kulturhus');
+        expect(ev.city).toBe('Vallentuna');
+        expect(ev.classifyHints).toBe('Film');
+        expect(ev.description).toContain('gratis film');
+        expect(ev.imageUrl).toBe('https://www.vallentuna.se/images/200.61a7/1791202414674/Br%C3%A4nd%20liggande.webp');
+    });
+
+    it('slutdatum bara när det ligger efter startdagen', () => {
+        expect(mapCalendarListItem({ ...item, toDateIso: '2026-11-17' }, BASE, 'Vallentuna')!.endDate?.getDate()).toBe(17);
+        expect(mapCalendarListItem({ ...item, toDateIso: '2026-11-15' }, BASE, 'Vallentuna')!.endDate).toBeUndefined();
+    });
+
+    it('en webbadress i platsfältet är ingen lokal', () => {
+        expect(mapCalendarListItem({ ...item, place: 'www.vallentuna.se' }, BASE, 'Vallentuna')!.venueName).toBeUndefined();
+        expect(mapCalendarListItem({ ...item, place: 'https://teams.microsoft.com/x' }, BASE, 'Vallentuna')!.venueName).toBeUndefined();
+        expect(mapCalendarListItem({ ...item, place: 'Vallentuna Teater' }, BASE, 'Vallentuna')!.venueName).toBe('Vallentuna Teater');
+    });
+
+    it('kort utan titel, länk eller giltigt datum hoppas', () => {
+        expect(mapCalendarListItem({ ...item, linkHtml: '<a class="x"></a>' }, BASE, undefined)).toBeNull();
+        expect(mapCalendarListItem({ ...item, fromDateIso: '' }, BASE, undefined)).toBeNull();
+        expect(mapCalendarListItem({ ...item, fromDateIso: '2026-02-30' }, BASE, undefined)).toBeNull();
+        expect(mapCalendarListItem({}, BASE, undefined)).toBeNull();
     });
 });

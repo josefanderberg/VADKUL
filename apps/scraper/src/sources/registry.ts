@@ -7580,17 +7580,20 @@ export const SOURCES: Source[] = [
         engine: 'sitevision',
         config: {
             // 1/11: kommunen bytte Optimizely → SiteVision; /api/v1/eventsselection
-            // ger 404. Kalendern laddar korten i JS (3 "fästa" i HTML:n) → Puppeteer.
+            // ger 404. 15/11: sidan bär bara de nio första korten och resten
+            // laddas med "Visa fler" — Puppeteer såg 11 av 69. Kalenderappens
+            // egen /getPages-rutt ger alla, med plats och kategori.
             urls: ['https://www.vallentuna.se/uppleva-och-gora/evenemang-och-motesplatser/evenemang'],
             defaultCity: 'Vallentuna',
-            useBrowser: true,
+            calendarListApi: { pageId: '4.2d6cb2d919d85cc2d2563f8', portletId: '12.2d6cb2d919d85cc2d251d377' },
             dropMunicipalMeetings: true,
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
         notes: 'Optimizely-kommunens egen /api/v1/eventsselection — 82 event i ETT anrop, ingen paginering. FÄLLA: toppnivåns StartDate är null för återkommande event, datumen ligger bara i Dates[]. '
-            + '1/11: Optimizely-API:t borta (SiteVision nu) → sitevision + useBrowser.',
-        lastVerified: '2026-11-01',
+            + '1/11: Optimizely-API:t borta (SiteVision nu) → sitevision + useBrowser. '
+            + '15/11: calendarListApi (Consids calendar-list-app, /getPages) i stället för Puppeteer: 69 event mot 11.',
+        lastVerified: '2026-11-15',
         discovery: { method: 'probe-xhr', probeUrl: 'https://www.vallentuna.se/api/v1/eventsselection?CurrentPageId=c36b6e1a-5da0-4719-9b5e-c586df601ec6', date: '2026-08-26', rawEventCount: 82, notes: 'CurrentPageId sniffat med apps/scraper/scout/deep-scout.cjs. Prova samma endpoint på andra Optimizely-kommuner.' },
     },
     {
