@@ -6525,6 +6525,29 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-11',
     },
     {
+        id: 'bio-rio',
+        hostName: 'Bio Rio',
+        region: 'stockholm',
+        engine: 'json-ld',
+        config: {
+            // Startsidan bär de närmaste dagarnas visningar som ScreeningEvent
+            // med en boknings-URL per visning; daglig körning fångar varje dag.
+            urls: ['https://www.biorio.se/sv'],
+            userAgent: 'VadKul/1.0 (+https://vadkul.se)',
+        },
+        updateFrequency: 'daily',
+        status: 'experimental',
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://www.biorio.se/sv',
+            date: '2026-11-15',
+            rawEventCount: 20,
+            notes: 'Happymaps Stockholmslista 15/11: Bio Rio 48 visningar på två veckor, vi 0.',
+        },
+        notes: 'Kvartersbio på Hornstull. Kalendersidan (/sv/kalender) bär ingen JSON-LD — startsidan gör.',
+        lastVerified: '2026-11-15',
+    },
+    {
         id: 'sensus',
         hostName: 'Sensus',
         region: 'national',

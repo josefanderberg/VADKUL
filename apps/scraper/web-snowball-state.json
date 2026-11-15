@@ -1341,6 +1341,12 @@
       "date": "2026-09-29",
       "note": "bulk-probe"
     },
+    "biorio.se": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-11-15",
+      "note": "alla 3 event har samma titel",
+      "probe": 2
+    },
     "biorodakvarn.se": {
       "verdict": "PASS",
       "date": "2026-11-15",
@@ -1350,6 +1356,11 @@
       "verdict": "FAIL",
       "date": "2026-11-15",
       "note": "bulk-probe",
+      "probe": 2
+    },
+    "bioskandia.se": {
+      "verdict": "PASS",
+      "date": "2026-11-15",
       "probe": 2
     },
     "biotopia.nu": {
@@ -2363,6 +2374,12 @@
       "probe": 2
     },
     "campuscatering.se": {
+      "verdict": "FAIL",
+      "date": "2026-11-15",
+      "note": "bulk-probe",
+      "probe": 2
+    },
+    "capitolbio.se": {
       "verdict": "FAIL",
       "date": "2026-11-15",
       "note": "bulk-probe",
@@ -11782,6 +11799,12 @@
       "date": "2026-11-10",
       "note": "bulk-probe"
     },
+    "polismuseet.se": {
+      "verdict": "SMOKE-FAIL",
+      "date": "2026-11-15",
+      "note": "bara 2 framtida event (kräver ≥3)",
+      "probe": 2
+    },
     "potatoking.se": {
       "verdict": "FAIL",
       "date": "2026-11-15",
@@ -12528,6 +12551,11 @@
       "note": "bulk-probe",
       "probe": 2
     },
+    "rosettas.se": {
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
+    },
     "roslagen.se": {
       "date": "2026-08-23",
       "note": "bulk-probe",
@@ -12961,6 +12989,11 @@
       "verdict": "FAIL",
       "date": "2026-11-15",
       "note": "bulk-probe",
+      "probe": 2
+    },
+    "scenkonstmuseet.se": {
+      "verdict": "PASS",
+      "date": "2026-11-15",
       "probe": 2
     },
     "scenkonstsormland.se": {
@@ -13827,6 +13860,12 @@
       "note": "bulk-probe"
     },
     "strindbergsintimateater.se": {
+      "verdict": "FAIL",
+      "date": "2026-11-15",
+      "note": "bulk-probe",
+      "probe": 2
+    },
+    "strindbergsmuseet.se": {
       "verdict": "FAIL",
       "date": "2026-11-15",
       "note": "bulk-probe",
@@ -19997,6 +20036,12 @@
       "verdict": "FAIL",
       "date": "2026-10-06",
       "note": "bulk-probe"
+    },
+    "zita.se": {
+      "verdict": "FAIL",
+      "date": "2026-11-15",
+      "note": "bulk-probe",
+      "probe": 2
     },
     "zymologi.se": {
       "verdict": "PASS",
