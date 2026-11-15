@@ -232,12 +232,12 @@ Ticket: #250 (första omgången, #236, nådde sina mål: pris över 40 %, mittpu
 Alla tal gäller förvalet (det en ny besökare ser, utan kyrkan/PRO/Korpen) i ett tvåveckorsfönster,
 mätt på samma sätt varje gång (avsnitt 6).
 
-| Mått | Happymap | Vi 14/11 | Vi 15/11 | Mål |
-|---|---|---|---|---|
-| Antal | 16 837 (14-27/11) | 14 580 | 15 207 | minst deras siffra samma dag |
-| Med pris | 45-66 % i ortsstickproven, 90 % i Stockholms utvalda | 41,7 % | 43,7 % | 60 % |
-| På sin lokal | lokalnamn på nära varje rad (Stockholm 15/11: ett fåtal av 50 saknade) | 66,7 % | 68,1 % | 85 % |
-| På ortens mittpunkt | - | 24,0 % | 23,5 % | under 10 % |
+| Mått | Happymap | Vi 14/11 | Vi 15/11 | Vi 15/11 kväll | Mål |
+|---|---|---|---|---|---|
+| Antal | 16 837 (14-27/11) | 14 580 | 15 207 | 15 295 | minst deras siffra samma dag |
+| Med pris | 45-66 % i ortsstickproven, 90 % i Stockholms utvalda | 41,7 % | 43,7 % | 54,2 % | 60 % |
+| På sin lokal | lokalnamn på nära varje rad (Stockholm 15/11: ett fåtal av 50 saknade) | 66,7 % | 68,1 % | 68,3 % | 85 % |
+| På ortens mittpunkt | - | 24,0 % | 23,5 % | 23,3 % | under 10 % |
 
 **Var prisluckan ligger** (förvalet 15-28/11, event utan pris): biblioteken 1 957 av 2 765,
 Tickster 983 av 1 089, Facebook 956 av 1 615, hockeymatcherna (swehockey) 653 av 653, Uppsalas
@@ -248,7 +248,9 @@ eventmodell saknar prisfält helt, både i sökningen och i detaljanropet
 samma data. Av 2 205 biblioteksevent i tvåveckorsfönstret har 529 pris hos oss (ur texten och
 AI-granskningen); textparsern hittar redan allt som står (5 missade). Bara 30 nämner ett
 belopp i kronor över huvud taget. Resten, cirka 1 670, saknar prisuppgift hos källan.
-Luckan stängs bara med ett ägarbeslut om hur ett biblioteksevent utan prisuppgift ska visas.
+ÄGARBESLUT (Josef 15/11): ett biblioteksevent utan någon kostnadsuppgift visas som gratis
+(faef0336). 3 257 kända biblioteksevent fick priset vid omläsningen samma kväll, och
+förvalets prisandel gick från 43,7 till 54,2 %.
 Ticketmaster läses redan via Discovery API; det är `priceRanges` som saknas i svaren.
 
 **Ett fel som åt priser (rättat 15/11):** AI-granskningen skrev sitt eget prisförslag över
