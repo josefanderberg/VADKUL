@@ -2,6 +2,8 @@
 // därför bara när användaren aktivt kryssar i dem (opt-in). När de väl är på
 // integreras de visuellt som vilka event som helst — de ritas med sin vanliga
 // LLM-kategorifärg på kartan (ingen egen käll-/mörk markörfärg längre).
+// Undantag sedan 15/11 (#240, utils/optInZoom): inzoomat till kvartersnivå
+// ritar kartan källorna även utan kryss; listan och siffrorna gör det inte.
 //
 // Klassningen (classifySource) används enbart av opt-in-filtret; källan
 // identifieras på event-URL:ens värdnamn (LinkEvent.url, som för

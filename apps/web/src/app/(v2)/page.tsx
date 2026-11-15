@@ -26,6 +26,7 @@ import { inviteUrl, nextRsvp, parseRsvpLocal, rsvpCountDeltas, rsvpShareId, RSVP
 import { X, ImagePlus, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, MapPin, Plus, ListFilter as FilterIcon } from 'lucide-react';
 import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/utils/categories';
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
+import { mapEventsFor, optInSourcesOnMapAt, withInzoomSources } from '@/utils/optInZoom';
 import { passesPopularFilter } from '@/utils/popularFilter';
 import { inListWindow, isPopularListed } from '@/utils/popularList';
 import { LIST_ZOOM_OUT_FLOOR, nearestOutsideBounds } from '@/utils/listZoomRings';
@@ -2394,7 +2395,9 @@ export default function HomePage() {
     // argument, så kategoriradens siffror räknar "vad visas om jag trycker
     // här" med exakt samma regler (en enelements-mängd per chip). `popular`
     // = 🔥-läget; sökets kategoriord (20/10) skickar false - de ersätter 🔥.
-    const matchesFilterFor = useCallback((evt: LinkEvent, cats: ReadonlySet<string> | null, source: string | null = null, popular: boolean = popularOnly) => {
+    // `sources` = källorna som räknas som ikryssade; kartans inzoomade lager
+    // (#240, matchesInzoomFilter nedan) skickar in kyrkan, PRO och Korpen.
+    const matchesFilterFor = useCallback((evt: LinkEvent, cats: ReadonlySet<string> | null, source: string | null = null, popular: boolean = popularOnly, sources: ReadonlySet<string> = selectedCategories) => {
         // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
         // hela filtret, även ett aktivt kategorival.
         if (evt.userCreated) return true;
@@ -2416,7 +2419,8 @@ export default function HomePage() {
         if (source) return src === source;
         if (hasCats && !cats.has(cat) && !unionPop) return false;
         // Special-källa: syns bara om den är ikryssad (ingår inte i "visa alla").
-        if (src) return selectedCategories.has(src);
+        // Inzoomat på kartan räknas kyrkan, PRO och Korpen som ikryssade (#240).
+        if (src) return sources.has(src);
         // Familj & barn: bara exakt kategori 'family' berörs — breda event som
         // passar både barn och vuxna klassas som music/party av pipelinen och
         // göms aldrig här. Väljer man Familj-chippet vill man se dem.
@@ -2433,11 +2437,33 @@ export default function HomePage() {
             : matchesFilterFor(evt, mapCategories, mapSource)),
         [matchesFilterFor, mapCategories, mapSource, categorySearch, searchCategories],
     );
+    // KYRKAN, PRO OCH KORPEN INZOOMAT (#240, ägarbeslut 15/11, utils/
+    // optInZoom): samma regler som matchesFilter, men med de tre källorna som
+    // om de vore ikryssade - kategori och 🔥 gäller dem som för en ikryssad
+    // källa. Används bara för kartans markörer (mapEvents nedan) och för om
+    // det öppna kortet räknas som bortfiltrerat. Listan man scrollar,
+    // siffrorna, populärt och stadsrutan går genom matchesFilter som förut.
+    const inzoomSources = useMemo(() => withInzoomSources(selectedCategories), [selectedCategories]);
+    const matchesInzoomFilter = useCallback(
+        (evt: LinkEvent) => (categorySearch
+            ? matchesFilterFor(evt, searchCategories, null, false, inzoomSources)
+            : matchesFilterFor(evt, mapCategories, mapSource, popularOnly, inzoomSources)),
+        [matchesFilterFor, mapCategories, mapSource, popularOnly, categorySearch, searchCategories, inzoomSources],
+    );
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
     const visibleEvents = useMemo(
         () => searchFilteredEvents.filter(matchesFilter),
         [searchFilteredEvents, matchesFilter],
+    );
+    // Kartans markörer: utzoomat exakt visibleEvents (samma referens), från
+    // kvartersnivån (OPT_IN_MAP_MIN_ZOOM) även kyrkan, PRO och Korpen. Beror
+    // bara på om gränsen är passerad, inte på varje zoomsteg, så kartan bygger
+    // om sina lager en gång när gränsen passeras.
+    const optInOnMap = optInSourcesOnMapAt(mapZoom);
+    const mapEvents = useMemo(
+        () => mapEventsFor(optInOnMap, visibleEvents, searchFilteredEvents, matchesInzoomFilter),
+        [optInOnMap, visibleEvents, searchFilteredEvents, matchesInzoomFilter],
     );
     // Bannern: arrangörens TOTALA antal kommande event (alla dagar, hela
     // landet, samma filter som kartan) - Josef 30/9: "där uppe ska det
@@ -2541,12 +2567,14 @@ export default function HomePage() {
         if (!eventsSettledForView) return null;
         // EN lista PER PERIOD — slås de ihop grupperar kartan tvärs över
         // perioderna och bakar fel count-badgar/cykler (se prop-kommentaren).
-        const slices = [periodSlice(dayOffset + effectiveRangeDays).filter(matchesFilter)];
+        // Inzoomat bakas kyrkan, PRO och Korpen med, som på kartan (#240).
+        const passes = optInOnMap ? matchesInzoomFilter : matchesFilter;
+        const slices = [periodSlice(dayOffset + effectiveRangeDays).filter(passes)];
         if (dayOffset > 0) {
-            slices.push(periodSlice(Math.max(0, dayOffset - effectiveRangeDays)).filter(matchesFilter));
+            slices.push(periodSlice(Math.max(0, dayOffset - effectiveRangeDays)).filter(passes));
         }
         return slices;
-    }, [eventsSettledForView, periodSlice, dayOffset, effectiveRangeDays, matchesFilter]);
+    }, [eventsSettledForView, periodSlice, dayOffset, effectiveRangeDays, matchesFilter, optInOnMap, matchesInzoomFilter]);
 
     // Veckoalternativet (dagväljaren, veckogenvägen i navbaren och erbjudandet
     // i tom-läget) låses upp först när man zoomat in till stadsnivå — se
@@ -5588,7 +5616,8 @@ export default function HomePage() {
 
             {/* 2. Fullskärmskarta underst */}
             <V2MapDynamic
-                events={visibleEvents}
+                // Inzoomat även kyrkan, PRO och Korpen (#240, mapEvents ovan).
+                events={mapEvents}
                 selectedEvent={selectedEvent}
                 onSelectEvent={handleSelectEventFromMap}
                 savedEventIds={savedEventIds}
@@ -6621,7 +6650,10 @@ export default function HomePage() {
                 // Kategorival som valt bort det ÖPPNA eventet → kortet växlar
                 // till listvyn (11/10, Josef: "då ska vi ju komma till listan
                 // ... som faktiskt har det man söker på").
-                selectedFilteredOut={!!selectedEvent && !matchesFilter(selectedEvent)}
+                // Kyrkan, PRO och Korpen räknas inte som bortfiltrerade bara
+                // för att de inte är ikryssade (#240): en markör man öppnat
+                // inzoomat ska visa sitt kort, även om man sedan zoomar ut.
+                selectedFilteredOut={!!selectedEvent && !matchesInzoomFilter(selectedEvent)}
                 // Sökarket (7/10 kväll): filterknappen uppe till höger öppnar
                 // kortet med bara sök + chips; stängs när ett event väljs.
                 searchSheet={searchSheetOpen}
