@@ -264,6 +264,11 @@
       "date": "2026-10-13",
       "note": "bulk-probe"
     },
+    "berseau.se": {
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
+    },
     "bestcoastpairings.com": {
       "verdict": "FAIL",
       "date": "2026-11-10",
@@ -509,6 +514,11 @@
       "note": "bulk-probe",
       "verdict": "FAIL"
     },
+    "byttaniparken.se": {
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
+    },
     "cafefontaine.se": {
       "verdict": "FAIL",
       "date": "2026-11-14",
@@ -540,9 +550,9 @@
       "note": "bulk-probe"
     },
     "chapterhouse.se": {
-      "verdict": "FAIL",
-      "date": "2026-11-14",
-      "note": "bulk-probe"
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
     },
     "chennaismiles.org": {
       "verdict": "FAIL",
@@ -2287,6 +2297,11 @@
       "date": "2026-11-10",
       "note": "bulk-probe"
     },
+    "folketsbiojonkoping.se": {
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
+    },
     "folketsbioumea.se": {
       "verdict": "FAIL",
       "date": "2026-10-20",
@@ -3733,9 +3748,9 @@
       "verdict": "FAIL"
     },
     "palladiumvaxjo.se": {
-      "verdict": "FAIL",
-      "date": "2026-11-14",
-      "note": "bulk-probe"
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
     },
     "panora.se": {
       "verdict": "PASS",
@@ -4150,6 +4165,11 @@
       "verdict": "FAIL",
       "date": "2026-08-25",
       "note": "bulk-probe"
+    },
+    "slottshotellet.se": {
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
     },
     "slottsstallarna.com": {
       "verdict": "PASS",
@@ -6197,9 +6217,9 @@
       "note": "bulk-probe"
     },
     "vaxjokonserthus.se": {
-      "verdict": "FAIL",
-      "date": "2026-11-14",
-      "note": "bulk-probe"
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
     },
     "vellinge.se": {
       "date": "2026-08-23",
@@ -6229,6 +6249,11 @@
       "verdict": "FAIL",
       "date": "2026-11-03",
       "note": "bulk-probe"
+    },
+    "villakarlsro.com": {
+      "verdict": "PASS",
+      "date": "2026-11-15",
+      "probe": 2
     },
     "vindeln.se": {
       "date": "2026-08-23",
