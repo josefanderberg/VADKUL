@@ -288,6 +288,13 @@ export interface SitemapConfig {
      */
     skipPublishTimes?: boolean;
     /**
+     * Detaljsidan måste innehålla det här (rå HTML) för att räknas som ett
+     * event — annars hoppas den. För sajter där evenemang och kurser delar
+     * adress: Sensus 15/11 2026 har /kurser-och-evenemang/ för båda, och
+     * bara evenemangen har faktarutans fält "Datum" (kurserna "Startdatum").
+     */
+    detailRequire?: RegExp;
+    /**
      * Katalogen hämtas med POST (Episerver-block som Konserthusets
      * /CalendarSlideBlock/LoadMore/ — GET ger 405). Kroppen skickas som
      * application/x-www-form-urlencoded; `{{today}}` byts mot dagens lokala
@@ -344,6 +351,11 @@ export function dateFromDetailSelector(
     );
     const date = findFirstDateInText(opts.rangeStart ? rangeToStartText(numeric) : numeric, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
+}
+
+/** SitemapConfig.detailRequire: sidan måste innehålla mönstret. Utan krav räknas alla sidor. Exporterad för test. */
+export function meetsDetailRequirement(html: string, require: RegExp | undefined): boolean {
+    return !require || require.test(html);
 }
 
 /**
@@ -1783,6 +1795,7 @@ export const sitemapEngine = async (
                 continue;
             }
             alive.push(entry.url);
+            if (!meetsDetailRequirement(html, config.detailRequire)) { noEvent++; events.push(null); continue; }
             // Sidans eget datumfält (selektor eller regex) är sanningen — ingen fritext-fallback.
             const own = config.detailDateSelector
                 ? dateFromDetailSelector(html, config.detailDateSelector, new Date(), { rangeStart: config.detailDateRangeStart })

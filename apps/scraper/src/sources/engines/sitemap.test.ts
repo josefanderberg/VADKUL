@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord, isRememberedGone, nextGoneMemory, stripPublishTimes, stripSiteNameTail } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord, isRememberedGone, nextGoneMemory, stripPublishTimes, stripSiteNameTail, meetsDetailRequirement } from './sitemap';
 import type { RawEvent } from '../types';
 import { SOURCES } from '../registry';
 import { placeFromDetailHtml } from './wp-rest';
@@ -1249,5 +1249,17 @@ describe('stripSiteNameTail — sajtnamnet som svans på og:title (Växjö Konse
             <meta property="og:title" content="EVIGT EDVIN - Växjö Konserthus" /><meta property="og:site_name" content="Växjö Konserthus" /></head>
             <body><main><p>2027-03-18, 19.30</p><h2>EVIGT EDVIN</h2></main></body></html>`;
         expect(cheerioFallback(html, 'https://www.vaxjokonserthus.se/event/evigt-edvin/')?.title).toBe('EVIGT EDVIN');
+    });
+});
+
+describe('meetsDetailRequirement — evenemang och kurser på samma adress (Sensus 15/11)', () => {
+    const fact = (label: string, value: string) => `<div class="ArrangementFacts__Fact"><h2 class="ArrangementFacts__FactText--Title">${label}</h2><p>${value}</p></div>`;
+    const require = />Datum<\/h2>/;
+    it('evenemangets faktaruta har "Datum", kursens har "Startdatum"', () => {
+        expect(meetsDetailRequirement(fact('Datum', '17 december 2026') + fact('Tid', 'Kl 19:00 - 20:00'), require)).toBe(true);
+        expect(meetsDetailRequirement(fact('Startdatum', '12 januari 2027') + fact('Antal tillfällen', '10'), require)).toBe(false);
+    });
+    it('utan krav räknas alla sidor', () => {
+        expect(meetsDetailRequirement('<html></html>', undefined)).toBe(true);
     });
 });

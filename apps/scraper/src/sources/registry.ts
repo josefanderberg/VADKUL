@@ -6525,6 +6525,37 @@ export const SOURCES: Source[] = [
         lastVerified: '2026-06-11',
     },
     {
+        id: 'sensus',
+        hostName: 'Sensus',
+        region: 'national',
+        engine: 'sitemap',
+        config: {
+            // robots.txt stänger /wt/api/ — sajtkartan och sidorna är öppna.
+            sitemapUrl: 'https://www.sensus.se/wt/sitemap.xml',
+            urlPatterns: [/^https:\/\/www\.sensus\.se\/kurser-och-evenemang\/[a-z0-9-]+-\d+\/?$/],
+            // Kurser och evenemang delar adress; bara evenemangen har fältet "Datum".
+            detailRequire: />Datum<\/h2>/,
+            // Faktarutans kartlänk: "?q=Sankt Lars kyrka,Sankt Larsgatan,58224 LINKÖPING".
+            detailPlaceRegex: {
+                venue: /maps\.google\.com\/\?q=([^,"]+),[^"]*\d{3}\s?\d{2}/,
+                address: /maps\.google\.com\/\?q=[^,"]+,([^"]+)"/,
+            },
+            userAgent: 'VadKul/1.0 (+https://vadkul.se)',
+            maxUrls: 900,
+        },
+        windowDays: 60,
+        updateFrequency: 'every-3d',
+        status: 'experimental',
+        discovery: {
+            method: 'manual',
+            probeUrl: 'https://www.sensus.se/wt/sitemap.xml',
+            date: '2026-11-15',
+            notes: 'Sajtkartan har ~750 sidor under /kurser-och-evenemang/; evenemangen känns igen på faktarutans "Datum".',
+        },
+        notes: 'Studieförbundet Sensus: konserter, föreläsningar, samtal i hela landet. Saknades helt mot Happymap (oktobermätningen).',
+        lastVerified: '2026-11-15',
+    },
+    {
         id: 'nationsguiden',
         hostName: 'Nationsguiden',
         region: 'uppsala',
