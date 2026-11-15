@@ -51,6 +51,13 @@ describe('extractPriceFromText — gratis', () => {
     });
 });
 
+describe('extractPriceFromText — etiketten på egen rad (15/11)', () => {
+    it('"Entre:" följt av beloppet på nästa rad', () => {
+        expect(extractPriceFromText('Välkommen!\nEntre:\n80 kr – gratis garderob\nGratis inträde fram till 20:00.')).toBe('80 kr');
+        expect(extractPriceFromText('Pris:\n150 kr')).toBe('150 kr');
+    });
+});
+
 describe('extractPriceFromText — det som INTE ska bli pris', () => {
     it('villkorad gratis är inte eventets pris', () => {
         expect(extractPriceFromText('Fri entré för barn under 12 år.')).toBeNull();
@@ -58,6 +65,11 @@ describe('extractPriceFromText — det som INTE ska bli pris', () => {
         expect(extractPriceFromText('Kostnadsfritt t.o.m. 18 år')).toBeNull();
         expect(extractPriceFromText('Fri entré för alla!')).toBe('Gratis');
         expect(extractPriceFromText('Fri entré innan kl 22.00 därefter 120kr')).toBeNull();
+        // Tidsgräns utan "kl" (nationsguiden 15/11): gratis bara en del av kvällen.
+        expect(extractPriceFromText('Gratis inträde fram till 20:00.')).toBeNull();
+        expect(extractPriceFromText('Fri entré före 21.')).toBeNull();
+        expect(extractPriceFromText('Fri entré till 21.00, sedan 100 kr.')).toBeNull();
+        expect(extractPriceFromText('Fri entré till konserten!')).toBe('Gratis');
         expect(extractPriceFromText('Bebisar behöver ingen egen biljett, de har alltid fri entré hos oss!')).toBeNull();
     });
 

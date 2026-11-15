@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseSchedule, mapNationsguidenDay, nonceFromHome } from './nationsguiden';
+import { parseSchedule, mapNationsguidenDay, nonceFromHome, parseNationsguidenDetail } from './nationsguiden';
+import { normalizeRawEvent } from '../utils/normalizeEvent';
 
 const hm = (d: Date): string => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 const ymd = (d: Date): string => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -47,6 +48,45 @@ describe('mapNationsguidenDay', () => {
     it('ett event som även står i en hoppad kategori räknas när det står i en annan', () => {
         const evs = mapNationsguidenDay([{ title: 'Lunch', events: [lunch] }, { title: 'Kultur', events: [lunch] }], '2026-11-20');
         expect(evs.map((e) => e.title)).toEqual(['Lunch på Norrlands']);
+    });
+});
+
+describe('icke-event hoppas på titeln (15/11)', () => {
+    it('öppettider, utlåningstider, mottagningstider och landskap', () => {
+        const ev = (title: string) => ({ title, permalink: `https://www.nationsguiden.se/events/event/${encodeURIComponent(title)}/`, schedule: 'fre 20/11 10:00-14:00', organiser: { title: 'Norrlands nation' } });
+        const evs = mapNationsguidenDay([{ title: 'Kultur', events: [
+            ev('Utlåningstider – Norrlands bibliotek'), ev('Bibliotekets öppettider'), ev('Bibliotekariens mottagningstid'),
+            ev('Höstens andra lagtima Landskap'), ev('Brädspelskväll'),
+        ] }], '2026-11-20');
+        expect(evs.map((e) => e.title)).toEqual(['Brädspelskväll']);
+    });
+});
+
+// Nedtrimmad från nationsguiden.se/events/event/tisdagsklubb-a-sodermanlands-nerikes-nation/ (15/11 2026).
+const detailHtml = `<main>
+  <a href="https://maps.google.com/?q=x"><p class="font-medium">Sankt Larsgatan 4, 753 11 Uppsala, Sverige</p></a>
+  <div class="lg:text-lg mb-16 di-wysiwyg-content"><p>Välkommen till Snerikes Tisdagsklubb!</p>
+    <p><strong>Entre:</strong><br>80 kr – gratis garderob</p><p>Gratis inträde fram till 20:00.</p></div>
+  <div class="leaflet-map h-[400px] w-full mt-12 relative z-0" data-location='{"lat":59.8589541,"lng":17.6306534,"zoom":12,"markers":[{"label":"Sankt Larsgatan 4, 753 11 Uppsala, Sverige","lat":59.858976,"lng":17.630683,"geocode":[]}]}'></div>
+</main>`;
+
+describe('parseNationsguidenDetail', () => {
+    it('beskrivning, markörens adress och koordinater', () => {
+        const d = parseNationsguidenDetail(detailHtml);
+        expect(d.address).toBe('Sankt Larsgatan 4, 753 11 Uppsala, Sverige');
+        expect(d.coords).toEqual([59.858976, 17.630683]);
+        expect(d.description).toContain('80 kr');
+    });
+
+    it('priset i beskrivningen når eventet via runnerns normalisering', () => {
+        const e = normalizeRawEvent({ title: 'Tisdagsklubb', startDate: new Date('2026-11-17T18:00:00'), url: 'https://x.se/#2026-11-17', description: parseNationsguidenDetail(detailHtml).description });
+        expect(e.price).toBe('80 kr');
+    });
+
+    it('kartan utan markör ger inga koordinater (mittpunkten är bara stadens mitt)', () => {
+        const d = parseNationsguidenDetail(`<div class="leaflet-map" data-location='{"lat":59.85,"lng":17.63,"zoom":12,"markers":[]}'></div>`);
+        expect(d.coords).toBeUndefined();
+        expect(d.address).toBeUndefined();
     });
 });
 

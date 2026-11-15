@@ -81,7 +81,9 @@ const NEGATED_FREE_RE = new RegExp(NB + '(?:inte|ej|icke)\\s+(?:gratis|kostnadsf
  */
 const CONDITIONAL_AFTER_RE = new RegExp('^[\\s,()]*(?:för\\s+(?:barn|bebis(?:ar)?|ungdom(?:ar)?|medlem(?:mar)?|student(?:er)?|pensionär(?:er)?|senior(?:er)?|dig\\s+(?:som|under)|alla\\s+under|personer\\s+under)'
     + '|under\\s+\\d|upp\\s+till\\s+\\d|t\\.?\\s?o\\.?\\s?m|till\\s+och\\s+med\\s+\\d|med\\s+(?:medlems|student|press)|vid\\s+uppvisande'
-    + '|första\\s+(?:timmen|gången)|innan\\s+kl|före\\s+kl|fram\\s+till\\s+kl|efter\\s+kl|efter\\s+\\d)', 'iu');
+    // Tidsgräns med eller utan "kl": "innan kl 22", "fram till 20:00" (Snerikes
+    // tisdagsklubb 15/11: 80 kr, gratis bara före 20), "till 21.00".
+    + '|första\\s+(?:timmen|gången)|(?:innan|före|fram\\s+till|efter)\\s+(?:kl|\\d)|till\\s+\\d{1,2}[:.]\\d{2})', 'iu');
 /** … och strax FÖRE ("Bebisar har alltid fri entré", "medlemmar går in gratis"). */
 const CONDITIONAL_BEFORE_RE = new RegExp('(?:barn|bebis|ungdom|medlem|student|pensionär|senior|under\\s+\\d+\\s*år|upp\\s+till\\s+\\d)[^.!?]{0,60}$', 'iu');
 
@@ -92,6 +94,9 @@ const FOOD_RE = new RegExp(NB + '(?:mat|dryck|kaffe|kaka|fika|lunch|middag|buff�
 
 function splitSentences(text: string): string[] {
     return text
+        // En rad som slutar på kolon är en etikett för nästa rad ("Entre:" /
+        // "80 kr – gratis garderob", nationsguiden 15/11) — samma mening.
+        .replace(/:[ \t]*\n+[ \t]*/g, ': ')
         .split(/(?<=[.!?])\s+|\n+/)
         .map((s) => s.trim())
         .filter(Boolean);

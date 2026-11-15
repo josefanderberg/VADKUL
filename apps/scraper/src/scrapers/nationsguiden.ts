@@ -23,9 +23,18 @@
  *
  * Kategorier som inte är event hoppas: studieplatser, mottagningstider,
  * inskrivning, och de dagliga luncherna och frukostarna (en nations
- * lunchservering varje vardag skulle dränka allt annat).
+ * lunchservering varje vardag skulle dränka allt annat). Bibliotekens
+ * öppet- och utlåningstider ligger under "Kultur" och hoppas på titeln.
+ *
+ * Detaljsidan (permalänken, en per återkommande event) bär det som dagsvaret
+ * saknar: beskrivningen (`.di-wysiwyg-content`, där priset ofta står: "Entre:
+ * 80 kr") och kartans markör i `data-location` (gatuadress + koordinater). Den
+ * hämtas en gång per länk; vanliga körningar hoppar länkar vars alla datum
+ * redan är kända. Utan den saknade alla 746 event beskrivning och pris, och
+ * 207 låg på Uppsalas mittpunkt (15/11 2026).
  */
 
+import * as cheerio from 'cheerio';
 import { Engine, RawEvent } from '../sources/types';
 import { domainLimiter } from '../sources/rateLimiter';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
@@ -36,6 +45,13 @@ const UA = 'VadKul/1.0 (+https://vadkul.se)';
 
 /** Kategorier som inte är event (se filhuvudet). Jämförs i gemener. */
 const SKIP_CATEGORIES = new Set(['studieplatser', 'mottagningstider', 'inskrivning', 'lunch', 'frukost']);
+
+/**
+ * Titlar som inte är event oavsett kategori: öppettider ("Utlåningstider –
+ * Norrlands bibliotek", "Bibliotekets öppettider" under Kultur),
+ * mottagningstider och nationernas medlemsmöten (lagtima landskap).
+ */
+const NOT_EVENT_TITLE_RE = /(?<!\p{L})(?:utlåningstid(?:er)?|öppettider|mottagningstid(?:er)?|lagtima\s+landskap)(?!\p{L})/iu;
 
 export interface NationsguidenEvent {
     title?: string;
@@ -108,7 +124,7 @@ export function mapNationsguidenDay(categories: NationsguidenCategory[], day: st
     for (const [link, { e, cats }] of byLink) {
         const title = decodeHtmlEntities(e.title ?? '').replace(/\s+/g, ' ').trim();
         const when = parseSchedule(e.schedule ?? '', day);
-        if (!title || !when) continue;
+        if (!title || !when || NOT_EVENT_TITLE_RE.test(title)) continue;
         const organiser = decodeHtmlEntities(e.organiser?.title ?? '').trim() || undefined;
         const stamp = `${when.start.getFullYear()}-${pad(when.start.getMonth() + 1)}-${pad(when.start.getDate())}`;
         out.push({
@@ -125,6 +141,38 @@ export function mapNationsguidenDay(categories: NationsguidenCategory[], day: st
             imageUrl: imageSrc(e.image),
             classifyHints: cats.join(' '),
         });
+    }
+    return out;
+}
+
+export interface NationsguidenDetail {
+    /** Beskrivningens HTML — runnern städar den och plockar pris ur texten. */
+    description?: string;
+    /** Kartmarkörens etikett: "Sankt Larsgatan 4, 753 11 Uppsala, Sverige". */
+    address?: string;
+    coords?: [number, number];
+}
+
+/**
+ * Detaljsidan → beskrivning, adress och koordinater. Bara MARKÖRENS position
+ * räknas: kartans egen mittpunkt finns även utan markör och är då bara
+ * stadens mitt. Exporterad för test.
+ */
+export function parseNationsguidenDetail(html: string): NationsguidenDetail {
+    const $ = cheerio.load(html);
+    const out: NationsguidenDetail = {};
+    const desc = $('.di-wysiwyg-content').first().html()?.trim();
+    if (desc) out.description = desc;
+    const raw = $('[data-location]').first().attr('data-location');
+    if (raw) {
+        try {
+            const marker = JSON.parse(raw)?.markers?.[0];
+            const lat = Number(marker?.lat);
+            const lng = Number(marker?.lng);
+            if (lat > 55 && lat < 70 && lng > 10 && lng < 25) out.coords = [lat, lng];
+            const label = String(marker?.label ?? '').replace(/\s+/g, ' ').trim();
+            if (label) out.address = label;
+        } catch { /* trasig kart-JSON: beskrivningen räcker */ }
     }
     return out;
 }
@@ -169,6 +217,36 @@ export const nationsguidenEngine: Engine = async (_config, ctx) => {
             out.push(ev);
         }
     }
-    ctx.log(`nationsguiden: ${out.length} event`);
+
+    // Detaljsidan en gång per permalänk (ett återkommande event = en sida).
+    const byPage = new Map<string, RawEvent[]>();
+    for (const ev of out) {
+        const page = ev.url.replace(/#.*$/, '');
+        const list = byPage.get(page);
+        if (list) list.push(ev); else byPage.set(page, [ev]);
+    }
+    let pages = 0;
+    for (const [page, evs] of byPage) {
+        if (ctx.signal?.aborted) break;
+        if (!ctx.refreshKnown && ctx.isKnownUrl) {
+            const known = await Promise.all(evs.map((e) => ctx.isKnownUrl!(e.url)));
+            if (known.every(Boolean)) continue;
+        }
+        await domainLimiter.wait(ORIGIN);
+        try {
+            const res = await fetchWithRetry(page, { headers }, { signal: ctx.signal, timeoutPerAttemptMs: 20_000, label: 'nationsguiden detalj' });
+            if (!res.ok) continue;
+            const detail = parseNationsguidenDetail(await res.text());
+            pages++;
+            for (const e of evs) {
+                if (detail.description) e.description = detail.description;
+                if (detail.address) e.address = detail.address;
+                if (detail.coords) e.coords = detail.coords;
+            }
+        } catch (err) {
+            ctx.log(`nationsguiden: ${page} gick inte att läsa (${(err as Error).message})`);
+        }
+    }
+    ctx.log(`nationsguiden: ${out.length} event, ${pages} detaljsidor av ${byPage.size}`);
     return out;
 };
