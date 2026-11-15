@@ -227,6 +227,8 @@ med storleken), och beslutet i josefanderberg/VADKUL#240 om att visa kyrkan och 
 
 ## 5. Plan: minst Happymaps precision (läge 15/11)
 
+Ticket: #250 (första omgången, #236, nådde sina mål: pris över 40 %, mittpunkt under 25 %).
+
 Alla tal gäller förvalet (det en ny besökare ser, utan kyrkan/PRO/Korpen) i ett tvåveckorsfönster,
 mätt på samma sätt varje gång (avsnitt 6).
 
@@ -240,7 +242,15 @@ mätt på samma sätt varje gång (avsnitt 6).
 **Var prisluckan ligger** (förvalet 15-28/11, event utan pris): biblioteken 1 957 av 2 765,
 Tickster 983 av 1 089, Facebook 956 av 1 615, hockeymatcherna (swehockey) 653 av 653, Uppsalas
 nationer 340 av 340, Ticketmaster 157 av 158. Biblioteken är den största enskilda luckan, inte
-Tickster.
+Tickster. Bara 140 av bibliotekens 2 052 prislösa event säger "gratis" i beskrivningen, så
+priset måste läsas ur detaljsidornas fält (eller fri entré som standard, om Josef säger ja).
+Ticketmaster läses redan via Discovery API; det är `priceRanges` som saknas i svaren.
+
+**Ett fel som åt priser (rättat 15/11):** AI-granskningen skrev sitt eget prisförslag över
+källans pris i SQLite-spegeln, och förslaget är tomt när beskrivningen inte nämner något pris.
+Nya event gick därför ut utan pris tills nästa sync råkade läka raden. Sensus "Kostnadsfritt"
+lästes alltså rätt; det var granskningen som tog bort det. Nu fyller granskningen bara i där
+priset saknas (81feabfb), och 409 kommande event fick tillbaka sitt pris ur Firestore (4c9f7bdd).
 
 **Var platsluckan ligger** (på mittpunkten): biblioteken 598, Facebook 359, hockeymatcherna 270,
 Tickster 265, nationerna 98.
@@ -255,7 +265,7 @@ Tickster 265, nationerna 98.
 | Antal | #246 | Frikyrkorna (cirka 150 församlingar hos Happymap) | minin, Josef (förval) |
 | Antal | #248 | Biljettkiosken | minin |
 | Pris, plats | #243 | Tickster Event API (ansökan skickad 15/11); Event Dump API ger alla kommande event i ett anrop per dygn | Josef (nyckeln), minin |
-| Pris | ny | Pris utöver Tickster: biblioteken, nationerna, Ticketmasters Discovery API (`priceRanges`), Sensus "Kostnadsfritt" | minin |
+| Pris | #249 | Pris utöver Tickster: biblioteken (detaljsidornas fält), nationerna, hockeyn, Ticketmaster (`priceRanges` saknas i Discovery-svaren) | minin, Josef (fri entré som standard?) |
 | Plats | #247 | Källorna på mittpunkten, källa för källa; arenaregistret för hockeymatcherna | minin |
 
 Facebook-eventen saknar strukturerat pris och plats; de rättas bara genom att samma event hittas
