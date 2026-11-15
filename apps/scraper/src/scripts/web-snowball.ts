@@ -318,10 +318,12 @@ function sourceToTs(s: {
     ].join('\n');
 }
 
-function writeSnowballFile(newBlocks: string[]) {
+/** Lägger till blocken sist i filen och lämnar tillbaka filen som den såg ut före — för återställning. */
+function writeSnowballFile(newBlocks: string[]): string {
     const current = fs.readFileSync(SNOWBALL_TS, 'utf8');
     const updated = current.replace(/\n\];\s*$/, '\n\n' + newBlocks.join('\n') + '\n];\n');
     fs.writeFileSync(SNOWBALL_TS, updated);
+    return current;
 }
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
@@ -346,15 +348,26 @@ async function main() {
     const candFile = path.join(SCRAPER_DIR, '.web-snowball-candidates.txt');
     const outFile = path.join(SCRAPER_DIR, '.web-snowball-suggestions.json');
     fs.writeFileSync(candFile, candidates.map((c) => `${c.name}|${c.region}|${c.base}`).join('\n') + '\n');
+    // En kvarglömd svarsfil från en avbruten körning får inte läsas som dagens svar.
+    fs.rmSync(outFile, { force: true });
+    // Ett stadssvep är hundratals kandidater: 20 minuter räcker till ett hundratal.
+    const probeMinutes = Math.max(20, Math.ceil(candidates.length / 5));
     try {
         execFileSync('npx', ['ts-node', 'src/scripts/bulk-probe.ts', candFile, '--json', outFile], {
-            cwd: SCRAPER_DIR, stdio: 'inherit', timeout: 20 * 60_000,
+            cwd: SCRAPER_DIR, stdio: 'inherit', timeout: probeMinutes * 60_000,
             env: { ...process.env, BULK_MIN_EVENTS: '5' },
         });
     } catch (e: any) {
         console.error(`🕸️ SNÖBOLL-FEL: bulk-probe kraschade: ${e?.message}`);
     }
-    const suggestions: any[] = fs.existsSync(outFile) ? JSON.parse(fs.readFileSync(outFile, 'utf8')) : [];
+    // En prob som kraschat eller klippts av tidsgränsen säger ingenting om
+    // kandidaterna. Förr bokfördes då ALLA som FAIL och vilade i 90 dagar.
+    if (!fs.existsSync(outFile)) {
+        console.error('🕸️ SNÖBOLL-FEL: proben blev inte klar — inga verdikt sparade, kör om.');
+        fs.rmSync(candFile, { force: true });
+        process.exit(1);
+    }
+    const suggestions: any[] = JSON.parse(fs.readFileSync(outFile, 'utf8'));
     console.log(`🕸️ SNÖBOLL: ${suggestions.length} klarade proben`);
 
     // Verdikt-bokföring för alla probade
@@ -475,13 +488,16 @@ async function main() {
         console.log(approved.join('\n'));
         return;
     }
-    writeSnowballFile(approved);
+    const before = writeSnowballFile(approved);
     try {
         execFileSync('npx', ['tsc', '--noEmit'], { cwd: SCRAPER_DIR, stdio: 'pipe', timeout: 5 * 60_000 });
     } catch (e: any) {
         console.error('🕸️ SNÖBOLL-FEL: tsc-vakten fällde genererade filen — rullar tillbaka.');
         console.error(String(e?.stdout ?? e?.message).slice(0, 2000));
-        execFileSync('git', ['checkout', '--', SNOWBALL_TS], { cwd: SCRAPER_DIR });
+        // Tillbaka till filen som den var före DEN HÄR körningen. `git checkout`
+        // tog även med sig tidigare, ännu inte committade källor (ett svep i
+        // flera bitar skriver filen en gång per bit).
+        fs.writeFileSync(SNOWBALL_TS, before);
         process.exit(1);
     }
     const ids = approved.map((b) => b.match(/id: '([^']+)'/)?.[1]).filter(Boolean);
