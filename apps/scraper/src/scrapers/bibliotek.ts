@@ -207,6 +207,24 @@ export function isAllDayStart(start: Date): boolean {
     return start.getHours() === 0;
 }
 
+/**
+ * Allt som tyder på att eventet kostar: ett belopp ("50 kr", "kr 50", "100:-"),
+ * eller avgift/kostnad/biljett/betalning nämnd utan att vara fri.
+ */
+const COST_HINT_RE = /\d\s*(?:kr\b|kronor|:-|sek\b)|\b(?:kr|sek)\.?\s*\d|avgift(?!sfri)|kostar|kostnad(?!sfri)|biljett|betal|swish/i;
+
+/**
+ * Pris för ett biblioteksevent. Axiells eventmodell har inget prisfält (sökning
+ * och detaljanrop, undersökt 15/11 2026), och bara ~30 av 2 200 event på två
+ * veckor nämner ett belopp. ÄGARBESLUT (Josef 15/11 2026, #249): ett
+ * biblioteksevent utan någon kostnadsuppgift visas som gratis. Står det något
+ * som tyder på kostnad lämnas priset tomt — runnerns textparser och
+ * AI-granskningen får då plocka det ur beskrivningen. Exporterad för test.
+ */
+export function libraryDefaultPrice(title: string, text: string): string | undefined {
+    return COST_HINT_RE.test(`${title} ${text}`) ? undefined : 'Gratis';
+}
+
 /** Mappa ett Axiell-event → RawEvent. Exporterad för test. */
 export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent | null {
     const e = hit.event;
@@ -220,6 +238,7 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
     const branch = apiBranch || branchFromText(title, e.description) || '';
     const image = (e.images || []).find((i) => i.primaryImage)?.imageUrl || e.images?.[0]?.imageUrl;
     const audiences = (e.targetAudiences || []).map((a) => a.value).filter(Boolean).join(', ');
+    const text = stripHtml(e.description);
 
     return {
         externalId: hit.id,
@@ -232,8 +251,10 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         venueName: branch || undefined,
         city: tenant.cityHint ?? branchCity(branch, tenant.cities),
         imageUrl: image ? image.replace(/^http:\/\//, 'https://') : undefined,
-        description: [truncateAtBoundary(stripHtml(e.description), DEFAULT_DESCRIPTION_MAX), audiences ? `Målgrupp: ${audiences}.` : '']
+        description: [truncateAtBoundary(text, DEFAULT_DESCRIPTION_MAX), audiences ? `Målgrupp: ${audiences}.` : '']
             .filter(Boolean).join(' '),
+        // Hela texten, inte den kapade: ett "Pris 50 kr" sist får inte missas.
+        price: libraryDefaultPrice(title, text),
         hostName: apiBranch || tenant.name,
         // API:t levererar riktiga klockslag (UTC) — UTOM för heldagsevent
         // (utställningar, lovaktiviteter, bokförsäljning), som saknar allDay-

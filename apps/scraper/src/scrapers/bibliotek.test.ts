@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapAxiellEvent, branchCity, branchFromText, AxiellTenant, AXIELL_TENANTS } from './bibliotek';
+import { mapAxiellEvent, branchCity, branchFromText, libraryDefaultPrice, AxiellTenant, AXIELL_TENANTS } from './bibliotek';
 
 // TZ=Europe/Stockholm via vitest.config — samma som nattkedjan på minin.
 const tenant: AxiellTenant = {
@@ -60,6 +60,26 @@ function nullLocHit(title: string, description = '', location: string | null = n
         },
     };
 }
+
+describe('pris: gratis när ingen kostnad nämns (ägarbeslut 15/11, #249)', () => {
+    it('sagostund utan kostnadsuppgift → Gratis', () => {
+        expect(libraryDefaultPrice('Sagostund', 'Välkommen på sagostund för barn 3-5 år! Ingen anmälan.')).toBe('Gratis');
+        expect(mapAxiellEvent(nullLocHit('Sagostund', '<p>Välkommen!</p>'), gota)?.price).toBe('Gratis');
+    });
+    it('uttryckligen fritt räknas inte som kostnad', () => {
+        expect(libraryDefaultPrice('Föreläsning', 'Kostnadsfritt, avgiftsfri entré.')).toBe('Gratis');
+    });
+    it('belopp, avgift, biljett eller betalning lämnar priset åt textparsern', () => {
+        for (const text of [
+            'Entré 50 kr.', 'Pris: 100:-', 'Kostar kr 80 per person.', 'Materialkostnad tillkommer.',
+            'Anmälningsavgift betalas på plats.', 'Biljetter köps via Tickster.', 'Betala med Swish.',
+        ]) expect(libraryDefaultPrice('Workshop', text), text).toBeUndefined();
+    });
+    it('beloppet sist i en lång beskrivning missas inte', () => {
+        const long = `${'Om boken och författaren. '.repeat(80)}Pris 60 kr.`;
+        expect(mapAxiellEvent(nullLocHit('Författarbesök', `<p>${long}</p>`), gota)?.price).toBeUndefined();
+    });
+});
 
 describe('branchFromText', () => {
     it('filial i titeln ("på Linghems bibliotek")', () => {
