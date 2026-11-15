@@ -63,8 +63,8 @@ interface ProfilePanelProps {
     /** Var panelen hänger: under profilknappen i kartans VÄNSTRA hörn
      *  (default) eller till höger (stadssidornas toppnav). */
     anchor?: 'left' | 'right';
-    /** Den dockade sidopanelens bredd (utils/sidePanel) när ett event är
-     *  öppet på bred skärm: profilknappen står då till höger om eventpanelen
+    /** Den dockade sidopanelens bredd (utils/sidePanel) när ett event eller
+     *  sökarket är öppet på bred skärm: profilknappen står då till höger om eventpanelen
      *  (18/10), och panelen ska hänga under knappen - inte under kortet. */
     leftInset?: number;
     /** "Visa även på kartan" — opt-in-källorna (Svenska kyrkan, PRO, 🧸 Familj)

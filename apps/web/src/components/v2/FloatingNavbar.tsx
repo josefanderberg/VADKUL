@@ -9,8 +9,8 @@ interface FloatingNavbarProps {
     onLoginClick?: () => void;
     /** Inloggad: profilknappen öppnar profilpanelen (allt konto-relaterat). */
     onOpenProfile?: () => void;
-    /** Den dockade sidopanelens bredd (utils/sidePanel) när ett event är
-     *  öppet på bred skärm, annars 0: profilen står då till HÖGER om panelen
+    /** Den dockade sidopanelens bredd (utils/sidePanel) när ett event eller
+     *  sökarket är öppet på bred skärm, annars 0: profilen står då till HÖGER om panelen
      *  (Josef 18/10) i stället för under den. */
     leftInset?: number;
     /* (SÖKEN OCH FILTERKNAPPEN ÄR BORTTAGNA 7/10 på ägarbeslut: "vi kan ju

@@ -905,9 +905,9 @@ export default function HomePage() {
     // kant i kant längs vänsterkanten i full höjd. Kartkromet som annars
     // hamnat under panelen - profilen, stadsplattan, dagväljaren - flyttar
     // in i den fria kartytan till höger (Josef: "flytta profilikonen till
-    // höger om eventfönstret"). Samma villkor som EventCards sideNav.
+    // höger om eventfönstret"). Samma villkor som EventCards sideNav -
+    // chromeLeft räknas under sökarkets state längre ner.
     const sidePanelMode = useSidePanelMode();
-    const chromeLeft = sidePanelMode && selectedEvent ? SIDE_PANEL_W : 0;
     const welcomeAutoShownRef = useRef(false);
     const welcomeNewVisitRef = useRef<boolean | null>(null);
     useEffect(() => {
@@ -3614,6 +3614,11 @@ export default function HomePage() {
     useEffect(() => {
         if (selectedEvent) setSearchSheetOpen(false);
     }, [selectedEvent]);
+    // Sidopanelens bredd när kromet ska flytta åt höger (se sidePanelMode
+    // ovan): ett valt event ELLER sökarket dockar till vänster sedan 14/11
+    // (#235, Josef: "när jag söker då ska det bli inte ett sådant
+    // vänsterfönster? som när vi visar eventkortet").
+    const chromeLeft = sidePanelMode && (selectedEvent || searchSheetOpen) ? SIDE_PANEL_W : 0;
     // EN TRÄFF UR EN KATEGORISÖKNING (20/10, appens kartHopp.kategorier):
     // kartan får EXAKT sökets kategorier - 🔥 och källan släpps - så att
     // kortet inte står bortfiltrerat (selectedFilteredOut → listvyn) när

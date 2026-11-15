@@ -1538,8 +1538,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // träfflistan växer arket HIT, inte till taket, så kartan syns ovanför
     // och man ser sökningen/filtren slå igenom på markörerna. Samtidigt
     // arkets mellanstopp för drag/hjul - man kan själv dra upp till taket.
-    // (Sidopanelsläget klampar ändå upp till SIDE_HEIGHT_VH - där ligger
-    // kartan fri till höger.)
+    // (Sidopanelsläget klampar ändå upp till SIDE_DOCKED_VH - där dockar
+    // arket till vänster och kartan ligger fri till höger, #235.)
     const SEARCH_LIST_VH = 55;
     const searchListVh = () => Math.min(SEARCH_LIST_VH, maxVhRef.current);
 
@@ -1585,15 +1585,12 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // arrangörslänkarna (CardMoreRows) nås utan att dra upp något.
     // 18/10 (utils/sidePanel): ett VALT EVENT dockar kant i kant och går
     // från topp till botten (SIDE_DOCKED_VH) - inga dragstreck, inget att
-    // dra ner. Sökarket (inget event) står kvar centrerat på 80 vh.
-    const SIDE_HEIGHT_VH = 80;
+    // dra ner. 14/11 (#235, Josef: "när jag söker då ska det bli inte ett
+    // sådant vänsterfönster? som när vi visar eventkortet"): SÖKARKET dockar
+    // likadant - det stod centrerat på 400 px och 80 vh 6/10-14/11.
     const SIDE_DOCKED_VH = 100;
     const [sideMode, setSideMode] = useState(false);
     const sideModeRef = useRef(false);
-    // Speglar selectedEvent för updateHeightVh (anropas ur gester/timers
-    // som inte ser propen) - dockat = sideModeRef && sideHasEventRef.
-    const sideHasEventRef = useRef(!!selectedEvent);
-    useLayoutEffect(() => { sideHasEventRef.current = !!selectedEvent; }, [selectedEvent]);
     useEffect(() => {
         const mq = window.matchMedia(SIDE_PANEL_QUERY);
         const apply = () => { sideModeRef.current = mq.matches; setSideMode(mq.matches); };
@@ -1614,9 +1611,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     const updateHeightVh = (vh: number, live = false) => {
         // Sidopanelen (xl): kortet står alltid högt — alla öppnings- och
         // snäpphöjder klampas upp till panelhöjden; bara stängningen (≤8 vh,
-        // closeCard:s glid) släpps igenom. Dockat event = hela höjden.
+        // closeCard:s glid) släpps igenom. Panelen (event eller sökarket,
+        // 14/11) går alltid hela höjden.
         if (sideModeRef.current && vh > 8) {
-            vh = Math.max(vh, sideHasEventRef.current ? SIDE_DOCKED_VH : SIDE_HEIGHT_VH);
+            vh = Math.max(vh, SIDE_DOCKED_VH);
         }
         heightVhRef.current = vh;
         if (live) {
@@ -1824,15 +1822,15 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     };
     const measureCollapsedHeight = (): number => measureCompactHeight() ?? COLLAPSED_HEIGHT_VH;
 
-    // Sidopanelen: när läget slås PÅ (skärmen breddas eller ett kort öppnas
-    // på bred skärm) reser sig kortet till full höjd direkt - klampen i
-    // updateHeightVh håller den sedan.
+    // Sidopanelen: när läget slås PÅ (skärmen breddas eller ett kort/sökarket
+    // öppnas på bred skärm) reser sig panelen till full höjd direkt - klampen
+    // i updateHeightVh håller den sedan.
     useEffect(() => {
-        if (!sideMode || !selectedEvent) return;
+        if (!sideMode || !(selectedEvent || searchOnly)) return;
         setIsAnimating(true);
         updateHeightVh(Math.max(heightVhRef.current, SIDE_DOCKED_VH));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sideMode, selectedEvent]);
+    }, [sideMode, selectedEvent, searchOnly]);
 
     // ANMÄL/BOKA i footern (ägarbeslut 7/10: "fixa så anmäl är direkt i
     // anslutning till det" — pillret i knappraden är borttaget): samma
@@ -3833,9 +3831,10 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
     // längst ner, bakåt/lista/pager staplade ovanför. Dagväljaren står
     // centrerad i den FRIA kartytan (sidan flyttar den, 18/10), så kolumnen
     // går fri från den; Nästa står dessutom under väljarens bottom-[92px].
-    // sideNav = PANELEN ÄR DOCKAD (valt event på bred skärm): kant i kant,
-    // topp till botten, SIDE_PANEL_W bred (utils/sidePanel, 18/10).
-    const sideNav = sideMode && !!selectedEvent;
+    // sideNav = PANELEN ÄR DOCKAD (valt event ELLER sökarket på bred skärm,
+    // sökarket sedan 14/11 #235): kant i kant, topp till botten, SIDE_PANEL_W
+    // bred (utils/sidePanel, 18/10). Samma villkor som sidans chromeLeft.
+    const sideNav = sideMode && (!!selectedEvent || searchOnly);
     // ml-auto knuffar ut gruppen i högerkanten på raden - i kolumnen hade den
     // högerställt knapparna mot den bredaste, så den släpps där.
     const navMlAuto = sideNav ? '' : ' ml-auto';
@@ -4107,7 +4106,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 valt ELLER sökarket (filterknappen uppe till höger) är öppet. */}
             {selectedEvent || searchOnly ? (
             <div
-                className={`w-full ${sideNav ? '' : sideMode ? 'max-w-[400px]' : 'max-w-4xl'}`}
+                className={`w-full ${sideNav ? '' : 'max-w-4xl'}`}
                 style={sideNav ? { maxWidth: SIDE_PANEL_W } : undefined}
             >
             {/* Dockad panel (18/10): raka hörn mot skärmkanterna och skuggan
