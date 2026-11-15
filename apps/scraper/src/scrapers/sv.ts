@@ -53,7 +53,7 @@ function parseSvCards(html: string, kind: string): SvCard[] {
     $('article.event-list__event-item').each((_i, el) => {
         const card = $(el);
         const titleEl = card.find('.event-list__title').first();
-        const title = titleEl.text().replace(/\s+/g, ' ').trim();
+        let title = titleEl.text().replace(/\s+/g, ' ').trim();
         const href = (titleEl.closest('a').attr('href')
             || card.find('a[itemprop="url"]').first().attr('href') || '').trim();
         if (!title || !href) return;
@@ -70,6 +70,13 @@ function parseSvCards(html: string, kind: string): SvCard[] {
         // Distans- och webbarrangemang har ingen plats — "Distans" geokodades
         // som en ort och 12 webbinarier hamnade i Göteborg (15/11 2026).
         if (city && /^(?:distans|digital(?:t)?|online|webb(?:inarium)?|zoom|teams)\b/i.test(city)) return;
+        // Katalogtitlarna slutar med orten: "Föreläsning - Digital säkerhet
+        // och risker med AI, Kalmar", "AI - För föreningsarbete, Umeå (kväll)".
+        // Orten står redan på kartan — ", <ort>" bort, en parentes efter står kvar.
+        if (city) {
+            const esc = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            title = title.replace(new RegExp(`,\\s*${esc}(?=\\s*(?:\\([^)]*\\))?\\s*$)`, 'i'), '').trim();
+        }
         const price = card.find('.event-list__price').first().text().replace(/\s+/g, ' ').trim() || undefined;
         const img = card.find('img.event-list__image').first().attr('src') || undefined;
         const idM = href.match(/-(\d+)\/?$/);   // slug slutar "-<id>"

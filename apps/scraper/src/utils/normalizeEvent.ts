@@ -48,17 +48,33 @@ export function normalizeTitle(title: string, ctx: { venueName?: string; city?: 
     const tail = t.match(/^(.*\S)\s+[|–-]\s+([^|–-]{2,60})$/);
     if (tail) {
         const suffix = tail[2].trim().toLowerCase();
-        const known = [ctx.venueName, ctx.hostName]
-            .filter((x): x is string => !!x && x.length >= 3)
-            .map((x) => x.toLowerCase());
         // Staden bara när suffixet ÄR staden ("… | Lund", "… | Lund, Skåne").
         // "Sunderby SK – Luleå HF" med city Luleå är en match, inte en
         // ortsangivelse — includes klippte bort bortalaget (swehockey 10/10).
         const city = (ctx.city ?? '').trim().toLowerCase();
+        // En venue som bara är orten följer stadsregeln, inte includes:
+        // Vuxenskolan sätter venue = ort, och "Föreläsning - Digital säkerhet
+        // och risker med AI, Kalmar" blev "Föreläsning" (15/11 2026).
+        const known = [ctx.venueName, ctx.hostName]
+            .filter((x): x is string => !!x && x.length >= 3)
+            .map((x) => x.trim().toLowerCase())
+            .filter((x) => x !== city);
         const isCity = city.length >= 3 && (suffix === city || suffix.startsWith(`${city},`));
         if (isCity || known.some((k) => suffix === k || suffix.includes(k) || k.includes(suffix))) t = tail[1].trim();
     }
     return t;
+}
+
+/**
+ * Den sparade titeln är en avkapad början av den färska ("Föreläsning" av
+ * "Föreläsning - Digital säkerhet …"): kapningen skedde vid ett skiljetecken.
+ * Används av scripts/refresh-truncated-titles.ts.
+ */
+export function isTruncationOf(stored: string, fresh: string): boolean {
+    const s = stored.trim();
+    const f = fresh.trim();
+    if (!s || f.length <= s.length || !f.startsWith(s)) return false;
+    return /^\s*[-–|:,]/.test(f.slice(s.length));
 }
 
 /** Beskrivning: cleanDescription (taggar → \n, entiteter, whitespace) + chrome-spärr. */

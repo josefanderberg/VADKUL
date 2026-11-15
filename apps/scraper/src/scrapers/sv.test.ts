@@ -85,13 +85,28 @@ describe('parseSvCatalogPage — hela katalogens engångsarrangemang (15/11)', (
             card({ href: '/kurser-och-evenemang/sprak/spanska-1-12345', title: 'Spanska 1', occasions: 10 }),
             card({ href: '/kurser-och-evenemang/x/utan-tillfallen-1', title: 'Okänt antal', occasions: null }),
         ));
-        expect(evs.map((e) => e.title)).toEqual(['AI - För föreningsarbete, Umeå (kväll)']);
+        expect(evs.map((e) => e.title)).toEqual(['AI - För föreningsarbete (kväll)']);
         expect(evs[0]).toMatchObject({ city: 'Umeå', price: 'Kostnadsfri', hasSpecificTime: true, url: 'https://www.sv.se/kurser-och-evenemang/data-it/ai-for-foreningsarbete-umea-(kvall)-80154' });
         expect(evs[0].description).toBe('Arrangemang med Studieförbundet Vuxenskolan i Umeå.');
     });
 
     it('kulturlistan behåller sina kort oavsett antal tillfällen', () => {
         expect(parseSvPage(page(card({ occasions: null }), card({ href: '/a-2', occasions: 3 })))).toHaveLength(2);
+    });
+});
+
+describe('orten i slutet av titeln (15/11)', () => {
+    it('", <ort>" bort, men bara när det är kortets ort', () => {
+        const evs = parseSvCatalogPage(page(
+            card({ href: '/a-1', title: 'F&#xF6;rel&#xE4;sning - Digital s&#xE4;kerhet och risker med AI, Kalmar', loc: 'Kalmar' }),
+            card({ href: '/a-2', title: 'Vandring runt Kalmar, Kalmar', loc: 'Kalmar' }),
+            card({ href: '/a-3', title: 'Konsert med Lund, Malmö och Ystad', loc: 'Växjö' }),
+        ));
+        expect(evs.map((e) => e.title)).toEqual([
+            'Föreläsning - Digital säkerhet och risker med AI',
+            'Vandring runt Kalmar',
+            'Konsert med Lund, Malmö och Ystad',
+        ]);
     });
 });
 

@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, normalizeDescription, normalizeLocation, normalizeRawEvent, sanitizePriceField } from './normalizeEvent';
+import { normalizeTitle, normalizeDescription, normalizeLocation, normalizeRawEvent, sanitizePriceField, isTruncationOf } from './normalizeEvent';
+
+describe('isTruncationOf — sparad titel avkapad vid ett skiljetecken', () => {
+    it('känner igen kapningen', () => {
+        expect(isTruncationOf('Föreläsning', 'Föreläsning - Digital säkerhet och risker med AI')).toBe(true);
+        expect(isTruncationOf('Filmis', 'Filmis - Uddevalla filmstudio: Kevlarsjal')).toBe(true);
+        expect(isTruncationOf('Musik', 'Musik | Jul i Duvemåla hage')).toBe(true);
+    });
+    it('ett bytt eller förlängt ord är ingen kapning', () => {
+        expect(isTruncationOf('Jul', 'Julkonsert')).toBe(false);
+        expect(isTruncationOf('Julkonsert', 'Julkonsert')).toBe(false);
+        expect(isTruncationOf('Julkonsert i kyrkan', 'Julkonsert')).toBe(false);
+        expect(isTruncationOf('', 'Julkonsert')).toBe(false);
+    });
+});
 
 describe('normalizeTitle', () => {
     it('avkodar entiteter och kollapsar whitespace', () => {
@@ -21,6 +35,12 @@ describe('normalizeTitle', () => {
             .toBe('Sunderby SK – Luleå HF (U18)');
         expect(normalizeTitle('IK Huge – Gävle GIK', { city: 'Gävle' })).toBe('IK Huge – Gävle GIK');
         expect(normalizeTitle('Atomic Swing x Popsicle | Lund, Skåne', { city: 'Lund' })).toBe('Atomic Swing x Popsicle');
+    });
+    it('en venue som bara är orten klipper inte ett suffix som nämner orten (Vuxenskolan 15/11)', () => {
+        expect(normalizeTitle('Föreläsning - Digital säkerhet och risker med AI, Kalmar', { venueName: 'Kalmar', city: 'Kalmar' }))
+            .toBe('Föreläsning - Digital säkerhet och risker med AI, Kalmar');
+        // Suffixet som ÄR orten går fortfarande bort.
+        expect(normalizeTitle('Vinprovning - Kalmar', { venueName: 'Kalmar', city: 'Kalmar' })).toBe('Vinprovning');
     });
     it('rör inte vanliga titlar', () => {
         expect(normalizeTitle('Söndagsateljé: Skapa med Mika Liffner')).toBe('Söndagsateljé: Skapa med Mika Liffner');
