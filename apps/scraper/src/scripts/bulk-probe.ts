@@ -7,6 +7,12 @@
  *   3. Sitemap                        →  /sitemap.xml, /wp-sitemap.xml, robots
  *        → leta event-sub-sitemap eller event-mönster-URLs, räkna,
  *          och kolla första detaljsidan för JSON-LD @type=Event + startDate.
+ *   4–5. GoToHub, SiteVision-kalender
+ *   6. Listsida                       →  startsidans länk till "Evenemang"/"Program"
+ *        → katalog (kort som länkar till en detaljsida per event): sitemap-
+ *          motorn med isHtmlCatalog, eller
+ *        → program på en enda sida utan detaljsidor: listing-motorn.
+ *        Det är här krogar, biografer och små scener hamnar (14/11 2026).
  *
  * Verdict PASS om någon ger ≥ MIN_EVENTS strukturerade (framtida) events utan
  * bot-skydd. Dubletter mot befintliga registry-domäner flaggas (SKIP-dupe).
@@ -21,6 +27,11 @@
 
 import fs from 'fs';
 import path from 'path';
+import { listingCandidates, detailLinkFamily, robotsAllows } from '../utils/listingProbe';
+import { parseListing } from '../utils/listingBlocks';
+import { LISTING_LOOKBACK_DAYS } from '../utils/snowballSmoke';
+import { decodeHtmlBytes } from '../utils/htmlCharset';
+import { extractFromHtml, stripPublishTimes } from '../sources/engines/sitemap';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const MIN_EVENTS = parseInt(process.env.BULK_MIN_EVENTS || '5', 10);
@@ -31,8 +42,8 @@ interface Candidate { name: string; region: string; base: string; }
 interface ProbeResult {
     cand: Candidate;
     verdict: 'PASS' | 'FAIL' | 'DUPE';
-    engine?: 'wp-rest' | 'sitemap' | 'sitevision' | 'gotohub';
-    method?: string;       // tribe | wp-v2 | sitemap-json-ld | sitemap-text
+    engine?: 'wp-rest' | 'sitemap' | 'sitevision' | 'gotohub' | 'listing';
+    method?: string;       // tribe | wp-v2 | sitemap-json-ld | sitemap-text | listing-catalog | listing-inline
     count?: number;        // framtida/strukturerade events upptäckta
     detail?: string;       // bästa URL / sub-sitemap
     config?: Record<string, any>;
@@ -40,15 +51,29 @@ interface ProbeResult {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-async function fetchText(url: string): Promise<{ ok: boolean; status: number; body: string; ct: string }> {
-    try {
-        const res = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'follow', signal: AbortSignal.timeout(TIMEOUT_MS) });
-        const ct = res.headers.get('content-type') || '';
-        const body = res.ok ? await res.text() : '';
-        return { ok: res.ok, status: res.status, body, ct };
-    } catch {
-        return { ok: false, status: 0, body: '', ct: '' };
-    }
+interface Fetched { ok: boolean; status: number; body: string; ct: string; url: string }
+
+/**
+ * Körningens hämtningar, per adress. Stegen delar startsidan och robots.txt —
+ * utan minnet hämtades samma sida en gång per steg.
+ */
+const fetched = new Map<string, Promise<Fetched>>();
+
+function fetchText(url: string): Promise<Fetched> {
+    const hit = fetched.get(url);
+    if (hit) return hit;
+    const p = (async (): Promise<Fetched> => {
+        try {
+            const res = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'follow', signal: AbortSignal.timeout(TIMEOUT_MS) });
+            const ct = res.headers.get('content-type') || '';
+            const body = res.ok ? decodeHtmlBytes(new Uint8Array(await res.arrayBuffer()), ct) : '';
+            return { ok: res.ok, status: res.status, body, ct, url: res.url || url };
+        } catch {
+            return { ok: false, status: 0, body: '', ct: '', url };
+        }
+    })();
+    fetched.set(url, p);
+    return p;
 }
 
 function safeJson(s: string): any { try { return JSON.parse(s); } catch { return null; } }
@@ -219,7 +244,77 @@ async function probeSitemap(base: string): Promise<{ method: string; count: numb
     return null;
 }
 
+// ── 6. Listsida: katalog med detaljsidor, eller program på en enda sida ───────
+// Krogar, biografer och små scener har varken kalenderplugin eller event-
+// sitemap: programmet står på en sida som startsidan länkar till. Stegets
+// räknare är bara en SIL — rimlighetskontrollen kör riktiga motorn efteråt.
+const MIN_LISTING_EVENTS = 3;
+
+type ListingHit =
+    | { kind: 'catalog'; url: string; count: number; pattern: string }
+    | { kind: 'inline'; url: string; count: number };
+
+async function probeListing(base: string): Promise<ListingHit | null> {
+    const home = await fetchText(base);
+    if (!home.ok || !/html/i.test(home.ct)) return null;
+    const robots = (await fetchText(`${base}/robots.txt`)).body;
+    const allowed = (url: string): boolean => {
+        try { return robotsAllows(robots, new URL(url).pathname); } catch { return false; }
+    };
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(todayStart.getTime() + 86_400_000);
+    const lookback = new Date(todayStart.getTime() - LISTING_LOOKBACK_DAYS * 86_400_000);
+    // Startsidan sist: många små scener listar programmet direkt där.
+    const pages = [...listingCandidates(home.body, home.url), home.url];
+    let inline: ListingHit | null = null;
+    for (const url of pages) {
+        if (!allowed(url)) continue;
+        const page = url === home.url ? home : await fetchText(url);
+        if (!page.ok || !/html/i.test(page.ct)) continue;
+
+        // A. Katalog: länkfamilj + framtida datum på detaljsidorna. Detaljsidor
+        //    ger mer (beskrivning, bild, egen adress per event) och går först.
+        const family = detailLinkFamily(page.body, page.url);
+        if (family) {
+            const sample = family.links.filter(allowed).slice(0, 3);
+            let dated = 0;
+            for (const u of sample) {
+                const d = await fetchText(u);
+                if (!d.ok) continue;
+                const ev = extractFromHtml(stripPublishTimes(d.body), u);
+                if (ev && ev.startDate instanceof Date && ev.startDate >= todayStart) dated++;
+            }
+            if (dated >= 2) return { kind: 'catalog', url: page.url, count: family.links.length, pattern: family.pattern };
+        }
+
+        // B. Program på sidan själv.
+        //    Passerade event som står kvar räknas som belägg (en krog har ofta
+        //    bara en eller två kvällar kvar), men minst ett måste ligga EFTER
+        //    i dag: ett nyhetsarkiv med publiceringsdatum har aldrig det.
+        if (!inline) {
+            const dated = parseListing(page.body, page.url).filter((e) => e.start >= lookback);
+            const upcoming = dated.filter((e) => e.start >= tomorrow).length;
+            if (dated.length >= MIN_LISTING_EVENTS && upcoming >= 1) inline = { kind: 'inline', url: page.url, count: dated.filter((e) => e.start >= todayStart).length };
+        }
+    }
+    return inline;
+}
+
 async function probeCandidate(cand: Candidate, existingDomains: Set<string>): Promise<ProbeResult> {
+    try {
+        return await probeSteps(cand, existingDomains);
+    } finally {
+        // Kandidaten är klar — släpp dess sidor ur minnet (ett svep är tusentals sajter).
+        const domain = cand.base.replace(/^https?:\/\/(www\.)?/, '').split('/')[0].toLowerCase();
+        for (const url of fetched.keys()) {
+            let host = '';
+            try { host = new URL(url).hostname.toLowerCase(); } catch { /* behåll */ }
+            if (host === domain || host.endsWith(`.${domain}`)) fetched.delete(url);
+        }
+    }
+}
+
+async function probeSteps(cand: Candidate, existingDomains: Set<string>): Promise<ProbeResult> {
     const base = cand.base.replace(/\/$/, '');
     const domain = base.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
     if (existingDomains.has(domain)) return { cand, verdict: 'DUPE' };
@@ -260,6 +355,17 @@ async function probeCandidate(cand: Candidate, existingDomains: Set<string>): Pr
     if (sv) return {
         cand, verdict: 'PASS', engine: 'sitevision', method: sv.restApi ? 'sitevision-restapp' : 'sitevision-cal', count: sv.count, detail: sv.url,
         config: { urls: [sv.url], defaultCity: cand.name, ...(sv.restApi ? { restApi: { url: sv.restApi } } : {}) },
+    };
+
+    // 6. Listsida (katalog eller program på en sida)
+    const li = await probeListing(base);
+    if (li?.kind === 'catalog') return {
+        cand, verdict: 'PASS', engine: 'sitemap', method: 'listing-catalog', count: li.count, detail: li.url,
+        config: { sitemapUrl: li.url, isHtmlCatalog: true, urlPatterns: [li.pattern], skipPublishTimes: true, defaultCity: cand.name, maxUrls: 80 },
+    };
+    if (li?.kind === 'inline') return {
+        cand, verdict: 'PASS', engine: 'listing', method: 'listing-inline', count: li.count, detail: li.url,
+        config: { urls: [li.url], defaultCity: cand.name },
     };
 
     return { cand, verdict: 'FAIL' };

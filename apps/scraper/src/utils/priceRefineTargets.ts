@@ -19,6 +19,15 @@ const SKIP_HOST_RE = /(?:^|\.)(?:svenskakyrkan\.se|zoezi\.se|facebook\.com|fb\.m
 /** Fragment som är en SPA-rutt (bibliotekens "/evenemang#<uuid>", "#/events/…") — sidan bakom är ett skal. */
 const SPA_FRAGMENT_RE = /^#(?:\/|!|[0-9a-f]{8}-[0-9a-f]{4}-)/i;
 
+/**
+ * Listing-motorns fragment ("…/evenemang/#2026-11-21-quiz-med-kalle"): sidan
+ * bakom är ett helt program med MÅNGA event, så ett pris på den hör till ett
+ * av dem — inte nödvändigtvis det här. Motorn läser själv priset ur eventets
+ * eget kort. Riksteaterns "#2026-11-29" (bara datum) är en egen detaljsida
+ * och hämtas som förut.
+ */
+const LISTING_FRAGMENT_RE = /^#\d{4}-\d{2}-\d{2}-[a-z0-9]/;
+
 /** Värden utan "www." — nyckeln som grupperar och takbegränsar hämtningarna. */
 export function refineHost(url: string): string | null {
     try { return new URL(url).hostname.replace(/^www\./i, '').toLowerCase(); } catch { return null; }
@@ -34,7 +43,7 @@ export function priceRefineFetchUrl(url: string): string | null {
     try { u = new URL(url); } catch { return null; }
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
     if (SKIP_HOST_RE.test(u.hostname)) return null;
-    if (SPA_FRAGMENT_RE.test(u.hash)) return null;
+    if (SPA_FRAGMENT_RE.test(u.hash) || LISTING_FRAGMENT_RE.test(u.hash)) return null;
     u.hash = '';
     return u.toString();
 }

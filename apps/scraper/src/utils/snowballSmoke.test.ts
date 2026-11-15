@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { judgeEvents } from './snowballSmoke';
+import { judgeEvents, remembersVerdict, inlineListingAllowed, titlesNear, NOT_A_VENUE_NOTE, PROBE_VERSION } from './snowballSmoke';
 import { RawEvent } from '../sources/types';
 
 const START = new Date(2026, 10, 14);
@@ -64,5 +64,99 @@ describe('judgeEvents — övriga spärrar står kvar', () => {
         const v = judgeEvents(events, START, END, 'x.se');
         expect(v.ok).toBe(true);
         expect(v.events).toBe(3);
+    });
+});
+
+describe('remembersVerdict — minnet av en probad domän', () => {
+    it('ett färskt FAIL från dagens prob gäller i 90 dagar', () => {
+        const fail = { verdict: 'FAIL' as const, date: '2026-11-14', probe: PROBE_VERSION };
+        expect(remembersVerdict(fail, 0, 90)).toBe(true);
+        expect(remembersVerdict(fail, 89, 90)).toBe(true);
+        expect(remembersVerdict(fail, 90, 90)).toBe(false);
+    });
+
+    it('FAIL och SMOKE-FAIL från en äldre prob provas om direkt (Chapter House 14/11)', () => {
+        // Poster från före 14/11 saknar fältet och räknas som generation 1.
+        expect(remembersVerdict({ verdict: 'FAIL', date: '2026-11-14', note: 'bulk-probe' }, 0, 90)).toBe(false);
+        expect(remembersVerdict({ verdict: 'SMOKE-FAIL', date: '2026-11-01', probe: 1 }, 13, 90)).toBe(false);
+        expect(remembersVerdict({ verdict: 'FAIL', date: '2026-11-14', probe: 2 }, 0, 90, 3)).toBe(false);
+    });
+
+    it('en dubblett är alltid en dubblett; PASS och okända domäner följer åldern', () => {
+        expect(remembersVerdict({ verdict: 'DUPE', date: '2025-01-01' }, 600, 90)).toBe(true);
+        expect(remembersVerdict({ verdict: 'PASS', date: '2026-11-01' }, 13, 90)).toBe(true);
+        expect(remembersVerdict({ verdict: 'PASS', date: '2026-01-01' }, 300, 90)).toBe(false);
+        expect(remembersVerdict(undefined, 0, 90)).toBe(false);
+    });
+});
+
+describe('judgeEvents — programsidor räknar passerade event som belägg (Chapter House 14/11)', () => {
+    const past = { ...ev('Ölprovning med bryggeriet', 7, 14), startDate: new Date(2026, 10, 7, 14) };
+    const today = ev('Ginprovning', 14, 14);
+    const dec = { ...ev('Julinspirerad ölprovning', 5, 14), startDate: new Date(2026, 11, 5, 14) };
+
+    it('utan tillbakablick faller en krog med två kommande kvällar', () => {
+        expect(judgeEvents([past, today, dec], START, END, 'x.se').ok).toBe(false);
+    });
+
+    it('med tillbakablick godkänns den, och antalet som rapporteras är de kommande', () => {
+        const v = judgeEvents([past, today, dec], START, END, 'x.se', { lookbackDays: 30 });
+        expect(v.ok).toBe(true);
+        expect(v.events).toBe(2);
+    });
+
+    it('ett nyhetsarkiv har inget datum efter i dag och faller ändå', () => {
+        const posts = [3, 9, 12, 14].map((d) => ({ ...ev(`Inlägg ${d}`, d, 0), startDate: new Date(2026, 10, d) }));
+        const v = judgeEvents(posts, START, END, 'x.se', { lookbackDays: 30 });
+        expect(v.ok).toBe(false);
+        expect(v.reasons.join(' ')).toMatch(/inget kommande event/);
+    });
+
+    it('äldre än tillbakablicken räknas inte', () => {
+        const old = { ...ev('Sommarfest', 1), startDate: new Date(2026, 8, 1) };
+        expect(judgeEvents([old, today, dec], START, END, 'x.se', { lookbackDays: 30 }).ok).toBe(false);
+    });
+});
+
+describe('program på en enda sida läses bara för utpekade ställen (haaks.se, pubkor.se 15/11)', () => {
+    it('listing-inline kräver ställe-märkningen; kataloger och övriga metoder gör det inte', () => {
+        expect(inlineListingAllowed('listing-inline', true)).toBe(true);
+        expect(inlineListingAllowed('listing-inline', false)).toBe(false);
+        expect(inlineListingAllowed('listing-inline', undefined)).toBe(false);
+        expect(inlineListingAllowed('listing-catalog', false)).toBe(true);
+        expect(inlineListingAllowed('tribe', undefined)).toBe(true);
+    });
+
+    it('en sajt som fälldes för att den inte var utpekad provas om när den kommer som ett ställe', () => {
+        const fail = { verdict: 'FAIL' as const, date: '2026-11-15', note: NOT_A_VENUE_NOTE, probe: PROBE_VERSION };
+        expect(remembersVerdict(fail, 0, 90)).toBe(true);
+        expect(remembersVerdict(fail, 0, 90, PROBE_VERSION, true)).toBe(false);
+        // Ett vanligt FAIL gäller även för ett ställe.
+        expect(remembersVerdict({ ...fail, note: 'bulk-probe' }, 0, 90, PROBE_VERSION, true)).toBe(true);
+    });
+});
+
+describe('titlesNear — dubblettkontrollen ser bara ortens egna event (Växjö Konserthus 15/11)', () => {
+    const VAXJO = { lat: 56.888, lng: 14.799 };
+    const rows = [
+        { t: 'evigt edvin', h: 'Upplev Växjö', lat: 56.879, lng: 14.806 },           // Växjö Konserthus
+        { t: 'evigt edvin', h: 'Karlstad CCC', lat: 59.38, lng: 13.5 },
+        { t: 'sissels jul 2026', h: 'Malmö Live Konserthus', lat: 55.607, lng: 12.99 },
+        { t: 'julmarknad', h: 'Teleborgs slott', lat: 56.853, lng: 14.83 },
+        { t: 'okänd plats', h: 'x', lat: 0, lng: 0 },
+        { t: 'utan koordinat', h: 'x', lat: null, lng: null },
+    ];
+
+    it('samma turné i en annan stad räknas inte som att vi har ställets kväll', () => {
+        const near = titlesNear(rows, VAXJO.lat, VAXJO.lng);
+        expect([...near.keys()].sort()).toEqual(['evigt edvin', 'julmarknad']);
+        expect(near.get('evigt edvin')).toBe('Upplev Växjö');
+        expect(near.has('sissels jul 2026')).toBe(false);
+    });
+
+    it('event utan plats (0,0 eller tomt) hör inte till någon ort', () => {
+        const near = titlesNear(rows, 0, 0, 5000);
+        expect(near.has('okänd plats')).toBe(false);
+        expect(near.has('utan koordinat')).toBe(false);
     });
 });

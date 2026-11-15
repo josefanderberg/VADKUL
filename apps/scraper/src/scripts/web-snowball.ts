@@ -16,8 +16,8 @@
  *                 arrangören hänvisar själv dit) + slug-gissning för
  *                 återkommande hostNames utan känd domän (låg precision,
  *                 verifieras hårt i steg 2-3).
- *   2. PROBE    — bulk-probe (Tribe / wp-v2 / sitemap+JSON-LD): finns
- *                 strukturerad eventdata med riktiga startdatum?
+ *   2. PROBE    — bulk-probe (Tribe / wp-v2 / sitemap+JSON-LD / listsida):
+ *                 finns event med riktiga startdatum som en motor kan läsa?
  *   3. SMOKE    — motorn körs PÅ RIKTIGT (ingen DB-skrivning) och eventen
  *                 rimlighetskontrolleras: antal, datumspridning, titelkvalitet
  *                 (längd, unikhet, junk-ord), Sverige-signal. Detta är svaret
@@ -31,6 +31,8 @@
  *
  * Minne: web-snowball-state.json — varje probad domän får verdikt + datum så
  * samma FAIL inte re-probas varje vecka (re-probe efter RETRY_FAILED_DAYS).
+ * Verdiktet bär probens generation (PROBE_VERSION): lär sig proben läsa en ny
+ * sorts sajt provas äldre FAIL om, utan att filen töms för hand.
  *
  * Loggmarkörer (för rapport/log-grep): "🕸️ SNÖBOLL:"-rader.
  */
@@ -44,7 +46,7 @@ import { SOURCES } from '../sources/registry';
 import { SNOWBALL_SOURCES } from '../sources/registry-snowball';
 import { Source, RawEvent, EngineContext } from '../sources/types';
 import { getSqlitePath } from '../utils/sqliteHelper';
-import { judgeEvents, type SmokeVerdict } from '../utils/snowballSmoke';
+import { judgeEvents, remembersVerdict, inlineListingAllowed, titlesNear, NOT_A_VENUE_NOTE, PROBE_VERSION, LISTING_LOOKBACK_DAYS, type SmokeVerdict, type ProbeMemory, type KnownTitle } from '../utils/snowballSmoke';
 import { closeJsonLdBrowser } from '../sources/engines/json-ld';
 import { closeXhrDiscoveryBrowser } from '../sources/engines/xhr-discovery';
 import { closeSitemapBrowser } from '../sources/engines/sitemap';
@@ -60,9 +62,9 @@ const SMOKE_WINDOW_DAYS = 180;
 
 // Domäner som aldrig är kandidater: sociala medier, biljett-plattformar vi
 // redan täcker via egna källor, länkkortare, kartor, myndighets-generiskt.
-const DOMAIN_BLOCKLIST = /(?:^|\.)(facebook|fb|instagram|youtube|youtu|spotify|tiktok|linkedin|twitter|x|google|goo|maps|bit|tinyurl|mailchi|forms|docs|drive|apple|microsoft|teams|zoom|live|eventbrite|ticketmaster|tickster|billetto|nortic|axs|dice|visitsweden|wikipedia|eduadmin|sportadmin|hembygd|svenskakyrkan|naturskyddsforeningen|rodakorset|friluftsframjandet|korpen|riksteatern|bilda|medborgarskolan|studieframjandet|raceid|pro|abf|sv|kulturhusetstadsteatern)\.(?:com|se|nu|org|net|ly|be|fm|me|co)$/i;
+const DOMAIN_BLOCKLIST = /(?:^|\.)(facebook|fb|instagram|youtube|youtu|spotify|tiktok|linkedin|twitter|x|google|goo|maps|bit|tinyurl|mailchi|forms|docs|drive|apple|microsoft|teams|zoom|live|eventbrite|ticketmaster|tickster|billetto|nortic|axs|dice|simplesignup|visitsweden|wikipedia|eduadmin|sportadmin|hembygd|svenskakyrkan|naturskyddsforeningen|rodakorset|friluftsframjandet|korpen|riksteatern|bilda|medborgarskolan|studieframjandet|raceid|pro|abf|sv|kulturhusetstadsteatern)\.(?:com|se|nu|org|net|ly|be|fm|me|co)$/i;
 
-interface StateEntry { verdict: 'PASS' | 'FAIL' | 'DUPE' | 'SMOKE-FAIL'; date: string; note?: string }
+type StateEntry = ProbeMemory;
 interface StateFile { version: 1; domains: Record<string, StateEntry> }
 
 function loadState(): StateFile {
@@ -141,7 +143,7 @@ function harvestCandidates(max: number): Candidate[] {
         if (existing.has(domain) || existing.has('www.' + domain)) return true;
         if (DOMAIN_BLOCKLIST.test(domain)) return true;
         const st = state.domains[domain];
-        if (st && (st.verdict === 'DUPE' || daysSince(st.date) < RETRY_FAILED_DAYS)) return true;
+        if (st && remembersVerdict(st, daysSince(st.date), RETRY_FAILED_DAYS)) return true;
         return false;
     };
 
@@ -224,10 +226,11 @@ function candidatesFromFile(file: string, max: number): Candidate[] {
         if (existing.has(domain) || existing.has('www.' + domain)) { console.log(`   redan i registry: ${domain}`); continue; }
         if (DOMAIN_BLOCKLIST.test(domain)) { console.log(`   blocklistad: ${domain}`); continue; }
         const st = state.domains[domain];
-        if (st && (st.verdict === 'DUPE' || daysSince(st.date) < RETRY_FAILED_DAYS)) { console.log(`   nyligen probad (${st.verdict} ${st.date}): ${domain}`); continue; }
+        const isVenue = /^st[äa]lle$/i.test(kind ?? '');
+        if (st && remembersVerdict(st, daysSince(st.date), RETRY_FAILED_DAYS, PROBE_VERSION, isVenue)) { console.log(`   nyligen probad (${st.verdict} ${st.date}): ${domain}`); continue; }
         out.push({
             name: name || prettyName(domain), region: region || 'national', base, domain, refs: 0, via: 'fil',
-            city: city || undefined, isVenue: /^st[äa]lle$/i.test(kind ?? ''),
+            city: city || undefined, isVenue,
         });
     }
     return out.slice(0, max);
@@ -262,7 +265,9 @@ async function smokeTest(suggestion: any): Promise<SmokeVerdict> {
             new Promise<RawEvent[]>((_, rej) => setTimeout(() => rej(new Error('smoke-timeout 150s')), 150_000)),
         ]);
         const domain = domainFromUrl(configMainUrl(suggestion.config));
-        return judgeEvents(raw, windowStart, windowEnd, domain);
+        // Programsidor (listing) bedöms med de passerade eventen som står kvar
+        // på sidan: en krog med två kommande kvällar är fortfarande ett program.
+        return judgeEvents(raw, windowStart, windowEnd, domain, suggestion.engine === 'listing' ? { lookbackDays: LISTING_LOOKBACK_DAYS } : {});
     } catch (e: any) {
         return { ok: false, reasons: [`motorn kraschade: ${e?.message ?? e}`], events: 0, sampleTitles: [], allTitles: [] };
     }
@@ -358,8 +363,8 @@ async function main() {
         domainFromUrl(configMainUrl(s.config))));
     for (const c of candidates) {
         state.domains[c.domain] = passedDomains.has(c.domain)
-            ? { verdict: 'PASS', date: todayISO() }
-            : { verdict: 'FAIL', date: todayISO(), note: 'bulk-probe' };
+            ? { verdict: 'PASS', date: todayISO(), probe: PROBE_VERSION }
+            : { verdict: 'FAIL', date: todayISO(), note: 'bulk-probe', probe: PROBE_VERSION };
     }
 
     // 3. SMOKE — sekventiellt (snällt mot sajterna, enkel felsökning)
@@ -373,10 +378,19 @@ async function main() {
     // svepet 2026-08-23 släppte igenom destinationeskilstuna.se (= visiteskilstuna,
     // 381 dubbletter) eftersom fingeravtrycket bara såg samma körning.
     const dbTitles = new Map<string, string>();
+    let dbRows: KnownTitle[] = [];
+    // Ortens mittpunkt, för ställen med känd ort: de jämförs bara mot event i
+    // orten (se titlesNear — en konsertsal delar titlar med hela turnén).
+    const cityCenters = new Map<string, { lat: number; lng: number } | null>();
     {
         const dbx = new Database(getSqlitePath(), { readonly: true });
-        for (const r of dbx.prepare("SELECT LOWER(TRIM(title)) t, hostName h FROM link_events WHERE hidden = 0 AND time > datetime('now')").all() as { t: string; h: string }[]) {
+        dbRows = dbx.prepare("SELECT LOWER(TRIM(title)) t, hostName h, lat, lng FROM link_events WHERE hidden = 0 AND time > datetime('now')").all() as KnownTitle[];
+        for (const r of dbRows) {
             if (r.t && !dbTitles.has(r.t)) dbTitles.set(r.t, r.h ?? '');
+        }
+        const center = dbx.prepare('SELECT lat, lng FROM tatorter WHERE name = ? COLLATE NOCASE ORDER BY bef DESC LIMIT 1');
+        for (const city of new Set(candidates.map((c) => c.city).filter((c): c is string => !!c))) {
+            cityCenters.set(city, (center.get(city) as { lat: number; lng: number } | undefined) ?? null);
         }
         dbx.close();
     }
@@ -385,6 +399,13 @@ async function main() {
         const cand = candidates.find((c) => c.domain === domain);
         let id = `sb-${domain.replace(/\./g, '-')}`;
         if (existingIds.has(id)) id = `${id}-2`;
+
+        // Program på en enda sida: bara för utpekade ställen (se inlineListingAllowed).
+        if (!inlineListingAllowed(sug.method, cand?.isVenue)) {
+            console.log(`   hoppar: ${domain.padEnd(32)} program på en sida, men sajten är inte utpekad som ett ställe`);
+            state.domains[domain] = { verdict: 'FAIL', date: todayISO(), note: NOT_A_VENUE_NOTE, probe: PROBE_VERSION };
+            continue;
+        }
 
         // Hänvisande eventets hostName/stad säger inget om SAJTENS namn/stad —
         // neutralt domännamn + tom defaultCity (geokodningen tar eventadressen).
@@ -401,7 +422,7 @@ async function main() {
         const v = await smokeTest(sug);
         if (!v.ok) {
             console.log(`❌ ${v.reasons.join('; ')}`);
-            state.domains[domain] = { verdict: 'SMOKE-FAIL', date: todayISO(), note: v.reasons[0] };
+            state.domains[domain] = { verdict: 'SMOKE-FAIL', date: todayISO(), note: v.reasons[0], probe: PROBE_VERSION };
             continue;
         }
         const mine = new Set(v.allTitles.map((t) => t.toLowerCase()));
@@ -415,9 +436,11 @@ async function main() {
             continue;
         }
         // Innehåll som redan finns i databasen (annan domän, samma kalender)?
-        const known = [...mine].filter((t) => dbTitles.has(t));
+        const center = cand?.city ? cityCenters.get(cand.city) : null;
+        const pool = center ? titlesNear(dbRows, center.lat, center.lng) : dbTitles;
+        const known = [...mine].filter((t) => pool.has(t));
         if (mine.size >= 3 && known.length / mine.size >= 0.6) {
-            const via = dbTitles.get(known[0]) || 'okänd källa';
+            const via = pool.get(known[0]) || 'okänd källa';
             console.log(`❌ innehållet finns redan i DB (${known.length}/${mine.size} titlar, t.ex. via "${via}")`);
             state.domains[domain] = { verdict: 'DUPE', date: todayISO(), note: `samma innehåll som befintlig källa (${via})` };
             continue;

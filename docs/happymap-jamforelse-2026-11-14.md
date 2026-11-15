@@ -156,12 +156,46 @@ de flesta på standardplattformar våra motorer redan läser. Tre saker stoppade
 Utfall i Växjö: 40 kandidater → 4 med läsbar kalender → 3 nya källor (Slottsstallarna, Kafé de
 luxe, PM & Vänner), 25 event, alla på sin lokal, Kafé de luxe med pris.
 
-**Det som återstår är proben.** Chapter House, keun joo, Palladium, Växjö Konserthus och Café
-Fontaine har eventsidor men inte i något format proben provar (Tribe, wp-v2, sitemap med JSON-LD).
-Nästa steg är att proben också letar en listsida (`/evenemang`, `/event-nyheter`, `/program`,
-`/live`) och provar sitemap-motorns katalogläge på den. Mono säljer via Biljettkiosken, en
-biljettplattform vi inte läser. När proben kan mer: töm domarna i `web-snowball-state.json` för
-de berörda domänerna, annars vilar de i 90 dagar.
+**Proben läser nu vanliga programsidor (15/11).** Chapter House, Palladium och Växjö Konserthus
+hade eventsidor men inte i något format proben provade (Tribe, wp-v2, sitemap med JSON-LD). Nytt
+steg i `bulk-probe`: följ startsidans länk till "Evenemang"/"Program" och läs sidan som
+
+- **katalog** - kort som länkar till en detaljsida per event (`/event/<namn>/`). Sitemap-motorns
+  `isHtmlCatalog` läser den redan; proben pekar bara ut listsidan och länkfamiljen. Ny flagga
+  `skipPublishTimes`: ett WordPress-inläggs publiceringsdatum är inget eventdatum (keun joo gav
+  tio "event" på sina publiceringsdagar).
+- **program på en enda sida** - rubrik, datumrad, lite text, inga detaljsidor. Ny motor `listing`
+  (`utils/listingBlocks.ts`). Datumraden är ankaret och titeln är rubriken i samma kort; en sida
+  ger hellre noll event än fel event.
+
+Torrkört, inget inlagt i registret än:
+
+| | Ställen provade | Skulle bli källor |
+|---|---|---|
+| Växjö | 37 | Chapter House (3 event på sidan, pris 300/525/725 kr), Palladium (7), Växjö Konserthus (46 via katalogen) |
+| Kalmar + Jönköping (oberoende test) | 105 | Byttan (18), Slottshotellet (7), Villa Karlsro (4), Folkets bio (9), Berseau (3) |
+
+Räkna med ungefär tre nya ställen per stad av den storleken. Det oberoende testet hittade sex
+brister som rättades samma natt: status på datumraden ("27 nov Fullbokat" blev titeln
+"Fullbokat"), ett avsnitts text på grannens event, slutdatum efter midnatt som eget event, en
+veckodag som flyttade datumet 13 månader fram, hopklistrade element och Latin-1-sidor.
+
+Tre spärrar kom ur samma test:
+
+1. **Program på en sida läses bara för utpekade ställen** (kandidatfilens femte kolumn, satt av
+   `venue-candidates`). Hos en krog är texten efter datumet akten; hos ett turnerande band är den
+   platsen. Ett urval av 210 gamla FAIL släppte igenom haaks.se och pubkor.se med titlar som
+   "Kalmar - Krögers". Kataloger berörs inte.
+2. **Dubblettkontrollen är ortsmedveten** för ställen med känd ort. En konsertsal delar titlar
+   med hela turnén, och Växjö Konserthus föll på att "EVIGT EDVIN" fanns i Karlstad.
+3. **Utställningskataloger hoppas över.** En utställning hamnar annars på sin sista dag.
+
+Probens generation står i `PROBE_VERSION` (`utils/snowballSmoke.ts`). Gamla FAIL från en äldre
+generation provas om av sig själva, så `web-snowball-state.json` behöver inte tömmas för hand.
+
+Läses fortfarande inte: keun joo (inlägg direkt under roten med datum som "21/11" - går inte att
+skilja från `/meny/`), Café Fontaine (tom sida), Blend Bar (Facebook-inbäddning) och Mono, som
+säljer via Biljettkiosken.
 
 ## 5. Vad som krävs för att vara minst lika bra
 
@@ -169,7 +203,7 @@ de berörda domänerna, annars vilar de i 90 dagar.
 |---|---|---|---|
 | Pris | 42 % i förvalet mot deras 45-65 % | Tickster-nyckeln. Bibliotekens API. | Josef (nyckeln), minin |
 | Plats | 67 % exakt, 24 % på mittpunkt (var 64 / 28) | venueFixes för de namngivna. Arenaregistret för matcherna. | minin |
-| Antal, förvalet | 87 % av deras (14 580 mot 16 837) | Proben för listsidor, sedan `venue-candidates` ort för ort. nationsguiden.se, Sensus, Biljettkiosken. De tolv volymrasen. Och frågan om kyrkan/PRO/Korpen ska vara dolda som förval - 10 098 event i fönstret. | Josef (beslutet), minin |
+| Antal, förvalet | 87 % av deras (14 580 mot 16 837) | Lägg in de torrkörda ställena, sedan `venue-candidates` ort för ort (cirka tre ställen per stad). nationsguiden.se, Sensus, Biljettkiosken. De tolv volymrasen. Och frågan om kyrkan/PRO/Korpen ska vara dolda som förval - 10 098 event i fönstret. | Josef (beslutet), minin |
 
 ## 6. Mätmetod, för nästa gång
 

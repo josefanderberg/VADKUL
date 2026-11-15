@@ -4,7 +4,7 @@
  * ur riktiga Tickster-detaljsidor (probade 2026-07-02).
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord, isRememberedGone, nextGoneMemory } from './sitemap';
+import { backfillPlaceFromHtml, extractCatalogDates, cheerioFallback, extractFromHtml, isVendorFooterAddress, dateFromDetailSelector, startInsteadOfEnd, applyTitlePlaces, extractJsonCatalogUrls, descFromDetailSelector, applyDetailPlace, dateFromDetailRegex, applyDetailPlaceRegex, catalogPostBody, priceFromDetailSelector, isPlaceholderCoord, isRememberedGone, nextGoneMemory, stripPublishTimes, stripSiteNameTail } from './sitemap';
 import type { RawEvent } from '../types';
 import { SOURCES } from '../registry';
 import { placeFromDetailHtml } from './wp-rest';
@@ -1211,5 +1211,43 @@ describe('platsfälten i mittpunkts-svepet 14/11', () => {
         const html = '"location": {\n        "@type": "Place",\n        "name": "Stora Teatern",\n        "address": {"@type": "PostalAddress", "streetAddress": "Stora Teatern\\r\\nKungsparken 1"},\n        "url": "http:\\/\\/maps.google.com\\/?q=57.70260450000001,11.97059319999994"\n    }'
             + '<span> Stora Teatern<br />\nKungsparken 1<br>\n<a class="border-a" target="_blank" href="http://maps.google.com/?q=57.70260450000001,11.97059319999994"> Hitta hit</a></span>';
         expect(wpPlace('stora-teatern-gbg', html)).toEqual({ venueName: 'Stora Teatern', address: 'Kungsparken 1', coords: [57.70260450000001, 11.97059319999994] });
+    });
+});
+
+describe('stripPublishTimes — inläggets publiceringsdatum är inget eventdatum (keun joo 14/11)', () => {
+    const post = (body: string) => `<html><head><meta property="article:published_time" content="2026-11-01T00:16:08+01:00"><title>Zatori duo - keun joo</title></head>
+        <body><article><h1>Zatori duo rockar källarn</h1>
+        <time class="entry-date published" datetime="2026-11-01T00:16:08+01:00">2026-11-01</time>
+        <time class="updated" datetime="2026-11-01T00:16:08+01:00">1 november 2026</time>
+        ${body}</article></body></html>`;
+
+    it('publicerings- och ändringstider tas bort, eventets egen <time> står kvar', () => {
+        const out = stripPublishTimes(post('<time datetime="2026-11-21T22:00">21 november kl 22</time>'));
+        expect(out).not.toMatch(/entry-date|class="updated"|published_time/);
+        expect(out).toContain('<time datetime="2026-11-21T22:00">');
+    });
+
+    it('med tiderna borta ger ett inlägg utan eventdatum inget event', () => {
+        const html = post('<p>Denna afton kan ni dansa järnet på dansgolvet.</p>');
+        expect(cheerioFallback(html, 'https://keunjoo.se/zatori-duo/')?.startDate.toISOString().slice(0, 10)).toBe('2026-10-31');
+        expect(cheerioFallback(stripPublishTimes(html), 'https://keunjoo.se/zatori-duo/')).toBeNull();
+    });
+});
+
+describe('stripSiteNameTail — sajtnamnet som svans på og:title (Växjö Konserthus 14/11)', () => {
+    it('svansen tas bort bara när den är sajtens eget namn', () => {
+        expect(stripSiteNameTail('EVIGT EDVIN - Växjö Konserthus', 'Växjö Konserthus')).toBe('EVIGT EDVIN');
+        expect(stripSiteNameTail('Sven Ingvars - Igår. Idag. Imorgon. 70 år. - Växjö Konserthus', 'Växjö Konserthus')).toBe('Sven Ingvars - Igår. Idag. Imorgon. 70 år.');
+        expect(stripSiteNameTail('Julkonsert | växjö konserthus', 'Växjö Konserthus')).toBe('Julkonsert');
+        expect(stripSiteNameTail('Niklas Strömstedt - Tyck OM mig', 'Växjö Konserthus')).toBe('Niklas Strömstedt - Tyck OM mig');
+        expect(stripSiteNameTail('Växjö Konserthus', 'Växjö Konserthus')).toBe('Växjö Konserthus');
+        expect(stripSiteNameTail('EVIGT EDVIN - Växjö Konserthus', '')).toBe('EVIGT EDVIN - Växjö Konserthus');
+    });
+
+    it('en sida utan h1 får titeln ur og:title utan sajtnamnet', () => {
+        const html = `<html><head><title>EVIGT EDVIN - Växjö Konserthus</title>
+            <meta property="og:title" content="EVIGT EDVIN - Växjö Konserthus" /><meta property="og:site_name" content="Växjö Konserthus" /></head>
+            <body><main><p>2027-03-18, 19.30</p><h2>EVIGT EDVIN</h2></main></body></html>`;
+        expect(cheerioFallback(html, 'https://www.vaxjokonserthus.se/event/evigt-edvin/')?.title).toBe('EVIGT EDVIN');
     });
 });

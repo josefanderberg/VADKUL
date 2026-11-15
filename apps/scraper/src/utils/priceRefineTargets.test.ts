@@ -80,3 +80,14 @@ describe('roundRobin', () => {
         expect(roundRobin([], 5)).toEqual([]);
     });
 });
+
+describe('priceRefineFetchUrl — listing-motorns fragment', () => {
+    it('en programsida med många event hämtas inte för ETT events pris', () => {
+        expect(priceRefineFetchUrl('https://www.palladiumvaxjo.se/evenemang/#2026-11-21-en-kvall-med-shan-atci')).toBeNull();
+        expect(priceRefineFetchUrl('https://chapterhouse.se/event-nyheter/#2026-12-05-julinspirerad-olprovning')).toBeNull();
+    });
+
+    it('en egen detaljsida med bara datum i fragmentet hämtas som förut', () => {
+        expect(priceRefineFetchUrl('https://x.se/pa-scen/jazzkvall/#2026-11-21')).toBe('https://x.se/pa-scen/jazzkvall/');
+    });
+});

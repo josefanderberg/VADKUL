@@ -17,20 +17,94 @@
  */
 
 import { RawEvent } from '../sources/types';
+import { distanceKm } from './townBoundary';
 
 export const SMOKE_MIN_EVENTS = 3;
+
+/** Så långt bakåt räknas en programsidas passerade event som belägg för att sidan är ett program. */
+export const LISTING_LOOKBACK_DAYS = 30;
+
+/**
+ * Probens generation. Höjs när proben lär sig läsa en ny sorts sajt — då är
+ * ett gammalt FAIL inte längre facit, och domänen ska provas igen utan att
+ * någon behöver tömma minnesfilen för hand.
+ *   1 — Tribe, wp-v2, sitemap + JSON-LD, GoToHub, SiteVision
+ *   2 — listsidor: katalog med detaljsidor, program på en enda sida (14/11 2026)
+ */
+export const PROBE_VERSION = 2;
+
+/**
+ * Ett PROGRAM PÅ EN ENDA SIDA (listing-motorn) läses bara för sajter som är
+ * utpekade som ett ställe — kandidatfilens femte kolumn, som `npm run
+ * venue-candidates` sätter ur OSM. Raden "21 nov · Nyköping, Träffen" betyder
+ * olika saker på olika sajter: hos en krog är texten efter datumet akten och
+ * platsen är krogen själv; hos ett turnerande band är texten PLATSEN och
+ * akten är bandet. Torrkörningen mot gamla FAIL 15/11 2026 släppte igenom
+ * haaks.se och pubkor.se (turnéplaner, titlar som "Kalmar - Krögers") och
+ * larssonsresor.se (bussresor) — riktiga datum, men inga event på en plats.
+ * Kataloger med detaljsidor berörs inte: där bär varje sida sin egen titel.
+ */
+export const NOT_A_VENUE_NOTE = 'program på en sida: inte ett utpekat ställe';
+
+export function inlineListingAllowed(method: string | undefined, isVenue: boolean | undefined): boolean {
+    return method !== 'listing-inline' || isVenue === true;
+}
+
+export interface ProbeMemory {
+    verdict: 'PASS' | 'FAIL' | 'DUPE' | 'SMOKE-FAIL';
+    date: string;
+    note?: string;
+    /** Generationen som gav verdiktet; saknas på poster från före 14/11 2026 (= 1). */
+    probe?: number;
+}
+
+/**
+ * Gäller minnet av en domän fortfarande, så att den hoppas över? En dubblett
+ * är alltid en dubblett. Övriga verdikt gäller i `retryDays` dagar — utom
+ * FAIL och SMOKE-FAIL från en äldre probe-generation, som aldrig fick chansen
+ * mot dagens prob, och en sajt som fälldes för att den inte var utpekad som
+ * ett ställe men nu kommer som ett (`asVenue`).
+ */
+export function remembersVerdict(entry: ProbeMemory | undefined, ageDays: number, retryDays: number, probeVersion = PROBE_VERSION, asVenue = false): boolean {
+    if (!entry) return false;
+    if (entry.verdict === 'DUPE') return true;
+    if (ageDays >= retryDays) return false;
+    // Fälld för att sajten inte var utpekad som ett ställe — nu är den det.
+    if (asVenue && entry.note === NOT_A_VENUE_NOTE) return false;
+    const failed = entry.verdict === 'FAIL' || entry.verdict === 'SMOKE-FAIL';
+    return !(failed && (entry.probe ?? 1) < probeVersion);
+}
 
 export interface SmokeVerdict { ok: boolean; reasons: string[]; events: number; sampleTitles: string[]; allTitles: string[] }
 
 const dayOf = (d: Date): string => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 
-export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date, domain: string): SmokeVerdict {
+export interface JudgeOptions {
+    /**
+     * Räkna även event så här många dagar BAKÅT. För programsidor (listing-
+     * motorn): en liten krog har ofta bara ett eller två event kvar på sidan,
+     * men de passerade står kvar ovanför och visar lika väl att sidan är ett
+     * program. Kräver då minst ett event EFTER i dag — ett nyhetsarkiv, där
+     * varje inlägg bär sitt publiceringsdatum, har aldrig ett datum i morgon.
+     */
+    lookbackDays?: number;
+}
+
+export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date, domain: string, opts: JudgeOptions = {}): SmokeVerdict {
     const reasons: string[] = [];
+    const from = new Date(windowStart.getTime() - (opts.lookbackDays ?? 0) * 86_400_000);
     const future = raw.filter((e) => e.startDate instanceof Date && !isNaN(+e.startDate)
-        && e.startDate >= windowStart && e.startDate < windowEnd);
+        && e.startDate >= from && e.startDate < windowEnd);
+    const upcoming = future.filter((e) => e.startDate >= windowStart);
 
     if (future.length < SMOKE_MIN_EVENTS) {
-        return { ok: false, reasons: [`bara ${future.length} framtida event (kräver ≥${SMOKE_MIN_EVENTS})`], events: future.length, sampleTitles: [], allTitles: [] };
+        return { ok: false, reasons: [`bara ${future.length} ${opts.lookbackDays ? 'daterade' : 'framtida'} event (kräver ≥${SMOKE_MIN_EVENTS})`], events: upcoming.length, sampleTitles: [], allTitles: [] };
+    }
+    if (opts.lookbackDays) {
+        const tomorrow = new Date(windowStart.getTime() + 86_400_000);
+        if (!future.some((e) => e.startDate >= tomorrow)) {
+            return { ok: false, reasons: [`inget kommande event (${future.length} daterade, alla i dag eller passerade)`], events: upcoming.length, sampleTitles: [], allTitles: [] };
+        }
     }
     const titles = future.map((e) => (e.title ?? '').trim());
 
@@ -63,5 +137,27 @@ export function judgeEvents(raw: RawEvent[], windowStart: Date, windowEnd: Date,
     const stamps = new Set(future.map((e) => +e.startDate));
     if (stamps.size === 1 && future.length >= 5) reasons.push('alla event på samma timestamp (datumparse trasig?)');
 
-    return { ok: reasons.length === 0, reasons, events: future.length, sampleTitles: titles.slice(0, 3), allTitles: titles };
+    return { ok: reasons.length === 0, reasons, events: upcoming.length, sampleTitles: titles.slice(0, 3), allTitles: titles };
+}
+
+export interface KnownTitle { t: string; h: string; lat: number | null; lng: number | null }
+
+/** Inom så många km från ortens mittpunkt räknas ett event som ortens eget. */
+export const LOCAL_TITLES_KM = 30;
+
+/**
+ * Titlarna vi redan har INOM ORTEN (titel → värd), för dubblettkontrollen av
+ * ett ställe med känd ort. Jämförelsen mot hela landet fällde Växjö Konserthus
+ * 15/11 2026: 34 av 49 titlar "fanns redan" — som samma turné i Karlstad,
+ * Örebro och Västerås. En konsertsal delar titlar med hela Sverige utan att vi
+ * har just dess kvällar.
+ */
+export function titlesNear(rows: KnownTitle[], lat: number, lng: number, km = LOCAL_TITLES_KM): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const r of rows) {
+        if (!r.t || r.lat == null || r.lng == null || (r.lat === 0 && r.lng === 0)) continue;
+        if (distanceKm(lat, lng, r.lat, r.lng) > km) continue;
+        if (!out.has(r.t)) out.set(r.t, r.h ?? '');
+    }
+    return out;
 }

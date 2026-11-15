@@ -279,6 +279,15 @@ export interface SitemapConfig {
      */
     noMarkupPrice?: boolean;
     /**
+     * Detaljsidorna är INLÄGG (WordPress-poster) och bär sitt publiceringsdatum
+     * som <time class="entry-date published">. Flaggan tar bort de tiderna före
+     * datumtolkningen (stripPublishTimes), så ett inlägg utan eventdatum i
+     * texten faller bort i stället för att bli "event" dagen det publicerades.
+     * Sätts av snöbollens prob på kataloger den själv hittat (14/11 2026:
+     * keun joo i Växjö gav tio event på sina publiceringsdatum).
+     */
+    skipPublishTimes?: boolean;
+    /**
      * Katalogen hämtas med POST (Episerver-block som Konserthusets
      * /CalendarSlideBlock/LoadMore/ — GET ger 405). Kroppen skickas som
      * application/x-www-form-urlencoded; `{{today}}` byts mot dagens lokala
@@ -335,6 +344,31 @@ export function dateFromDetailSelector(
     );
     const date = findFirstDateInText(opts.rangeStart ? rangeToStartText(numeric) : numeric, now);
     return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
+}
+
+/**
+ * "Eventtitel - Sajtnamn" → "Eventtitel" när svansen är exakt sajtens namn
+ * (og:site_name). Utan känt sajtnamn, eller när titeln BARA är sajtnamnet,
+ * lämnas titeln orörd. Exporterad för test.
+ */
+export function stripSiteNameTail(title: string, siteName: string): string {
+    if (!title || !siteName) return title;
+    const m = title.match(/^(.*\S)\s+[|–—-]\s+([^|–—]+)$/);
+    return m && m[2].trim().toLowerCase() === siteName.toLowerCase() ? m[1].trim() : title;
+}
+
+/**
+ * Inläggets publicerings- och ändringstider bort ur sidan (SitemapConfig.
+ * skipPublishTimes): <time class="entry-date|published|updated|post-date">,
+ * <time pubdate>, itemprop=datePublished/dateModified och motsvarande
+ * meta-taggar. Eventets egna <time>-element (utan de klasserna) står kvar.
+ * Exporterad för test och för snöbollens prob.
+ */
+export function stripPublishTimes(html: string): string {
+    return html
+        .replace(/<time\b[^>]*\bclass=["'][^"']*\b(?:entry-date|published|updated|post-date)\b[^"']*["'][^>]*>[\s\S]*?<\/time>/gi, ' ')
+        .replace(/<time\b[^>]*(?:\bpubdate\b|itemprop=["']date(?:Published|Modified)["'])[^>]*>[\s\S]*?<\/time>/gi, ' ')
+        .replace(/<meta\b[^>]*(?:article:(?:published|modified)_time|itemprop=["']date(?:Published|Modified)["'])[^>]*>/gi, ' ');
 }
 
 /**
@@ -1174,7 +1208,10 @@ export function cheerioFallback(html: string, url: string, defaultCity?: string,
         if (!title && tl !== siteName) title = t;   // första icke-logga som fallback
         if ((pageName && tl === pageName) || pageNames.has(tl)) { title = t; return false; }
     });
-    if (!title) title = ogTitle;
+    // og:title bär ofta sajtnamnet som svans ("EVIGT EDVIN - Växjö Konserthus").
+    // Bara när svansen ÄR sajtens eget og:site_name tas den bort — ett
+    // bindestreck i en riktig titel rörs inte. (Sidor utan h1, 14/11 2026.)
+    if (!title) title = stripSiteNameTail(ogTitle, ($('meta[property="og:site_name"]').attr('content') || '').trim());
     if (!title) title = docTitle.split(/\s+[|–-]\s+/)[0].trim();
     if (!title) title = titleFromUrl(url);
     if (!title) return null;
@@ -1736,7 +1773,8 @@ export const sitemapEngine = async (
                 skippedKnown++;
                 continue;
             }
-            const html = await detailFetch(entry.url);
+            const fetchedHtml = await detailFetch(entry.url);
+            const html = fetchedHtml && config.skipPublishTimes ? stripPublishTimes(fetchedHtml) : fetchedHtml;
             fetched++;
             if (!html) {
                 const status = lastStatus.get(entry.url);
