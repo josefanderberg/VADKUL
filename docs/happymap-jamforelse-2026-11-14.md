@@ -197,6 +197,34 @@ Läses fortfarande inte: keun joo (inlägg direkt under roten med datum som "21/
 skilja från `/meny/`), Café Fontaine (tom sida), Blend Bar (Facebook-inbäddning) och Mono, som
 säljer via Biljettkiosken.
 
+### Stadssvepen natten till 15/11
+
+Proben kördes mot krogar, scener, caféer och museer ur OSM i 38 städer, de 20 största först och
+sedan Norrland, Dalarna, Skåne och västkusten.
+
+| | Ställen provade | Godkända | Inlagda efter granskning |
+|---|---|---|---|
+| Svep 1 (19 städer) | 1 147 | 91 | 82 |
+| Svep 2 (19 städer) | 618 | 32 | 30 |
+| Växjö, Kalmar, Jönköping | 142 | 8 | 8 |
+
+Första körningen gav 847 nya synliga event, varav 510 inom förvalets tvåveckorsfönster och 470 av
+dem på sin lokal. Gapet mot Happymap var cirka 2 250 event i samma fönster. Störst effekt i
+Stockholm, där vi låg sämst till: Göta Lejon, Oscarsteatern, Intiman, Folkoperan, China Teatern,
+Scalateatern, Playhouse och Teaterverket.
+
+Granskningen tog bort elva källor och blev regler i snöbollen: hotellkedjor och rikskalendrar
+(ortens hotell eller café blev plats för hela landets event), en idrottsförenings mötes- och
+bokningskalender, ett enskilt event som listsida, och **datumkluster** - Droskan i Umeå gav 187 av
+187 event samma dag och Skissernas museum 78 av 106 med dagens datum. Deras event är dolda.
+
+Volymlarmen: av tretton var bara Vallentuna en verklig förlust (sidan visar nio kort och laddar
+resten med "Visa fler"; nu 69 event mot 11 via kalenderappens egen rutt). Resten var säsong,
+sajter med färre event, eller falsklarm.
+
+Kvar: Örnsköldsvik (Overpass svarade inte), resten av landets tätorter (utbytet per stad sjunker
+med storleken), och beslutet i josefanderberg/VADKUL#240 om att visa kyrkan och PRO vid inzoomning.
+
 ## 5. Vad som krävs för att vara minst lika bra
 
 | | Läge | Nästa steg | Vem |
