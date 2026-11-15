@@ -65,7 +65,7 @@ const SMOKE_WINDOW_DAYS = 180;
 // Hotellkedjor och rikstäckande organisationer (15/11): kedjans eventsidor
 // gör reklam för andras evenemang, och en rikskalender fick ortens
 // hotell eller café som plats för hela landets event.
-const DOMAIN_BLOCKLIST = /(?:^|\.)(facebook|fb|instagram|youtube|youtu|spotify|tiktok|linkedin|twitter|x|google|goo|maps|bit|tinyurl|mailchi|forms|docs|drive|apple|microsoft|teams|zoom|live|eventbrite|ticketmaster|tickster|billetto|nortic|axs|dice|simplesignup|strawberry|strawberryhotels|scandichotels|nordicchoicehotels|elite|bishopsarms|erikshjalpen|ifsuede|visitsweden|wikipedia|eduadmin|sportadmin|hembygd|svenskakyrkan|naturskyddsforeningen|rodakorset|friluftsframjandet|korpen|riksteatern|bilda|medborgarskolan|studieframjandet|raceid|pro|abf|sv|kulturhusetstadsteatern)\.(?:com|se|nu|org|net|ly|be|fm|me|co)$/i;
+const DOMAIN_BLOCKLIST = /(?:^|\.)(facebook|fb|instagram|youtube|youtu|spotify|tiktok|linkedin|twitter|x|google|goo|maps|bit|tinyurl|mailchi|forms|docs|drive|apple|microsoft|teams|zoom|live|eventbrite|ticketmaster|tickster|billetto|nortic|axs|dice|simplesignup|strawberry|strawberryhotels|scandichotels|nordicchoicehotels|elite|bishopsarms|erikshjalpen|ifsuede|naturvardsverket|visitsweden|wikipedia|eduadmin|sportadmin|hembygd|svenskakyrkan|naturskyddsforeningen|rodakorset|friluftsframjandet|korpen|riksteatern|bilda|medborgarskolan|studieframjandet|raceid|pro|abf|sv|kulturhusetstadsteatern)\.(?:com|se|nu|org|net|ly|be|fm|me|co)$/i;
 
 type StateEntry = ProbeMemory;
 interface StateFile { version: 1; domains: Record<string, StateEntry> }
@@ -421,8 +421,11 @@ async function main() {
         // 15/11: Curiosum fick Bildmuseets namn och lokal). Exakt värd först.
         const host = bareHostOf(configMainUrl(sug.config));
         const cand = candidates.find((c) => bareHostOf(c.base) === host) ?? candidates.find((c) => c.domain === domain);
-        let id = `sb-${domain.replace(/\./g, '-')}`;
-        if (existingIds.has(id)) id = `${id}-2`;
+        // Flera ställen kan dela basdomän (uppsala.se 15/11: tre källor fick
+        // samma id sb-uppsala-se-2). Räkna upp tills id:t är ledigt.
+        const stem = `sb-${domain.replace(/\./g, '-')}`;
+        let id = stem;
+        for (let n = 2; existingIds.has(id); n++) id = `${stem}-${n}`;
 
         // Program på en enda sida: bara för utpekade ställen (se inlineListingAllowed).
         if (!inlineListingAllowed(sug.method, cand?.isVenue)) {
