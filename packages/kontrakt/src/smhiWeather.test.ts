@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-    formatTemp, parseSmhiForecast, pickWeatherForDay, smhiPointUrl, weatherEmoji, weatherText, weatherToShow,
+    cityWeatherFor, createSmhiLoader, formatTemp, parseSmhiForecast, pickWeatherForDay, SMHI_RETRY_MS, SMHI_TTL_MS,
+    smhiPointUrl, WEATHER_PENDING, weatherEmoji, weatherText, weatherToShow,
     type WeatherStep,
 } from './smhiWeather';
 
@@ -130,5 +131,130 @@ describe('weatherToShow', () => {
     it('en ort utan prognos visar inget, men håller platsen åt nästa ort', () => {
         expect(weatherToShow(VAXJO, { url: VAXJO, steps: [] })).toBeNull();
         expect(weatherToShow(KALMAR, { url: VAXJO, steps: [] })).toEqual({ state: 'pending' });
+    });
+});
+
+// Det dagchipet ritar - webbens hook och appens platta läser samma svar (#237).
+describe('cityWeatherFor', () => {
+    const steps = parseSmhiForecast(SVAR);
+    const nu = new Date('2026-11-13T15:20:00Z');
+    const VAXJO = 'https://smhi.invalid/vaxjo';
+    const KALMAR = 'https://smhi.invalid/kalmar';
+
+    it('ortens egen prognos: symbol, temperatur och text', () => {
+        expect(cityWeatherFor(VAXJO, { url: VAXJO, steps }, 0, nu)).toEqual({
+            emoji: '☁️', temp: '2°', text: 'Mulet', state: 'fresh',
+        });
+    });
+
+    it('på väg till en ny ort ritas förra ortens väder som gammalt', () => {
+        expect(cityWeatherFor(KALMAR, { url: VAXJO, steps }, 0, nu)).toEqual({
+            emoji: '☁️', temp: '2°', text: 'Mulet', state: 'stale',
+        });
+    });
+
+    it('före första svaret ritas utfyllnaden', () => {
+        expect(cityWeatherFor(VAXJO, null, 0, nu)).toBe(WEATHER_PENDING);
+        expect(WEATHER_PENDING.state).toBe('pending');
+        expect(WEATHER_PENDING.text).toBe('');
+    });
+
+    it('förra orten saknar dagens timme: platsen hålls tills den nya kommit', () => {
+        expect(cityWeatherFor(KALMAR, { url: VAXJO, steps }, 9, nu)).toBe(WEATHER_PENDING);
+    });
+
+    it('ortens egen prognos når inte dagen: inget väder', () => {
+        expect(cityWeatherFor(VAXJO, { url: VAXJO, steps }, 9, nu)).toBeNull();
+    });
+
+    it('ingen ort eller en ort utan prognos: inget väder', () => {
+        expect(cityWeatherFor(null, { url: VAXJO, steps }, 0, nu)).toBeNull();
+        expect(cityWeatherFor(VAXJO, { url: VAXJO, steps: [] }, 0, nu)).toBeNull();
+    });
+});
+
+describe('createSmhiLoader', () => {
+    const URL_A = 'https://smhi.invalid/a';
+    const URL_B = 'https://smhi.invalid/b';
+
+    /** En hämtning som räknar anropen och svarar med det som ligger i kön. */
+    function fejkad(svar: (() => unknown)[]) {
+        const anrop: string[] = [];
+        const fetchJson = async (url: string) => {
+            anrop.push(url);
+            const nästa = svar.shift();
+            if (!nästa) throw new Error('inget svar köat');
+            return nästa();
+        };
+        return { anrop, fetchJson };
+    }
+    const nätfel = () => { throw new Error('nätfel'); };
+
+    it('hämtar en gång per ort och minns prognosen en halvtimme', async () => {
+        let nu = 1_000_000;
+        const { anrop, fetchJson } = fejkad([() => SVAR, () => SVAR]);
+        const load = createSmhiLoader(fetchJson, () => nu);
+
+        const första = await load(URL_A);
+        expect(första.map(s => s.temp)).toEqual([2.4, 1.6, -0.4, 4.6]);
+        nu += SMHI_TTL_MS - 1;
+        // Samma lista tillbaka (samma objekt) - klienten kan jämföra på identitet.
+        expect(await load(URL_A)).toBe(första);
+        expect(anrop).toEqual([URL_A]);
+
+        nu += 1;
+        await load(URL_A);
+        expect(anrop).toEqual([URL_A, URL_A]);
+    });
+
+    it('två samtidiga frågor om samma ort delar på en hämtning', async () => {
+        const { anrop, fetchJson } = fejkad([() => SVAR, () => SVAR]);
+        const load = createSmhiLoader(fetchJson, () => 0);
+        const [a, b, c] = await Promise.all([load(URL_A), load(URL_A), load(URL_B)]);
+        expect(a).toBe(b);
+        expect(c).not.toBe(a);
+        expect(anrop).toEqual([URL_A, URL_B]);
+    });
+
+    it('en ort SMHI saknar (null) ger tom lista och frågas inte om i onödan', async () => {
+        let nu = 0;
+        const { anrop, fetchJson } = fejkad([() => null]);
+        const load = createSmhiLoader(fetchJson, () => nu);
+        expect(await load(URL_A)).toEqual([]);
+        nu += SMHI_RETRY_MS + 1;
+        expect(await load(URL_A)).toEqual([]);
+        expect(anrop).toEqual([URL_A]);
+    });
+
+    it('ett nätfel faller aldrig - tom lista, och orten försöker snart igen', async () => {
+        let nu = 0;
+        const { anrop, fetchJson } = fejkad([nätfel, () => SVAR]);
+        const load = createSmhiLoader(fetchJson, () => nu);
+        expect(await load(URL_A)).toEqual([]);
+        nu += SMHI_RETRY_MS - 1;
+        expect(await load(URL_A)).toEqual([]);
+        expect(anrop).toEqual([URL_A]);
+
+        nu += 1;
+        expect((await load(URL_A)).length).toBe(4);
+        expect(anrop).toEqual([URL_A, URL_A]);
+    });
+
+    it('nätfel vid omhämtningen: den förra prognosen står kvar', async () => {
+        let nu = 0;
+        const { fetchJson } = fejkad([() => SVAR, nätfel, () => SVAR]);
+        const load = createSmhiLoader(fetchJson, () => nu);
+        const första = await load(URL_A);
+        nu += SMHI_TTL_MS;
+        expect(await load(URL_A)).toBe(första);
+        nu += SMHI_RETRY_MS;
+        const ny = await load(URL_A);
+        expect(ny).not.toBe(första);
+        expect(ny).toEqual(första);
+    });
+
+    it('en hämtning som kastar direkt (inte via löftet) fälls inte heller', async () => {
+        const load = createSmhiLoader(() => { throw new Error('synkront fel'); }, () => 0);
+        expect(await load(URL_A)).toEqual([]);
     });
 });

@@ -12,7 +12,10 @@
  *    kreditdagarna för outnyttjad boost, 4/11 2026, eventClouds.ts =
  *    kartans molnlager: var molnen står, zoomkurvan, knuffen och skuggan,
  *    14/11 2026, poiSigns.ts = kartans platsskyltar: vilka som finns, när de
- *    tänds, lagren i stilen och vilken skylt ett tryck träffar, 14/11 2026)
+ *    tänds, lagren i stilen och vilken skylt ett tryck träffar, 14/11 2026,
+ *    smhiWeather.ts = vädret i stadsplattans dagchip: tolkningen av SMHI:s
+ *    prognos, vad plattan visar medan en ny ort laddas och minnet kring
+ *    hämtningen, 15/11 2026)
  *
  * REGLER: paketet får aldrig bero på firebase, react eller node-API:er —
  * det ska gå att importera oförändrat i Next, Cloud Functions och React
@@ -33,3 +36,4 @@ export * from './featured';
 export * from './boostCredit';
 export * from './eventClouds';
 export * from './poiSigns';
+export * from './smhiWeather';
