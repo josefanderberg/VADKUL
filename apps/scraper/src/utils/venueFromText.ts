@@ -80,3 +80,61 @@ export function venueBuildingOf(venueName: string | null | undefined): string | 
     if (BUILDING_RE.test(left) && !ROOM_RE.test(left)) return null;
     return right.trim();
 }
+
+/** Byggnadsord SIST i ett ord ("Centralteatern", "Sparbankshallen", "Folkets Hus"). */
+const BUILDING_TAIL_RE = /(?:teater(?:n)?|kulturhus(?:et)?|konserthus(?:et)?|arena(?:n)?|hus(?:et)?|hall(?:en)?|bio(?:n)?|biograf(?:en)?|museum|museet|opera(?:n)?|kyrka(?:n)?|scen(?:en)?|center|centrum)$/i;
+/** Rum sist i namnet: "… Stora Scen", "… Scen 2", "… Lilla salen", "… Salong 3". */
+const ROOM_TAIL_RE = /^(.{3,}?)\s+(?:(?:stora|lilla|nya|gamla|övre|nedre)\s+)?(?:scen(?:en)?|sal(?:en)?|salong(?:en)?|studio(?:n)?|foaj[ée]n?)(?:\s*\d{1,2})?$/i;
+/** Ensamma rumsord — aldrig en byggnad. */
+const BARE_ROOM_RE = /^(?:sal(?:en)?|salong(?:en)?|scen(?:en)?|studio(?:n)?|rum|lokal|stora|lilla)$/i;
+
+/**
+ * Byggnaden bakom ett salongsnamn, i den ordning de ska provas (#247,
+ * platsgranskningen 15/11: 266 Tickster-event låg på ortens mittpunkt, de
+ * flesta med salongens namn som plats). Formerna:
+ *   "Saga - Bio 3:an"                       → Bio 3:an      (venueBuildingOf)
+ *   "Nalen – Stora Salen"                   → Nalen         (rummet till höger)
+ *   "Unga Klara, Kulturhuset Stadsteatern"  → Kulturhuset Stadsteatern
+ *   "Arena Varberg, Sparbankshallen"        → Arena Varberg, Sparbankshallen
+ *   "Wermland Opera Stora Scen"             → Wermland Opera
+ *   "Norrbottensteatern Scen 2"             → Norrbottensteatern
+ *   "Sara Kulturhus Hjortronet"             → Sara Kulturhus
+ *   "Kino 2"                                → Kino          (salongsnumret)
+ * Tom lista när namnet redan är byggnaden. Ren funktion.
+ */
+export function buildingCandidatesOf(venueName: string | null | undefined): string[] {
+    const v = (venueName ?? '').trim().replace(/\s+/g, ' ');
+    if (!v) return [];
+    const out: string[] = [];
+    const add = (b: string | null | undefined) => {
+        const t = (b ?? '').trim().replace(/[,\s–—-]+$/, '');
+        if (t.length >= 3 && t.toLowerCase() !== v.toLowerCase() && !BARE_ROOM_RE.test(t) && !out.some(o => o.toLowerCase() === t.toLowerCase())) out.push(t);
+    };
+
+    add(venueBuildingOf(v));
+    // "Byggnad – Rum": rummet till höger.
+    const dash = v.match(/^(.{2,40}?)\s+[-–—]\s+(.{3,80})$/);
+    const roomRight = (r: string) => ROOM_RE.test(r) || /^\S*(?:salen|salongen|scenen)$/i.test(r);
+    if (dash && roomRight(dash[2].trim()) && !ROOM_RE.test(dash[1].trim())) add(dash[1]);
+    // "Rum, Byggnad" / "Byggnad, Hall": segmenten som slutar på ett byggnadsord.
+    const segs = v.split(',').map(s => s.trim()).filter(Boolean);
+    if (segs.length >= 2) {
+        for (const seg of segs) {
+            const last = seg.split(' ').pop() ?? '';
+            if (!ROOM_RE.test(seg) && (BUILDING_RE.test(seg) || BUILDING_TAIL_RE.test(last))) add(seg);
+        }
+    }
+    const head = segs[0] ?? v;
+    // "Wermland Opera Stora Scen", "Norrbottensteatern Scen 2".
+    if (dash) return out;
+    const roomTail = head.match(ROOM_TAIL_RE);
+    if (roomTail && !BARE_ROOM_RE.test(roomTail[1])) add(roomTail[1]);
+    // "Sara Kulturhus Hjortronet": ett rumsnamn efter byggnadsordet — som
+    // inte får stå först ("Arena Varberg" är byggnaden själv).
+    const afterBuilding = head.match(/^(.*?(?:kulturhus(?:et)?|konserthus(?:et)?|teater(?:n)?|folkets hus|arena(?:n)?))\s+\p{Lu}[\p{L}-]+$/iu);
+    if (afterBuilding && !/^(?:kulturhus|konserthus|teater|folkets hus|arena)/i.test(afterBuilding[1])) add(afterBuilding[1]);
+    // "Kino 2": salongsnumret (när inget rumsord redan tagit det).
+    const numbered = roomTail ? null : head.match(/^(.{4,40}?)\s+\d{1,2}$/);
+    if (numbered) add(numbered[1]);
+    return out;
+}

@@ -14,7 +14,7 @@
  */
 import { db } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
-import { sqlite, setEventCoords, upsertKnownVenue, isGenericLookupName } from '../utils/sqliteHelper';
+import { sqlite, setEventCoords, upsertKnownVenue, isGenericLookupName, venueTownConflict } from '../utils/sqliteHelper';
 import { llmEnrichEvent, ollamaIsAvailable } from '../utils/llmEnrich';
 import {
     geocodeVenueSweden, reverseGeocode, isInNordic, distanceKm, isForeignAddress,
@@ -82,7 +82,7 @@ async function main(): Promise<void> {
         }
         // Registret får bara RENA venuenamn: inte generiska (förgiftnings-
         // risken från Seriefest-incidenten), inte adresser (siffror).
-        if (precision === 'poi' && cand.length >= 5 && !isGenericLookupName(cand) && !/\d/.test(cand)) {
+        if (precision === 'poi' && cand.length >= 5 && !isGenericLookupName(cand) && !/\d/.test(cand) && !venueTownConflict(cand, hit[0], hit[1])) {
             upsertKnownVenue(cand, hit[0], hit[1], city, `llm-verify ${new Date().toISOString().slice(0, 10)}`);
         }
     }

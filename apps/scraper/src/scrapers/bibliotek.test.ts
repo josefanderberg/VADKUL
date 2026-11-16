@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapAxiellEvent, branchCity, branchFromText, libraryDefaultPrice, AxiellTenant, AXIELL_TENANTS } from './bibliotek';
+import { mapAxiellEvent, branchCity, branchTown, branchFromText, libraryDefaultPrice, AxiellTenant, AXIELL_TENANTS } from './bibliotek';
 
 // TZ=Europe/Stockholm via vitest.config — samma som nattkedjan på minin.
 const tenant: AxiellTenant = {
@@ -117,5 +117,36 @@ describe('mapAxiellEvent — location null', () => {
         expect(ev.venueName).toBeUndefined();
         expect(ev.city).toBeUndefined();
         expect(ev.geocodeCandidates).toEqual([]);
+    });
+});
+
+describe('filialens egen ort (#247: konsortiefilialer i en annan medlemsort)', () => {
+    const towns = new Set(['sturefors', 'linghem']);
+    const townIn = (name: string) => towns.has(name.toLowerCase());
+
+    it('branchTown: tätorten i filialnamnet, genitiv eller inte', () => {
+        expect(branchTown('Sturefors bibliotek', ['Linköping'], townIn)).toBe('Sturefors');
+        expect(branchTown('Linghems bibliotek', ['Linköping'], townIn)).toBe('Linghem');
+        expect(branchTown('Sylte bibliotek', ['Trollhättan'], townIn)).toBeUndefined();
+        expect(branchTown('Ung Zon', ['Linköping'], townIn)).toBeUndefined();
+    });
+
+    it('känd egen ort: bara den provas, aldrig de andra medlemsorterna', () => {
+        const ev = mapAxiellEvent(nullLocHit('Digitalhjälp', '', 'Sturefors bibliotek'), gota, townIn)!;
+        expect(ev.city).toBe('Sturefors');
+        expect(ev.geocodeCandidates).toEqual(['Sturefors bibliotek, Sturefors', 'Sturefors bibliotek', 'Sturefors']);
+    });
+
+    it('medlemsort i listan: likadant (Vilhelmina hamnade i Lycksele)', () => {
+        const ev = mapAxiellEvent(nullLocHit('Sagostund', '', 'Motala stadsbibliotek'), gota, townIn)!;
+        expect(ev.city).toBe('Motala');
+        expect(ev.geocodeCandidates?.filter((c) => c.includes(','))).toEqual(['Motala stadsbibliotek, Motala']);
+    });
+
+    it('stadsdelsfilial utan ort: medlemsorterna i tur och ordning, som förut', () => {
+        const ev = mapAxiellEvent(nullLocHit('Sagostund', '', 'Ryds bibliotek'), gota, () => false)!;
+        expect(ev.city).toBeUndefined();
+        expect(ev.geocodeCandidates?.[0]).toBe('Ryds bibliotek, Linköping');
+        expect(ev.geocodeCandidates?.length).toBeGreaterThan(5);
     });
 });

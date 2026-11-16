@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { anchorCityOverride } from './anchorCity';
+import { anchorCityOverride, addressAnchorCity } from './anchorCity';
 
 describe('anchorCityOverride', () => {
     it('Skönsmon-rapporten 25/9: "Umeå, Väven" ur Sundsvalls-kön → Umeå', () => {
@@ -72,5 +72,22 @@ describe('anchorCityOverride', () => {
             address: 'SCA Arena',
             description: '',
         })).toBe('Skellefteå');
+    });
+});
+
+describe('addressAnchorCity (#247: postorten slår köns stad)', () => {
+    const towns = new Set(['mölnlycke', 'karlskoga', 'delsbo']);
+    const isPlace = (n: string) => towns.has(n.toLowerCase());
+
+    it('svenskt postnummer + känd ort: postorten', () => {
+        expect(addressAnchorCity('Långenäsvägen 5, 435 33 Mölnlycke', 'Uppsala', isPlace)).toBe('Mölnlycke');
+        expect(addressAnchorCity('Folkets hus, 691 31 KARLSKOGA', 'Eskilstuna', isPlace)).toBe('Karlskoga');
+        expect(addressAnchorCity('Delsbo Forngård, 820 60 Delsbo', null, isPlace)).toBe('Delsbo');
+    });
+
+    it('utan postnummer eller med okänd postort: kontextstaden', () => {
+        expect(addressAnchorCity('Långenäsvägen 5, Mölnlycke', 'Uppsala', isPlace)).toBe('Uppsala');
+        expect(addressAnchorCity('Mannerheimintie 1, 00100 Helsinki', 'Uppsala', isPlace)).toBe('Uppsala');
+        expect(addressAnchorCity('Okänd plats', null, isPlace)).toBeUndefined();
     });
 });

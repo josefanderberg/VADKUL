@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveExpectedCity, deriveExpectedCityWithSource } from './repair-misplaced-geo';
+import { deriveExpectedCity, deriveExpectedCityWithSource, sitsInOwnTown } from './repair-misplaced-geo';
 
 describe('deriveExpectedCity', () => {
     it('församlings-mönstret vinner: "kyrka, X församling" → ort', () => {
@@ -88,5 +88,19 @@ describe('deriveExpectedCityWithSource (titeln som sista utväg — FB-turnékla
         expect(deriveExpectedCityWithSource(
             'SCA Arena', null, 'SCA Arena', 'Timrå IK – Skellefteå AIK',
         )).toEqual({ city: 'Skellefteå', fromTitle: true });
+    });
+});
+
+describe('sitsInOwnTown (#247: Storfors bibliotek flyttades till Arvika)', () => {
+    const storfors = { name: 'Storfors', lat: 59.5347, lng: 14.2752 };
+
+    it('eventet i orten som platsnamnet nämner rörs inte, vad den härledda staden än säger', () => {
+        expect(sitsInOwnTown(59.5347, 14.2752, storfors, 'Arvika')).toBe(true);
+    });
+
+    it('långt från den nämnda orten, ingen ort eller samma ort som staden: vanlig kontroll', () => {
+        expect(sitsInOwnTown(59.6544, 12.5916, storfors, 'Arvika')).toBe(false);
+        expect(sitsInOwnTown(59.5347, 14.2752, null, 'Arvika')).toBe(false);
+        expect(sitsInOwnTown(59.5347, 14.2752, storfors, 'Storfors')).toBe(false);
     });
 });

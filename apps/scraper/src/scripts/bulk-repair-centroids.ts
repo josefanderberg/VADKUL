@@ -32,6 +32,7 @@ import { db } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
 import {
     sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart, lookupVenueNear, lookupTatortNear,
+    venueTownConflict,
 } from '../utils/sqliteHelper';
 import {
     geocodeVenueSweden, geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode,
@@ -242,7 +243,7 @@ async function main(): Promise<void> {
                     try { await batch.commit(); } catch (e: any) { console.error(`  ⚠️ Firestore-batch: ${e?.message}`); }
                 }
             }
-            if (city && precision === 'poi' && name.length >= 5 && !GENERIC_VENUE_NAME.test(name)) {
+            if (city && precision === 'poi' && name.length >= 5 && !GENERIC_VENUE_NAME.test(name) && !venueTownConflict(name, lat, lng)) {
                 upsertKnownVenue(name, lat, lng, city, `bulk-repair ${new Date().toISOString().slice(0, 10)}`);
                 learned++;
             }

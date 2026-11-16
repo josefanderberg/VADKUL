@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { firstPreciseHit } from './geocodeChain';
+import { firstPreciseHit, shouldMovePlace } from './geocodeChain';
 import type { GeoHit } from './venueCoordinates';
 
 const answers = (m: Record<string, GeoHit | null>) => vi.fn(async (q: string) => m[q] ?? null);
@@ -21,10 +21,24 @@ describe('firstPreciseHit', () => {
         expect(geo).toHaveBeenCalledTimes(2);
     });
 
-    it('ort-centroid och okänd precision räknas som träff (oförändrat beteende)', async () => {
-        expect((await firstPreciseHit(['x'], answers({ x: [1, 1, 'ort-centroid'] })))?.hit[2]).toBe('ort-centroid');
+    it('okänd precision (gammal cache) räknas som träff', async () => {
         expect((await firstPreciseHit(['x'], answers({ x: [1, 1, null] })))?.query).toBe('x');
         expect((await firstPreciseHit(['x'], answers({ x: [1, 1] as unknown as GeoHit })))?.query).toBe('x');
+    });
+
+    it('ortsmittpunkt stoppar inte kedjan: lokalen efter vinner (#247)', async () => {
+        const geo = answers({
+            'Storgatan 5, Gemla, Växjö': [56.86, 14.65, 'ort-centroid'],
+            'Gemla bibliotek, Växjö': [56.861, 14.651, 'poi'],
+        });
+        const r = await firstPreciseHit(['Storgatan 5, Gemla, Växjö', 'Gemla bibliotek, Växjö', 'Växjö'], geo);
+        expect(r?.query).toBe('Gemla bibliotek, Växjö');
+    });
+
+    it('ortsmittpunkt går före stadens mittpunkt, även när den kommer senare', async () => {
+        const geo = answers({ a: [1, 1, 'stad-centroid'], b: [2, 2, 'ort-centroid'], c: [3, 3, 'ort-centroid'] });
+        expect(await firstPreciseHit(['a', 'b', 'c'], geo)).toEqual({ hit: [2, 2, 'ort-centroid'], query: 'b' });
+        expect(geo).toHaveBeenCalledTimes(3);
     });
 
     it('bara centroider → första centroiden; inga träffar → null', async () => {
@@ -32,5 +46,22 @@ describe('firstPreciseHit', () => {
         expect(await firstPreciseHit(['a', 'b', 'c'], geo)).toEqual({ hit: [1, 1, 'stad-centroid'], query: 'a' });
         expect(await firstPreciseHit(['b'], geo)).toBeNull();
         expect(await firstPreciseHit([], geo)).toBeNull();
+    });
+});
+
+describe('shouldMovePlace (#247: rättelser ska nå gamla event)', () => {
+    const km = (a: number, b: number, c: number, d: number) => Math.hypot(a - c, b - d) * 100;   // grovt, räcker här
+
+    it('uppåt i precision flyttar, nedåt aldrig', () => {
+        expect(shouldMovePlace({ lat: 1, lng: 1, precision: 'stad-centroid' }, [1.001, 1, 'poi'], km)).toBe(true);
+        expect(shouldMovePlace({ lat: 1, lng: 1, precision: 'stad-centroid' }, [1.3, 1, 'ort-centroid'], km)).toBe(true);
+        expect(shouldMovePlace({ lat: 1, lng: 1, precision: 'ort-centroid' }, [1.3, 1, 'stad-centroid'], km)).toBe(false);
+        expect(shouldMovePlace({ lat: 1, lng: 1, precision: 'poi' }, [1.3, 1, 'poi'], km)).toBe(false);
+    });
+
+    it('samma rang: bara en annan punkt flyttar (kommunmitten → orten)', () => {
+        expect(shouldMovePlace({ lat: 64.833, lng: 16.0, precision: 'stad-centroid' }, [64.624, 16.663, 'stad-centroid'], km)).toBe(true);
+        expect(shouldMovePlace({ lat: 1, lng: 1, precision: 'stad-centroid' }, [1.001, 1, 'stad-centroid'], km)).toBe(false);
+        expect(shouldMovePlace({ lat: 1, lng: 1, precision: 'stad-centroid' }, null, km)).toBe(false);
     });
 });

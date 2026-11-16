@@ -27,6 +27,24 @@
  */
 
 import { cityMentioned, findKnownCities } from '../../utils/cityInText';
+import { postalTown } from '../../utils/swedishAddress';
+import { isPlaceName } from '../../utils/sqliteHelper';
+
+/**
+ * Ankarstaden för adressens geokodning: postorten när adressen har ett
+ * svenskt postnummer och orten finns i SCB-registret, annars kontextstaden.
+ * Postorten är eventets egen uppgift; köns stad bara var vi letade. Mölnlycke
+ * ur Uppsala-kön, Karlskoga ur Eskilstunas och Delsbo ur Hudiksvalls hamnade
+ * alla i köns stad (#247, platsgranskningen 15/11). isPlace injiceras för test.
+ */
+export function addressAnchorCity(
+    address: string, contextCity: string | null | undefined,
+    isPlace: (name: string) => boolean = isPlaceName,
+): string | undefined {
+    const town = postalTown(address);
+    if (town && isPlace(town)) return town;
+    return contextCity || undefined;
+}
 
 export interface AnchorCityInput {
     /** Staden från sök-kön/sidbevakningen (source.city) — kan saknas. */

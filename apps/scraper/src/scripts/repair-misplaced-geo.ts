@@ -27,7 +27,7 @@
  */
 
 import { db } from '../config/firebase';
-import { sqlite, setEventCoords } from '../utils/sqliteHelper';
+import { sqlite, setEventCoords, findTatortInText } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import {
     geocodeVenueSweden, geocodeCityCentroid, distanceKm, reverseGeocode,
@@ -147,12 +147,27 @@ export function deriveExpectedCityWithSource(
     return inTitle.length === 1 ? { city: inTitle[0], fromTitle: true } : null;
 }
 
-async function applyCoords(r: Row, lat: number, lng: number, query: string, verified: boolean): Promise<void> {
-    setEventCoords(r.url, lat, lng, query);
+/**
+ * Ligger eventet redan i orten som dess eget platsnamn nämner? Då är det rätt
+ * placerat, vad den härledda staden än säger. Konsortiernas geocodedQuery bar
+ * en ANNAN medlemsort ("Storfors bibliotek, Arvika"), skriptet härledde Arvika
+ * och flyttade Storfors bibliotek dit — 96 km fel (#247, 16/11).
+ * Ren funktion, exporterad för test.
+ */
+export const OWN_TOWN_KM = 15;
+export function sitsInOwnTown(
+    lat: number, lng: number, ownTown: { name: string; lat: number; lng: number } | null, expectedCity: string,
+): boolean {
+    if (!ownTown || ownTown.name.toLowerCase() === expectedCity.toLowerCase()) return false;
+    return distanceKm(lat, lng, ownTown.lat, ownTown.lng) <= OWN_TOWN_KM;
+}
+
+async function applyCoords(r: Row, lat: number, lng: number, query: string, verified: boolean, geoPrecision: string | null = null): Promise<void> {
+    setEventCoords(r.url, lat, lng, query, geoPrecision);
     if (db && r.firestoreId) {
         try {
             await db.collection('linkEvents').doc(r.firestoreId)
-                .update(stamped({ lat, lng, isLocationVerified: verified }));
+                .update(stamped({ lat, lng, isLocationVerified: verified, geocodedQuery: query, ...(geoPrecision ? { geoPrecision } : {}) }));
         } catch (e: any) {
             if (e?.code !== 5) console.error(`  ❌ Firestore fail ${r.url.slice(0, 50)}: ${e?.message}`);
         }
@@ -195,6 +210,7 @@ async function main() {
 
         const dist = distanceKm(r.lat, r.lng, center[0], center[1]);
         if (dist <= NEAR_CITY_MAX_KM) continue;   // rätt placerat
+        if (sitsInOwnTown(r.lat, r.lng, findTatortInText(r.locationName || ''), city)) continue;
 
         // Tvetydighets-vakt: stadslistans namn är INTE unika ortnamn. "Nora
         // Hembygdsförening" ligger i Nora ÅNGERMANLAND, "Sandviken 130" är en
@@ -232,7 +248,7 @@ async function main() {
         if (hit) {
             console.log(`   → reparerad: [${hit[0].toFixed(4)},${hit[1].toFixed(4)}] ("${loc}", nära ${city})`);
             repaired++;
-            if (APPLY) await applyCoords(r, hit[0], hit[1], `${loc}, ${city} (repair)`, true);
+            if (APPLY) await applyCoords(r, hit[0], hit[1], `${loc}, ${city} (repair)`, true, hit[2] ?? null);
         } else if (fromTitle) {
             // Titel-härledd stad är en HEURISTIK — miss betyder "kunde inte
             // bekräfta", inte "platsen finns inte". Att nolla här hade kunnat

@@ -1,7 +1,7 @@
 /** Extraktorerna för PRO/SPF-fallet (Canasta i Vislanda, 24/8). */
 import { describe, it, expect } from 'vitest';
 import { extractVenueFromText, ortFromForeningsnamn } from './venueFromText';
-import { venueBuildingOf } from './venueFromText';
+import { venueBuildingOf, buildingCandidatesOf } from './venueFromText';
 
 describe('extractVenueFromText', () => {
     it('ägarens exempel: Canasta-beskrivningen ger Folkets Hus', () => {
@@ -61,5 +61,38 @@ describe('venueBuildingOf', () => {
         expect(venueBuildingOf('Musik i ruinen - S:t Nicolai')).toBeNull();
         expect(venueBuildingOf('')).toBeNull();
         expect(venueBuildingOf(undefined)).toBeNull();
+    });
+});
+
+describe('buildingCandidatesOf (#247: Ticksters salonger på ortens mittpunkt)', () => {
+    it('salongen åt ena eller andra hållet om strecket', () => {
+        expect(buildingCandidatesOf('Saga - Bio 3:an')).toEqual(['Bio 3:an']);
+        expect(buildingCandidatesOf('Nalen – Stora Salen')).toEqual(['Nalen']);
+        expect(buildingCandidatesOf('Agens Kulturhus - Krusenstjernasalen')).toEqual(['Agens Kulturhus']);
+        expect(buildingCandidatesOf('Kulturens Hus - Lilla salen')).toEqual(['Kulturens Hus']);
+    });
+
+    it('rum, byggnad med komma', () => {
+        expect(buildingCandidatesOf('Unga Klara, Kulturhuset Stadsteatern')).toEqual(['Kulturhuset Stadsteatern']);
+        expect(buildingCandidatesOf('Idun, Umeå Folkets Hus')).toEqual(['Umeå Folkets Hus']);
+        expect(buildingCandidatesOf('Hantverksalen, Centralteatern')).toEqual(['Centralteatern']);
+        expect(buildingCandidatesOf('Arena Varberg, Sparbankshallen')).toEqual(['Arena Varberg', 'Sparbankshallen']);
+    });
+
+    it('rummet sist i namnet', () => {
+        expect(buildingCandidatesOf('Wermland Opera Stora Scen')).toEqual(['Wermland Opera']);
+        expect(buildingCandidatesOf('Norrbottensteatern Scen 2')).toEqual(['Norrbottensteatern']);
+        expect(buildingCandidatesOf('Sara Kulturhus Scen 4')).toEqual(['Sara Kulturhus']);
+        expect(buildingCandidatesOf('Sara Kulturhus Hjortronet')).toEqual(['Sara Kulturhus']);
+        expect(buildingCandidatesOf('Kino 2')).toEqual(['Kino']);
+    });
+
+    it('byggnaden själv eller bara ett rum: inget att prova', () => {
+        expect(buildingCandidatesOf('Lund Stadsteater')).toEqual([]);
+        expect(buildingCandidatesOf('Wermland Opera')).toEqual([]);
+        expect(buildingCandidatesOf('Sal 2')).toEqual([]);
+        expect(buildingCandidatesOf('Stora Scen')).toEqual([]);
+        expect(buildingCandidatesOf('')).toEqual([]);
+        expect(buildingCandidatesOf(null)).toEqual([]);
     });
 });

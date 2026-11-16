@@ -825,6 +825,41 @@ export function lookupTatortNear(
 }
 
 /**
+ * Välj tätort för ett ortnamn UTAN ankare: entydigt namn, annars tätorten som
+ * bär kommunens namn ("Ljungby" i Ljungby kommun). Annars null — en gissning
+ * bland namnar blir fel halva tiden. Ren funktion, exporterad för test.
+ */
+export function pickTownRow<T extends { kommun: string | null }>(rows: T[], name: string): T | null {
+    if (rows.length === 1) return rows[0];
+    const own = rows.filter(r => (r.kommun ?? '').trim().toLowerCase() === name.trim().toLowerCase());
+    return own.length === 1 ? own[0] : null;
+}
+
+/**
+ * Ortens punkt ur SCB-registret, med eller utan ankare (se lookupTatortNear
+ * och pickTownRow). För stadsmittpunkter: Nominatims svar för "Strömsund,
+ * Sverige" är kommunens mitt, 45 km ut i skogen (platsgranskningen 15/11, #247).
+ */
+export function lookupTownCentroid(
+    name: string, anchorLat?: number, anchorLng?: number, maxKm = 75,
+): [number, number] | null {
+    if (anchorLat !== undefined && anchorLng !== undefined) return lookupTatortNear(name, anchorLat, anchorLng, maxKm);
+    const rows = tatortByNameStmt.all(name.trim()) as { lat: number; lng: number; kommun: string | null }[];
+    const r = pickTownRow(rows, name);
+    return r ? [r.lat, r.lng] : null;
+}
+
+/**
+ * Är namnet en ort (SCB-tätort eller kommun)? Tätortsnamn som också är vanliga
+ * ord ("Hamnen", "Kyrkan") räknas inte — se TATORT_STOPPORD.
+ */
+export function isPlaceName(name: string): boolean {
+    const n = (name || '').trim();
+    if (n.length < 2 || TATORT_STOPPORD.has(n.toLowerCase())) return false;
+    return !!placeNameStmt.get(n, n);
+}
+
+/**
  * Tätortsnamn som ALDRIG får matchas fritt i en textsträng — de är också
  * vanliga svenska ord och skulle placera event i fel del av landet
  * ("Vi ses i…" → tätorten Vi, "bara för medlemmar" → tätorten Bara).
@@ -835,6 +870,32 @@ const TATORT_STOPPORD = new Set([
     'hamnen', 'kyrkan', 'staden', 'centrum', 'skogen', 'stranden', 'graven',
     'valla', 'kärna', 'backe', 'floda', 'björna', 'norrby', 'söderby',
 ]);
+
+/** Hur långt från orten i namnet en lokal får ligga ("Malå bibliotek" ≤ 30 km från Malå). */
+export const VENUE_TOWN_MAX_KM = 30;
+
+/**
+ * Pekar lokalnamnets första ord ut en ort som punkten ligger långt från?
+ * Returnerar orten när punkten är längre än maxKm från ALLA tätorter med det
+ * namnet, annars null. Vakten mot förgiftade registerrader: geo-refine lärde
+ * sig "Malå bibliotek" på Norsjös koordinater, och 9 event låg 46 km fel med
+ * märkningen 'poi' (#247, 15/11). Kräver minst två ord — ett rent ortnamn är
+ * ingen lokal — och genitiv prövas ("Lunds domkyrka" → Lund).
+ */
+export function venueTownConflict(name: string, lat: number, lng: number, maxKm = VENUE_TOWN_MAX_KM): string | null {
+    const words = (name || '').trim().split(/\s+/);
+    if (words.length < 2) return null;
+    const first = words[0].replace(/[^\p{L}-]/gu, '');
+    if (first.length < 4) return null;
+    const variants = /s$/i.test(first) && first.length > 4 ? [first, first.slice(0, -1)] : [first];
+    for (const v of variants) {
+        if (TATORT_STOPPORD.has(v.toLowerCase())) continue;
+        const rows = tatortByNameStmt.all(v) as { lat: number; lng: number }[];
+        if (rows.length === 0) continue;
+        return rows.some(r => haversineKm(r.lat, r.lng, lat, lng) <= maxKm) ? null : v;
+    }
+    return null;
+}
 
 /** Alla tätortsnamn ≥5 tecken, längsta först. Laddas en gång per process. */
 let tatortScanList: string[] | null = null;

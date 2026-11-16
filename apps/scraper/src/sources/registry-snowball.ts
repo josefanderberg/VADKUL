@@ -3360,7 +3360,7 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Karlskoga Bio',
         region: 'karlskoga',
         engine: 'listing' as const,
-        config: { urls: ["https://karlskogabio.nu/"], defaultCity: 'Karlskoga' },
+        config: { urls: ["https://karlskogabio.nu/"], defaultCity: 'Karlskoga', defaultVenue: 'Saga Bio' },
         updateFrequency: 'every-3d' as const,
         status: 'experimental' as const,
         discovery: {

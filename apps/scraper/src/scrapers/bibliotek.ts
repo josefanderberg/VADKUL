@@ -27,6 +27,7 @@ import { RawEvent, Engine } from '../sources/types';
 import { mapPool } from '../utils/mapPool';
 import { decodeHtmlEntities, truncateAtBoundary, DEFAULT_DESCRIPTION_MAX } from '../utils/text';
 import { extractVenueFromText } from '../utils/venueFromText';
+import { lookupTownCentroid, lookupTatortNear } from '../utils/sqliteHelper';
 
 const API_BASE = 'https://api.axiell.com/event/api';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -170,7 +171,7 @@ export const AXIELL_TENANTS: AxiellTenant[] = [
     { id: 'emmaboda',      customerId: '64f194eb8094f34fdca7fb05', eventsUrl: 'https://bibliotek.emmaboda.se/evenemang',   name: 'Emmaboda bibliotek',           cityHint: 'Emmaboda' },
 ];
 
-interface AxiellHit {
+export interface AxiellHit {
     id: string;
     event?: {
         title?: string;
@@ -225,8 +226,39 @@ export function libraryDefaultPrice(title: string, text: string): string | undef
     return COST_HINT_RE.test(`${title} ${text}`) ? undefined : 'Gratis';
 }
 
+/**
+ * Filialens ort när den INTE står i konsortiets lista men är en SCB-tätort
+ * inom medlemsorternas område: "Sturefors bibliotek" → Sturefors (Linköpings
+ * kommun), "Linghems bibliotek" → Linghem. Ankrad i medlemsorterna (40 km)
+ * så att en namne i en annan landsände aldrig väljs. Utan den här orten
+ * provades filialen ihop med varje medlemsort, och "Sturefors bibliotek,
+ * Söderköping" vann — 38 km fel (#247). townIn injiceras för test.
+ */
+export function branchTown(
+    branch: string | undefined, cities: string[] | undefined,
+    townIn: (name: string, cities: string[]) => boolean = isTownInArea,
+): string | undefined {
+    if (!branch || !cities?.length) return undefined;
+    const m = branch.match(/^(.+?)\s+(?:huvud|stads|folk)?bibliotek/i);
+    if (!m) return undefined;
+    const base = m[1].trim();
+    const variants = /s$/i.test(base) && base.length > 4 ? [base.slice(0, -1), base] : [base];
+    return variants.find((v) => townIn(v, cities));
+}
+
+const BRANCH_TOWN_KM = 40;
+function isTownInArea(name: string, cities: string[]): boolean {
+    return cities.some((c) => {
+        const cc = lookupTownCentroid(c);
+        return !!cc && !!lookupTatortNear(name, cc[0], cc[1], BRANCH_TOWN_KM);
+    });
+}
+
 /** Mappa ett Axiell-event → RawEvent. Exporterad för test. */
-export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent | null {
+export function mapAxiellEvent(
+    hit: AxiellHit, tenant: AxiellTenant,
+    townIn: (name: string, cities: string[]) => boolean = isTownInArea,
+): RawEvent | null {
     const e = hit.event;
     if (!e || e.deleted || e.status !== 'PUBLISHED') return null;
     const title = (e.title || '').trim();
@@ -239,6 +271,9 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
     const image = (e.images || []).find((i) => i.primaryImage)?.imageUrl || e.images?.[0]?.imageUrl;
     const audiences = (e.targetAudiences || []).map((a) => a.value).filter(Boolean).join(', ');
     const text = stripHtml(e.description);
+    // Filialens egen ort: listans medlemsort, annars tätorten i namnet.
+    const ownTown = tenant.cityHint ? undefined
+        : branchCity(branch, tenant.cities) ?? branchTown(branch, tenant.cities, townIn);
 
     return {
         externalId: hit.id,
@@ -249,7 +284,7 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         // klickbar och unik (URL = PRIMARY KEY).
         url: `${tenant.eventsUrl}#${hit.id}`,
         venueName: branch || undefined,
-        city: tenant.cityHint ?? branchCity(branch, tenant.cities),
+        city: tenant.cityHint ?? ownTown,
         imageUrl: image ? image.replace(/^http:\/\//, 'https://') : undefined,
         description: [truncateAtBoundary(text, DEFAULT_DESCRIPTION_MAX), audiences ? `Målgrupp: ${audiences}.` : '']
             .filter(Boolean).join(' '),
@@ -263,13 +298,16 @@ export function mapAxiellEvent(hit: AxiellHit, tenant: AxiellTenant): RawEvent |
         hasSpecificTime: !isAllDayStart(startDate),
         geocodeCandidates: [
             branch && tenant.cityHint ? `${branch}, ${tenant.cityHint}` : '',
-            // Konsortier: härledd ort först ("Åstorps bibliotek" → Åstorp),
-            // sedan övriga medlemsorter — runnern tar första träffen.
+            // Konsortier: filialens egen ort när den går att härleda ("Åstorps
+            // bibliotek" → Åstorp) — och BARA den. Övriga medlemsorter provas
+            // bara för stadsdelsfilialer utan ort i namnet ("Sylte bibliotek"):
+            // "Vilhelmina folkbibliotek, Lycksele" gav Lyckseles mittpunkt,
+            // 95 km fel (#247).
             ...(branch && !tenant.cityHint && tenant.cities
-                ? [...new Set([branchCity(branch, tenant.cities), ...tenant.cities].filter(Boolean))].map((c) => `${branch}, ${c}`)
+                ? (ownTown ? [ownTown] : tenant.cities).map((c) => `${branch}, ${c}`)
                 : []),
             branch,
-            tenant.cityHint ?? branchCity(branch, tenant.cities) ?? '',
+            tenant.cityHint ?? ownTown ?? '',
         ].filter(Boolean) as string[],
     };
 }

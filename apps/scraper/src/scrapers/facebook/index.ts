@@ -6,7 +6,7 @@ import { uploadEventImage, isOurStorageUrl } from '../../utils/storageHelper';
 import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
 import { FB_SEARCH_CITIES } from '../../utils/swedishPlaces';
 import { centroidFallbackRejection } from './centroidGuard';
-import { anchorCityOverride } from './anchorCity';
+import { anchorCityOverride, addressAnchorCity } from './anchorCity';
 import { classifyEvent } from '../../utils/classify';
 import { normalizeDescription } from '../../utils/normalizeEvent';
 import { extractPriceFromText } from '../../utils/priceFromText';
@@ -679,19 +679,23 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                         }
                     }
 
+                    // Postorten i adressen ("…, 435 30 Mölnlycke") är eventets ort,
+                    // inte köns stad: Mölnlycke-adressen ur Uppsala-kön hamnade i
+                    // Uppsala, Karlskoga i Eskilstuna (#247, 15/11).
+                    const anchor = addressAnchorCity(extractedAddress, city);
                     let geocodeQuery = extractedAddress;
                     // Om stadsnamn inte redan ingår i adressen, lägg till kontext-staden från sök-kön
-                    if (city && !extractedAddress.toLowerCase().includes(city.toLowerCase())) {
-                        geocodeQuery = `${extractedAddress}, ${city}`;
+                    if (anchor && !extractedAddress.toLowerCase().includes(anchor.toLowerCase())) {
+                        geocodeQuery = `${extractedAddress}, ${anchor}`;
                     }
-                    if (!coords) coords = await geocodeVenueSweden(geocodeQuery, city ? { nearCity: city } : undefined);
+                    if (!coords) coords = await geocodeVenueSweden(geocodeQuery, anchor ? { nearCity: anchor } : undefined);
 
                     // Retry 1: skanna extractedAddress efter inbäddad stad (t.ex. "Foajén - Örebro Konserthus")
                     if (!coords) {
                         const cityInAddr = SWEDISH_GEO_CITIES.find(c =>
                             new RegExp(`\\b${c}\\b`, 'i').test(extractedAddress)
                         );
-                        if (cityInAddr && cityInAddr.toLowerCase() !== (city || '').toLowerCase()) {
+                        if (cityInAddr && cityInAddr.toLowerCase() !== (anchor || '').toLowerCase()) {
                             const retryQ = `${extractedAddress}, ${cityInAddr}`;
                             if (retryQ !== geocodeQuery) {
                                 coords = await geocodeVenueSweden(retryQ, { nearCity: cityInAddr });
@@ -718,7 +722,7 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     // Märks som stad-centroid: positionen är en gissning, inte platsen.
                     let cityFallbackUsed = false;
                     if (!coords) {
-                        const fallbackCity = city
+                        const fallbackCity = anchor
                             || SWEDISH_GEO_CITIES.find(c => new RegExp(`\\b${c}\\b`, 'i').test(extractedAddress));
                         // Vakt (Sala 2026-09-11): stadssöket ger världen över-träffar
                         // när ortnamnet också är ett ord/en ort utomlands — de hamnade

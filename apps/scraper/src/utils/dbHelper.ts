@@ -185,7 +185,8 @@ export async function refreshEventPlace(
 ): Promise<boolean> {
     const row = getSqliteEvent(url);
     if (!row) return false;
-    if ((row.locationName ?? '') === locationName && Math.abs((row.lat ?? 0) - lat) < 1e-6) return false;
+    if ((row.locationName ?? '') === locationName && Math.abs((row.lat ?? 0) - lat) < 1e-6
+        && (!geoPrecision || geoPrecision === (row.geoPrecision ?? null))) return false;
     try {
         setEventCoords(url, lat, lng, geocodedQuery, geoPrecision);
         setEventLocationName(url, locationName);
@@ -196,7 +197,7 @@ export async function refreshEventPlace(
     if (db && row.firestoreId) {
         try {
             await db.collection('linkEvents').doc(row.firestoreId).update(stamped({
-                locationName, lat, lng, isLocationVerified: verified,
+                locationName, lat, lng, isLocationVerified: verified, geocodedQuery,
                 ...(geoPrecision ? { geoPrecision } : {}),
             }));
         } catch (err: any) {

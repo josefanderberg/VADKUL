@@ -150,7 +150,7 @@ export const SOURCES: Source[] = [
             sitemapUrl: 'https://berns.se/event-sitemap.xml',
             // Bara sv-default /sv/kalender/, ej /calendar/-engelska dubbletter.
             urlPatterns: [/\/sv\/kalender\/[^/]+\/?$/i],
-            defaultCity: 'Stockholm',
+            defaultCity: 'Stockholm', defaultVenue: 'Berns',
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
@@ -195,7 +195,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.operan.se/site-map.xml',
             urlPatterns: [/\/forestallningar\/[a-z0-9-]{4,}/i],
-            defaultCity: 'Stockholm',
+            defaultCity: 'Stockholm', defaultVenue: 'Kungliga Operan',
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
@@ -1032,7 +1032,7 @@ export const SOURCES: Source[] = [
             // Detaljsidor direkt under /sv/evenemang/ — kategorisidorna själva
             // exkluderas (annars skrapas landningssidor som "event").
             urlPatterns: [/\/sv\/evenemang\/(?!(?:konsert|musikal|humor|dans|show|familj|teater)\/?$)[^/#?]+\/?$/i],
-            defaultCity: 'Stockholm',
+            defaultCity: 'Stockholm', defaultVenue: 'Cirkus',
             maxUrls: 40,
         },
         updateFrequency: 'weekly',
@@ -1285,7 +1285,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://varmlandsmuseum.se/event-sitemap.xml',
             urlPatterns: [/\/aktivitet\/[^/]+\/?$/i],
-            defaultCity: 'Karlstad',
+            defaultCity: 'Karlstad', defaultVenue: 'Värmlands museum',
         },
         updateFrequency: 'every-3d',
         notes: 'Probe 2026-06-08: event-sitemap.xml, /aktivitet/ (länsmuseum).',
@@ -1665,7 +1665,7 @@ export const SOURCES: Source[] = [
             // OBS: event-URLs ligger under /arrangemang/ — INTE /evenemang/
             // som auto-probens förslag antog (det hade matchat 0).
             urlPatterns: [/\/arrangemang\/[a-z0-9][a-z0-9-]{2,}\/?$/i],
-            defaultCity: 'Örebro',
+            defaultCity: 'Örebro', defaultVenue: 'Conventum',
             maxUrls: 200,
         },
         updateFrequency: 'every-3d',
@@ -4386,7 +4386,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.nordiskamuseet.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?evenemang\/[^/]+\/?$/i],
-            defaultCity: 'Stockholm',
+            defaultCity: 'Stockholm', defaultVenue: 'Nordiska museet',
         },
         updateFrequency: 'every-3d',
         notes: 'Probe-venues 2026-06-09: 104 event-URLs (evenemang-mönster) — museum.',
@@ -4552,7 +4552,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.waldemarsudde.se/sitemap_index.xml',
             urlPatterns: [/\/(?:sv\/)?aktivitet(?:er)?\/[^/]+\/?$/i],
-            defaultCity: 'Stockholm',
+            defaultCity: 'Stockholm', defaultVenue: 'Prins Eugens Waldemarsudde',
             // Sajtens WAF (nginx) svarar 403 på "Mozilla/…"-UA som inte kommer
             // från en riktig webbläsare (TLS-fingeravtrycket avslöjar node) —
             // curl med samma UA släpps igenom. En ärlig bot-UA utan "Mozilla"
@@ -4614,7 +4614,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.formdesigncenter.com/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?program\/[^/]+\/?$/i],
-            defaultCity: 'Malmö',
+            defaultCity: 'Malmö', defaultVenue: 'Form/Design Center',
         },
         updateFrequency: 'every-3d',
         notes: 'Probe-venues 2026-06-09: 1487 event-URLs (program-mönster) — museum.',
@@ -4671,7 +4671,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.modernamuseet.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?program\/[^/]+\/?$/i],
-            defaultCity: 'Stockholm',
+            defaultCity: 'Stockholm', defaultVenue: 'Moderna Museet',
         },
         updateFrequency: 'every-3d',
         notes: 'Probe-venues 2026-06-09: 980 event-URLs (program-mönster) — museum (Stockholm + Malmö delar sitemap).',
@@ -4843,7 +4843,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.vasterbottensteatern.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?forestallning(?:ar)?\/[^/]+\/?$/i],
-            defaultCity: 'Skellefteå',
+            defaultCity: 'Skellefteå', defaultVenue: 'Västerbottensteatern',
         },
         updateFrequency: 'every-3d',
         notes: 'Probe-venues 2026-06-09: 654 event-URLs (forestallning-mönster) — länsteater.',
@@ -5164,7 +5164,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.fargfabriken.se/sitemap_index.xml',
             urlPatterns: [/\/(?:sv\/)?pa-gang\/[^/]+\/?$/i],
-            defaultCity: 'Stockholm',
+            defaultCity: 'Stockholm', defaultVenue: 'Färgfabriken',
         },
         updateFrequency: 'every-3d',
         notes: 'Probe-venues 2026-06-09: 860 event-URLs (pa-gang-mönster) — konsthall.',
@@ -5554,6 +5554,9 @@ export const SOURCES: Source[] = [
             sitemapUrl: 'https://www.bioroy.se/sitemap.xml',
             urlPatterns: [/\/(?:sv\/)?program\/[^/]+\/?$/i],
             defaultCity: 'Göteborg',
+            // Adressen i namnet: OSM kallar biografen "Roy", och registrets
+            // enda "Bio Roy" ligger i Fårösund (#247).
+            defaultVenue: 'Bio Roy, Kungsportsavenyen 45',
         },
         updateFrequency: 'every-3d',
         status: 'active',
@@ -5734,7 +5737,7 @@ export const SOURCES: Source[] = [
             // låg på 2026-11-26. Artikeln bär eventets eget datum ("Datum: 14
             // november", "den 14 november kliver …").
             detailDateSelector: 'article.js-progress-bar__article',
-            defaultCity: 'Visby',
+            defaultCity: 'Visby', defaultVenue: 'Wisby Strand',
         },
         updateFrequency: 'every-3d',
         status: 'experimental',
@@ -8287,7 +8290,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.wermlandopera.com/evenemang-sitemap.xml',
             urlPatterns: [/\/evenemang\/[^/]+\/[^/]+\/?$/i],
-            defaultCity: 'Karlstad',
+            defaultCity: 'Karlstad', defaultVenue: 'Wermland Opera',
             maxUrls: 120,
         },
         updateFrequency: 'every-3d',
@@ -8304,7 +8307,7 @@ export const SOURCES: Source[] = [
         config: {
             sitemapUrl: 'https://www.nojesfabriken.se/event-sitemap.xml',
             urlPatterns: [/\/event\/[^/]+\/?$/i],
-            defaultCity: 'Karlstad',
+            defaultCity: 'Karlstad', defaultVenue: 'Nöjesfabriken',
             maxUrls: 120,
         },
         updateFrequency: 'every-3d',

@@ -13,14 +13,14 @@
 import { Source, Engine, EngineContext, RawEvent, SourceRunResult } from './types';
 import { addEventsBatch, eventExistsInDb, refreshEventTime, refreshEventPlace, refreshEventEndDate, refreshEventContent } from '../utils/dbHelper';
 import { pickBetterDescription, pickBetterHost, pickBetterPrice } from '../utils/contentRefresh';
-import { venueBuildingOf } from '../utils/venueFromText';
+import { buildingCandidatesOf } from '../utils/venueFromText';
 import { looksLikeCinema } from '../utils/cinema';
 import { ruleEmojiFor } from '../utils/emojiRules';
 import { validEventEnd } from '../utils/eventEnd';
 import { getSqliteEvent, lookupTatortNear } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
-import { geocodeVenueSweden, isCoarseSourceCoord, isInNordic, type GeoHit } from '../utils/venueCoordinates';
-import { firstPreciseHit } from '../utils/geocodeChain';
+import { geocodeVenueSweden, isCoarseSourceCoord, isInNordic, distanceKm, storedPrecisionOf, type GeoHit } from '../utils/venueCoordinates';
+import { firstPreciseHit, shouldMovePlace, precisionRank } from '../utils/geocodeChain';
 import { cleanLocationName } from '../utils/text';
 import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
@@ -101,8 +101,9 @@ export function geocodeQueriesFor(e: RawEvent): string[] {
         ? e.geocodeCandidates
         : [
             e.address ? [e.address, e.city].filter(Boolean).join(', ') : '',
-            // "Saga - Bio 3:an" → byggnaden först; salongsnamnet träffar annars fel ort.
-            (() => { const b = venueBuildingOf(e.venueName); return b ? [b, e.city].filter(Boolean).join(', ') : ''; })(),
+            // "Saga - Bio 3:an", "Kino 2", "Norrbottensteatern Scen 2" → byggnaden
+            // först; salongsnamnet träffar annars fel ort eller ingenting (#247).
+            ...buildingCandidatesOf(e.venueName).map((b) => [b, e.city].filter(Boolean).join(', ')),
             e.venueName ? [e.venueName, e.city].filter(Boolean).join(', ') : '',
             e.city ?? '',
         ];
@@ -363,6 +364,23 @@ export async function runSource(
                         if (hit && await refreshEventPlace(e.url, q, hit[0], hit[1], e.coords ? 'källans egna koordinater' : (verified ? q : `stad: ${e.city}`), verified, hit[2])) {
                             result.updated++;
                             ctx.log(`  📍 plats uppdaterad: ${e.title.slice(0, 50)} → ${q}`);
+                        }
+                    } else if (storedRow && !e.coords && storedRow.lat && storedRow.lng
+                        && precisionRank(storedPrecisionOf(storedRow)) < 3
+                        && (e.venueName || e.address || e.geocodeCandidates?.length)) {
+                        // Sparad på en mittpunkt (#247): kedjan har kanske blivit bättre
+                        // sedan dess — lokalen hittas nu, eller mittpunkten var fel ort
+                        // (kommunens mitt, en annan medlemsort). Rättelser i kedjan når
+                        // annars aldrig gamla event. Bara uppåt i precision eller till en
+                        // annan punkt av samma slag (shouldMovePlace).
+                        const stored = { lat: storedRow.lat, lng: storedRow.lng, precision: storedPrecisionOf(storedRow) };
+                        const best = await geocodeChainFor(e);
+                        // "Östersund, Östersund" sparad som 'poi': märkningen ska rättas även när punkten står kvar.
+                        const relabel = stored.precision !== (storedRow.geoPrecision ?? null);
+                        if (best && (shouldMovePlace(stored, best.hit, distanceKm) || relabel)
+                            && await refreshEventPlace(e.url, storedRow.locationName || e.venueName || best.query, best.hit[0], best.hit[1], best.query, true, best.hit[2] ?? null)) {
+                            result.updated++;
+                            ctx.log(`  📍 mittpunkt läkt: ${e.title.slice(0, 50)} → ${best.query} (${best.hit[2] ?? '?'})`);
                         }
                     } else if (storedPlaceless && (e.venueName || e.geocodeCandidates?.length)) {
                         // Plats men ingen ort (konsortiefilial ur titeln, NBV-venue utan

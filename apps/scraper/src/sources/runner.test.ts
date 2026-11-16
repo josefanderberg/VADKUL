@@ -25,6 +25,8 @@ vi.mock('../utils/venueCoordinates', () => ({
     isCoarseSourceCoord: (lat: number, lng: number) => !(lat === 0 && lng === 0)
         && Math.abs(lat * 60 - Math.round(lat * 60)) < 1e-4
         && Math.abs(lng * 60 - Math.round(lng * 60)) < 1e-4,
+    distanceKm: (a: number, b: number, c: number, d: number) => Math.hypot(a - c, (b - d) * 0.55) * 111,
+    storedPrecisionOf: (row: { geoPrecision?: string | null }) => row.geoPrecision ?? null,
 }));
 vi.mock('../utils/classify', () => ({
     classifyEvent: vi.fn(() => 'community'),
@@ -518,6 +520,13 @@ describe('geocodeQueriesFor', () => {
         })).toEqual(['Storgatan 1, Växjö', 'Folkets Hus, Växjö', 'Växjö']);
     });
 
+    it('salongsnumret och rummet sist: byggnaden provas före salongen (#247)', () => {
+        const kino = geocodeQueriesFor({ title: 'x', url: 'u', startDate: new Date(), venueName: 'Kino 2', city: 'Lund' });
+        expect(kino.indexOf('Kino, Lund')).toBeLessThan(kino.indexOf('Kino 2, Lund'));
+        const nbt = geocodeQueriesFor({ title: 'x', url: 'u', startDate: new Date(), venueName: 'Norrbottensteatern Scen 2', city: 'Luleå' });
+        expect(nbt[0]).toBe('Norrbottensteatern, Luleå');
+    });
+
     it('ingen platsinfo alls → inga frågor', () => {
         expect(geocodeQueriesFor({ title: 't', url: 'u', startDate: new Date() })).toEqual([]);
     });
@@ -575,10 +584,28 @@ describe('runSource — refresh flyttar event från defaultCity-fallbacken', () 
         expect(placeMock).not.toHaveBeenCalled();
     });
 
-    it('centroid-lagrat event i annan källa utan defaultCity-flytt → ingen geokodning', async () => {
-        sqliteMock.mockReturnValue(stored({ locationName: 'Kulturhuset', geoPrecision: 'stad-centroid' }));
+    it('lokal-lagrat event (poi/gata) geokodas inte om', async () => {
+        sqliteMock.mockReturnValue(stored({ locationName: 'Kulturhuset', geoPrecision: 'poi' }));
         await run([makeEvent({ city: 'Växjö', venueName: 'Kulturhuset' })], {}, { config: {} } as Partial<Source>);
         expect(geocodeMock).not.toHaveBeenCalled();
+    });
+
+    // #247: rättelser i kedjan nådde aldrig gamla mittpunktsevent.
+    it('mittpunktslagrat event med lokal: kedjan körs, en lokalträff flyttar eventet', async () => {
+        sqliteMock.mockReturnValue(stored({ locationName: 'Kulturhuset', geoPrecision: 'stad-centroid', lat: 56.879, lng: 14.806 }));
+        geocodeMock.mockResolvedValue([56.8800, 14.8000, 'poi'] as any);
+        const res = await run([makeEvent({ city: 'Växjö', venueName: 'Kulturhuset' })], {}, { config: {} } as Partial<Source>);
+        expect(res.errors).toEqual([]);
+        expect(geocodeMock).toHaveBeenCalledWith('Kulturhuset, Växjö', { nearCity: 'Växjö' });
+        expect(placeMock.mock.calls[0].slice(1, 3)).toEqual(['Kulturhuset', 56.88]);
+        expect(placeMock.mock.calls[0][6]).toBe('poi');
+    });
+
+    it('mittpunktslagrat event: samma mittpunkt igen flyttar inget', async () => {
+        sqliteMock.mockReturnValue(stored({ locationName: 'Kulturhuset', geoPrecision: 'stad-centroid', lat: 56.879, lng: 14.806 }));
+        geocodeMock.mockResolvedValue([56.879, 14.806, 'stad-centroid'] as any);
+        await run([makeEvent({ city: 'Växjö', venueName: 'Kulturhuset' })], {}, { config: {} } as Partial<Source>);
+        expect(placeMock).not.toHaveBeenCalled();
     });
 });
 

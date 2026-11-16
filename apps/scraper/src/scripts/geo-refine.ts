@@ -29,7 +29,7 @@
  */
 
 import { db } from '../config/firebase';
-import { sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart, lookupVenueNear } from '../utils/sqliteHelper';
+import { sqlite, setEventCoords, bumpGeoRefineAttempts, upsertKnownVenue, lookupVenueSmart, lookupVenueNear, venueTownConflict } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import {
     geocodeVenueSwedenStrict, geocodeStreetSweden, reverseGeocode, isInNordic,
@@ -334,7 +334,8 @@ async function main() {
             // tabellen; kravet på stad gör namnet entydigt.
             const name = (r.locationName || '').trim();
             if (city && name.length >= 5 && !GENERIC_VENUE_NAME.test(name)
-                && name.toLowerCase() !== city.toLowerCase()) {
+                && name.toLowerCase() !== city.toLowerCase()
+                && !venueTownConflict(name, lat, lng)) {   // "Malå bibliotek" i Norsjö (#247)
                 upsertKnownVenue(name, lat, lng, city, `geo-refine ${new Date().toISOString().slice(0, 10)}`);
                 learnedVenues++;
             }

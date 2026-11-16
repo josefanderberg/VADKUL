@@ -38,13 +38,19 @@ const CATEGORIES: [string, string, string][] = [
     ['amenity', 'community_centre', 'samlingslokal'],
     ['tourism', 'museum', 'museum'],
     ['amenity', 'place_of_worship', 'kyrka'],
+    // Arenorna (#247, 16/11): 300 hockeymatcher på 98 arenor låg på ortens
+    // mittpunkt — registret hade inga ishallar eller idrottshallar.
+    ['leisure', 'ice_rink', 'ishall'],
+    ['leisure', 'sports_centre', 'idrottshall'],
+    ['leisure', 'stadium', 'arena'],
+    ['building', 'sports_hall', 'sporthall'],
 ];
 const picked = CAT_ARG
     ? CATEGORIES.filter(c => CAT_ARG.split('=')[1].split(',').includes(c[1]))
     : CATEGORIES;
 
 /** Samma generiska-namn-vakt som geo-refine — tabellen får inte förgiftas. */
-const GENERIC = /^(bibliotek(et)?|stadsbibliotek(et)?|kyrka(n)?|kapell(et)?|församlingshem(met)?|folkets hus|folkets park|hembygdsgård(en)?|bygdegård(en)?|kulturhus(et)?|museum|museet|bio(grafen)?|teater(n)?|scen(en)?|sporthall(en)?|missionshus(et)?|allianskyrkan|pingstkyrkan|missionskyrkan|frälsningsarmén|equmeniakyrkan|filadelfia(kyrkan)?|betel|betania|salem|sion|elim|centrumkyrkan|korskyrkan|stadsmuseet|konsthall(en)?|medborgarhus(et)?)$/i;
+const GENERIC = /^(bibliotek(et)?|stadsbibliotek(et)?|kyrka(n)?|kapell(et)?|församlingshem(met)?|folkets hus|folkets park|hembygdsgård(en)?|bygdegård(en)?|kulturhus(et)?|museum|museet|bio(grafen)?|teater(n)?|scen(en)?|sporthall(en)?|missionshus(et)?|allianskyrkan|pingstkyrkan|missionskyrkan|frälsningsarmén|equmeniakyrkan|filadelfia(kyrkan)?|betel|betania|salem|sion|elim|centrumkyrkan|korskyrkan|stadsmuseet|konsthall(en)?|medborgarhus(et)?|ishall(en)?|isstadion|idrottshall(en)?|idrottsplats(en)?|simhall(en)?|arena(n)?|ishockeyhall(en)?|ridhus(et)?|gymnastiksal(en)?)$/i;
 
 /** Webbens ortlista (291 orter med koordinater), regex-läst över paketgränsen
  *  — samma trick som schedule-city-posts.ts. */
@@ -71,6 +77,17 @@ const OVERPASS_ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
 ];
+
+/** name + alt_name/official_name/old_name ("A;B" delas). Exporterad för test. */
+export function osmNames(tags: Record<string, string> | undefined): string[] {
+    if (!tags) return [];
+    const raw = ['name', 'alt_name', 'official_name', 'old_name']
+        .flatMap(k => (tags[k] || '').split(';'))
+        .map(n => n.trim())
+        .filter(Boolean);
+    const seen = new Set<string>();
+    return raw.filter(n => !seen.has(n.toLowerCase()) && !!seen.add(n.toLowerCase()));
+}
 
 async function fetchCategory(tag: string, value: string, label: string): Promise<Poi[]> {
     const query = `[out:json][timeout:180];
@@ -100,12 +117,16 @@ out center tags;`;
     const data: any = await res.json();
     const out: Poi[] = [];
     for (const el of data.elements ?? []) {
-        const name = (el.tags?.name || '').trim();
         const lat = el.lat ?? el.center?.lat;
         const lng = el.lon ?? el.center?.lon;
-        if (!name || typeof lat !== 'number' || typeof lng !== 'number') continue;
+        if (typeof lat !== 'number' || typeof lng !== 'number') continue;
         if (!isInNordic(lat, lng)) continue;
-        out.push({ name, lat, lng, city: (el.tags?.['addr:city'] || '').trim(), cat: label });
+        // Arenor byter sponsornamn ofta; OSM har det gamla eller nya som
+        // alt_name/old_name. Varje namn blir en egen rad (tvetydighets-
+        // vakten nedan gäller alla).
+        for (const name of osmNames(el.tags)) {
+            out.push({ name, lat, lng, city: (el.tags?.['addr:city'] || '').trim(), cat: label });
+        }
     }
     return out;
 }
@@ -159,4 +180,6 @@ async function main(): Promise<void> {
     console.log(`known_venues totalt nu: ${countKnownVenues()}`);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+if (require.main === module) {
+    main().catch(e => { console.error(e); process.exit(1); });
+}

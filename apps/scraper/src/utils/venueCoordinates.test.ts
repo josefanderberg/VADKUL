@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     stripParishSegments, suffixQueries, firstWordPlaceQuery, standaloneVenueQuery, classifyQueryPrecision, isForeignAddress,
-    isCoarseSourceCoord,
+    isCoarseSourceCoord, placeOnlyPrecision, isPlaceSegment, reconcileCityCentroid,
 } from './venueCoordinates';
 import { isGenericLookupName, lookupVenueSmart, upsertKnownVenue } from './sqliteHelper';
 
@@ -189,5 +189,60 @@ describe('isCoarseSourceCoord (#199: ortsmittpunkter från källan)', () => {
     it('null-ön och trasiga värden är inte grova (de hanteras på annat håll)', () => {
         expect(isCoarseSourceCoord(0, 0)).toBe(false);
         expect(isCoarseSourceCoord(NaN, 14)).toBe(false);
+    });
+});
+
+describe('placeOnlyPrecision (#247: "Östersund, Östersund" märktes som lokal)', () => {
+    // Ortregistret i liten skala — produktionen frågar SCB-tabellen.
+    const TOWNS = new Set(['östersund', 'gemla', 'växjö', 'sturefors', 'linköping', 'vilhelmina', 'strömsund', 'reftele']);
+    const isPlace = (s: string) => TOWNS.has(s.toLowerCase());
+
+    it('orten upprepad, ensam eller med Sverige är stadens mittpunkt', () => {
+        expect(placeOnlyPrecision('Östersund, Östersund', 'Östersund', isPlace)).toBe('stad-centroid');
+        expect(placeOnlyPrecision('Östersund, Östersund', undefined, isPlace)).toBe('stad-centroid');
+        expect(placeOnlyPrecision('Vilhelmina', undefined, isPlace)).toBe('stad-centroid');
+        expect(placeOnlyPrecision('Strömsund, Sverige', undefined, isPlace)).toBe('stad-centroid');
+        expect(placeOnlyPrecision('Strömsunds kommun', undefined, isPlace)).toBe('stad-centroid');
+    });
+
+    it('en mer specifik ort än staden är ortens mittpunkt', () => {
+        expect(placeOnlyPrecision('Gemla, Växjö', undefined, isPlace)).toBe('ort-centroid');
+        expect(placeOnlyPrecision('Gemla', 'Växjö', isPlace)).toBe('ort-centroid');
+        expect(placeOnlyPrecision('Sturefors, Linköpings kommun', undefined, isPlace)).toBe('ort-centroid');
+    });
+
+    it('allt som inte är en ort ger vanlig märkning', () => {
+        expect(placeOnlyPrecision('Gemla bibliotek, Växjö', 'Växjö', isPlace)).toBeNull();
+        expect(placeOnlyPrecision('Storgatan 4, Östersund', 'Östersund', isPlace)).toBeNull();
+        expect(placeOnlyPrecision('831 30 Östersund', undefined, isPlace)).toBeNull();
+        expect(placeOnlyPrecision('Sverige', undefined, isPlace)).toBeNull();
+        expect(placeOnlyPrecision('', undefined, isPlace)).toBeNull();
+    });
+
+    it('isPlaceSegment: kända städer och stadshintsen räknas utan registret', () => {
+        const none = () => false;
+        expect(isPlaceSegment('Göteborg', undefined, none)).toBe(true);
+        expect(isPlaceSegment('Testby', 'Testby', none)).toBe(true);
+        expect(isPlaceSegment('Testby', undefined, none)).toBe(false);
+        expect(isPlaceSegment('Reftele', undefined, isPlace)).toBe(true);
+    });
+});
+
+describe('reconcileCityCentroid (#247: Nominatims stadssvar var kommunens mitt)', () => {
+    it('kommunmitt på hela bågminuter ersätts av tätortens punkt', () => {
+        // Strömsund: Nominatim 64.25, 15.366667 — orten ligger 45 km söderut.
+        expect(reconcileCityCentroid([64.25, 15.366667], [63.8539, 15.5661])).toEqual([63.8539, 15.5661]);
+    });
+
+    it('en namne långt bort ersätts, storstadens centrum behålls', () => {
+        expect(reconcileCityCentroid([56.0, 13.0], [60.6, 16.4])).toEqual([60.6, 16.4]);
+        // Göteborg: Nominatims centrum 4,8 km från tätortens geometriska mitt.
+        expect(reconcileCityCentroid([57.7072, 11.9668], [57.6637, 11.9611])).toEqual([57.7072, 11.9668]);
+    });
+
+    it('utan tätort gäller Nominatim, utan Nominatim gäller tätorten', () => {
+        expect(reconcileCityCentroid([59.1, 18.1], null)).toEqual([59.1, 18.1]);
+        expect(reconcileCityCentroid(null, [59.5347, 14.2752])).toEqual([59.5347, 14.2752]);
+        expect(reconcileCityCentroid(null, null)).toBeNull();
     });
 });

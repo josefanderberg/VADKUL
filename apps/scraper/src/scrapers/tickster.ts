@@ -2,7 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import { addEventToDb, eventExistsInDb } from '../utils/dbHelper';
 import { geocodeVenueSweden, type GeoHit } from '../utils/venueCoordinates';
 import { firstPreciseHit } from '../utils/geocodeChain';
-import { venueBuildingOf } from '../utils/venueFromText';
+import { buildingCandidatesOf } from '../utils/venueFromText';
 import { looksLikeCinema, CINEMA_EMOJI } from '../utils/cinema';
 import { searchGoogleImage } from '../utils/imageSearch';
 
@@ -485,15 +485,17 @@ export async function scrapeTickster(opts: TicksterOptions = {}) {
                 // 14 km bort mellan Svensbyn och Hemmingsmark). Geokoda BYGGNADEN
                 // först — en riktig träff (known_venues/poi/gata) vinner över
                 // salongens koordinat; stadscentroid räknas inte som träff.
+                // Salongsformerna "Kino 2", "Norrbottensteatern Scen 2", "Idun, Umeå
+                // Folkets Hus" likaså (#247): första byggnaden som träffar vinner.
                 let buildingHit: GeoHit | null = null;
-                const building = venueBuildingOf(details.venue);
-                if (building) {
+                for (const building of buildingCandidatesOf(details.venue)) {
                     const bq = [building, details.city].filter(Boolean).join(', ');
                     const hit = await geocodeVenueSweden(bq, details.city ? { nearCity: details.city } : undefined);
                     if (hit && hit[2] && hit[2] !== 'stad-centroid' && hit[2] !== 'ort-centroid') {
                         buildingHit = hit;
                         details.geocodeQuery = bq;
                         console.log(`     🏛️  Byggnad "${bq}" → [${hit[0].toFixed(4)}, ${hit[1].toFixed(4)}] (${hit[2]}) i stället för salongskoordinaten`);
+                        break;
                     }
                 }
 

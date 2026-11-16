@@ -9,6 +9,7 @@ import {
     upsertEvent, sqliteEventExists, getSqliteEvent, setEventStatus,
     recordScrapeRun, getRunsBySource, upsertKnownVenue, lookupVenueExact, lookupVenueSmart, lookupVenueNear,
     getSyncMeta, setSyncMeta, deleteEventsByFirestoreIds, setEventAuditWithCategory,
+    replaceTatorter, lookupTownCentroid, isPlaceName, pickTownRow, venueTownConflict,
 } from './sqliteHelper';
 
 beforeAll(() => {
@@ -189,5 +190,54 @@ describe('deleteEventsByFirestoreIds', () => {
 
     it('tom lista är en no-op', () => {
         expect(deleteEventsByFirestoreIds([])).toBe(0);
+    });
+});
+
+describe('lookupTownCentroid + isPlaceName (#247: stadsmittpunkt ur SCB-registret)', () => {
+    it('entydigt namn, kommunens egen tätort bland namnar, annars null', () => {
+        replaceTatorter([
+            { name: 'Strömsund', kommun: 'Strömsund', lan: 'Jämtland', lat: 63.8539, lng: 15.5661, bef: 3590 },
+            { name: 'Ljungby', kommun: 'Ljungby', lan: 'Kronoberg', lat: 56.832, lng: 13.936, bef: 16076 },
+            { name: 'Ljungby', kommun: 'Falkenberg', lan: 'Halland', lat: 56.97, lng: 12.6, bef: 300 },
+            { name: 'Tuna', kommun: 'Vimmerby', lan: 'Kalmar', lat: 57.58, lng: 16.1, bef: 400 },
+            { name: 'Tuna', kommun: 'Nyköping', lan: 'Södermanland', lat: 58.8, lng: 17.0, bef: 300 },
+            { name: 'Hamnen', kommun: 'Testkommun', lan: 'X', lat: 58.0, lng: 15.0, bef: 300 },
+        ]);
+        try {
+            expect(lookupTownCentroid('Strömsund')).toEqual([63.8539, 15.5661]);
+            expect(lookupTownCentroid('ljungby')).toEqual([56.832, 13.936]);
+            expect(lookupTownCentroid('Tuna')).toBeNull();
+            expect(lookupTownCentroid('Tuna', 58.75, 17.01)).toEqual([58.8, 17.0]);   // ankaret väljer
+            expect(isPlaceName('Strömsund')).toBe(true);
+            expect(isPlaceName('Testkommun')).toBe(true);                               // kommunnamnet
+            expect(isPlaceName('Hamnen')).toBe(false);                                  // stoppord
+            expect(isPlaceName('Folkets hus')).toBe(false);
+        } finally {
+            replaceTatorter([]);
+        }
+    });
+
+    it('pickTownRow är ren', () => {
+        expect(pickTownRow([{ kommun: 'A' }, { kommun: 'B' }], 'C')).toBeNull();
+        expect(pickTownRow([{ kommun: 'A' }, { kommun: 'C' }], 'c')).toEqual({ kommun: 'C' });
+    });
+});
+
+describe('venueTownConflict (#247: "Malå bibliotek" på Norsjös koordinater)', () => {
+    it('lokalen långt från orten i sitt namn är en konflikt; nära, okänd ort eller bara ortnamnet är det inte', () => {
+        replaceTatorter([
+            { name: 'Malå', kommun: 'Malå', lan: 'Västerbotten', lat: 65.1872, lng: 18.742, bef: 2013 },
+            { name: 'Lund', kommun: 'Lund', lan: 'Skåne', lat: 55.705, lng: 13.19, bef: 98000 },
+        ]);
+        try {
+            expect(venueTownConflict('Malå bibliotek', 64.9112, 19.4813)).toBe('Malå');       // Norsjö, 46 km
+            expect(venueTownConflict('Malå bibliotek', 65.1850, 18.7450)).toBeNull();
+            expect(venueTownConflict('Lunds domkyrka', 55.7047, 13.1939)).toBeNull();        // genitiv
+            expect(venueTownConflict('Lunds domkyrka', 59.33, 18.06)).toBe('Lund');
+            expect(venueTownConflict('Malå', 64.9112, 19.4813)).toBeNull();                  // bara orten
+            expect(venueTownConflict('Bio Roy', 57.7, 11.97)).toBeNull();                    // ingen ort
+        } finally {
+            replaceTatorter([]);
+        }
     });
 });
