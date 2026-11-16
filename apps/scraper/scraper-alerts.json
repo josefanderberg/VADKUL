@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-15T07:32:32.971Z",
+  "generatedAt": "2026-11-16T03:48:55.875Z",
   "counts": {
     "fel": 0,
     "varning": 40,
-    "nollkoordinatTotalt": 435
+    "nollkoordinatTotalt": 436
   },
   "alerts": [
     {
@@ -12,13 +12,6 @@
       "source": "almhult-cruncho",
       "since": "2026-11-07",
       "message": "gav 95 event 2026-11-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "sb-gamlalinkoping-info",
-      "since": "2026-11-07",
-      "message": "gav 9 event 2026-11-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -38,14 +31,7 @@
       "level": "varning",
       "kind": "volymras",
       "source": "damallsvenskan",
-      "since": "2026-11-13",
-      "message": "ger 7 event per körning mot 25 tidigare — ändrad sajt, eller tolkningen tappar event?"
-    },
-    {
-      "level": "varning",
-      "kind": "volymras",
-      "source": "elitettan",
-      "since": "2026-11-13",
+      "since": "2026-11-14",
       "message": "ger 7 event per körning mot 25 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
@@ -59,21 +45,35 @@
       "level": "varning",
       "kind": "volymras",
       "source": "havremagasinet",
-      "since": "2026-11-07",
+      "since": "2026-11-10",
       "message": "ger 7 event per körning mot 137 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
+      "source": "jonkoping",
+      "since": "2026-11-10",
+      "message": "ger 7 event per körning mot 161 tidigare — ändrad sajt, eller tolkningen tappar event?"
+    },
+    {
+      "level": "varning",
+      "kind": "volymras",
+      "source": "kungliga-operan",
+      "since": "2026-11-09",
+      "message": "ger 17 event per körning mot 58 tidigare — ändrad sajt, eller tolkningen tappar event?"
+    },
+    {
+      "level": "varning",
+      "kind": "volymras",
       "source": "norsjo",
-      "since": "2026-11-06",
+      "since": "2026-11-09",
       "message": "ger 11 event per körning, under källans golv 23 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "sb-vemdalen-se",
-      "since": "2026-11-01",
+      "since": "2026-11-10",
       "message": "ger 16 event per körning mot 250 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
@@ -106,12 +106,6 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Härlanda församling",
-      "message": "6 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
       "source": "Jazzimalmo",
       "message": "53 av 54 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
     },
@@ -136,8 +130,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "435 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: ABF 16, Tickster Norge 16, Förlösa-Kläckeberga församling 14, Barnarp-Ödestugu församling 13, Söndrum-Vapnö församling 13"
+      "source": "436 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Tickster Norge 19, ABF 16, Barnarp-Ödestugu församling 13, Söndrum-Vapnö församling 13, Förlösa-Kläckeberga församling 12"
     },
     {
       "level": "varning",
@@ -149,7 +143,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Vallentuna Kommun",
-      "message": "invariant-vakten larmar (1 av 53 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (1 av 50 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -205,6 +199,13 @@
       "source": "rosendals-tradgard",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "sb-gamlalinkoping-info",
+      "since": "2026-11-16",
+      "message": "i karantän sedan 2026-11-16: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
