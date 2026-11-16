@@ -408,7 +408,7 @@ async function nominatimSearchSweden(
     accept?: (lat: number, lng: number) => boolean,
     settlementsOnly = false,
 ): Promise<[number, number] | null> {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=se,dk,no`;
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=${settlementsOnly ? 6 : 3}&countrycodes=se,dk,no`;
     const response = await fetch(url, {
         headers: { 'User-Agent': 'VadkulScraperBot/1.0 (admin@vadkul.se)' }
     });
@@ -565,7 +565,9 @@ export async function geocodeCityCentroid(city: string): Promise<[number, number
 
     await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
     try {
-        const result = await nominatimSearchSweden(`${name}, Sverige`);
+        // Bara bebyggelse: utan filtret svarar Nominatim ofta med kommunens
+        // gränsyta (Svedala 4 km från orten, Strömsund 45 km) i stället för orten.
+        const result = await nominatimSearchSweden(`${name}, Sverige`, undefined, true);
         geocodeCacheSet(key, result);
         return reconcileCityCentroid(result, tatort);
     } catch (e) {
@@ -577,19 +579,15 @@ export async function geocodeCityCentroid(city: string): Promise<[number, number
     }
 }
 
-/**
- * Hur långt Nominatims stadsmittpunkt får ligga från SCB-tätortens punkt.
- * Storstäderna behåller Nominatims centrum: tätortens geometriska mitt ligger
- * 2–5 km därifrån (Stockholm 2,0 km, Göteborg 4,8 km). Mätt 16/11 på 808
- * cachade städer (#247).
- */
+/** Så långt får Nominatims ortspunkt ligga från tätortens punkt innan den räknas som en namne. */
 export const CITY_CENTROID_MAX_DRIFT_KM = 5;
 
 /**
- * Stadsmittpunkten: Nominatims svar, utom när det är kommunens mitt (hela
- * bågminuter, se isCoarseSourceCoord: Strömsund 64.25, 15.3667 låg 45 km från
- * orten, Vilhelmina 37 km) eller en namne i en annan landsände (Torsåker
- * 292 km). Då vinner SCB:s tätortspunkt. Ren funktion, exporterad för test.
+ * Stadsmittpunkten: Nominatims ortspunkt (place-noden, se geocodeCityCentroid),
+ * utom när den är kommunens mitt (hela bågminuter: Strömsund låg 45 km från
+ * orten) eller en namne (Torsåker, 292 km). Då vinner SCB:s tätortspunkt.
+ * Tätortens geometriska mitt duger inte som förstahandsval: Karlskronas låg
+ * 4,4 km från Stortorget (16/11). Ren funktion, exporterad för test.
  */
 export function reconcileCityCentroid(
     nominatim: [number, number] | null, tatort: [number, number] | null,
@@ -621,10 +619,13 @@ export function isPlaceSegment(seg: string, cityHint: string | undefined, isPlac
     return /\s+kommun$/i.test(seg.trim()) && /s$/i.test(s) && isPlace(s.slice(0, -1));
 }
 
-function placeKey(seg: string, isPlace: (s: string) => boolean): string {
+/** Ortnamnet i segmentet, i originalskiftläge (registret slås upp med det). */
+function placeName(seg: string, isPlace: (s: string) => boolean): string {
     const s = stripPlaceSuffix(seg);
-    const base = /\s+kommun$/i.test(seg.trim()) && /s$/i.test(s) && !isPlace(s) ? s.slice(0, -1) : s;
-    return base.toLowerCase();
+    return /\s+kommun$/i.test(seg.trim()) && /s$/i.test(s) && !isPlace(s) ? s.slice(0, -1) : s;
+}
+function placeKey(seg: string, isPlace: (s: string) => boolean): string {
+    return placeName(seg, isPlace).toLowerCase();
 }
 
 /**
@@ -654,13 +655,31 @@ export function placeOnlyPrecision(
  * Den sparade märkningen, rättad för rena ortsfrågor: "Östersund, Östersund"
  * märktes 'poi' före #247 men är stadens (eller ortens) mittpunkt.
  */
-export function storedPrecisionOf(row: { geocodedQuery?: string | null; geoPrecision?: string | null }): string | null {
+export function storedPrecisionOf(row: {
+    geocodedQuery?: string | null; geoPrecision?: string | null; lat?: number | null; lng?: number | null;
+}): string | null {
     const q = (row.geocodedQuery ?? '').replace(/^stad:\s*/i, '').trim();
-    if (row.geoPrecision === 'poi' && q) {
+    if (row.geoPrecision === 'poi' && q && row.lat != null && row.lng != null) {
         const label = placeOnlyPrecision(q, undefined, isPlaceName);
-        if (label) return label;
+        // Bara när punkten ÄR ortens mitt. Malmö Arena bar frågan "Malmö" men
+        // låg rätt i Hyllie — den flyttades till stadens mitt (16/11).
+        if (label && isAtPlaceCentroid(q, row.lat, row.lng)) return label;
     }
     return row.geoPrecision ?? null;
+}
+
+/** Ligger punkten på ortens mitt (tätortens punkt eller den cachade stadsmittpunkten)? */
+const AT_CENTROID_KM = 1.5;
+function isAtPlaceCentroid(q: string, lat: number, lng: number): boolean {
+    const head = placeName(q.split(',')[0] ?? '', isPlaceName);
+    const pts: [number, number][] = [];
+    const t = lookupTatortNear(head, lat, lng, 10);
+    if (t) pts.push(t);
+    for (const key of [`city:${head.toLowerCase()}`, q]) {
+        const c = geocodeCacheGet(key);
+        if (c?.ok) pts.push([c.lat, c.lng]);
+    }
+    return pts.some(p => distanceKm(lat, lng, p[0], p[1]) <= AT_CENTROID_KM);
 }
 
 /**
@@ -669,11 +688,12 @@ export function storedPrecisionOf(row: { geocodedQuery?: string | null; geoPreci
  * Växjö). Annars stadsmittpunkten (tätortsjusterad, se geocodeCityCentroid).
  */
 async function placeOnlyCentroid(cleaned: string, nearCity: string): Promise<[number, number] | null> {
-    const segs = cleaned.split(',').map(s => placeKey(s, isPlaceName)).filter(s => s && s !== 'sverige' && s !== 'sweden');
+    const segs = cleaned.split(',').map(s => placeName(s, isPlaceName)).filter(s => s && !/^(sverige|sweden)$/i.test(s));
     const head = segs[0];
     if (!head) return null;
-    const ctxName = segs.slice(1).find(s => s !== head)
-        ?? (nearCity && nearCity.toLowerCase() !== head ? nearCity : '');
+    const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+    const ctxName = segs.slice(1).find(s => !same(s, head))
+        ?? (nearCity && !same(nearCity, head) ? nearCity : '');
     if (!ctxName) return geocodeCityCentroid(head);
     const ctx = await geocodeCityCentroid(ctxName);
     return ctx ? lookupTownCentroid(head, ctx[0], ctx[1]) : null;

@@ -90,7 +90,38 @@ function rebuild(r: Row): { queries: string[]; city?: string; source: TownSource
     return { queries: geocodeQueriesFor(raw), city: town?.town, source: town?.source ?? 'sparad-fråga' };
 }
 
+/**
+ * --revert=<rapport.json> --apply: återställ event som första skarpa körningen
+ * (16/11) flyttade från en riktig punkt till en sämre mittpunkt. Orsaken var
+ * att en sparad 'poi' med frågan "Malmö" togs för en felmärkt mittpunkt
+ * (Malmö Arena), och att småorternas mittpunkt kom från Nominatims kommunmitt.
+ * Rapporten saknade url, så raden hittas på titel + lokal + nuvarande punkt.
+ */
+async function revert(file: string): Promise<void> {
+    const entries = JSON.parse(fs.readFileSync(file, 'utf-8')) as Array<{
+        decision: string; title: string; loc: string | null; km: number;
+        from: [number, number, string | null]; to: [number, number, string | null];
+    }>;
+    const bad = entries.filter(x => x.decision !== 'register-konflikt' && x.km > 1
+        && (x.from[2] === 'poi' || x.from[2] === 'gata')
+        && (x.to[2] === 'stad-centroid' || x.to[2] === 'ort-centroid'));
+    const find = sqlite.prepare(`SELECT url, locationName, geocodedQuery FROM link_events
+        WHERE locationName IS ? AND abs(lat - ?) < 1e-6 AND abs(lng - ?) < 1e-6 AND substr(title, 1, ?) = ?`);
+    let restored = 0, missing = 0;
+    for (const x of bad) {
+        const rows = find.all(x.loc, x.to[0], x.to[1], x.title.length, x.title) as { url: string; locationName: string; geocodedQuery: string | null }[];
+        if (rows.length === 0) { missing++; continue; }
+        for (const row of rows) {
+            if (APPLY && await refreshEventPlace(row.url, row.locationName, x.from[0], x.from[1], row.geocodedQuery ?? '', true, x.from[2])) restored++;
+        }
+    }
+    console.log(`Återställning: ${bad.length} rapportrader, ${restored} event ${APPLY ? 'återställda' : '(dry-run)'}, ${missing} hittades inte`);
+    process.exit(0);
+}
+
 async function main(): Promise<void> {
+    const rev = process.argv.find(x => x.startsWith('--revert='))?.split('=')[1];
+    if (rev) return revert(rev);
     console.log(`${APPLY ? '🔧 APPLY' : '🔍 DRY-RUN (inget skrivs)'} — kommande ${DAYS} dagar`);
 
     // Städning: kommunmitter i cachen och den förgiftade registerraden.
@@ -108,6 +139,13 @@ async function main(): Promise<void> {
     const nOrt = (sqlite.prepare(`SELECT COUNT(*) n FROM geocode_cache WHERE ${ortNominatim}`).get() as { n: number }).n;
     sqlite.prepare(`DELETE FROM geocode_cache WHERE ${ortNominatim}`).run();
     console.log(`Cachade Nominatim-svar märkta ort-centroid: ${nOrt} — tas bort`);
+    // Stadsmittpunkterna frågas om med bebyggelsefiltret (geocodeCityCentroid):
+    // de gamla svaren var ofta kommunens gränsyta. --behall-stader hoppar över.
+    if (!process.argv.includes('--behall-stader')) {
+        const nCity = (sqlite.prepare(`SELECT COUNT(*) n FROM geocode_cache WHERE query LIKE 'city:%'`).get() as { n: number }).n;
+        sqlite.prepare(`DELETE FROM geocode_cache WHERE query LIKE 'city:%'`).run();
+        console.log(`Cachade stadsmittpunkter: ${nCity} — frågas om med bebyggelsefiltret`);
+    }
     if (APPLY && deleteKnownVenue('Malå bibliotek')) console.log('Registerraden "Malå bibliotek" (Norsjös koordinater) borttagen');
 
     const rows = sqlite.prepare(`
@@ -179,7 +217,7 @@ async function main(): Promise<void> {
         if (relabelOnly) best.hit = [r.lat, r.lng, precision as GeoHit[2]];
         bump(relabelOnly ? 'märkning-namne' : decision, h);
         report.push({
-            decision, host: h, title: r.title.slice(0, 50), loc: r.locationName, city: plan.city, source: plan.source,
+            url: r.url, decision, host: h, title: r.title.slice(0, 50), loc: r.locationName, city: plan.city, source: plan.source,
             from: [r.lat, r.lng, r.geoPrecision], to: [best.hit[0], best.hit[1], best.hit[2]], query: best.query, km: Math.round(km * 10) / 10,
         });
         if (APPLY && await refreshEventPlace(r.url, r.locationName || best.query, best.hit[0], best.hit[1], best.query, true, best.hit[2] ?? null)) {

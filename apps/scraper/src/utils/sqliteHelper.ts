@@ -612,10 +612,6 @@ export function lookupVenueSmart(name: string, city?: string): [number, number] 
 }
 
 const venueByNameStmt = sqlite.prepare('SELECT lat, lng FROM known_venues WHERE LOWER(name) = LOWER(?)');
-/** Är namnet en tätort eller en kommun? (Index på name; kommun-jämförelsen går över 2 000 rader.) */
-const placeNameStmt = sqlite.prepare(
-    'SELECT 1 FROM tatorter WHERE name = ? COLLATE NOCASE OR kommun = ? COLLATE NOCASE LIMIT 1',
-);
 
 const CHURCH_NAME_RE = /kyrka|kapell|församlingshem|församlingsgård|s:t(?:a)?\s|sankt(?:a)?\s/i;
 
@@ -657,7 +653,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 export function lookupVenueNear(name: string, lat: number, lng: number, maxKm: number): [number, number] | null {
     const n = name.trim();
     if (n.length < 4 || isGenericLookupName(n) || ROOM_NAME_RE.test(n) || ORG_NAME_RE.test(n)) return null;
-    if (placeNameStmt.get(n, n)) return null;
+    if (tatortRowsNamed(n).length > 0 || tatortIdx().kommuner.has(n.toLowerCase())) return null;
     // Kyrkonamn återkommer från ort till ort ("S:t Mikaels kyrka") och registret
     // rymmer bara EN rad per namn — grannortens får inte duga. Snävare radie.
     if (CHURCH_NAME_RE.test(n)) maxKm = Math.min(maxKm, 10);
@@ -776,9 +772,6 @@ export function setEventCoords(url: string, lat: number, lng: number, geocodedQu
 const tatortUpsertStmt = sqlite.prepare(
     'INSERT INTO tatorter (name, kommun, lan, lat, lng, bef) VALUES (?, ?, ?, ?, ?, ?)',
 );
-const tatortByNameStmt = sqlite.prepare(
-    'SELECT name, kommun, lat, lng, bef FROM tatorter WHERE name = ? COLLATE NOCASE',
-);
 const tatortClearStmt = sqlite.prepare('DELETE FROM tatorter');
 
 export function replaceTatorter(rows: { name: string; kommun: string; lan: string; lat: number; lng: number; bef: number }[]): void {
@@ -787,6 +780,34 @@ export function replaceTatorter(rows: { name: string; kommun: string; lan: strin
         for (const r of rows) tatortUpsertStmt.run(r.name, r.kommun, r.lan, r.lat, r.lng, r.bef);
     });
     tx();
+    tatortIndex = null;
+    tatortScanList = null;
+}
+
+export interface TatortRow { name: string; kommun: string | null; lat: number; lng: number; bef: number | null }
+
+/**
+ * Registret i minnet, nycklat på namnet med JS-gemener. SQLites NOCASE viker
+ * bara ASCII: "överkalix" hittade aldrig "Överkalix", och Överkalix, Åmål och
+ * Ånge fick Nominatims kommunmitt i stället för orten (#247, 16/11).
+ */
+let tatortIndex: { byName: Map<string, TatortRow[]>; kommuner: Set<string> } | null = null;
+function tatortIdx(): { byName: Map<string, TatortRow[]>; kommuner: Set<string> } {
+    if (!tatortIndex) {
+        const byName = new Map<string, TatortRow[]>();
+        const kommuner = new Set<string>();
+        for (const r of sqlite.prepare('SELECT name, kommun, lat, lng, bef FROM tatorter').all() as TatortRow[]) {
+            const k = r.name.trim().toLowerCase();
+            const list = byName.get(k);
+            if (list) list.push(r); else byName.set(k, [r]);
+            if (r.kommun) kommuner.add(r.kommun.trim().toLowerCase());
+        }
+        tatortIndex = { byName, kommuner };
+    }
+    return tatortIndex;
+}
+function tatortRowsNamed(name: string): TatortRow[] {
+    return tatortIdx().byName.get((name || '').trim().toLowerCase()) ?? [];
 }
 
 export function countTatorter(): number {
@@ -808,7 +829,7 @@ export function allTatortNames(): string[] {
 export function lookupTatortNear(
     name: string, anchorLat?: number, anchorLng?: number, maxKm = 75,
 ): [number, number] | null {
-    const rows = tatortByNameStmt.all(name.trim()) as { lat: number; lng: number }[];
+    const rows = tatortRowsNamed(name);
     if (rows.length === 0) return null;
     if (anchorLat === undefined || anchorLng === undefined) {
         return rows.length === 1 ? [rows[0].lat, rows[0].lng] : null;
@@ -844,14 +865,18 @@ export function lookupTownCentroid(
     name: string, anchorLat?: number, anchorLng?: number, maxKm = 75,
 ): [number, number] | null {
     if (anchorLat !== undefined && anchorLng !== undefined) return lookupTatortNear(name, anchorLat, anchorLng, maxKm);
-    const rows = tatortByNameStmt.all(name.trim()) as { lat: number; lng: number; kommun: string | null }[];
-    const r = pickTownRow(rows, name);
+    const r = lookupTownRow(name);
     return r ? [r.lat, r.lng] : null;
+}
+
+/** Tätortsraden (med befolkning) för ett entydigt namn, se pickTownRow. */
+export function lookupTownRow(name: string): TatortRow | null {
+    return pickTownRow(tatortRowsNamed(name), name);
 }
 
 /** Flera tätorter med namnet och ingen av dem är kommunens egen ("Ekeby", "Torup")? */
 export function isAmbiguousTownName(name: string): boolean {
-    const rows = tatortByNameStmt.all((name || '').trim()) as { kommun: string | null }[];
+    const rows = tatortRowsNamed(name);
     return rows.length > 1 && !pickTownRow(rows, name);
 }
 
@@ -862,7 +887,7 @@ export function isAmbiguousTownName(name: string): boolean {
 export function isPlaceName(name: string): boolean {
     const n = (name || '').trim();
     if (n.length < 2 || TATORT_STOPPORD.has(n.toLowerCase())) return false;
-    return !!placeNameStmt.get(n, n);
+    return tatortRowsNamed(n).length > 0 || tatortIdx().kommuner.has(n.toLowerCase());
 }
 
 /**
@@ -905,7 +930,7 @@ export function venueTownConflict(
     const variants = /s$/i.test(first) && first.length > 4 ? [first, first.slice(0, -1)] : [first];
     for (const v of variants) {
         if (TATORT_STOPPORD.has(v.toLowerCase())) continue;
-        const rows = tatortByNameStmt.all(v) as { lat: number; lng: number }[];
+        const rows = tatortRowsNamed(v);
         if (rows.length === 0) continue;
         const nearest = Math.min(...rows.map(r => haversineKm(r.lat, r.lng, lat, lng)));
         return nearest > maxKm && nearest <= VENUE_TOWN_HOMONYM_KM ? v : null;
@@ -976,7 +1001,7 @@ export function matchTatortInText(text: string, names: string[]): string | null 
 export function findTatortInText(text: string): { name: string; lat: number; lng: number } | null {
     const name = matchTatortInText(text, tatortNamesForScan());
     if (!name) return null;
-    const rows = tatortByNameStmt.all(name) as { lat: number; lng: number }[];
+    const rows = tatortRowsNamed(name);
     if (rows.length !== 1) return null;
     return { name, lat: rows[0].lat, lng: rows[0].lng };
 }

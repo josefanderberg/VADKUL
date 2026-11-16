@@ -234,10 +234,12 @@ describe('reconcileCityCentroid (#247: Nominatims stadssvar var kommunens mitt)'
         expect(reconcileCityCentroid([64.25, 15.366667], [63.8539, 15.5661])).toEqual([63.8539, 15.5661]);
     });
 
-    it('en namne långt bort ersätts, storstadens centrum behålls', () => {
+    it('en namne långt bort ersätts, ortens centrum behålls', () => {
         expect(reconcileCityCentroid([56.0, 13.0], [60.6, 16.4])).toEqual([60.6, 16.4]);
         // Göteborg: Nominatims centrum 4,8 km från tätortens geometriska mitt.
         expect(reconcileCityCentroid([57.7072, 11.9668], [57.6637, 11.9611])).toEqual([57.7072, 11.9668]);
+        // Karlskrona: Stortorget, inte tätortens mitt 4,4 km bort.
+        expect(reconcileCityCentroid([56.1621, 15.5866], [56.1926, 15.6315])).toEqual([56.1621, 15.5866]);
     });
 
     it('utan tätort gäller Nominatim, utan Nominatim gäller tätorten', () => {
