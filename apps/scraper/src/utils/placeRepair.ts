@@ -7,7 +7,7 @@
 import { shouldMovePlace, precisionRank } from './geocodeChain';
 import type { GeoHit } from './venueCoordinates';
 
-export type TownSource = 'lokalen' | 'postort' | 'bibliotekets-ort' | 'sparad-fråga';
+export type TownSource = 'hela-lokalen' | 'lokalen' | 'postort' | 'bibliotekets-ort' | 'sparad-fråga';
 
 /**
  * Eventets ort för omgeokodningen, och varifrån den kom. Ordning:
@@ -31,7 +31,7 @@ export function deriveTownForRow(
 ): { town: string; source: TownSource } | null {
     const loc = (locationName ?? '').trim();
     const segs = loc.split(',').map(s => s.trim()).filter(Boolean);
-    if (segs.length === 1 && isPlace(segs[0])) return { town: segs[0], source: 'lokalen' };
+    if (segs.length === 1 && isPlace(segs[0])) return { town: segs[0], source: 'hela-lokalen' };
     const locPost = postalTownOf(loc);
     if (locPost && isPlace(locPost)) return { town: locPost, source: 'postort' };
     const locLast = segs.length >= 2 ? segs[segs.length - 1] : null;
@@ -58,8 +58,8 @@ export const WRONG_TOWN_KM = 20;
  * Ska det sparade eventet flyttas till omgeokodningens svar?
  *   - uppåt i precision, eller samma rang men en annan punkt (shouldMovePlace),
  *   - märkningen var fel ("Östersund, Östersund" som 'poi') — relabel,
- *   - den sparade punkten låg i en annan ort (> WRONG_TOWN_KM) och orten
- *     kommer ur eventets EGET lokalnamn, inte ur den sparade frågan,
+ *   - den sparade punkten låg i en annan ort (> WRONG_TOWN_KM) och orten är
+ *     säker: hela lokalnamnet, postorten eller bibliotekets egen ort,
  *   - registerraden låg långt från orten i sitt eget namn ("Malå bibliotek"
  *     i Norsjö) — då är den sparade 'poi'-träffen inget värd.
  */
@@ -76,7 +76,10 @@ export function decideMove(args: {
     const far = distanceKm(stored.lat, stored.lng, best[0], best[1]) > WRONG_TOWN_KM;
     if (args.storedConflict) return 'register-konflikt';
     if (shouldMovePlace(stored, best, distanceKm)) return 'flytt';
-    if (far && args.townSource !== 'sparad-fråga' && precisionRank(stored.precision) < 3) return 'annan-ort';
+    // Annan ort bara när orten är säker och inget mer specifikt kan ha legat där:
+    // "Sollebrunns bibliotek, Alingsås" låg rätt i byn Sollebrunn, 21 km från Alingsås.
+    const sureTown = args.townSource === 'hela-lokalen' || args.townSource === 'postort' || args.townSource === 'bibliotekets-ort';
+    if (far && sureTown && precisionRank(stored.precision) < 3) return 'annan-ort';
     if (args.storedLabelWrong) return 'märkning';
     return null;
 }

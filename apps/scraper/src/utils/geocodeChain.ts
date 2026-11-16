@@ -54,5 +54,21 @@ export function shouldMovePlace(
     const oldRank = precisionRank(stored.precision), newRank = precisionRank(best[2]);
     if (newRank !== oldRank) return newRank > oldRank;
     if (newRank === 3) return false;   // lokalen var redan känd
-    return distanceKm(stored.lat, stored.lng, best[0], best[1]) > CENTROID_MOVE_KM;
+    if (distanceKm(stored.lat, stored.lng, best[0], best[1]) <= CENTROID_MOVE_KM) return false;
+    // By mot by: bara bort från en kommunmitt, eller till SCB-registrets punkt.
+    // Röda Sten låg rätt och en Nominatim-by "Röda" 10 km bort fick inte vinna.
+    if (newRank === CENTROID_RANK['ort-centroid']) return onArcMinute(stored.lat, stored.lng) || isRegisterPoint(best[0], best[1]);
+    return true;
+}
+
+/** Kommunmitt: hela bågminuter (samma test som isCoarseSourceCoord). */
+function onArcMinute(lat: number, lng: number): boolean {
+    const on = (v: number) => Math.abs(v * 60 - Math.round(v * 60)) < 1e-4;
+    return on(lat) && on(lng);
+}
+
+/** SCB-registrets punkter har fler än sju decimaler; Nominatims har sju. */
+export function isRegisterPoint(lat: number, lng: number): boolean {
+    const beyond7 = (v: number) => Math.abs(v * 1e7 - Math.round(v * 1e7)) > 1e-3;
+    return beyond7(lat) || beyond7(lng);
 }

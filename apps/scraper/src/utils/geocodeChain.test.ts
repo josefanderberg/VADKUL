@@ -59,6 +59,13 @@ describe('shouldMovePlace (#247: rättelser ska nå gamla event)', () => {
         expect(shouldMovePlace({ lat: 1, lng: 1, precision: 'poi' }, [1.3, 1, 'poi'], km)).toBe(false);
     });
 
+    it('by mot by: bara bort från kommunmitt eller till registrets punkt (Röda Sten låg rätt)', () => {
+        const rodaSten = { lat: 57.6891735, lng: 11.9016288, precision: 'ort-centroid' };
+        expect(shouldMovePlace(rodaSten, [57.6037012, 11.8616753, 'ort-centroid'], km)).toBe(false);
+        expect(shouldMovePlace(rodaSten, [57.6037012345678, 11.86167531234, 'ort-centroid'], km)).toBe(true);
+        expect(shouldMovePlace({ lat: 56.416667, lng: 15.833333, precision: 'ort-centroid' }, [56.4443568, 15.8179628, 'ort-centroid'], km)).toBe(true);
+    });
+
     it('samma rang: bara en annan punkt flyttar (kommunmitten → orten)', () => {
         expect(shouldMovePlace({ lat: 64.833, lng: 16.0, precision: 'stad-centroid' }, [64.624, 16.663, 'stad-centroid'], km)).toBe(true);
         expect(shouldMovePlace({ lat: 1, lng: 1, precision: 'stad-centroid' }, [1.001, 1, 'stad-centroid'], km)).toBe(false);

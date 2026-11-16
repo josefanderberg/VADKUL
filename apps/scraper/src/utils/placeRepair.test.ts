@@ -9,7 +9,7 @@ const km = (a: number, b: number, c: number, d: number) => Math.hypot(a - c, (b 
 describe('deriveTownForRow (#247)', () => {
     it('lokalen, postorten, lokalens sista segment, sist den sparade frågan', () => {
         expect(deriveTownForRow('Övertorneå', 'Övertorneå', null, isPlace, postalTownOf))
-            .toEqual({ town: 'Övertorneå', source: 'lokalen' });
+            .toEqual({ town: 'Övertorneå', source: 'hela-lokalen' });
         expect(deriveTownForRow('Finngatan 2D, SE-824 71 Delsbo, Sverige', 'x', null, isPlace, postalTownOf))
             .toEqual({ town: 'Delsbo', source: 'postort' });
         expect(deriveTownForRow('Ätrans bibliotek, Falkenberg', 'Falkenberg', null, isPlace, postalTownOf))
@@ -39,6 +39,11 @@ describe('decideMove (#247)', () => {
         const stored = { lat: 59.6544, lng: 12.5916, precision: 'ort-centroid' };
         expect(decideMove({ ...base, stored, best: [59.5347, 14.2752, 'stad-centroid'] })).toBe('annan-ort');
         expect(decideMove({ ...base, townSource: 'sparad-fråga', stored, best: [59.5347, 14.2752, 'stad-centroid'] })).toBeNull();
+    });
+
+    it('byn i lokalnamnet låg rätt: ingen annan-ort-flytt till huvudorten (Sollebrunn)', () => {
+        const stored = { lat: 58.1170, lng: 12.5300, precision: 'ort-centroid' };
+        expect(decideMove({ ...base, townSource: 'lokalen', stored, best: [57.93, 12.533, 'stad-centroid'] })).toBeNull();
     });
 
     it('lokal hittad: flytt; samma mittpunkt: inget; fel märkning: märkning', () => {
