@@ -42,6 +42,7 @@ vi.mock('../utils/sqliteHelper', () => ({
     getSyncMeta: vi.fn(() => null),
     setSyncMeta: vi.fn(),
     lookupTatortNear: vi.fn(() => null),
+    isPlaceName: vi.fn((n: string) => ['boliden', 'skellefteå'].includes(n.toLowerCase())),
 }));
 // Var 4:e-körning-logiken är datum/hash-styrd — pinna av så testerna inte
 // blir beroende av vilken dag de körs.
@@ -525,6 +526,12 @@ describe('geocodeQueriesFor', () => {
         expect(kino.indexOf('Kino, Lund')).toBeLessThan(kino.indexOf('Kino 2, Lund'));
         const nbt = geocodeQueriesFor({ title: 'x', url: 'u', startDate: new Date(), venueName: 'Norrbottensteatern Scen 2', city: 'Luleå' });
         expect(nbt[0]).toBe('Norrbottensteatern, Luleå');
+    });
+
+    it('en by i lokalnamnet följer med byggnaden (Boliden i Skellefteå, #247)', () => {
+        const q = geocodeQueriesFor({ title: 'x', url: 'u', startDate: new Date(), venueName: 'Folkets Hus, Biolokalen, Boliden', city: 'Skellefteå' });
+        expect(q[0]).toBe('Folkets Hus, Boliden, Skellefteå');
+        expect(q).not.toContain('Folkets Hus, Skellefteå');
     });
 
     it('ingen platsinfo alls → inga frågor', () => {

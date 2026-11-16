@@ -17,7 +17,7 @@ import { buildingCandidatesOf } from '../utils/venueFromText';
 import { looksLikeCinema } from '../utils/cinema';
 import { ruleEmojiFor } from '../utils/emojiRules';
 import { validEventEnd } from '../utils/eventEnd';
-import { getSqliteEvent, lookupTatortNear } from '../utils/sqliteHelper';
+import { getSqliteEvent, lookupTatortNear, isPlaceName } from '../utils/sqliteHelper';
 import { isRefreshRun } from './schedule';
 import { geocodeVenueSweden, isCoarseSourceCoord, isInNordic, distanceKm, storedPrecisionOf, type GeoHit } from '../utils/venueCoordinates';
 import { firstPreciseHit, shouldMovePlace, precisionRank } from '../utils/geocodeChain';
@@ -103,12 +103,21 @@ export function geocodeQueriesFor(e: RawEvent): string[] {
             e.address ? [e.address, e.city].filter(Boolean).join(', ') : '',
             // "Saga - Bio 3:an", "Kino 2", "Norrbottensteatern Scen 2" → byggnaden
             // först; salongsnamnet träffar annars fel ort eller ingenting (#247).
-            ...buildingCandidatesOf(e.venueName).map((b) => [b, e.city].filter(Boolean).join(', ')),
+            // En by i lokalnamnet följer med: "Folkets Hus, Biolokalen, Boliden"
+            // (Skellefteå) blev annars Folkets Hus i Skellefteå, 45 km fel.
+            ...buildingCandidatesOf(e.venueName).map((b) => [b, villageIn(e.venueName, e.city), e.city].filter(Boolean).join(', ')),
             e.venueName ? [e.venueName, e.city].filter(Boolean).join(', ') : '',
             e.city ?? '',
         ];
     // Dedupa (address kan vara identisk med venueName) och släng korta/tomma.
     return [...new Set(candidates)].filter((q) => q && q.trim().length > 2);
+}
+
+/** En ort i lokalnamnets senare segment som inte är eventets stad ("…, Boliden" i Skellefteå). */
+export function villageIn(venueName: string | undefined, city: string | undefined): string | undefined {
+    const segs = (venueName ?? '').split(',').map((s) => s.trim()).filter(Boolean).slice(1);
+    const c = (city ?? '').trim().toLowerCase();
+    return segs.find((s) => s.toLowerCase() !== c && isPlaceName(s));
 }
 
 /**
