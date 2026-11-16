@@ -77,6 +77,7 @@ describe('buildingCandidatesOf (#247: Ticksters salonger på ortens mittpunkt)',
         expect(buildingCandidatesOf('Idun, Umeå Folkets Hus')).toEqual(['Umeå Folkets Hus']);
         expect(buildingCandidatesOf('Hantverksalen, Centralteatern')).toEqual(['Centralteatern']);
         expect(buildingCandidatesOf('Arena Varberg, Sparbankshallen')).toEqual(['Arena Varberg', 'Sparbankshallen']);
+        expect(buildingCandidatesOf('Tillsammans Arena, Hall Nord')).toEqual(['Tillsammans Arena']);
     });
 
     it('rummet sist i namnet', () => {
@@ -85,6 +86,16 @@ describe('buildingCandidatesOf (#247: Ticksters salonger på ortens mittpunkt)',
         expect(buildingCandidatesOf('Sara Kulturhus Scen 4')).toEqual(['Sara Kulturhus']);
         expect(buildingCandidatesOf('Sara Kulturhus Hjortronet')).toEqual(['Sara Kulturhus']);
         expect(buildingCandidatesOf('Kino 2')).toEqual(['Kino']);
+    });
+
+    it('arenornas hallar (swehockey)', () => {
+        expect(buildingCandidatesOf('Vilundaparkens Ishall A')).toEqual(['Vilundaparkens Ishall']);
+        expect(buildingCandidatesOf('Kungsbacka Ishall (A)')).toEqual(['Kungsbacka Ishall']);
+        expect(buildingCandidatesOf('NKT Arena Karlskrona A-Hall')).toEqual(['NKT Arena Karlskrona']);
+        expect(buildingCandidatesOf('Ulriksdals IP Hall 3')).toEqual(['Ulriksdals IP']);
+        expect(buildingCandidatesOf('Trängens IP Hall A')).toEqual(['Trängens IP']);
+        expect(buildingCandidatesOf('Nolia Ishall 1')).toEqual(['Nolia Ishall']);
+        expect(buildingCandidatesOf('Stångebro Ishall')).toEqual([]);
     });
 
     it('byggnaden själv eller bara ett rum: inget att prova', () => {

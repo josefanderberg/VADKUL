@@ -1,27 +1,29 @@
 import { describe, it, expect } from 'vitest';
 import { deriveTownForRow, venueWithoutTown, decideMove } from './placeRepair';
 
-const TOWNS = new Set(['falkenberg', 'storfors', 'arvika', 'karlstad', 'säffle', 'lund', 'umeå', 'östersund']);
+const TOWNS = new Set(['falkenberg', 'storfors', 'arvika', 'karlstad', 'säffle', 'lund', 'umeå', 'östersund', 'övertorneå', 'delsbo', 'hallen']);
 const isPlace = (s: string) => TOWNS.has(s.toLowerCase());
-const townInText = (s: string) => {
-    const hit = [...TOWNS].find(t => new RegExp(`(^|[^\\p{L}])${t}s?([^\\p{L}]|$)`, 'iu').test(s));
-    return hit ? hit[0].toUpperCase() + hit.slice(1) : null;
-};
+const postalTownOf = (s: string) => s.match(/\d{3}\s?\d{2}\s+([A-ZÅÄÖ][a-zåäö]+)/)?.[1] ?? null;
 const km = (a: number, b: number, c: number, d: number) => Math.hypot(a - c, (b - d) * 0.5) * 111;
 
 describe('deriveTownForRow (#247)', () => {
-    it('lokalens sista segment, sedan orten i namnet, sist den sparade frågan', () => {
-        expect(deriveTownForRow('Ätrans bibliotek, Falkenberg', 'Falkenberg', townInText, isPlace))
-            .toEqual({ town: 'Falkenberg', source: 'lokalens-sista-segment' });
-        expect(deriveTownForRow('Storfors bibliotek', 'Storfors bibliotek, Arvika', townInText, isPlace))
-            .toEqual({ town: 'Storfors', source: 'ort-i-lokalnamnet' });
-        expect(deriveTownForRow('Skaparverkstan i Karlstad', 'Skaparverkstan i Karlstad, Säffle', townInText, isPlace))
-            .toEqual({ town: 'Karlstad', source: 'ort-i-lokalnamnet' });
-        expect(deriveTownForRow('Kino 2', 'Kino 2, Lund', townInText, isPlace))
+    it('lokalen, postorten, lokalens sista segment, sist den sparade frågan', () => {
+        expect(deriveTownForRow('Övertorneå', 'Övertorneå', null, isPlace, postalTownOf))
+            .toEqual({ town: 'Övertorneå', source: 'lokalen' });
+        expect(deriveTownForRow('Finngatan 2D, SE-824 71 Delsbo, Sverige', 'x', null, isPlace, postalTownOf))
+            .toEqual({ town: 'Delsbo', source: 'postort' });
+        expect(deriveTownForRow('Ätrans bibliotek, Falkenberg', 'Falkenberg', null, isPlace, postalTownOf))
+            .toEqual({ town: 'Falkenberg', source: 'lokalen' });
+        expect(deriveTownForRow('Kino 2', 'Kino 2, Lund', null, isPlace, postalTownOf))
             .toEqual({ town: 'Lund', source: 'sparad-fråga' });
-        expect(deriveTownForRow('Teaterbistron', 'stad: Östersund', townInText, isPlace))
+        expect(deriveTownForRow('Teaterbistron', 'stad: Östersund', null, isPlace, postalTownOf))
             .toEqual({ town: 'Östersund', source: 'sparad-fråga' });
-        expect(deriveTownForRow('Någonstans', 'Storgatan 4', townInText, isPlace)).toBeNull();
+        expect(deriveTownForRow('Någonstans', 'Storgatan 4', null, isPlace, postalTownOf)).toBeNull();
+    });
+
+    it('ortnamn mitt i lokalnamnet räknas inte ("KvB Hallen" ligger inte i Hallen)', () => {
+        expect(deriveTownForRow('KvB Hallen', 'KvB Hallen, Umeå', null, isPlace, postalTownOf))
+            .toEqual({ town: 'Umeå', source: 'sparad-fråga' });
     });
 
     it('venueWithoutTown stryker avslutande ortsegment', () => {
@@ -31,7 +33,7 @@ describe('deriveTownForRow (#247)', () => {
 });
 
 describe('decideMove (#247)', () => {
-    const base = { storedLabelWrong: false, storedConflict: false, townSource: 'ort-i-lokalnamnet' as const, distanceKm: km };
+    const base = { storedLabelWrong: false, storedConflict: false, townSource: 'bibliotekets-ort' as const, distanceKm: km };
 
     it('Storfors i Arvika: annan ort när orten kommer ur lokalnamnet', () => {
         const stored = { lat: 59.6544, lng: 12.5916, precision: 'ort-centroid' };

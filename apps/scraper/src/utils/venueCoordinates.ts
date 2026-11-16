@@ -393,9 +393,20 @@ async function nominatimSearch(query: string): Promise<[number, number] | null> 
 // Nordic-bred (Sverige, Danmark, Norge). Valfritt accept-predikat filtrerar
 // träffarna (limit=3) — används av nearCity-valideringen för att välja träffen
 // nära rätt stad istället för Nominatims mest "prominenta" (Örebro-buggen).
+/**
+ * Nominatims svarstyper som är bebyggelse — för sökningar där svaret ska
+ * vara en by eller ort. "Roslagens, Norrtälje" gav en järnväg, "Clas,
+ * Leksand" en park och "Plats, Ängelholm" flygplatsen (#247, 16/11).
+ */
+const SETTLEMENT_TYPES = new Set(['city', 'town', 'village', 'hamlet', 'suburb', 'neighbourhood', 'quarter', 'isolated_dwelling', 'locality', 'farm', 'borough']);
+export function isSettlementResult(r: { class?: string; addresstype?: string; type?: string }): boolean {
+    return r.class === 'place' || SETTLEMENT_TYPES.has(r.addresstype ?? '') ;
+}
+
 async function nominatimSearchSweden(
     query: string,
     accept?: (lat: number, lng: number) => boolean,
+    settlementsOnly = false,
 ): Promise<[number, number] | null> {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&countrycodes=se,dk,no`;
     const response = await fetch(url, {
@@ -410,6 +421,7 @@ async function nominatimSearchSweden(
         // Sanity check: must be within Nordic bounding box (SE/DK/NO)
         if (lat >= 54.5 && lat <= 71.5 && lng >= 4.0 && lng <= 31.5) {
             if (accept && !accept(lat, lng)) continue;
+            if (settlementsOnly && !isSettlementResult(result)) continue;
             return [lat, lng];
         }
     }
@@ -710,7 +722,7 @@ export function suffixQueries(cleaned: string): string[] {
 }
 
 /** Adjektiv/genrer som inleder venuenamn — aldrig ortskandidater. */
-const FIRST_WORD_STOP = /^(stora|lilla|gamla|nya|norra|södra|östra|västra|övre|nedre|hotell|restaurang|caf[ée]|teater(n)?|bio(grafen)?|salong(en)?|galleri(et)?|the|el|la|de|den|det)$/i;
+const FIRST_WORD_STOP = /^(stora|lilla|gamla|nya|norra|södra|östra|västra|övre|nedre|hotell|restaurang|caf[ée]|teater(n)?|bio(grafen)?|salong(en)?|galleri(et)?|hall(en)?|plats|datum|the|el|la|de|den|det)$/i;
 
 /**
  * "Gemla bibliotek" (stad: Växjö) → "Gemla, Växjö". Första ordet i ett
@@ -819,6 +831,7 @@ export async function geocodeVenueSweden(
     // och föll till stadscentroiden (Visit Linköping, 2/10). Det sparade
     // locationName sanerades redan; frågan gjorde det inte.
     const cleaned = stripParishSegments(cleanLocationName(rawQuery)
+        .replace(/^\s*plats\s*:\s*/i, '')   // "Plats: Munka Ljungby bibliotek" (engelholm.se)
         .replace(/Magasinsgatan\s*8\s*,?\s*\d{3}\s*\d{2}\s+Göteborg/gi, '')
         .replace(/Magasinsgatan\s*8\s*,\s*Göteborg\b/gi, '')
         .trim()
@@ -840,7 +853,19 @@ export async function geocodeVenueSweden(
         }
     }
     const hit = await geocodeVenueSwedenChain(cleaned, nearCityRaw);
-    return hit && placeOnly ? [hit[0], hit[1], placeOnly] : hit;
+    if (hit && placeOnly) return [hit[0], hit[1], placeOnly];
+    // Samma vakt på slutsvaret: cachade och Nominatim-svar kan också missa
+    // orten i lokalens namn ("Malå bibliotek" → Norsjö låg även i cachen).
+    if (hit && (hit[2] === 'poi' || hit[2] === 'gata')) {
+        const head = cleaned.split(',')[0].trim();
+        const ctx = nearCityRaw ? await geocodeCityCentroid(nearCityRaw) : null;
+        const town = venueTownConflict(head, hit[0], hit[1], ctx);
+        if (town) {
+            console.log(`[Geocoding/SE] "${cleaned}" → [${hit[0]}, ${hit[1]}] ligger långt från ${town} — förkastas`);
+            return null;
+        }
+    }
+    return hit;
 }
 
 async function geocodeVenueSwedenChain(cleaned: string, nearCityRaw: string): Promise<GeoHit | null> {
@@ -854,7 +879,9 @@ async function geocodeVenueSwedenChain(cleaned: string, nearCityRaw: string): Pr
         ?? (head !== cleaned ? lookupVenueSmart(head, nearCityRaw || undefined) : null)
         ?? (headDeGen ? lookupVenueSmart(headDeGen, nearCityRaw || undefined) : null);
     // Registerraden får inte ligga långt från orten i sitt eget namn (#247).
-    if (venueHit && !venueTownConflict(head, venueHit[0], venueHit[1])) return [venueHit[0], venueHit[1], 'poi'];
+    // Stadens punkt behövs för vakten; den är cachad och billig.
+    const ctx = nearCityRaw ? await geocodeCityCentroid(nearCityRaw) : null;
+    if (venueHit && !venueTownConflict(head, venueHit[0], venueHit[1], ctx)) return [venueHit[0], venueHit[1], 'poi'];
 
     // nearCity-validering: geokoda stadens centroid (cachad) och bygg predikatet.
     // Kan centroiden inte lösas (okänd småort) → kör oskyddat som tidigare.
@@ -872,7 +899,7 @@ async function geocodeVenueSwedenChain(cleaned: string, nearCityRaw: string): Pr
         const nearHit = lookupVenueNear(cleaned, cityCenter[0], cityCenter[1], KNOWN_VENUE_NEAR_KM)
             ?? (head !== cleaned ? lookupVenueNear(head, cityCenter[0], cityCenter[1], KNOWN_VENUE_NEAR_KM) : null)
             ?? (headDeGen ? lookupVenueNear(headDeGen, cityCenter[0], cityCenter[1], KNOWN_VENUE_NEAR_KM) : null);
-        if (nearHit && !venueTownConflict(head, nearHit[0], nearHit[1])) return [nearHit[0], nearHit[1], 'poi'];
+        if (nearHit && !venueTownConflict(head, nearHit[0], nearHit[1], cityCenter)) return [nearHit[0], nearHit[1], 'poi'];
     }
 
     if (!accept) {
@@ -991,8 +1018,10 @@ async function geocodeVenueSwedenLive(
             return [tt[0], tt[1], anchorTown ? 'stad-centroid' : 'ort-centroid'];
         }
         await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-        result = await nominatimSearchSweden(sfx, accept);
         const gata = classifyQueryPrecision(sfx) === 'gata';
+        // Ett mellansegment utan husnummer ska vara en by/ort ("Fylleryd,
+        // Växjö"), inte "Arenan, Klippan" (#247).
+        result = await nominatimSearchSweden(sfx, accept, !gata);
         // Mellansegmentet gav bara stadens mitt: ingen by — låt 2a/2b försöka.
         if (result && !gata && !anchorTown && isCityItself(result, anchor)) continue;
         if (result) {
@@ -1028,8 +1057,8 @@ async function geocodeVenueSwedenLive(
                 return [ft[0], ft[1], 'ort-centroid'];
             }
             await new Promise(r => setTimeout(r, NOMINATIM_DELAY_MS));
-            result = await nominatimSearchSweden(fw, accept);
-            // Nominatim tappar byn och svarar med staden ("Storfors, Arvika" →
+            result = await nominatimSearchSweden(fw, accept, true);
+            // Bara bebyggelse (isSettlementResult). Och Nominatim tappar byn och svarar med staden ("Storfors, Arvika" →
             // Arvika): det är ingen by, och kedjan ska gå vidare.
             if (result && !isCityItself(result, anchor)) {
                 console.log(`[Geocoding/SE] Found first-word place "${fw}": [${result[0]}, ${result[1]}]`);

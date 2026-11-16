@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     stripParishSegments, suffixQueries, firstWordPlaceQuery, standaloneVenueQuery, classifyQueryPrecision, isForeignAddress,
-    isCoarseSourceCoord, placeOnlyPrecision, isPlaceSegment, reconcileCityCentroid,
+    isCoarseSourceCoord, placeOnlyPrecision, isPlaceSegment, reconcileCityCentroid, isSettlementResult,
 } from './venueCoordinates';
 import { isGenericLookupName, lookupVenueSmart, upsertKnownVenue } from './sqliteHelper';
 
@@ -244,5 +244,16 @@ describe('reconcileCityCentroid (#247: Nominatims stadssvar var kommunens mitt)'
         expect(reconcileCityCentroid([59.1, 18.1], null)).toEqual([59.1, 18.1]);
         expect(reconcileCityCentroid(null, [59.5347, 14.2752])).toEqual([59.5347, 14.2752]);
         expect(reconcileCityCentroid(null, null)).toBeNull();
+    });
+});
+
+describe('isSettlementResult (#247: första-ordsorten måste vara en ort)', () => {
+    it('byar och orter godtas, järnvägar, parker och flygplatser inte', () => {
+        expect(isSettlementResult({ class: 'place', addresstype: 'village' })).toBe(true);
+        expect(isSettlementResult({ class: 'boundary', addresstype: 'suburb' })).toBe(true);
+        expect(isSettlementResult({ class: 'railway', addresstype: 'track' })).toBe(false);
+        expect(isSettlementResult({ class: 'leisure', addresstype: 'park' })).toBe(false);
+        expect(isSettlementResult({ class: 'aeroway', addresstype: 'aeroway' })).toBe(false);
+        expect(isSettlementResult({})).toBe(false);
     });
 });

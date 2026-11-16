@@ -121,7 +121,8 @@ export function buildingCandidatesOf(venueName: string | null | undefined): stri
     if (segs.length >= 2) {
         for (const seg of segs) {
             const last = seg.split(' ').pop() ?? '';
-            if (!ROOM_RE.test(seg) && (BUILDING_RE.test(seg) || BUILDING_TAIL_RE.test(last))) add(seg);
+            // "Hall Nord", "Hall A": en hall i huset, inte huset.
+            if (!ROOM_RE.test(seg) && !/^hall(?:en)?\s/i.test(seg) && (BUILDING_RE.test(seg) || BUILDING_TAIL_RE.test(last))) add(seg);
         }
     }
     const head = segs[0] ?? v;
@@ -133,8 +134,12 @@ export function buildingCandidatesOf(venueName: string | null | undefined): stri
     // inte får stå först ("Arena Varberg" är byggnaden själv).
     const afterBuilding = head.match(/^(.*?(?:kulturhus(?:et)?|konserthus(?:et)?|teater(?:n)?|folkets hus|arena(?:n)?))\s+\p{Lu}[\p{L}-]+$/iu);
     if (afterBuilding && !/^(?:kulturhus|konserthus|teater|folkets hus|arena)/i.test(afterBuilding[1])) add(afterBuilding[1]);
-    // "Kino 2": salongsnumret (när inget rumsord redan tagit det).
-    const numbered = roomTail ? null : head.match(/^(.{4,40}?)\s+\d{1,2}$/);
+    // Arenornas hallar: "Vilundaparkens Ishall A", "Kungsbacka Ishall (A)",
+    // "NKT Arena Karlskrona A-Hall", "Ulriksdals IP Hall 3" (swehockey, #247).
+    const hall = head.match(/^(.{4,}?)\s+(?:\((?:[A-D]|\d)\)|[A-D]-?hall(?:en)?|hall\s*(?:[A-D]|\d{1,2})|[A-D])$/iu);
+    if (hall) add(hall[1]);
+    // "Kino 2": salongsnumret (när inget rums- eller hallord redan tagit det).
+    const numbered = roomTail || hall ? null : head.match(/^(.{4,40}?)\s+\d{1,2}$/);
     if (numbered) add(numbered[1]);
     return out;
 }

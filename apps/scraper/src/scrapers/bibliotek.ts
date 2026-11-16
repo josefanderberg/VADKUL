@@ -229,8 +229,8 @@ export function libraryDefaultPrice(title: string, text: string): string | undef
 /**
  * Filialens ort när den INTE står i konsortiets lista men är en SCB-tätort
  * inom medlemsorternas område: "Sturefors bibliotek" → Sturefors (Linköpings
- * kommun), "Linghems bibliotek" → Linghem. Ankrad i medlemsorterna (40 km)
- * så att en namne i en annan landsände aldrig väljs. Utan den här orten
+ * kommun), "Linghems bibliotek" → Linghem. Entydig i registret och ankrad i
+ * medlemsorterna (80 km: Sysslebäck–Torsby) så att en namne aldrig väljs. Utan den här orten
  * provades filialen ihop med varje medlemsort, och "Sturefors bibliotek,
  * Söderköping" vann — 38 km fel (#247). townIn injiceras för test.
  */
@@ -246,8 +246,12 @@ export function branchTown(
     return variants.find((v) => townIn(v, cities));
 }
 
-const BRANCH_TOWN_KM = 40;
+const BRANCH_TOWN_KM = 80;
 function isTownInArea(name: string, cities: string[]): boolean {
+    // Bara entydiga orter: orten blir eventets nearCity, och en namne
+    // ("Ekeby" finns tre gånger) slås upp i fel landsände.
+    const own = lookupTownCentroid(name);
+    if (!own) return false;
     return cities.some((c) => {
         const cc = lookupTownCentroid(c);
         return !!cc && !!lookupTatortNear(name, cc[0], cc[1], BRANCH_TOWN_KM);

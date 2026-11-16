@@ -27,10 +27,12 @@
  *   npx ts-node src/scripts/oneoff-regeocode-places-247.ts                 # dry-run, 60 dagar
  *   npx ts-node src/scripts/oneoff-regeocode-places-247.ts --apply
  *   npx ts-node src/scripts/oneoff-regeocode-places-247.ts --days=14 --limit=200
+ *   npx ts-node src/scripts/oneoff-regeocode-places-247.ts --alla      # även kyrkan/PRO/Korpen
  */
 import fs from 'fs';
-import { sqlite, findTatortInText, venueTownConflict, isPlaceName, deleteKnownVenue } from '../utils/sqliteHelper';
-import { geocodeVenueSweden, distanceKm, storedPrecisionOf, type GeoHit } from '../utils/venueCoordinates';
+import { sqlite, venueTownConflict, isPlaceName, isAmbiguousTownName, deleteKnownVenue } from '../utils/sqliteHelper';
+import { postalTown } from '../utils/swedishAddress';
+import { geocodeVenueSweden, geocodeCityCentroid, distanceKm, storedPrecisionOf, type GeoHit } from '../utils/venueCoordinates';
 import { firstPreciseHit, precisionRank } from '../utils/geocodeChain';
 import { refreshEventPlace } from '../utils/dbHelper';
 import { geocodeQueriesFor } from '../sources/runner';
@@ -46,11 +48,17 @@ const arg = (name: string, def: number) => {
 const DAYS = arg('days', 60);
 const LIMIT = arg('limit', Infinity);
 const REPORT = process.argv.find(x => x.startsWith('--report='))?.split('=')[1];
+/** Förvalets källor först: kyrkan, PRO och Korpen syns bara vid inzoomning (#240). --alla tar med dem. */
+const ALL = process.argv.includes('--alla');
+const OPT_IN = /svenskakyrkan\.se|pro\.se|zoezi|korpen/i;
 
 interface Row {
     url: string; title: string; time: string; locationName: string | null; extractedAddress: string | null;
     geocodedQuery: string | null; lat: number; lng: number; geoPrecision: string | null;
 }
+
+/** Ingen plats att kartlägga ("Online", "Digitalt", "Zoom"). */
+const NO_PLACE = /^(?:online|digital\w*|distans|zoom|webben|teams)\b/i;
 
 const host = (u: string) => u.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
 const OFFICE = /Magasinsgatan\s*8/i;
@@ -58,7 +66,7 @@ const OFFICE = /Magasinsgatan\s*8/i;
 /** Kandidater + ort för ett sparat event, samma vägar som skrapan tar i dag. */
 function rebuild(r: Row): { queries: string[]; city?: string; source: TownSource } | null {
     const loc = (r.locationName ?? '').trim();
-    if (!loc || /^sverige$/i.test(loc)) return null;
+    if (!loc || /^sverige$/i.test(loc) || NO_PLACE.test(loc)) return null;
 
     const tenant = AXIELL_TENANTS.find(t => r.url.startsWith(`${t.eventsUrl}#`));
     if (tenant) {
@@ -67,10 +75,10 @@ function rebuild(r: Row): { queries: string[]; city?: string; source: TownSource
             event: { title: r.title, startDate: r.time, status: 'PUBLISHED', location: { value: loc } },
         }, tenant);
         if (!raw) return null;
-        return { queries: geocodeQueriesFor(raw), city: raw.city, source: raw.city ? 'ort-i-lokalnamnet' : 'sparad-fråga' };
+        return { queries: geocodeQueriesFor(raw), city: raw.city, source: 'bibliotekets-ort' };
     }
 
-    const town = deriveTownForRow(loc, r.geocodedQuery, s => findTatortInText(s)?.name ?? null, isPlaceName);
+    const town = deriveTownForRow(loc, r.geocodedQuery, r.extractedAddress, isPlaceName, postalTown);
     const venue = town ? venueWithoutTown(loc, town.town) : loc;
     const addr = (r.extractedAddress ?? '').trim();
     const raw: RawEvent = {
@@ -92,6 +100,14 @@ async function main(): Promise<void> {
     console.log(`Cachade mittpunktssvar på hela bågminuter: ${coarse.n} — tas bort`);
     sqlite.prepare(`DELETE FROM geocode_cache WHERE ok = 1 AND precision IN ('stad-centroid', 'ort-centroid')
         AND abs(lat * 60 - round(lat * 60)) < 1e-4 AND abs(lng * 60 - round(lng * 60)) < 1e-4`).run();
+    // Nominatim-svar märkta ort-centroid (7 decimaler, inte tätortsregistrets
+    // punkter) kom ur första-ords- och suffixsökningarna utan ortsfilter:
+    // "Arenan, Klippan", "Clas, Leksand" → en park (#247). Räknas om.
+    const ortNominatim = `ok = 1 AND precision = 'ort-centroid'
+        AND abs(lat * 1e7 - round(lat * 1e7)) < 1e-3 AND abs(lng * 1e7 - round(lng * 1e7)) < 1e-3`;
+    const nOrt = (sqlite.prepare(`SELECT COUNT(*) n FROM geocode_cache WHERE ${ortNominatim}`).get() as { n: number }).n;
+    sqlite.prepare(`DELETE FROM geocode_cache WHERE ${ortNominatim}`).run();
+    console.log(`Cachade Nominatim-svar märkta ort-centroid: ${nOrt} — tas bort`);
     if (APPLY && deleteKnownVenue('Malå bibliotek')) console.log('Registerraden "Malå bibliotek" (Norsjös koordinater) borttagen');
 
     const rows = sqlite.prepare(`
@@ -103,11 +119,13 @@ async function main(): Promise<void> {
 
     const work: { r: Row; precision: string | null; labelWrong: boolean; conflict: boolean }[] = [];
     for (const r of rows) {
+        if (!ALL && OPT_IN.test(r.url)) continue;
         const precision = storedPrecisionOf(r);
         const head = (r.locationName ?? '').split(',')[0].trim();
-        const conflict = (r.geoPrecision === 'poi' || r.geoPrecision === 'gata') && !!venueTownConflict(head, r.lat, r.lng);
-        if (precisionRank(precision) < 3 || conflict) {
-            work.push({ r, precision: conflict ? 'stad-centroid' : precision, labelWrong: precision !== r.geoPrecision, conflict });
+        // Grovsållning utan ortskontext; den riktiga prövningen (med eventets ort) görs nedan.
+        const maybeConflict = (r.geoPrecision === 'poi' || r.geoPrecision === 'gata') && !!venueTownConflict(head, r.lat, r.lng);
+        if (precisionRank(precision) < 3 || maybeConflict) {
+            work.push({ r, precision, labelWrong: precision !== r.geoPrecision, conflict: maybeConflict });
         }
     }
     console.log(`${rows.length} kommande event med koordinater, ${work.length} att pröva`);
@@ -125,13 +143,22 @@ async function main(): Promise<void> {
     const started = Date.now();
     let done = 0, written = 0;
 
-    for (const { r, precision, labelWrong, conflict } of work) {
+    for (const w of work) {
+        const { r, labelWrong } = w;
         if (done >= LIMIT) break;
         done++;
         if (done % 200 === 0) console.log(`  … ${done}/${work.length} (${Math.round((Date.now() - started) / 1000)} s, ${written} skrivna)`);
         const h = host(r.url);
         const plan = rebuild(r);
         if (!plan || plan.queries.length === 0) { bump('ingen-kandidat', h); continue; }
+        // Utan säker ort finns ingen ortsvakt: "Marknadsgränd 2" hamnade 529 km
+        // bort och "Bergs Bygdegård" hos en namne (dry-run 16/11). Hellre orört.
+        if (!plan.city) { bump('ingen-ort', h); continue; }
+        if (isAmbiguousTownName(plan.city)) { bump('tvetydig-ort', h); continue; }
+        const head = (r.locationName ?? '').split(',')[0].trim();
+        const conflict = w.conflict && !!venueTownConflict(head, r.lat, r.lng, await geocodeCityCentroid(plan.city));
+        if (w.conflict && !conflict && precisionRank(w.precision) >= 3) { bump('oförändrad', h); continue; }
+        const precision = conflict ? 'stad-centroid' : w.precision;
 
         const best = await firstPreciseHit(plan.queries, async (q) => {
             const key = plan.city ? `${q}|near:${plan.city}` : q;
@@ -145,8 +172,12 @@ async function main(): Promise<void> {
         });
         if (!decision || !best) { bump(best ? 'oförändrad' : 'ingen-träff', h); continue; }
 
-        bump(decision, h);
         const km = distanceKm(r.lat, r.lng, best.hit[0], best.hit[1]);
+        // En felmärkt ortsfråga långt från ortens punkt är en namne ("Klippan"
+        // finns både i Skåne och i Småland): rätta bara märkningen.
+        const relabelOnly = labelWrong && km > 20 && decision !== 'register-konflikt';
+        if (relabelOnly) best.hit = [r.lat, r.lng, precision as GeoHit[2]];
+        bump(relabelOnly ? 'märkning-namne' : decision, h);
         report.push({
             decision, host: h, title: r.title.slice(0, 50), loc: r.locationName, city: plan.city, source: plan.source,
             from: [r.lat, r.lng, r.geoPrecision], to: [best.hit[0], best.hit[1], best.hit[2]], query: best.query, km: Math.round(km * 10) / 10,

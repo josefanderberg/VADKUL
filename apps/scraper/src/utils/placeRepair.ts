@@ -7,27 +7,37 @@
 import { shouldMovePlace, precisionRank } from './geocodeChain';
 import type { GeoHit } from './venueCoordinates';
 
-export type TownSource = 'lokalens-sista-segment' | 'ort-i-lokalnamnet' | 'sparad-fråga';
+export type TownSource = 'lokalen' | 'postort' | 'bibliotekets-ort' | 'sparad-fråga';
 
 /**
  * Eventets ort för omgeokodningen, och varifrån den kom. Ordning:
- *   1. locationNames SISTA segment när det är en ort ("Ätrans bibliotek, Falkenberg"),
- *   2. en ort inuti lokalnamnet ("Storfors bibliotek", "Skaparverkstan i Karlstad"),
- *   3. den sparade frågans sista segment.
- * Den sparade frågan kommer sist: konsortierna skrev en ANNAN medlemsort där
- * ("Storfors bibliotek, Arvika"), och det var just den som var felet.
+ *   1. hela lokalnamnet är en ort ("Övertorneå", "Västerhaninge"),
+ *   2. postorten i lokalnamnet ("Finngatan 2D, SE-824 71 Delsbo"),
+ *   3. lokalnamnets SISTA segment när det är en ort ("Ätrans bibliotek, Falkenberg"),
+ *   4. postorten i den sparade adressen,
+ *   5. den sparade frågans sista segment.
+ * Ortnamn MITT I lokalnamnet används inte: "KvB Hallen", "Front Lindholmen"
+ * och "Bokskogen i Torup" pekade ut tätorter hundratals km bort (dry-run
+ * 16/11). Den sparade frågan kommer sist: konsortierna skrev en ANNAN
+ * medlemsort där ("Storfors bibliotek, Arvika") — bibliotekens ort härleds
+ * i stället ur skrapans egen logik (mapAxiellEvent).
  */
 export function deriveTownForRow(
     locationName: string | null | undefined,
     geocodedQuery: string | null | undefined,
-    townInText: (s: string) => string | null,
+    extractedAddress: string | null | undefined,
     isPlace: (s: string) => boolean,
+    postalTownOf: (s: string) => string | null,
 ): { town: string; source: TownSource } | null {
-    const segs = (locationName ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    const loc = (locationName ?? '').trim();
+    const segs = loc.split(',').map(s => s.trim()).filter(Boolean);
+    if (segs.length === 1 && isPlace(segs[0])) return { town: segs[0], source: 'lokalen' };
+    const locPost = postalTownOf(loc);
+    if (locPost && isPlace(locPost)) return { town: locPost, source: 'postort' };
     const locLast = segs.length >= 2 ? segs[segs.length - 1] : null;
-    if (locLast && isPlace(locLast)) return { town: locLast, source: 'lokalens-sista-segment' };
-    const own = segs.length ? townInText(segs.join(', ')) : null;
-    if (own) return { town: own, source: 'ort-i-lokalnamnet' };
+    if (locLast && isPlace(locLast)) return { town: locLast, source: 'lokalen' };
+    const addrPost = postalTownOf(extractedAddress ?? '');
+    if (addrPost && isPlace(addrPost)) return { town: addrPost, source: 'postort' };
     const q = (geocodedQuery ?? '').replace(/^stad:\s*/i, '').split(',').map(s => s.trim()).filter(Boolean);
     const qLast = q[q.length - 1];
     if (qLast && !/\d/.test(qLast) && isPlace(qLast)) return { town: qLast, source: 'sparad-fråga' };

@@ -224,18 +224,20 @@ describe('lookupTownCentroid + isPlaceName (#247: stadsmittpunkt ur SCB-registre
 });
 
 describe('venueTownConflict (#247: "Malå bibliotek" på Norsjös koordinater)', () => {
-    it('lokalen långt från orten i sitt namn är en konflikt; nära, okänd ort eller bara ortnamnet är det inte', () => {
+    it('lokalen nära men utanför orten i sitt namn är en konflikt; namnar och eventets egen ort är det inte', () => {
         replaceTatorter([
             { name: 'Malå', kommun: 'Malå', lan: 'Västerbotten', lat: 65.1872, lng: 18.742, bef: 2013 },
-            { name: 'Lund', kommun: 'Lund', lan: 'Skåne', lat: 55.705, lng: 13.19, bef: 98000 },
+            { name: 'Bergshamra', kommun: 'Norrtälje', lan: 'Stockholm', lat: 59.629, lng: 18.626, bef: 600 },
+            { name: 'Alby', kommun: 'Ånge', lan: 'Västernorrland', lat: 62.497, lng: 15.483, bef: 400 },
         ]);
         try {
-            expect(venueTownConflict('Malå bibliotek', 64.9112, 19.4813)).toBe('Malå');       // Norsjö, 46 km
+            expect(venueTownConflict('Malå bibliotek', 64.9112, 19.4813)).toBe('Malå');                    // Norsjö, 46 km
+            expect(venueTownConflict('Malå bibliotek', 64.9112, 19.4813, [65.1872, 18.742])).toBe('Malå'); // och långt från eventets ort
             expect(venueTownConflict('Malå bibliotek', 65.1850, 18.7450)).toBeNull();
-            expect(venueTownConflict('Lunds domkyrka', 55.7047, 13.1939)).toBeNull();        // genitiv
-            expect(venueTownConflict('Lunds domkyrka', 59.33, 18.06)).toBe('Lund');
-            expect(venueTownConflict('Malå', 64.9112, 19.4813)).toBeNull();                  // bara orten
-            expect(venueTownConflict('Bio Roy', 57.7, 11.97)).toBeNull();                    // ingen ort
+            expect(venueTownConflict('Bergshamra bibliotek', 59.3800, 18.0350, [59.36, 18.0])).toBeNull(); // Solna
+            expect(venueTownConflict('Alby bibliotek', 59.2390, 17.8470)).toBeNull();                      // namne 400 km bort
+            expect(venueTownConflict('Malå', 64.9112, 19.4813)).toBeNull();                                // bara orten
+            expect(venueTownConflict('Bio Roy', 57.7, 11.97)).toBeNull();                                  // ingen ort
         } finally {
             replaceTatorter([]);
         }

@@ -849,6 +849,12 @@ export function lookupTownCentroid(
     return r ? [r.lat, r.lng] : null;
 }
 
+/** Flera tätorter med namnet och ingen av dem är kommunens egen ("Ekeby", "Torup")? */
+export function isAmbiguousTownName(name: string): boolean {
+    const rows = tatortByNameStmt.all((name || '').trim()) as { kommun: string | null }[];
+    return rows.length > 1 && !pickTownRow(rows, name);
+}
+
 /**
  * Är namnet en ort (SCB-tätort eller kommun)? Tätortsnamn som också är vanliga
  * ord ("Hamnen", "Kyrkan") räknas inte — se TATORT_STOPPORD.
@@ -873,26 +879,36 @@ const TATORT_STOPPORD = new Set([
 
 /** Hur långt från orten i namnet en lokal får ligga ("Malå bibliotek" ≤ 30 km från Malå). */
 export const VENUE_TOWN_MAX_KM = 30;
+/** Längre bort än så är tätorten en namne, inte lokalens ort (Alby i Ånge ≠ Alby i Botkyrka). */
+export const VENUE_TOWN_HOMONYM_KM = 150;
 
 /**
- * Pekar lokalnamnets första ord ut en ort som punkten ligger långt från?
- * Returnerar orten när punkten är längre än maxKm från ALLA tätorter med det
- * namnet, annars null. Vakten mot förgiftade registerrader: geo-refine lärde
- * sig "Malå bibliotek" på Norsjös koordinater, och 9 event låg 46 km fel med
- * märkningen 'poi' (#247, 15/11). Kräver minst två ord — ett rent ortnamn är
- * ingen lokal — och genitiv prövas ("Lunds domkyrka" → Lund).
+ * Pekar lokalnamnets första ord ut en ort som punkten missar? Vakten mot
+ * förgiftade registerrader: geo-refine lärde sig "Malå bibliotek" på Norsjös
+ * koordinater, 46 km bort, och 9 event låg fel med märkningen 'poi' (#247).
+ *
+ * Konflikt = punkten ligger mer än maxKm från närmaste tätort med namnet,
+ * MEN inom VENUE_TOWN_HOMONYM_KM (längre bort är det en namne: "Alby
+ * bibliotek" i Botkyrka, tätorten Alby ligger i Ånge). Med context (eventets
+ * ort) är det ingen konflikt när punkten ligger i den orten: "Bergshamra
+ * bibliotek" i Solna, fast tätorten Bergshamra ligger 45 km bort i Norrtälje.
+ * Kräver två ord (ett rent ortnamn är ingen lokal); genitiv prövas.
  */
-export function venueTownConflict(name: string, lat: number, lng: number, maxKm = VENUE_TOWN_MAX_KM): string | null {
+export function venueTownConflict(
+    name: string, lat: number, lng: number, context?: [number, number] | null, maxKm = VENUE_TOWN_MAX_KM,
+): string | null {
     const words = (name || '').trim().split(/\s+/);
     if (words.length < 2) return null;
     const first = words[0].replace(/[^\p{L}-]/gu, '');
     if (first.length < 4) return null;
+    if (context && haversineKm(lat, lng, context[0], context[1]) <= maxKm) return null;
     const variants = /s$/i.test(first) && first.length > 4 ? [first, first.slice(0, -1)] : [first];
     for (const v of variants) {
         if (TATORT_STOPPORD.has(v.toLowerCase())) continue;
         const rows = tatortByNameStmt.all(v) as { lat: number; lng: number }[];
         if (rows.length === 0) continue;
-        return rows.some(r => haversineKm(r.lat, r.lng, lat, lng) <= maxKm) ? null : v;
+        const nearest = Math.min(...rows.map(r => haversineKm(r.lat, r.lng, lat, lng)));
+        return nearest > maxKm && nearest <= VENUE_TOWN_HOMONYM_KM ? v : null;
     }
     return null;
 }
