@@ -84,6 +84,8 @@ describe('remembersVerdict — minnet av en probad domän', () => {
 
     it('en dubblett är alltid en dubblett; PASS och okända domäner följer åldern', () => {
         expect(remembersVerdict({ verdict: 'DUPE', date: '2025-01-01' }, 600, 90)).toBe(true);
+        // Bortgranskad för hand (Stora Djulö 17/11: bara julbord) — kommer aldrig tillbaka av sig själv.
+        expect(remembersVerdict({ verdict: 'GRANSKAD', date: '2026-11-17', probe: 2 }, 600, 90, 3, true)).toBe(true);
         expect(remembersVerdict({ verdict: 'PASS', date: '2026-11-01' }, 13, 90)).toBe(true);
         expect(remembersVerdict({ verdict: 'PASS', date: '2026-01-01' }, 300, 90)).toBe(false);
         expect(remembersVerdict(undefined, 0, 90)).toBe(false);

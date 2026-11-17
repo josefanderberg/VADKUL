@@ -369,6 +369,13 @@ export function stripSiteNameTail(title: string, siteName: string): string {
     return m && m[2].trim().toLowerCase() === siteName.toLowerCase() ? m[1].trim() : title;
 }
 
+/** Sidans og:site_name ur rå HTML (båda attributordningarna), tom sträng utan. */
+function ogSiteName(html: string): string {
+    const m = html.match(/<meta[^>]+property=["']og:site_name["'][^>]*content=["']([^"']*)["']/i)
+        ?? html.match(/<meta[^>]+content=["']([^"']*)["'][^>]*property=["']og:site_name["']/i);
+    return m ? decodeHtmlEntities(m[1]).trim() : '';
+}
+
 /**
  * Inläggets publicerings- och ändringstider bort ur sidan (SitemapConfig.
  * skipPublishTimes): <time class="entry-date|published|updated|post-date">,
@@ -1678,6 +1685,9 @@ export function extractFromHtml(html: string, url: string, defaultCity?: string,
         // det riktiga eventet, inte tomt.
         if (isBlacklistedTitle(candidate.title)) { sawBlacklisted = true; continue; }
         if (!candidate.city && defaultCity) candidate.city = defaultCity;
+        // Squarespace skriver sidans <title> som Event-namn: "Open Mic Night — garage bar"
+        // (Garage Bar i Höganäs, stadssvepet 17/11). Samma svansregel som og:title.
+        candidate.title = stripSiteNameTail(candidate.title, ogSiteName(html));
         ev = candidate;
         break;
     }

@@ -127,6 +127,20 @@ export function sanitizePriceField(price: unknown): string | undefined {
     return p;
 }
 
+const CANCELLED_WORD = String.raw`(?:inst[äa]ll(?:d|t|da)|cancell?ed)`;
+const CANCELLED_HEAD_RE = new RegExp(String.raw`^\s*${CANCELLED_WORD}\s*[:!–—-]`, 'iu');
+const CANCELLED_TAIL_RE = new RegExp(String.raw`[:–—(|-]\s*${CANCELLED_WORD}[)!.\s]*$`, 'iu');
+
+/**
+ * Inställt event där arrangören skrivit om titeln i stället för att ta bort
+ * sidan: "Inställd: Tysta bokklubben" (Aurora i Kiruna, stadssvepet 17/11),
+ * "Drop in vigsel - INSTÄLLT!". Bara ordet först eller sist, med skiljetecken,
+ * så "Inställda tåg och andra berättelser" inte räknas.
+ */
+export function isCancelledTitle(title: string): boolean {
+    return CANCELLED_HEAD_RE.test(title) || CANCELLED_TAIL_RE.test(title);
+}
+
 /** Applicera allt på ett RawEvent (muterar). Returnerar eventet för kedjning. */
 export function normalizeRawEvent(e: RawEvent, hostName?: string): RawEvent {
     const loc = normalizeLocation(e.venueName, e.address);

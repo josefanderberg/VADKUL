@@ -252,6 +252,19 @@ describe('runSource — grundpipeline', () => {
         expect(writtenEvents()).toHaveLength(0);
     });
 
+    it('registrets defaultVenue fyller en tom lokal i alla motorer (Aurora Kiruna 17/11)', async () => {
+        const src = { engine: 'sitevision', config: { defaultVenue: 'Aurora kultur och kongress' } } as Partial<Source>;
+        await run([makeEvent({ city: 'Kiruna' }), makeEvent({ venueName: 'Kiruna kyrka', city: 'Kiruna' })], {}, src);
+        expect(writtenEvents().map((w) => w.locationName)).toEqual(['Aurora kultur och kongress', 'Kiruna kyrka']);
+    });
+
+    it('inställda event sparas inte', async () => {
+        const result = await run([makeEvent({ title: 'Inställd: Tysta bokklubben' }), makeEvent({ title: 'Romantasy på 30 minuter' })]);
+        expect(result.saved).toBe(1);
+        expect(result.skipped.invalid).toBe(1);
+        expect(writtenEvents()[0].title).toBe('Romantasy på 30 minuter');
+    });
+
     it('skippar event utanför fönstret (igår + bortom windowDays)', async () => {
         const yesterday = new Date(Date.now() - 24 * 3600_000);
         const farFuture = new Date(Date.now() + 40 * 24 * 3600_000);

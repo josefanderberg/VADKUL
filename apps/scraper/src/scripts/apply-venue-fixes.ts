@@ -48,10 +48,10 @@ async function main() {
 
     // 3: flytta befintliga framtida event som matchar och står fel.
     const events = sqlite.prepare(`
-        SELECT url, firestoreId, title, locationName, lat, lng
+        SELECT url, firestoreId, title, locationName, lat, lng, geoPrecision
         FROM link_events
         WHERE hidden = 0 AND time >= datetime('now')
-    `).all() as { url: string; firestoreId: string | null; title: string | null; locationName: string | null; lat: number | null; lng: number | null }[];
+    `).all() as { url: string; firestoreId: string | null; title: string | null; locationName: string | null; lat: number | null; lng: number | null; geoPrecision: string | null }[];
 
     // En trasig rad (NULL-titel, korrupt url …) får ALDRIG fälla hela steget:
     // run-daily.sh sväljer exit≠0 med en ⚠️-rad och kör vidare, så en krasch
@@ -63,8 +63,11 @@ async function main() {
             const fix = matchVenueFix(e.locationName);
             if (!fix) continue;
             const dist = distanceKm(e.lat || 0, e.lng || 0, fix.lat, fix.lng);
-            if (dist < 0.1) { alreadyRight++; continue; }
-            console.log(`  🔧 ${(e.title ?? '(utan titel)').slice(0, 45)} | ${e.locationName} | ${dist.toFixed(1)} km fel${APPLY ? ' → flyttas' : ''}`);
+            // Rätt punkt men märkt som mittpunkt (Kirunas mittpunkt ligger 90 m från
+            // Aurora, 17/11): märkningen rättas, annars räknas eventet fel i mätningen.
+            const centroidLabel = !e.geoPrecision || /centroid/.test(e.geoPrecision);
+            if (dist < 0.1 && !centroidLabel) { alreadyRight++; continue; }
+            console.log(`  🔧 ${(e.title ?? '(utan titel)').slice(0, 45)} | ${e.locationName} | ${dist < 0.1 ? 'rätt punkt, märkt mittpunkt' : `${dist.toFixed(1)} km fel`}${APPLY ? ' → flyttas' : ''}`);
             if (!APPLY) { moved++; continue; }
             setEventCoords(e.url, fix.lat, fix.lng, `venue-fix: ${fix.city}`, 'poi');
             if (db && e.firestoreId) {

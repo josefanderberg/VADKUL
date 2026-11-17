@@ -51,7 +51,8 @@ export function inlineListingAllowed(method: string | undefined, isVenue: boolea
 }
 
 export interface ProbeMemory {
-    verdict: 'PASS' | 'FAIL' | 'DUPE' | 'SMOKE-FAIL';
+    /** GRANSKAD = godkänd av kedjan men bortgranskad för hand (julbord, nyheter, företagskurser). */
+    verdict: 'PASS' | 'FAIL' | 'DUPE' | 'SMOKE-FAIL' | 'GRANSKAD';
     date: string;
     note?: string;
     /** Generationen som gav verdiktet; saknas på poster från före 14/11 2026 (= 1). */
@@ -60,14 +61,17 @@ export interface ProbeMemory {
 
 /**
  * Gäller minnet av en domän fortfarande, så att den hoppas över? En dubblett
- * är alltid en dubblett. Övriga verdikt gäller i `retryDays` dagar — utom
+ * är alltid en dubblett, och en källa som granskats bort för hand kommer inte
+ * tillbaka av sig själv (stadssvepen 15–17/11: en godkänd källa som togs bort
+ * stod kvar som PASS och hade lagts in igen efter 90 dagar). Övriga verdikt
+ * gäller i `retryDays` dagar — utom
  * FAIL och SMOKE-FAIL från en äldre probe-generation, som aldrig fick chansen
  * mot dagens prob, och en sajt som fälldes för att den inte var utpekad som
  * ett ställe men nu kommer som ett (`asVenue`).
  */
 export function remembersVerdict(entry: ProbeMemory | undefined, ageDays: number, retryDays: number, probeVersion = PROBE_VERSION, asVenue = false): boolean {
     if (!entry) return false;
-    if (entry.verdict === 'DUPE') return true;
+    if (entry.verdict === 'DUPE' || entry.verdict === 'GRANSKAD') return true;
     if (ageDays >= retryDays) return false;
     // Fälld för att sajten inte var utpekad som ett ställe — nu är den det.
     if (asVenue && entry.note === NOT_A_VENUE_NOTE) return false;

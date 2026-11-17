@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, normalizeDescription, normalizeLocation, normalizeRawEvent, sanitizePriceField, isTruncationOf } from './normalizeEvent';
+import { normalizeTitle, normalizeDescription, normalizeLocation, normalizeRawEvent, sanitizePriceField, isTruncationOf, isCancelledTitle } from './normalizeEvent';
+
+describe('isCancelledTitle — inställt i titeln (Aurora Kiruna 17/11)', () => {
+    it('ordet först eller sist med skiljetecken', () => {
+        expect(isCancelledTitle('Inställd: Tysta bokklubben')).toBe(true);
+        expect(isCancelledTitle('INSTÄLLT - Julkonsert')).toBe(true);
+        expect(isCancelledTitle('Drop in vigsel-INSTÄLLT!')).toBe(true);
+        expect(isCancelledTitle('Lucinda Williams - inställd')).toBe(true);
+        expect(isCancelledTitle('Konsert (inställd)')).toBe(true);
+        expect(isCancelledTitle('Cancelled: Open Mic')).toBe(true);
+    });
+    it('ordet som en del av titeln räknas inte', () => {
+        expect(isCancelledTitle('Inställda tåg och andra berättelser')).toBe(false);
+        expect(isCancelledTitle('Romantasy på 30 minuter')).toBe(false);
+        expect(isCancelledTitle('Den inställda festen')).toBe(false);
+    });
+});
 
 describe('isTruncationOf — sparad titel avkapad vid ett skiljetecken', () => {
     it('känner igen kapningen', () => {

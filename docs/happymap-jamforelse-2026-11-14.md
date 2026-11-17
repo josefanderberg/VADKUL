@@ -225,6 +225,45 @@ sajter med färre event, eller falsklarm.
 Kvar: Örnsköldsvik (Overpass svarade inte), resten av landets tätorter (utbytet per stad sjunker
 med storleken), och beslutet i josefanderberg/VADKUL#240 om att visa kyrkan och PRO vid inzoomning.
 
+### Svep 4, 17/11: de 19 städerna som föll på OSM-spärren (#245)
+
+Katrineholm, Norrtälje, Ystad, Eslöv, Värnamo, Karlshamn, Hässleholm, Oskarshamn, Härnösand,
+Staffanstorp, Kiruna, Nynäshamn, Höganäs, Bålsta, Ljungby, Tranås, Stenungsund, Mjölby och Arvika.
+En Overpass-fråga i taget; tre städer gav 502 och fick en andra skörd.
+
+| | Antal |
+|---|---|
+| Kandidater ur OSM | 323 (291 nya för proben) |
+| Godkända av prob och rimlighetskontroll | 16 |
+| Bortgranskade efter torrkörning | 7 |
+| Inlagda | 9, plus 2 från tisdagens automatiska snöboll |
+| Event i första körningen | 39 från svepet, 34 från snöbollens två |
+
+Inlagda: Fritiden Hotell & Kongress (Ystad), Vandalorum (Värnamo), Best Western och Italii
+(Karlshamn), Aurora kultur och kongress (Kiruna), Garage Bar (Höganäs), Oui Albacken (Mjölby),
+Rackstadmuseet (Arvika) och Färsna gård (Norrtälje). Snöbollens: Nygatan 6 (Musik i Syds hus i
+Växjö) och Henrik Åbergs turné.
+
+Bortgranskade: Stora Djulö (julbord och bokningslänkar), Sushinu (erbjudanden), rjl.se
+(regionens nyheter), Biologiska museet i Oskarshamn (sidrubriker), Campus Ljungby
+(företagskurser), Badholmen och Lokal 16 (0 event i torrkörningen). De har nu verdiktet
+`GRANSKAD` i snöbollens minne, liksom de tio som granskades bort 15/11. Ett kvarlämnat PASS
+hade provats om och lagts in igen efter 90 dagar.
+
+**Utbytet sjunker tydligt med storleken: cirka 0,5 källor per stad, mot tre per stad i de 40
+största.** Städer med 10 000–20 000 invånare har få krogar med egen programsida. Där OSM gav
+någonting var det oftast ett museum, ett kulturhus eller ett hotell. Cirka 45 tätorter över
+10 000 invånare är ännu inte svepta, många av dem förorter till storstäderna.
+
+Fyra rättelser kom ur granskningen (pipeline-skillen, "Stadssvepets granskning"):
+
+- Runnern sätter registrets `defaultVenue` i alla motorer. Sitevision gjorde det inte, så Aurora
+  i Kiruna låg på ortens mittpunkt.
+- "Inställd: …" och "… – INSTÄLLT" sparas inte (`isCancelledTitle`).
+- JSON-LD-namn tappar sajtnamnet som svans ("Open Mic Night — garage bar").
+- Aurora saknas i OSM. Huset ligger nu i `data/venueFixes.ts`, med salarna Kaamos, Dálvi, Lumi
+  och Konsthallen. Sju event från andra källor stod 2,3 km bort, på Auroravägen.
+
 ## 5. Plan: minst Happymaps precision (läge 15/11)
 
 Ticket: #250 (första omgången, #236, nådde sina mål: pris över 40 %, mittpunkt under 25 %).

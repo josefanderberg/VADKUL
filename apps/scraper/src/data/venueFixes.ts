@@ -445,6 +445,26 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 12.291213,
         note: 'Folkets Hus Kulturhuset, Kungsgatan 25, Trollhättan — sajtens egen platspost (trollhattan.fh.se); 54 event låg på ortens mittpunkter (14/11)',
     },
+    {
+        // Aurora kultur och kongress, Stadshustorget 10, 981 30 Kiruna (sajtens
+        // sidfot). Kulturhuset i nya centrum, med stadsbiblioteket i huset —
+        // därför är kalendern mest bibliotekets. Huset saknas i OSM under alla
+        // namn, så alla 14 event låg på Kirunas mittpunkt (stadssvepet 17/11, #245).
+        // Koordinat: OSM:s biblioteksnod (amenity=library, Torggatan, Kiruna nya
+        // centrum), ~90 m från Stadshustorget.
+        // Salarna Kaamos, Dálvi, Lumi och Konsthallen ligger i huset; Kaamos-eventen
+        // med källans egen koordinat står 20 m från biblioteksnoden.
+        names: [
+            'Aurora kultur och kongress', 'Aurora kultur och kongress, Kiruna', 'Aurora, Kiruna', 'Kulturhuset Aurora',
+            'Aurora Kultur & Kongress', 'Aurora Kultur & Kongress, Kiruna',
+            'Kaamos, Aurora kultur & kongress', 'Aurora Kultur & Kongress, Kaamos, Kiruna', 'Aurora kultur och Kongress, Kaamos',
+            'Aurora kultur och kongress, Dálvi', 'Aurora Kultur & Kongress, Lumi, Kiruna', 'Konsthallen, Aurora kultur & kongress',
+        ],
+        city: 'Kiruna',
+        lat: 67.8490679,
+        lng: 20.3043598,
+        note: 'Aurora kultur och kongress, Stadshustorget 10, Kiruna — OSM:s biblioteksnod i huset; 14 event låg på Kirunas mittpunkt (17/11, #245)',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */

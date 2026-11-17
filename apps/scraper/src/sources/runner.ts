@@ -24,7 +24,7 @@ import { firstPreciseHit, shouldMovePlace, precisionRank } from '../utils/geocod
 import { cleanLocationName } from '../utils/text';
 import { classifyEvent } from '../utils/classify';
 import { normalizeCategory } from '../utils/categoryNormalize';
-import { normalizeRawEvent } from '../utils/normalizeEvent';
+import { normalizeRawEvent, isCancelledTitle } from '../utils/normalizeEvent';
 import { uploadEventImage, isOurStorageUrl } from '../utils/storageHelper';
 import { isLikelyLogoOrPlaceholderImage, normalizeImagePort, publishableImageUrl } from '../utils/imageFilter';
 import { recordScrapeRun, setEventAudit, getSyncMeta, setSyncMeta } from '../utils/sqliteHelper';
@@ -294,7 +294,16 @@ export async function runSource(
             // prefix "11/9 …" och " | VENUE"-suffix i titlar, flerradiga
             // platsnamn → venue + address. Revisionen 2026-08-20 visade att
             // per-engine-städning missade på 4 ställen — en plats, för alla.
+            // Registrets lokal när motorn inte gav någon. Sitemap, wp-rest och listing
+            // gör det själva; sitevision m.fl. gjorde det inte (Aurora i Kiruna 17/11
+            // hamnade på ortens mittpunkt trots defaultVenue).
+            const defaultVenue = (source.config as { defaultVenue?: string } | undefined)?.defaultVenue;
+            if (defaultVenue && !e.venueName) e.venueName = defaultVenue;
             normalizeRawEvent(e, source.hostName);
+            if (isCancelledTitle(e.title)) {
+                result.skipped.invalid++;
+                continue;
+            }
             if (e.startDate < windowStart || e.startDate >= windowEnd) {
                 result.skipped.outsideWindow++;
                 continue;

@@ -1250,6 +1250,13 @@ describe('stripSiteNameTail — sajtnamnet som svans på og:title (Växjö Konse
             <body><main><p>2027-03-18, 19.30</p><h2>EVIGT EDVIN</h2></main></body></html>`;
         expect(cheerioFallback(html, 'https://www.vaxjokonserthus.se/event/evigt-edvin/')?.title).toBe('EVIGT EDVIN');
     });
+
+    it('JSON-LD-namnet tappar också sajtnamnet (Squarespace, Garage Bar 17/11)', () => {
+        const page = (name: string) => `<html><head><meta property="og:site_name" content="garage bar" />
+            <script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"${name}","startDate":"2027-01-29T20:00:00+01:00","location":{"@type":"Place","name":"Garage Bar"}}</script></head><body></body></html>`;
+        expect(extractFromHtml(page('Open Mic Night  — garage bar'), 'https://www.garagebar.se/program/x')?.title).toBe('Open Mic Night');
+        expect(extractFromHtml(page('Garage Rock — The Band'), 'https://www.garagebar.se/program/y')?.title).toBe('Garage Rock — The Band');
+    });
 });
 
 describe('meetsDetailRequirement — evenemang och kurser på samma adress (Sensus 15/11)', () => {
