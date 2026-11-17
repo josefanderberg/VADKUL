@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchVenueFix, applyVenueFixInPlace, VENUE_FIXES, type VenueFix } from './venueFixes';
+import { matchVenueFix, applyVenueFixInPlace, fixAppliesAt, VENUE_FIXES, type VenueFix } from './venueFixes';
 
 const FIXES: VenueFix[] = [{
     names: ['Saga - Bio 3:an', 'Bio 3:an'],
@@ -46,6 +46,18 @@ describe('applyVenueFixInPlace', () => {
         const e = { locationName: 'Öresund, Öresund', lat: 57.44094, lng: 12.67765 };
         expect(applyVenueFixInPlace(e, kaj)).toBe(true);
         expect(e).toMatchObject({ lat: 55.8682572, lng: 12.8278203, geoPrecision: 'gata' });
+    });
+
+    it('withinKm: en namne i en annan stad flyttas inte (#257, "Nygatan 6")', () => {
+        const ny6: VenueFix[] = [{ names: ['Nygatan 6'], city: 'Växjö', lat: 56.8805096, lng: 14.8104961, note: 'test', withinKm: 30 }];
+        const vaxjo = { locationName: 'Nygatan 6', lat: 56.8796, lng: 14.8061 };
+        expect(applyVenueFixInPlace(vaxjo, ny6)).toBe(true);
+        expect(vaxjo).toMatchObject({ lat: 56.8805096, lng: 14.8104961, geoPrecision: 'poi' });
+        const umea = { locationName: 'Nygatan 6', lat: 63.8258, lng: 20.2630 };
+        expect(applyVenueFixInPlace(umea, ny6)).toBe(false);
+        expect(umea).toMatchObject({ lat: 63.8258, lng: 20.2630 });
+        // Utan koordinater: fixen gäller (inget att jämföra med).
+        expect(fixAppliesAt(ny6[0], 0, 0)).toBe(true);
     });
 
     it('rör inte event utan träff — även utan koordinater', () => {

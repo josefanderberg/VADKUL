@@ -350,7 +350,18 @@ export function dateFromDetailSelector(
         },
     );
     const date = findFirstDateInText(opts.rangeStart ? rangeToStartText(numeric) : numeric, now);
-    return date ? { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) } : null;
+    if (!date) return null;
+    // Klockslaget långt efter datumet i samma utpekade fält ("fredag 20 nov 2026
+    // Växjö | Nygatan 6 | 10:30 - 11:15", Nygatan 6 17/11, #257): textskannern
+    // fäster bara en tid som står direkt efter datumet. Fältets första klockslag
+    // är starttiden — men bara när skannern inte redan satt en tid. Punkt som
+    // skiljetecken bara efter "kl" eller i ett spann ("19.00–21.00"): "20.11"
+    // är annars lika gärna ett datum.
+    const clock = text.match(/(?<![\d.:])([01]?\d|2[0-3]):([0-5]\d)(?![\d.:])/)
+        ?? text.match(/\bkl\.?\s*([01]?\d|2[0-3])\.([0-5]\d)(?![\d.:])/i)
+        ?? text.match(/(?<![\d.:])([01]?\d|2[0-3])\.([0-5]\d)(?=\s*[-–]\s*\d{1,2}[.:]\d{2})/);
+    if (clock && date.getHours() === 0 && date.getMinutes() === 0) date.setHours(Number(clock[1]), Number(clock[2]), 0, 0);
+    return { date, hasTime: /\b\d{1,2}[:.]\d{2}\b/.test(text) };
 }
 
 /** SitemapConfig.detailRequire: sidan måste innehålla mönstret. Utan krav räknas alla sidor. Exporterad för test. */

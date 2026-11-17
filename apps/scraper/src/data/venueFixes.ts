@@ -28,6 +28,20 @@ export interface VenueFix {
     /** Märkningen eventen får. Standard 'poi' (huset självt); 'gata' när
      *  punkten bara är verifierad till gata/kvarter (julkryssningens kaj). */
     precision?: 'poi' | 'gata';
+    /** Bara event som redan står inom så många km flyttas. För gatuadresser
+     *  som namn ("Nygatan 6" finns i varannan stad): en namne i en annan
+     *  ort får inte dras till Växjö. Utan fältet flyttas alla träffar —
+     *  Väven-fixen ska just hämta hem event som hamnat 40 mil bort. */
+    withinKm?: number;
+}
+
+/** Gäller fixen ett event på den här punkten? Event utan koordinater: ja. */
+export function fixAppliesAt(fix: VenueFix, lat: number | null | undefined, lng: number | null | undefined): boolean {
+    if (!fix.withinKm || !lat || !lng) return true;
+    const rad = (d: number) => (d * Math.PI) / 180;
+    const dLat = rad(fix.lat - lat), dLng = rad(fix.lng - lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat)) * Math.cos(rad(fix.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * 6371 * Math.asin(Math.sqrt(h)) <= fix.withinKm;
 }
 
 export const VENUE_FIXES: VenueFix[] = [
@@ -469,6 +483,35 @@ export const VENUE_FIXES: VenueFix[] = [
         note: 'Aurora kultur och kongress, Stadshustorget 10, Kiruna — OSM:s biblioteksnod i huset; 14 event låg på Kirunas mittpunkt (17/11, #245)',
     },
     {
+        // Kafé de luxe, Sandgärdsgatan 19, Växjö. Husets egen källa lade
+        // eventen 300 m väster om huset, medan kommunens kalender stod rätt,
+        // så Vit Päls 20/11 blev två nålar och dubblettrensningen såg två hus
+        // (rapport 17/11, #257). Koordinat: OSM:s nod "Kafe de Luxe"
+        // (amenity=restaurant, Sandgärdsgatan 19), samma som Nominatim ger.
+        names: ['Kafé de luxe', 'Kafe de luxe', 'Kafé de luxe, Växjö', 'Kafe de luxe, Växjö'],
+        city: 'Växjö',
+        lat: 56.8777658,
+        lng: 14.8062466,
+        note: 'Kafé de luxe, Sandgärdsgatan 19, Växjö — OSM-noden; egna källan låg 300 m fel (17/11, #257)',
+        withinKm: 30,
+    },
+    {
+        // Nygatan 6, Musik i Syds konserthus i Växjö. Tre källor gav tre
+        // punkter, alla 280–450 m från huset: Facebook, husets egen sajt
+        // (defaultVenue geokodad) och kommunens kalender. "Kom som du är"
+        // 20/11 låg därför på tre nålar (rapport 17/11, #257). Huset saknar
+        // husnummer i OSM. Koordinat: kartlänken på husets egna eventsidor
+        // ("Se karta", Google Maps-platsen "Nygatan 6, 352 33 Växjö"), som
+        // stämmer med OSM:s Nygatan-segment för 352 33.
+        // withinKm: Nygatan 6 finns i många städer.
+        names: ['Nygatan 6', 'Nygatan 6, Växjö', 'Nygatan 6, 352 33 Växjö', 'Nygatan 6, 352 33 Växjö, Sweden'],
+        city: 'Växjö',
+        lat: 56.8805096,
+        lng: 14.8104961,
+        note: 'Nygatan 6 (Musik i Syd), Växjö — husets egen kartlänk; tre källor spretade 280–450 m (17/11, #257)',
+        withinKm: 30,
+    },
+    {
         // Öresund Cruise Lines julkryssningar med M/S Tilda. Arrangören har
         // registrerat lokalen hos Nortic som bara "Öresund" (adress "Öresund",
         // ort "öresund", postnummer 261 29), och Nortics API ger den
@@ -510,7 +553,7 @@ export function applyVenueFixInPlace(
     fixes: VenueFix[] = VENUE_FIXES,
 ): boolean {
     const fix = matchVenueFix(e.locationName, fixes);
-    if (!fix) return false;
+    if (!fix || !fixAppliesAt(fix, e.lat, e.lng)) return false;
     e.lat = fix.lat;
     e.lng = fix.lng;
     e.isLocationVerified = true;

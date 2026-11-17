@@ -24,7 +24,7 @@
 
 import { db } from '../config/firebase';
 import { stamped } from '../utils/firestoreStamp';
-import { VENUE_FIXES, matchVenueFix } from '../data/venueFixes';
+import { VENUE_FIXES, matchVenueFix, fixAppliesAt } from '../data/venueFixes';
 import { uploadShardedLayer } from './aggregate-events';
 
 const APPLY = process.argv.includes('--apply');
@@ -50,7 +50,7 @@ async function fixSourceDocs(firestore: NonNullable<typeof db>): Promise<number>
         for (const doc of snap.docs) {
             const v = doc.data() as { locationName?: string; lat?: number; lng?: number };
             const fix = matchVenueFix(v.locationName, FIXES);
-            if (!fix) continue;
+            if (!fix || !fixAppliesAt(fix, v.lat, v.lng)) continue;
             const off = Math.abs((v.lat ?? 0) - fix.lat) > 1e-4 || Math.abs((v.lng ?? 0) - fix.lng) > 1e-4;
             if (!off) continue;
             console.log(`   🗂  linkEvents/${doc.id} | ${v.locationName} | ${v.lat},${v.lng} → ${fix.lat},${fix.lng}`);
@@ -96,7 +96,7 @@ async function main() {
     for (const shard of shards) {
         for (const evt of shard.events) {
             const fix = matchVenueFix(evt?.locationName, FIXES);
-            if (!fix) continue;
+            if (!fix || !fixAppliesAt(fix, evt.lat, evt.lng)) continue;
             const off = Math.abs((evt.lat ?? 0) - fix.lat) > 1e-4 || Math.abs((evt.lng ?? 0) - fix.lng) > 1e-4;
             if (!off) continue;
             console.log(`   📍 ${evt.locationName} | ${String(evt.title).slice(0, 40)} | ${evt.lat},${evt.lng} → ${fix.lat},${fix.lng}`);

@@ -4256,16 +4256,26 @@ export const SOURCES: Source[] = [
         config: {
                     // Kalendern bor på underwebben upplev.vaxjo.se, inte på
                     // vaxjo.se — det gamla mönstret hittade 2 URLer, den här
-                    // sitemapen har 221. Datumet ligger i URL:en, så
-                    // urlDateRegex förfiltrerar innan detaljhämtningen.
+                    // sitemapen har 221.
+                    // Datumet i URL:en är när sidan PUBLICERADES, inte eventets
+                    // dag ("2026-09-28-vit-pals" är konserten 20/11). Ingen
+                    // urlDateRegex: förfiltret släppte bara URL:er högst 31 dagar
+                    // gamla, så 100 av 141 sidor (även kommande event) hämtades
+                    // aldrig om (#257, 17/11).
                     sitemapUrl: 'https://upplev.vaxjo.se/sitemap.xml',
                     urlPatterns: [/\/evenemang\/evenemang\/\d{4}-\d{2}-\d{2}-[^/]+$/i],
-                    urlDateRegex: /\/evenemang\/evenemang\/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})-/,
                     defaultCity: 'Växjö',
                     maxUrls: 250,
+                    // Lokalen står bara i SiteVision-datat ("place":"Kafe de luxe",
+                    // "address":"Sandgärdsgatan 19"). Utan den sparades "Växjö",
+                    // och dubblettrensningen såg aldrig att kommunens Vit Päls
+                    // och husets egen var samma kväll (#257, 17/11).
+                    detailPlaceRegex: { venue: /"place":"([^"]{2,80})"/, address: /"address":"([^"]{3,80})"/ },
                 },
         updateFrequency: 'every-3d',
         windowDays: 180,
+        // Kända event har "Växjö" som plats — ett svep hämtar lokalen till dem.
+        contentSweep: '2026-11-18',
         notes: 'Om-probad 7/9 2026 i runtknuten-svepet: 221 event-URLer på upplev.vaxjo.se '
             + '(gamla mönstret mot vaxjo.se gav 2).',
         lastVerified: '2026-09-07',

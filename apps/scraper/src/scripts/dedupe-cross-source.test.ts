@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows, stableIdKey, renameGhosts, sharesTitleTail, sameVenue, dateOnlyTwinLinks, compareScored, inheritedPrices, priceKey } from './dedupe-cross-source';
+import { normalizeTitle, localDay, locationKey, dedupKey, scoreOf, buildDedupGroups, ticketTwinKey, mergeTicketTwins, isTitleVariant, titleVariantLinks, mergeLinkedRows, stableIdKey, renameGhosts, sharesTitleTail, sameVenue, dateOnlyTwinLinks, compareScored, inheritedPrices, priceKey, stripVenueSuffix, sharesAllWords } from './dedupe-cross-source';
 
 const base = {
     url: 'https://example.se/e/1',
@@ -434,5 +434,117 @@ describe('prisarv mellan tvillingar', () => {
         expect(priceKey('150 kr')).toBe(priceKey('150kr'));
         expect(priceKey('150 SEK')).toBe(priceKey('150 kr'));
         expect(priceKey('150 kr')).not.toBe(priceKey('250 kr'));
+    });
+});
+
+// ─── Lokalen i titelsvansen + samma ord (Växjö 20/11, #257) ────────────────
+describe('stripVenueSuffix', () => {
+    it('stryker svansen när den bara är radens plats', () => {
+        expect(stripVenueSuffix('Live: Vit Päls — Kafé de luxe', 'Kafé de luxe')).toBe('Live: Vit Päls');
+        expect(stripVenueSuffix('Kom som du är: Franska känslostormar med Musica Vitae | Nygatan 6, Växjö', 'Nygatan 6, 352 33 Växjö, Sweden'))
+            .toBe('Kom som du är: Franska känslostormar med Musica Vitae');
+    });
+
+    it('rör inte svansar som är en del av titeln', () => {
+        expect(stripVenueSuffix('Live på Bio – Macbeth', 'Kulturhuset Sävsjö')).toBe('Live på Bio – Macbeth');
+        expect(stripVenueSuffix('Vit Päls - Bongo Live', 'Bongo Bar')).toBe('Vit Päls - Bongo Live');   // bindestreck
+        expect(stripVenueSuffix('Live: Vit Päls — Kafé de luxe', null)).toBe('Live: Vit Päls — Kafé de luxe');
+        expect(stripVenueSuffix('Jul | Kafé de luxe', 'Växjö')).toBe('Jul | Kafé de luxe');
+    });
+});
+
+describe('sharesAllWords', () => {
+    it('samma ord i annan ordning eller med inskott', () => {
+        expect(sharesAllWords('musica vitae franska kanslostormar', 'franska kanslostormar med musica vitae')).toBe(true);
+        expect(sharesAllWords('kom som du ar musica vitae', 'kom som du ar franska kanslostormar med musica vitae')).toBe(true);
+    });
+
+    it('för kort titel, andra ord eller identiska → nej', () => {
+        expect(sharesAllWords('julkonsert', 'julkonsert med koren')).toBe(false);
+        expect(sharesAllWords('vit pals', 'live vit pals')).toBe(false);
+        expect(sharesAllWords('kom som du ar musica vitae', 'kom som du ar barnkonsert')).toBe(false);
+        expect(sharesAllWords('jazz pa torget i kvall', 'jazz pa torget i kvall')).toBe(false);
+    });
+
+    it('siffror räknas: andra datum och andra lag är andra event', () => {
+        expect(sharesAllWords('we will rock you 9 1', 'we will rock you 8 1')).toBe(false);
+        expect(sharesAllWords('4 an fran grupp a 4 an fran grupp b', '3 an fran grupp a 3 an fran grupp b')).toBe(false);
+        expect(sharesAllWords('julmarknad pa masterlotsen i g a oxelosund', 'julmarknad pa masterlotsen i g a oxelosund lordag')).toBe(true);
+        expect(sharesAllWords('vinnare fran grupp k 2 an fran grupp l', 'vinnare fran grupp h 2 an fran grupp j')).toBe(false);
+    });
+
+    it('ren omkastning är två event (Korpens matcher)', () => {
+        expect(sharesAllWords('3 an fran grupp a 4 an fran grupp b', '4 an fran grupp a 3 an fran grupp b')).toBe(false);
+    });
+});
+
+describe('titleVariantLinks — ordregelns paraply och datumlösa rader', () => {
+    const t = { time: '2026-06-15T07:00:00.000Z', locationName: 'Uppsala Danscenter', lat: 59.8586, lng: 17.6389, geoPrecision: 'poi' };
+
+    it('en paraplytitel som rymmer flera veckor länkas inte till någon av dem', () => {
+        const all = row('Sommarläger – Barn 6-14 år – Vecka 25,26,27 & 32', 'https://udc/0', t);
+        const v26 = row('Sommarläger – Barn 6-14 år – Vecka 26', 'https://udc/26', t);
+        const v27 = row('Sommarläger – Barn 6-14 år – Vecka 27', 'https://udc/27', t);
+        expect(titleVariantLinks([all, v26, v27])).toHaveLength(0);
+    });
+
+    it('datumlösa rader (platshållartid) länkas inte på ord', () => {
+        const d = { ...t, time: '2026-12-13T11:00:00.000Z', hasSpecificTime: 0 };
+        const a = row('Luciakonsert i Uppsala domkyrka', 'https://u/1', d);
+        const b = row('Luciakonsert för yngre i Uppsala domkyrka', 'https://u/2', d);
+        expect(titleVariantLinks([a, b])).toHaveLength(0);
+    });
+});
+
+describe('titleVariantLinks — ordregelns paraplyspärr', () => {
+    const t = { time: '2026-11-08T09:00:00.000Z', locationName: 'Bella Center', lat: 55.6375, lng: 12.5786, geoPrecision: 'poi' };
+
+    it('Comic Con Denmark 8/11: helgbiljetten och gästernas biljetter hålls isär', () => {
+        const hub = row('Comic Con Denmark 7.- 8. Nov 2026', 'https://t/0', t);
+        const a = row('Troy Baker | Comic Con Denmark - 8. Nov 2026', 'https://t/1', t);
+        const b = row('Tom McKay | Comic Con Denmark - 8. Nov 2026', 'https://t/2', t);
+        expect(titleVariantLinks([hub, a, b])).toHaveLength(0);
+    });
+
+    it('en rubrik vars ord finns i flera olika längre titlar länkar ingen av dem', () => {
+        const hub = row('Julmarknad Mästerlotsen Oxelösund', 'https://t/0', t);
+        const a = row('Julmarknad på Mästerlotsen: tomtens verkstad, Oxelösund', 'https://t/1', t);
+        const b = row('Julmarknad på Mästerlotsen: ponnyridning, Oxelösund', 'https://t/2', t);
+        expect(titleVariantLinks([hub, a, b])).toHaveLength(0);
+        // Med bara en längre titel är den en tvilling.
+        expect(titleVariantLinks([hub, a])).toHaveLength(1);
+    });
+});
+
+describe('titleVariantLinks — Växjö 20/11 (#257)', () => {
+    const NY6 = { lat: 56.8805096, lng: 14.8104961, geoPrecision: 'poi' };
+    const KDL = { lat: 56.8777658, lng: 14.8062466, geoPrecision: 'poi' };
+
+    it('Vit Päls: husets "Live: … — Kafé de luxe" och kommunens "Vit Päls" samma kväll', () => {
+        const hus = row('Live: Vit Päls — Kafé de luxe', 'https://www.kafedeluxe.se/kalendarium/vit-pals-2026', { ...KDL, locationName: 'Kafé de luxe', time: '2026-11-20T20:00:00.000Z' });
+        const kommun = row('Vit Päls', 'https://upplev.vaxjo.se/evenemang/evenemang/2026-09-28-vit-pals', { ...KDL, locationName: 'Kafe de luxe, Växjö', time: '2026-11-20T20:00:00.000Z' });
+        expect(titleVariantLinks([hus, kommun])).toHaveLength(1);
+    });
+
+    it('kvällskonserten: kommunen och Facebook med orden i annan ordning', () => {
+        const kommun = row('Musica Vitae: Franska känslostormar', 'https://upplev.vaxjo.se/1', { ...NY6, locationName: 'Nygatan 6, Växjö', time: '2026-11-20T18:00:00.000Z' });
+        const fb = row('Franska känslostormar med Musica Vitae | Nygatan 6, Växjö', 'https://www.facebook.com/events/1/', { ...NY6, locationName: 'Nygatan 6, 352 33 Växjö, Sweden', time: '2026-11-20T18:00:00.000Z' });
+        expect(titleVariantLinks([kommun, fb])).toHaveLength(1);
+    });
+
+    it('förmiddagen: kommunen, Facebook och husets datumlösa rad blir ett event', () => {
+        const kommun = row('Kom som du är: Musica Vitae', 'https://upplev.vaxjo.se/2', { ...NY6, locationName: 'Nygatan 6, Växjö', time: '2026-11-20T09:30:00.000Z' });
+        const fb = row('Kom som du är: Franska känslostormar med Musica Vitae | Nygatan 6, Växjö', 'https://www.facebook.com/events/2/', { ...NY6, locationName: 'Nygatan 6, 352 33 Växjö, Sweden', time: '2026-11-20T09:30:00.000Z' });
+        const hus = row('Kom som du är: Musica Vitae', 'https://www.nygatan6.se/kalender/kom-som-du-ar-musica-vitae/', { ...NY6, locationName: 'Nygatan 6', time: '2026-11-20T12:00:00.000Z', hasSpecificTime: 0 });
+        const rows = [kommun, fb, hus];
+        const merged = mergeLinkedRows(rows.map((r) => [r]), titleVariantLinks(rows));
+        expect(merged).toHaveLength(1);
+        expect(merged[0]).toHaveLength(3);
+    });
+
+    it('samma ord men ett annat hus i stan: ingen länk', () => {
+        const kommun = row('Musica Vitae: Franska känslostormar', 'https://upplev.vaxjo.se/1', { ...NY6, locationName: 'Nygatan 6, Växjö', time: '2026-11-20T18:00:00.000Z' });
+        const annat = row('Franska känslostormar med Musica Vitae', 'https://example.se/2', { lat: 56.8777, lng: 14.8062, geoPrecision: 'poi', locationName: 'Konserthuset', time: '2026-11-20T18:00:00.000Z' });
+        expect(titleVariantLinks([kommun, annat])).toHaveLength(0);
     });
 });

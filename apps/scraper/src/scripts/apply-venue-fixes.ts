@@ -22,7 +22,7 @@ import { db } from '../config/firebase';
 import { sqlite, setEventCoords, upsertKnownVenue } from '../utils/sqliteHelper';
 import { stamped } from '../utils/firestoreStamp';
 import { distanceKm } from '../utils/venueCoordinates';
-import { VENUE_FIXES, matchVenueFix } from '../data/venueFixes';
+import { VENUE_FIXES, matchVenueFix, fixAppliesAt } from '../data/venueFixes';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -61,7 +61,8 @@ async function main() {
     for (const e of events) {
         try {
             const fix = matchVenueFix(e.locationName);
-            if (!fix) continue;
+            // Namne i en annan stad (withinKm, "Nygatan 6") flyttas inte.
+            if (!fix || !fixAppliesAt(fix, e.lat, e.lng)) continue;
             const dist = distanceKm(e.lat || 0, e.lng || 0, fix.lat, fix.lng);
             // Rätt punkt men märkt som mittpunkt (Kirunas mittpunkt ligger 90 m från
             // Aurora, 17/11): märkningen rättas, annars räknas eventet fel i mätningen.

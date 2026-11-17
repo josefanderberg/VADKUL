@@ -1270,3 +1270,25 @@ describe('meetsDetailRequirement — evenemang och kurser på samma adress (Sens
         expect(meetsDetailRequirement('<html></html>', undefined)).toBe(true);
     });
 });
+
+describe('Nygatan 6: datum och klockslag i tillfälles-rubriken (#257)', () => {
+    // Nedskalat ur nygatan6.se/kalender/kom-som-du-ar-musica-vitae/ (17/11).
+    const PAGE = `<html><body><div class="eventDateGroup"><div class="eventDate"><accordion id="eventDate_0">
+<div class="accordion"><button class="eventDate__header flex" type="button"><div class="eventDateHeader__left">
+<div class="eventDate__heading h3">fredag 20 nov <span class="eventDate__year">2026</span></div>
+<div class="eventDate__details eventDate__smallText">Växjö <span class="eventDate__detailSep">|</span> Nygatan 6 <span class="eventDate__detailSep">|</span> 10:30 - 11:15</div>
+</div></button></div></accordion></div></div></body></html>`;
+
+    it('ger förmiddagens starttid, inte bara dagen', () => {
+        const hit = dateFromDetailSelector(PAGE, '.eventDate__header', new Date('2026-11-17T12:00:00'))!;
+        const d = hit.date;
+        expect([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()]).toEqual([2026, 10, 20, 10, 30]);
+        expect(hit.hasTime).toBe(true);
+    });
+
+    it('"20.11" utan kl är ett datum, inte klockan 20:11', () => {
+        const page = '<html><body><div class="d">fredag 20.11.2026 | Nygatan 6 | se 20.11</div></body></html>';
+        const hit = dateFromDetailSelector(page, '.d', new Date('2026-11-17T12:00:00'));
+        if (hit) expect([hit.date.getHours(), hit.date.getMinutes()]).toEqual([0, 0]);
+    });
+});

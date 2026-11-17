@@ -3584,8 +3584,18 @@ export const SNOWBALL_SOURCES: Source[] = [
         hostName: 'Nygatan 6',
         region: 'vaxjo',
         engine: 'sitemap' as const,
-        config: { sitemapUrl: 'https://www.nygatan6.se/events-sitemap.xml', urlPatterns: [/\/kalender\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: 'Växjö', maxUrls: 200, defaultVenue: 'Nygatan 6' },
+        // Datum och klockslag står i tillfälles-rubriken ("fredag 20 nov 2026 |
+        // Växjö | Nygatan 6 | 10:30 - 11:15"), inte i någon JSON-LD — utan
+        // selektorn blev förmiddagskonserterna datumlösa (#257, 17/11).
+        // Sajten listar också Musik i Syds kvällar på Växjö Konserthus: lokalen
+        // läses ur tillfällets "Plats"-rad, Nygatan 6 är bara reserven.
+        config: {
+            sitemapUrl: 'https://www.nygatan6.se/events-sitemap.xml', urlPatterns: [/\/kalender\/[a-z0-9][a-z0-9-]{2,}/i], defaultCity: 'Växjö', maxUrls: 200, defaultVenue: 'Nygatan 6',
+            detailDateSelector: '.eventDate__header',
+            detailPlaceRegex: { venue: /eventDateRow__label">\s*Plats\s*<\/p>[\s\S]*?<p>([^<]{2,80})</ },
+        },
         updateFrequency: 'every-3d' as const,
+        contentSweep: '2026-11-17',
         status: 'experimental' as const,
         discovery: {
             method: 'hint' as const,

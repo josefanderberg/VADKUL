@@ -384,6 +384,51 @@ export function sharesTitleTail(a: string, b: string): boolean {
     return pa.length <= 3 && pb.length <= 3 && [...pa, ...pb].every((w) => LABEL_WORDS.has(w));
 }
 
+/**
+ * LOKALEN I TITELNS SVANS (2026-11-17, Växjö, #257): "Live: Vit Päls — Kafé de
+ * luxe" (husets sajt), "Kom som du är: … | Nygatan 6, Växjö" (Facebook). Svansen
+ * efter sista " | ", " — " eller " – " tas bort när ALLA dess ord (> 2 tecken)
+ * finns i radens eget platsnamn — då är den bara platsen, inte en del av titeln.
+ * Vanligt bindestreck räknas inte: "Vit Päls - Bongo Live" är en titel.
+ */
+export function stripVenueSuffix(title: string, locationName: string | null | undefined): string {
+    const m = title.match(/^(.*\S)\s+[|—–]\s+([^|—–]+)$/u);
+    if (!m || !locationName) return title;
+    const tail = locationTokens(m[2]);
+    if (tail.size === 0) return title;
+    const loc = locationTokens(locationName);
+    for (const t of tail) if (!loc.has(t)) return title;
+    return m[1];
+}
+
+/**
+ * SAMMA ORD, ANNAN ORDNING (2026-11-17, #257): "Musica Vitae: Franska
+ * känslostormar" (kommunen) / "Franska känslostormar med Musica Vitae"
+ * (Facebook), "Kom som du är: Musica Vitae" / "Kom som du är: Franska
+ * känslostormar med Musica Vitae". Varje ord i den kortare titeln finns i den
+ * längre. Kräver minst tre ord och 12 tecken ("Julkonsert" mot "Julkonsert med
+ * kören" räcker inte), och i titleVariantLinks exakt samma starttid i samma hus.
+ * Alla ord räknas, även siffror och ensamma bokstäver ("We Will Rock You 9/1"
+ * ≠ "… 8/1", Korpens "Grupp K" ≠ "Grupp H"). Den längre titeln måste ha ett
+ * ord TILL: ren omkastning är inte samma sak ("3:an från Grupp A - 4:an från
+ * Grupp B" mot "4:an från Grupp A - 3:an från Grupp B" är två matcher).
+ */
+export function sharesAllWords(a: string, b: string): boolean {
+    const [s, l] = a.length <= b.length ? [a, b] : [b, a];
+    if (!s || s === l) return false;
+    const sw = s.split(' ');
+    if (sw.filter((w) => w.length > 1 && !/^\d+$/.test(w)).length < 3 || s.length < 12) return false;
+    const lw = new Set(l.split(' '));
+    if (!sw.every((w) => lw.has(w))) return false;
+    const ss = new Set(sw);
+    return [...lw].some((w) => !ss.has(w));
+}
+
+/** Titeln som dubblettreglerna jämför: normaliserad, utan lokalen i svansen. */
+function variantTitle(r: Pick<Row, 'title' | 'locationName'>): string {
+    return normalizeTitle(stripVenueSuffix(r.title, r.locationName));
+}
+
 const SAME_VENUE_KM = 0.2;
 /** Samma HUS: ≤ 200 m och ingen av dem på en ort-/stadscentroid (två olika
  *  event på Jönköpings mittpunkt är inte "samma plats"). */
@@ -424,7 +469,7 @@ export function titleVariantLinks(rows: Row[]): [Row, Row][] {
     const links: [Row, Row][] = [];
     for (const b of buckets.values()) {
         if (b.length < 2) continue;
-        const norm = b.map((r) => normalizeTitle(r.title));
+        const norm = b.map(variantTitle);
         // Serierubriker: korta titlar som är början på ≥ 2 olika längre titlar
         // som inte själva är varianter av varandra.
         const distinct = [...new Set(norm)];
@@ -432,6 +477,21 @@ export function titleVariantLinks(rows: Row[]): [Row, Row][] {
             const longer = distinct.filter((l) => l.length > s.length && isTitleVariant(s, l));
             return longer.some((a, i) => longer.slice(i + 1).some((c) => !isTitleVariant(a, c)));
         }));
+        // Samma spärr för ordregeln: "Comic Con Denmark 7.- 8. Nov 2026" har alla
+        // sina ord i VARJE gästs biljett ("Troy Baker | Comic Con …", "Tom McKay
+        // | Comic Con …") — den är en paraplyrubrik, inte gästernas tvilling.
+        const wordHub = new Set(distinct.filter((s) => {
+            const longer = distinct.filter((l) => l.length > s.length && sharesAllWords(s, l));
+            return longer.some((a, i) => longer.slice(i + 1).some((c) => !sharesAllWords(a, c) && !isTitleVariant(a, c)));
+        }));
+        // Och åt andra hållet: en paraplytitel som rymmer FLERA olika kortare
+        // ("Sommarläger – Barn 6-14 år – Vecka 25,26,27 & 32" ⊇ "… Vecka 26",
+        // "… Vecka 27") är inte någon av dem.
+        const wordUmbrella = new Set(distinct.filter((l) => {
+            const shorter = distinct.filter((s) => s.length < l.length && sharesAllWords(s, l));
+            return shorter.some((a, i) => shorter.slice(i + 1).some((c) => !sharesAllWords(a, c) && !isTitleVariant(a, c)));
+        }));
+        const timed = (r: Row) => r.hasSpecificTime !== 0;
         for (let i = 0; i < b.length; i++) {
             for (let j = i + 1; j < b.length; j++) {
                 const [x, y] = [norm[i], norm[j]];
@@ -443,7 +503,15 @@ export function titleVariantLinks(rows: Row[]): [Row, Row][] {
                 // serierubrik, så spärren gäller inte.
                 const prefix = isTitleVariant(x, y) && !ambiguous.has(short);
                 const tail = sharesTitleTail(x, y) && sameVenue(b[i], b[j]);
-                if (prefix || tail) links.push([b[i], b[j]]);
+                // Datumlösa rader delar platshållartiden 12:00 — samma minut
+                // bevisar inget, så ordregeln kräver riktiga klockslag.
+                const long = short === x ? y : x;
+                const words = sharesAllWords(x, y) && !wordHub.has(short) && !wordUmbrella.has(long)
+                    && timed(b[i]) && timed(b[j]) && sameVenue(b[i], b[j]);
+                // Samma titel när lokalen strukits ur svansen ("Julmarknad —
+                // Kulturhuset" / "Julmarknad"), samma minut och plats-nyckel.
+                const same = x === y;
+                if (prefix || tail || words || same) links.push([b[i], b[j]]);
             }
         }
     }
@@ -473,10 +541,10 @@ export function dateOnlyTwinLinks(rows: Row[]): [Row, Row][] {
         if (dateOnly.length === 0) continue;
         const timed = b.filter((r) => r.hasSpecificTime !== 0);
         for (const d of dateOnly) {
-            const nd = normalizeTitle(d.title);
+            const nd = variantTitle(d);
             if (CANCELLED_RE.test(nd)) continue;
             const hits = timed.filter((t) => {
-                const nt = normalizeTitle(t.title);
+                const nt = variantTitle(t);
                 return !CANCELLED_RE.test(nt) && sameVenue(d, t)
                     && (nt === nd || isTitleVariant(nd, nt) || sharesTitleTail(nd, nt));
             });
