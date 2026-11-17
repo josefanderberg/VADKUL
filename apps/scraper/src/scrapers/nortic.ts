@@ -92,13 +92,16 @@ export function formatNorticPrice(min: number | null | undefined, max: number | 
  * Boknings-TILLÄGG som säljs som "föreställningar" (campingel, extragäster,
  * parkering) — produkter, inte event. Filtreras på titel.
  */
-const ADDON_TITLE = /^(lägg till|parkering\b|avbeställningsskydd|p-biljett|garderob\b)/i;
+const ADDON_TITLE = /^(lägg till|parkering\b|avbeställningsskydd|p-biljett|garderob\b|dryckespaket\b)/i;
+/** Tillägg som står mitt i titeln: "Öresund cruise line - Tillval Avbokning
+ *  event till kaj", "Dryckespaket Julbord 2026" (Öresund Cruise Line 17/11, #258). */
+const ADDON_ANYWHERE = /(?<![\p{L}])(tillval|avbokningsskydd|avbokning)(?![\p{L}])/iu;
 
 /** Mappa produktion+show → RawEvent. Exporterad för test. */
 export function mapNorticShow(e: NorticEvent, s: NorticShow): RawEvent | null {
     const title = (e.title || s.name || '').trim();
     if (!title || !e.id || !s.id) return null;
-    if (ADDON_TITLE.test(title)) return null;
+    if (ADDON_TITLE.test(title) || ADDON_ANYWHERE.test(title)) return null;
     const startDate = parseNorticTime(s.startDate);
     if (!startDate) return null;
 

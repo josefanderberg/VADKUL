@@ -57,7 +57,7 @@ async function fixSourceDocs(firestore: NonNullable<typeof db>): Promise<number>
             if (APPLY) {
                 await doc.ref.update(stamped({
                     lat: fix.lat, lng: fix.lng,
-                    isLocationVerified: true, geoPrecision: 'poi',
+                    isLocationVerified: true, geoPrecision: fix.precision ?? 'poi',
                 }));
             }
             fixedDocs++;

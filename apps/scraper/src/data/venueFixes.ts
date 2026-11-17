@@ -25,6 +25,9 @@ export interface VenueFix {
     lng: number;
     /** Varifrån koordinaten kommer + vilken rapport som föranledde fixen. */
     note: string;
+    /** Märkningen eventen får. Standard 'poi' (huset självt); 'gata' när
+     *  punkten bara är verifierad till gata/kvarter (julkryssningens kaj). */
+    precision?: 'poi' | 'gata';
 }
 
 export const VENUE_FIXES: VenueFix[] = [
@@ -465,6 +468,22 @@ export const VENUE_FIXES: VenueFix[] = [
         lng: 20.3043598,
         note: 'Aurora kultur och kongress, Stadshustorget 10, Kiruna — OSM:s biblioteksnod i huset; 14 event låg på Kirunas mittpunkt (17/11, #245)',
     },
+    {
+        // Öresund Cruise Lines julkryssningar med M/S Tilda. Arrangören har
+        // registrerat lokalen hos Nortic som bara "Öresund" (adress "Öresund",
+        // ort "öresund", postnummer 261 29), och Nortics API ger den
+        // koordinater i Kinna, 20 mil bort (rapport 17/11, #258). Kryssningarna
+        // går från Landskrona, Malmö och Helsingborg; den första i fönstret
+        // (20/11) och lokalens postnummer är Landskrona. Kajen anges inte, så
+        // punkten är postnumret 261 29 vid Landskronas hamn (Nominatim) och
+        // märks 'gata', inte 'poi'.
+        names: ['Öresund, öresund', 'M/S Tilda'],
+        city: 'Landskrona',
+        lat: 55.8682572,
+        lng: 12.8278203,
+        note: 'Öresund Cruise Line (Nortic-lokal "Öresund" utan adress), postnummer 261 29 Landskrona — Nortic gav Kinna (17/11, #258)',
+        precision: 'gata',
+    },
 ];
 
 /** Exakt (trim + case-okänslig) matchning av ett locationName mot fixarna. */
@@ -495,6 +514,6 @@ export function applyVenueFixInPlace(
     e.lat = fix.lat;
     e.lng = fix.lng;
     e.isLocationVerified = true;
-    e.geoPrecision = 'poi';
+    e.geoPrecision = fix.precision ?? 'poi';
     return true;
 }

@@ -69,11 +69,12 @@ async function main() {
             if (dist < 0.1 && !centroidLabel) { alreadyRight++; continue; }
             console.log(`  🔧 ${(e.title ?? '(utan titel)').slice(0, 45)} | ${e.locationName} | ${dist < 0.1 ? 'rätt punkt, märkt mittpunkt' : `${dist.toFixed(1)} km fel`}${APPLY ? ' → flyttas' : ''}`);
             if (!APPLY) { moved++; continue; }
-            setEventCoords(e.url, fix.lat, fix.lng, `venue-fix: ${fix.city}`, 'poi');
+            const precision = fix.precision ?? 'poi';
+            setEventCoords(e.url, fix.lat, fix.lng, `venue-fix: ${fix.city}`, precision);
             if (db && e.firestoreId) {
                 try {
                     await db.collection('linkEvents').doc(e.firestoreId).update(stamped({
-                        lat: fix.lat, lng: fix.lng, isLocationVerified: true, geoPrecision: 'poi',
+                        lat: fix.lat, lng: fix.lng, isLocationVerified: true, geoPrecision: precision,
                     }));
                 } catch (err: any) {
                     // NOT_FOUND (kod 5) = dokumentet rensat ur Firestore — SQLite räcker.

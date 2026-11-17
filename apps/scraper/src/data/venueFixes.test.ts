@@ -41,6 +41,13 @@ describe('applyVenueFixInPlace', () => {
         expect(e).toMatchObject({ lat: 65.32058, lng: 21.47594, isLocationVerified: true, geoPrecision: 'poi' });
     });
 
+    it('märker med fixens precision när den bara är verifierad till gata (#258)', () => {
+        const kaj: VenueFix[] = [{ names: ['Öresund, öresund'], city: 'Landskrona', lat: 55.8682572, lng: 12.8278203, note: 'test', precision: 'gata' }];
+        const e = { locationName: 'Öresund, Öresund', lat: 57.44094, lng: 12.67765 };
+        expect(applyVenueFixInPlace(e, kaj)).toBe(true);
+        expect(e).toMatchObject({ lat: 55.8682572, lng: 12.8278203, geoPrecision: 'gata' });
+    });
+
     it('rör inte event utan träff — även utan koordinater', () => {
         const e = { locationName: 'Annan plats', lat: 1, lng: 2 };
         expect(applyVenueFixInPlace(e, fixes)).toBe(false);

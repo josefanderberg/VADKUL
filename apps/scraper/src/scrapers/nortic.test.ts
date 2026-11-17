@@ -49,6 +49,12 @@ describe('mapNorticShow', () => {
     it('boknings-tillägg filtreras på titel', () => {
         expect(mapNorticShow({ ...baseEvent, title: 'Lägg till elanslutning till din campingbokning' }, baseShow)).toBeNull();
         expect(mapNorticShow({ ...baseEvent, title: 'Parkering festivalområdet' }, baseShow)).toBeNull();
+        // Öresund Cruise Line 17/11 (#258): tillvalen låg som egna event.
+        expect(mapNorticShow({ ...baseEvent, title: 'Öresund cruise line - Tillval Avbokning event till kaj' }, baseShow)).toBeNull();
+        expect(mapNorticShow({ ...baseEvent, title: 'Dryckespaket Julbord 2026' }, baseShow)).toBeNull();
+        // Själva kryssningen och ord som bara innehåller "tillval" är event.
+        expect(mapNorticShow({ ...baseEvent, title: 'Julbord 2026' }, baseShow)).not.toBeNull();
+        expect(mapNorticShow({ ...baseEvent, title: 'Tillvalsämnen-mässan' }, baseShow)).not.toBeNull();
     });
 
     it('utan titel/datum → null', () => {
