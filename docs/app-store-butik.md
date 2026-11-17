@@ -72,3 +72,32 @@ _Utkast 12/10 2026 inför build 7. Gäller appen som den är från build 7: kont
 **Analytics i klartext (4/11 2026):** Google Analytics för Firebase i båda apparna, samma GA4-egendom som vadkul.se (vadkul-app d28ab17: `data/matning`). Skärmvisningar per rutt och webbens handlingsnamn (event_view, event_anmal_click, event_like, event_rsvp, event_create, event_wish, star_placed, invite_share, welcome_*/startstad_*) med slug/kategori/status som enda parametrar. Inget användar-id, ingen IDFA och ingen ATT-prompt: iOS byggs med RNFB:s `withoutAdIdSupport` (FirebaseAnalyticsCore utan IdentitySupport), så "Spårning: Nej" står kvar. Dev-byggen mäter inte. Finns i native-byggen gjorda efter 4/11 - tidigare byggen mäter ingenting, oavsett OTA.
 
 **Kraschdatan i klartext:** inget skickas från dev-byggen. Inga loggrader med innehåll, inga e-postadresser eller namn - bara uid för inloggade (anonyma och utloggade får tomt id). Crashlytics sparar stackspår och tillhörande id:n i 90 dagar. Det är en global Firebase-tjänst utan val av lagringsplats, så datan kan behandlas utanför EU - till skillnad från kontodatan i Firestore (europe-north1/north2), som integritetspolicyn i dag beskriver som enda lagringsplats.
+
+## Julsäsongen 2026 (#192)
+
+_17/11 2026 ca 13:05: In-App Event + header + sökbild INSKICKADE för granskning ("3 Items Submitted", upp till 48 h, mejl när klart). Reklamtexten bytt samma dag på liveversionen 1.1.1 (fältet var tomt där innan - oktobertexten följde inte med till 1.1.1)._
+
+**När granskningen är klar:** versionssidan (Distribution -> 1.1.1) har en plats "0 of 1 Header Asset - Browse approved assets". Den godkända headern måste väljas där och publiceras, annars syns den inte. Kolla samma sak för sökbilden. Fyll i status här.
+
+Bilderna ligger i `docs/butik-assets/app-store-jul-2026/` och är renderade med `docs/butik-assets/rendera-julkarta.mjs`: webbens kartstil mot egna Protomaps-kakel (samma licensväg som stadssidornas kartbilder, `docs/kartbilder.md`) och de riktiga julmarknaderna kring Göteborg som 🎄-brickor. Svenska ortnamn, ingen text i bilderna, inga alfakanaler.
+
+**Header och sökbild (Asset Library, visas på iOS 27 och senare).** Granskas mot den senaste versionen och kräver ingen ny version. Byts tillbaka efter jul.
+- Header 21:9: `header-3840x1646.png`. Connect avvisade jpg-versionen ("File dimensions are invalid") trots rätt mått och att dokumentationen tillåter jpg - ladda upp headern som PNG.
+- Sökträff 3:2: `sokbild-3840x2560.jpg`
+
+**In-App Event**
+- Namn (30): Julmarknader nära dig
+- Kort beskrivning (50): Hundratals julmarknader på kartan i hela Sverige.
+- Lång beskrivning (120): Från stora julmarknader i stan till julbasarer i bygdegården. Se vilka som är öppna idag och i helgen, nära dig.
+- Märke: Special Event. Syfte: locka nya användare. Normal prioritet, inget köp krävs.
+- Period: 21/11-20/12 2026 (30 dagar; Apples tak är 31). Marknadsförs från godkännandet. Julmarknaderna per vecka 17/11: v47 170, v48 303, v49 243, v50 76, v51 10.
+- Djuplänk (krävs av Connect): `https://vadkul.se/sok?q=julmarknad` - appens sökskärm med julmarknader, närmast först.
+- Bara Sverige (1 av 175 länder). Synligt i App Store från 17/11 13:30, när det är godkänt.
+- Kortbild 16:9: `event-kort-1920x1080.jpg`. Detaljbild 9:16: `event-detalj-1080x1920.jpg`.
+
+**Reklamtext under säsongen (170, kräver ingen granskning):**
+Julmarknader nära dig: hundratals julmarknader och julbasarer i hela Sverige ligger på kartan. Se vad som är öppet idag och i helgen. Gratis, utan konto.
+
+Efter jul: tillbaka till den vanliga reklamtexten överst i filen och ta bort headern/sökbilden (eller byt mot en året-runt-bild).
+
+**Nyckelordet "julmarknad"** ingår inte här. Nyckelorden är låsta per version och läggs in med nästa version (1.1.2).
