@@ -1,10 +1,14 @@
 {
   "applinks": {
-    "apps": [],
     "details": [
       {
-        "appID": "66D54NKWK7.se.vadkul.app",
-        "paths": ["NOT /__/auth/action/", "NOT /__/auth/handler/", "NOT /_/*", "/*"]
+        "appIDs": ["66D54NKWK7.se.vadkul.app"],
+        "components": [
+          { "/": "/__/*", "exclude": true, "comment": "Firebase reserverade sökvägar: /__/auth/action (e-postlänkar) och /__/auth/handler (inloggning) ska stanna i webbläsaren" },
+          { "/": "/_/*", "exclude": true, "comment": "Firebase Hostings reserverade sökvägar" },
+          { "/": "/*", "?": { "boost_session": "*" }, "exclude": true, "comment": "Stripes retur efter boostköp: confirmBoost körs bara i webbläsaren (#254)" },
+          { "/": "/*" }
+        ]
       }
     ]
   }
