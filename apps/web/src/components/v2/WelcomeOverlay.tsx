@@ -65,10 +65,21 @@ function snöflingor(antal: number, frö: number, maxTop: number, storlek: [numb
         sway: Math.round((slump() * 2 - 1) * drift),
     }));
 }
-/** I kortets himmel. */
-const SNÖ = snöflingor(42, 17, 110, [3, 7], [6, 10.5], 10);
 /** Över hela skärmen bakom kortet (Josef 17/11: "mer snö"). */
 const SNÖ_UTE = snöflingor(48, 1225, 0, [3, 8], [9, 16], 40);
+/** Glittrande stjärnor i kvällshimlen (Josef 17/11: "lite mörkare med massa
+ *  glittrande stjärnor" i stället för julstjärnan). Samma fasta slump; top
+ *  håller sig i himlens mörka övre del, dur = glittrets takt. */
+const STJÄRNOR = snöflingor(26, 2412, 62, [5, 12], [1.6, 3.6], 0);
+
+/** Fyruddig glittrande stjärna (#255). */
+function Glitter({ size, style }: { size: number; style: React.CSSProperties }) {
+    return (
+        <svg viewBox="0 0 24 24" width={size} height={size} className="welcome-twinkle absolute" style={style} aria-hidden>
+            <path d="M12 0 C12.9 7.6 16.4 11.1 24 12 C16.4 12.9 12.9 16.4 12 24 C11.1 16.4 7.6 12.9 0 12 C7.6 11.1 11.1 7.6 12 0 Z" fill="#FFF6C9" />
+        </svg>
+    );
+}
 
 /** Tomteluvan på maskoten (#255). Ritad för en 96 px stor maskot: rak,
  *  centrerad över molnets högsta topp, spetsen faller åt höger. */
@@ -79,23 +90,6 @@ function Tomteluva({ className }: { className?: string }) {
             <path d="M26 44 C28 31 35 19 44 12 C45 23 47 34 51 44 Z" fill="#B81F2F" opacity="0.45" />
             <rect x="5" y="41" width="54" height="13" rx="6.5" fill="#fff" stroke="#c9dbea" strokeWidth="1.5" />
             <circle cx="46" cy="9" r="6.5" fill="#fff" stroke="#c9dbea" strokeWidth="1.5" />
-        </svg>
-    );
-}
-
-/** Tomteskägget (#255): vitt med molnets blå kontur (helvitt försvann mot
- *  det vita molnet), lockigt i nederkanten. Hänger under leendet. */
-function Tomteskägg({ className }: { className?: string }) {
-    return (
-        <svg viewBox="0 0 64 44" className={className} aria-hidden>
-            <path
-                d="M4 6 C10 10 18 12 32 12 C46 12 54 10 60 6 C62 14 60 22 56 27 C55 32 50 34 46 33 C44 38 39 40 35 38 C33 42 28 42 26 38 C22 40 17 38 16 33 C11 34 7 31 7 27 C3 22 2 14 4 6 Z"
-                fill="#fff"
-                stroke="#5b9bd5"
-                strokeWidth="2.2"
-                strokeLinejoin="round"
-            />
-            <path d="M20 20 C22 24 24 26 27 27 M37 27 C40 26 42 24 44 20 M31 22 C31 27 32 30 32 33" fill="none" stroke="#a9c9e6" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
     );
 }
@@ -159,6 +153,21 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     // Julvarianten (#255): rutan öppnas bara i webbläsaren (welcomeOpen sätts
     // efter mount), så besökarens egen kalender avgör utan SSR-skillnad.
     const [jul] = useState(() => ärJulsäsong(new Date()));
+    // Luvan är en SVG som ritas direkt, molnet en bild som laddas - utan den
+    // här grinden svävade luvan ensam tills molnet kom (Josef 17/11: "gör så
+    // tomteluvan först visas när molnet renderats klart"). decode() väntar
+    // tills bilden är avkodad och kan målas, inte bara nedladdad. Bilden kan
+    // redan vara klar (cache) innan onLoad hinner kopplas, därav kollen vid mount.
+    const maskotRef = useRef<HTMLImageElement>(null);
+    const [maskotKlar, setMaskotKlar] = useState(false);
+    const maskotLaddad = useCallback(() => {
+        const img = maskotRef.current;
+        if (!img) return;
+        img.decode().then(() => setMaskotKlar(true), () => setMaskotKlar(true));
+    }, []);
+    useEffect(() => {
+        if (maskotRef.current?.complete && maskotRef.current.naturalWidth > 0) maskotLaddad();
+    }, [maskotLaddad]);
 
     const shownCount = useCountUp(weekEventCount ?? 0);
     // Idag-siffran räknas upp precis som veckosiffran (Josef 1/9).
@@ -299,19 +308,21 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                         så gradienten är HELT vit innan klippkanten i ALLA
                         andningsfaser — annars mötte en blåtonad rest kortets
                         vita kropp som en synlig kant (1/9). */}
-                    {/* Julhimlen (#255) är en aning djupare vinterblå så att
-                        snön syns; samma stopp, så den möter kortet lika vitt. */}
-                    <div className={`welcome-sky absolute inset-x-0 top-0 h-[176px] bg-gradient-to-b ${jul ? 'from-[#86bfea] via-[#d3eafb]' : 'from-[#b8e0ff] via-[#e3f3ff]'} via-40% to-white to-[75%]`} />
+                    {/* Julhimlen (#255) är en kvällshimmel, mörkare blå upptill
+                        så att de glittrande stjärnorna syns; samma
+                        stopp, så den möter kortet lika vitt. */}
+                    <div className={`welcome-sky absolute inset-x-0 top-0 h-[176px] bg-gradient-to-b ${jul ? 'from-[#244f86] via-[#8fb8e0]' : 'from-[#b8e0ff] via-[#e3f3ff]'} via-40% to-white to-[75%]`} />
                     {jul ? (
-                        /* JULSTJÄRNAN (#255) i solens hörn, med samma
-                           roterande strålar bakom sig. Hela stjärnan syns -
-                           solen fick klippas av hörnet, en stjärna kan inte. */
-                        <div className="welcome-sun-drift absolute top-2.5 right-4 w-[52px] h-[52px]">
-                            <div className="welcome-rays absolute -inset-12 rounded-full blur-[5px] [mask-image:radial-gradient(circle,black_30%,transparent_72%)]" />
-                            <svg viewBox="0 0 24 24" className="welcome-star absolute inset-0 w-full h-full">
-                                <path d="M12 1.6l2.95 6.55 7.15.72-5.38 4.77 1.55 7.02L12 17.05l-6.27 3.61 1.55-7.02L1.9 8.87l7.15-.72z" fill="#FECC02" stroke="#F5B700" strokeWidth="0.6" strokeLinejoin="round" />
-                            </svg>
-                        </div>
+                        /* GLITTRANDE STJÄRNOR (#255) i kvällshimlen i stället
+                           för solen. (En stor gul julstjärna i solens hörn
+                           prövades och togs bort samma dag, Josef 17/11.) */
+                        STJÄRNOR.map((s, i) => (
+                            <Glitter
+                                key={i}
+                                size={s.size}
+                                style={{ left: `${s.left}%`, top: s.top, animationDuration: `${s.dur}s`, animationDelay: `${s.delay}s` }}
+                            />
+                        ))
                     ) : (
                         /* Solen driver sakta (wrappern) med roterande strålar
                            bakom sig; pulsen ligger kvar på själva solen. */
@@ -323,24 +334,9 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                         </div>
                     )}
 
-                    {/* SNÖN (#255): flingorna faller genom himlen och tonar ut
-                        i det vita. Med reducerad rörelse står de stilla på sin
-                        viloplats (top). */}
-                    {jul && SNÖ.map((f, i) => (
-                        <span
-                            key={i}
-                            className="welcome-snow absolute rounded-full bg-white"
-                            style={{
-                                left: `${f.left}%`,
-                                top: f.top,
-                                width: f.size,
-                                height: f.size,
-                                animationDuration: `${f.dur}s`,
-                                animationDelay: `${f.delay}s`,
-                                '--snow-sway': `${f.sway}px`,
-                            } as React.CSSProperties}
-                        />
-                    ))}
+                    {/* (Snö i själva rutans himmel prövades och togs bort,
+                        Josef 17/11: "du behöver inte snö i själva
+                        welcomemodal". Snön faller bara bakom rutan.) */}
 
                     {/* Småmoln som driver förbi i olika hastigheter */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -350,19 +346,25 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/favicon.png" alt="" className="absolute top-8 w-11 h-11 opacity-25 animate-cloud-drift" style={{ animationDuration: '32s', animationDelay: '-11s' }} />
 
-                    {/* Maskoten: stort glatt moln som svävar */}
-                    <div className="absolute inset-x-0 top-5 flex justify-center">
+                    {/* Maskoten: stort glatt moln som svävar. Med tomteluvan
+                        8 px längre ner så luvan får luft mot kanten (Josef 17/11). */}
+                    <div className={`absolute inset-x-0 ${jul ? 'top-7' : 'top-5'} flex justify-center`}>
                         {/* Luvan svävar MED molnet: animationen sitter på
                             wrappern när det är jul (#255). */}
                         <div className={`relative w-24 h-24 ${jul ? 'animate-welcome-float' : ''}`}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="/favicon.png" alt="" className={`w-24 h-24 drop-shadow-[0_8px_16px_rgba(0,106,167,0.25)] ${jul ? '' : 'animate-welcome-float'}`} />
-                            {jul && (
-                                <>
-                                    <Tomteskägg className="absolute top-[57px] left-[23px] w-[50px] h-[34px] drop-shadow-[0_3px_4px_rgba(0,106,167,0.18)]" />
-                                    <Tomteluva className="absolute -top-[17px] left-[21px] w-[54px] h-[54px] drop-shadow-[0_2px_3px_rgba(0,0,0,0.15)]" />
-                                </>
-                            )}
+                            <img
+                                ref={maskotRef}
+                                src="/favicon.png"
+                                alt=""
+                                onLoad={maskotLaddad}
+                                className={`w-24 h-24 drop-shadow-[0_8px_16px_rgba(0,106,167,0.25)] ${jul ? '' : 'animate-welcome-float'}`}
+                            />
+                            {/* (Ett tomteskägg prövades och togs bort samma
+                                dag, Josef 17/11: "ta bort skägget". Molnet
+                                ritat som SVG prövades också och lades ned -
+                                bilden används.) */}
+                            {jul && <Tomteluva className={`absolute -top-[17px] left-[21px] w-[54px] h-[54px] drop-shadow-[0_2px_3px_rgba(0,0,0,0.15)] ${maskotKlar ? '' : 'invisible'}`} />}
                         </div>
                     </div>
                 </div>
