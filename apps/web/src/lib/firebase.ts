@@ -73,8 +73,13 @@ if (useEmulator) {
   }
 }
 
-// Initialize Analytics only in the browser and not in emulator/local dev
-const useAnalytics = typeof window !== 'undefined' && !useEmulator && !firebaseConfig.projectId?.startsWith('demo-');
+// Initialize Analytics only in the browser and not in emulator/local dev.
+// Inte heller på localhost (#256): webbens API-nyckel är låst till
+// produktionsdomänen, så Firebase Installations svarar 403 PERMISSION_DENIED
+// och felet syns i dev-overlayn. Dev-besök hör ändå inte hemma i GA4.
+const isLocalhost = typeof window !== 'undefined'
+  && /^(localhost|127\.0\.0\.1|\[::1\])$|\.localhost$/.test(window.location.hostname);
+const useAnalytics = typeof window !== 'undefined' && !isLocalhost && !useEmulator && !firebaseConfig.projectId?.startsWith('demo-');
 export const analytics = useAnalytics ? 
   isSupported().then(yes => yes ? getAnalytics(app) : null) : 
   Promise.resolve(null);
