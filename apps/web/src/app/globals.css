@@ -324,6 +324,53 @@ html:has([data-app="v2"]) body {
 }
 
 
+/* ── Julvarianten (#255, 15/11 - 6/1): snö och julstjärna i välkomstrutan. ── */
+
+/* Flingorna faller från ovanför himlen ned förbi sin viloplats och tonar ut
+   i det vita. Viloplatsen (top i komponenten) är det som syns med reducerad
+   rörelse - då står de stilla. Den blå skuggan gör dem synliga mot ljus himmel. */
+@keyframes welcome-snow-fall {
+  0%   { transform: translate(0, -150px); opacity: 0; }
+  12%  { opacity: 1; }
+  80%  { opacity: 0.9; }
+  100% { transform: translate(var(--snow-sway, 0px), 40px); opacity: 0; }
+}
+.welcome-snow {
+  box-shadow: 0 0 3px rgba(0, 80, 140, 0.5);
+  animation-name: welcome-snow-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  pointer-events: none;
+}
+
+/* Snön över hela skärmen bakom kortet: från ovanför kanten till under den.
+   Med reducerad rörelse döljs lagret helt (stillastående prickar i en rad
+   överst hade sett ut som ett fel). */
+@keyframes welcome-snow-screen-fall {
+  0%   { transform: translate(0, -20px); }
+  100% { transform: translate(var(--snow-sway, 0px), calc(100dvh + 20px)); }
+}
+.welcome-snow-big {
+  opacity: 0.85;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
+  animation-name: welcome-snow-screen-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-snow-screen { display: none; }
+}
+
+/* Julstjärnan andas som solen, men med glöd runt stjärnformen (drop-shadow
+   följer konturen, box-shadow hade blivit en ruta). */
+@keyframes welcome-star-pulse {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 6px rgba(254, 204, 2, 0.55)); }
+  50%      { transform: scale(1.08); filter: drop-shadow(0 0 12px rgba(254, 204, 2, 0.85)); }
+}
+.welcome-star {
+  animation: welcome-star-pulse 4.5s ease-in-out infinite;
+}
+
 /* Ljusstråk som sveper över primärknappen med jämna mellanrum */
 @keyframes welcome-cta-shimmer {
   0%       { transform: translateX(-160%) skewX(-18deg); }
