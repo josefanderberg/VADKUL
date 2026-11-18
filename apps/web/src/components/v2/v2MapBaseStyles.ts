@@ -1,4 +1,4 @@
-// ── Baskartstilen + kart-lägen (projektion/terräng) ─────────────────────────
+// ── Baskartstilen + kart-läget (projektion) ─────────────────────────────────
 // Allt här är rena, kartinstans-oberoende byggstenar: stil-URL:er, statiska
 // stil-specar och idempotenta på/av-hjälpare som V2Map kallar. Ingen React,
 // inget komponent-state — bara MapLibre-konfiguration.
@@ -235,34 +235,11 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
     return style;
 }
 
-// Höjddata för 3D-terrängen. Keyless terrarium-kakor (samma anda som övriga
-// källor — ingen API-nyckel). Den läggs BARA till när terräng-läget slås på och
-// tas bort igen när det stängs av, så DEM-tiles inte ligger och tar minne i onödan.
-// Tile-cachen (maxTileCacheSize på kartan) gäller även den här källan.
-const TERRAIN_DEM_ID = 'terrain-dem';
-const TERRAIN_DEM_SOURCE: maplibregl.RasterDEMSourceSpecification = {
-    type: 'raster-dem',
-    tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
-    encoding: 'terrarium',
-    tileSize: 256,
-    maxzoom: 13,
-    attribution: 'Elevation: Mapzen / AWS Terrain Tiles'
-};
-const TERRAIN_EXAGGERATION = 1.4;
+// (3D-terrängen med Mapzens höjdkakel är RIVEN i #260 - den gick inte att nå
+// sedan Funktioner-knappen doldes 23/6, och höjdreliefen är riven i #203.
+// Bygg inte tillbaka höjdkakel.)
 
 // Skifta klot-projektionen på/av. Nästan gratis — samma tiles, annan projektion.
 export function applyProjection(map: maplibregl.Map, globe: boolean) {
     map.setProjection({ type: globe ? 'globe' : 'mercator' });
-}
-
-// Slå på/av 3D-terräng. DEM-källan läggs till lazy och tas bort när läget stängs
-// av, så höjddatan inte ligger och äter minne när man kör platt.
-export function applyTerrain(map: maplibregl.Map, on: boolean) {
-    if (on) {
-        if (!map.getSource(TERRAIN_DEM_ID)) map.addSource(TERRAIN_DEM_ID, TERRAIN_DEM_SOURCE);
-        map.setTerrain({ source: TERRAIN_DEM_ID, exaggeration: TERRAIN_EXAGGERATION });
-    } else {
-        map.setTerrain(null);
-        if (map.getSource(TERRAIN_DEM_ID)) map.removeSource(TERRAIN_DEM_ID);
-    }
 }

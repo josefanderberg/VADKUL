@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Tags, Globe, Mountain, Plus, Video, Target, Crosshair, Lock, Users, Flag, Map as MapIcon } from 'lucide-react';
+import { Tags, Globe, Plus, Video, Target, Crosshair, Lock, Users, Flag, Map as MapIcon } from 'lucide-react';
 import { EventWish, isVadkulHostedEvent, LinkEvent } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView, LABEL_TITLE_MIN_ZOOM } from '../../utils/mapUtils';
@@ -14,12 +14,12 @@ import { nextFront, overlapClusters, type OverlapPoint } from '../../utils/overl
 import { zoomOutStepsToReveal } from '../../utils/viewportTour';
 import { isEventFeatured } from '../../services/linkEventService';
 import toast from 'react-hot-toast';
-// Nöjesfälts-kartan (enda basstilen) + klot/terräng-hjälpare. Voyager-URL:en är
+// Nöjesfälts-kartan (enda basstilen) + klot-hjälparen. Voyager-URL:en är
 // kvar som reservväg om nöjesfälts-transformen inte går att hämta.
 import {
     BOOTSTRAP_STYLE, STREETS_STYLE_URL,
     THEMEPARK_LAND_COLOR, fetchAndTransformThemeParkStyle,
-    applyProjection, applyTerrain,
+    applyProjection,
 } from './v2MapBaseStyles';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
@@ -99,7 +99,7 @@ const LABEL_OBSTACLE_BADGE_IMAGE = 'vadkul-label-obstacle-badge';
 //      insug" (startRevealTravel) till de N närmast tappet.
 //   4. Kart-init (effekt, körs en gång): MapLibre-instans, zoom-lägen
 //      (brickor ↔ prickar), klick-hantering, bounds-rapportering.
-//   5. Stil-/läges-effekter: basstilen, klot, 3D-terräng, kamera (recenter/zoom).
+//   5. Stil-/läges-effekter: basstilen, klot, kamera (recenter/zoom).
 //   6. DOM-markör-synken: de speciella grupperna som riktiga DOM-element.
 //   7. Render: kartcontainer + inline markör-CSS + overlays (multi-event-lista,
 //      WebGL-fallback, funktions-väskan).
@@ -886,16 +886,12 @@ export default function V2Map({
     // kontextförlust). Då visar vi en fallback-ruta i stället för att krascha.
     const [mapError, setMapError] = useState(false);
 
-    // Två oberoende 3D-lägen — deklarerade tidigt så shop-flaggornas
-    // isFeatureActive() kan läsa dem under render (annars TDZ-error). Mer
-    // detaljer om hur de samverkar finns i kommentaren längre ned där
-    // applyProjection/applyTerrain används.
+    // Klot-läget - deklarerat tidigt så shop-flaggornas isFeatureActive() kan
+    // läsa det under render (annars TDZ-error). Mer detaljer i kommentaren
+    // längre ned där applyProjection används. (3D-terrängen är RIVEN, #260.)
     const [isGlobe, setIsGlobe] = useState(false);
-    const [is3DTerrain, setIs3DTerrain] = useState(false);
     const isGlobeRef = useRef(isGlobe);
     isGlobeRef.current = isGlobe;
-    const is3DTerrainRef = useRef(is3DTerrain);
-    is3DTerrainRef.current = is3DTerrain;
 
     // Funktions-"väskan" uppe till vänster: fäller ut en inline-lista med
     // kart-funktioner (kartstilar, skapa event m.m.). OBS: knappen som öppnar
@@ -1025,7 +1021,7 @@ export default function V2Map({
     onSelectGroupRef.current = onSelectGroup;
 
     // Shop-flaggor: vilka funktioner som är "påslagna". Funktioner med egen
-    // state i V2Map (globe/terräng/kartstil) hanteras separat i setFeatureActive
+    // state i V2Map (globe) hanteras separat i setFeatureActive
     // så väskan har en enda gemensam UI-modell; resten (createEvent/multiplayer/
     // record) lever här. createEvent/multiplayer skickas upp till page.tsx som
     // styr knappars synlighet utanför V2Map via onFeatureFlagsChange.
@@ -1054,11 +1050,10 @@ export default function V2Map({
     const onActivateMultiplayerRef = useRef(onActivateMultiplayer);
     onActivateMultiplayerRef.current = onActivateMultiplayer;
 
-    // Inkluderar globe/terräng i samma "is this feature active?"-modell som
+    // Inkluderar globe i samma "is this feature active?"-modell som
     // övriga shop-flaggor, så väskans rader kan hanteras likadant.
     const isFeatureActive = (key: string): boolean => {
         if (key === 'globe') return isGlobe;
-        if (key === 'terrain') return is3DTerrain;
         return (shopFlags as Record<string, boolean>)[key] ?? false;
     };
 
@@ -1074,18 +1069,14 @@ export default function V2Map({
             return;
         }
         if (key === 'globe') { setIsGlobe(value); return; }
-        if (key === 'terrain') { setIs3DTerrain(value); return; }
         setShopFlags(prev => ({ ...prev, [key]: value }));
     };
     const toggleFeature = (key: string) => setFeatureActive(key, !isFeatureActive(key));
 
-    // Två oberoende 3D-lägen som kan skiftas var för sig (och kombineras):
-    //   isGlobe      — projicera kartan på ett klot (mercator ↔ globe). ~0 minne.
-    //   is3DTerrain  — res upp höjder/berg ur kartan via en DEM-källa. Minnestungt,
-    //                  därför läggs DEM-källan till/tas bort dynamiskt (se effekt).
-    // Refs så att stil-omladdningen (setStyle nollställer projektion + custom-källor)
-    // kan återställa rätt läge utan att bindas om.
-    // (state + refs är deklarerade högre upp så shop-flaggorna kan läsa dem.)
+    // Klot-läget (isGlobe) projicerar kartan på ett klot (mercator ↔ globe), ~0 minne.
+    // Ref så att stil-omladdningen (setStyle nollställer projektionen) kan
+    // återställa rätt läge utan att bindas om.
+    // (state + ref är deklarerade högre upp så shop-flaggorna kan läsa dem.)
 
     // Spara undan callbacks i refs så map-event-handlers inte ständigt behöver bindas om
     const onSelectEventRef = useRef(onSelectEvent);
@@ -3890,7 +3881,7 @@ export default function V2Map({
         };
     }, []);
 
-    // Kör fn så snart kartans stil är redo (annars går addSource/setTerrain fel).
+    // Kör fn så snart kartans stil är redo (annars går setProjection fel).
     // styleLoadedRef, inte isStyleLoaded(): den senare är false under all
     // tile-laddning och då fyrar style.load aldrig → anropet tappades tyst.
     const runWhenStyleReady = (fn: (map: maplibregl.Map) => void) => {
@@ -3907,11 +3898,10 @@ export default function V2Map({
         const map = mapRef.current;
         if (!map) return;
         let cancelled = false;
-        // setStyle ersätter HELA stilen → projektionen nollställs och custom-källor
-        // (DEM) försvinner. Återställ globe + terräng när nya stilen laddat klart.
+        // setStyle ersätter HELA stilen → projektionen nollställs. Återställ
+        // globe när nya stilen laddat klart.
         const afterLoad = () => {
             applyProjection(map, isGlobeRef.current);
-            applyTerrain(map, is3DTerrainRef.current);
             // setStyle rensade GL-markörlagret (källa/bilder/lager) — återinstallera.
             // instant: användaren har redan sett markörerna — återställ allt direkt,
             // ingen ny pö-om-pö-stream (och ingen latch-återöppning av ladda-pillen).
@@ -3948,12 +3938,6 @@ export default function V2Map({
         runWhenStyleReady(map => applyProjection(map, isGlobe));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isGlobe]);
-
-    // 3D-terräng: fristående toggle. Lägger till/tar bort DEM-källan + terräng-mesh.
-    useEffect(() => {
-        runWhenStyleReady(map => applyTerrain(map, is3DTerrain));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [is3DTerrain]);
 
 
     // Vid val av event: stå kvar där användaren är. Klickar man på en markör som
@@ -4925,7 +4909,7 @@ export default function V2Map({
                     // Kartstilarna (Satellit, Nöjesfält, Orientering, Mörkt läge) är
                     // borttagna 4/9 — kartan har en enda stil och inget att välja på.
                     { key: 'createEvent', label: 'Skapa event', desc: 'Skapa egna event på kartan', color: '#22c55e', icon: <Plus size={20} strokeWidth={2.5} /> },
-                    { key: 'terrain', label: '3D-terräng', desc: 'Visa höjder & terräng i 3D', color: '#16a34a', icon: <Mountain size={20} /> },
+                    // (3D-terrängen är RIVEN, #260 - bygg inte tillbaka höjdkakel.)
                     // ── Låsta funktioner ────────────────────────────────────────
                     { key: 'globe', label: 'Klot', desc: 'Visa kartan som en jordglob', color: '#0891b2', icon: <Globe size={20} />, locked: true },
                     { key: 'countries', label: 'Länder', desc: 'Visa länder på kartan', color: '#0284c7', icon: <MapIcon size={20} />, locked: true },
