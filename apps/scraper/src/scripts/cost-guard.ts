@@ -24,7 +24,14 @@ import { getSqlitePath } from '../utils/sqliteHelper';
 /** Absoluta tak. Kollektioner utan egen rad använder DEFAULT_CAP. */
 const CAPS: Record<string, number> = {
     linkEvents: 60_000,        // ~33k idag; 60k ⇒ fönstret/cleanup har slutat städa
-    eventStats: 40_000,        // ~11k idag; växer med visade event
+    // Ett dokument per event som någon gång visats/klickats/gillats, och det
+    // städas MEDVETET aldrig: arrangörsstatistiken (export-organizer-stats)
+    // och påminnelsernas titeluppslag läser historiken. Ingen läser hela
+    // kollektionen (aggregatet tar bara likes > 0, arrangörsstatistiken
+    // count/sum per eventId), så antalet kostar bara lagring. Taket var
+    // 40k när det fanns 11k (aug); 49 830 i nov, ~+150/dygn. Det verkliga
+    // regressionslarmet är tillväxtregeln (+25 %/7 d).
+    eventStats: 100_000,
     eventReminders: 2_000,     // ska vara nära noll efter 2026-08-19-fixen
     eventReminderSends: 5_000,
     eventReminderPrefs: 5_000,

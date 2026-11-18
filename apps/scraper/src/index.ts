@@ -16,6 +16,7 @@ import { scrapeUpplevStockholm } from './scrapers/upplev-stockholm';
 // Nytt skalbart Sources-system — körs efter de stora bespoke-scrapers
 import { runSources, summarize, scheduledForToday, summarizeSchedule, ENGINES } from './sources';
 import { SOURCES } from './sources/registry';
+import { runWithWatchdog, tapStreamActivity } from './utils/stepWatchdog';
 
 /**
  * Kör en scraper isolerat: en krasch i en källa får aldrig stoppa de andra
@@ -26,6 +27,33 @@ async function runStep(name: string, fn: () => Promise<unknown>): Promise<void> 
         await fn();
     } catch (err) {
         console.error(`⚠️ Scraper "${name}" kraschade — fortsätter med nästa källa:`, err);
+    }
+}
+
+/**
+ * Facebook-steget bakom en stegvakt (#259): 17/11 hängde det tyst i 35 h och
+ * blockerade nästa natt. 30 min utan en enda loggrad = häng; 16 h = tak, så
+ * efterstegen hinner klart före nästa natts 00:30. Utfallet loggas som
+ * `❌ [häng]` — run-daily.sh lyfter raden till Telegram-rapportens "Att kolla".
+ */
+const FB_STALL_MS = 30 * 60_000;
+const FB_MAX_MS = 16 * 60 * 60_000;
+
+async function runFacebookGuarded(): Promise<void> {
+    const tap = tapStreamActivity();
+    try {
+        const outcome = await runWithWatchdog(scrapeFacebookEvents, {
+            stallMs: FB_STALL_MS,
+            maxMs: FB_MAX_MS,
+            lastActivityAt: tap.lastActivityAt,
+        });
+        if (outcome === 'stall') {
+            console.log(`❌ [häng] facebook: ingen loggrad på ${FB_STALL_MS / 60_000} min — steget släpps så kedjan går vidare`);
+        } else if (outcome === 'overtime') {
+            console.log(`❌ [häng] facebook: över ${FB_MAX_MS / 3_600_000} h — steget släpps så kedjan går vidare`);
+        }
+    } finally {
+        tap.restore();
     }
 }
 
@@ -82,7 +110,7 @@ async function runAllScrapers() {
         await aggregate('aggregate-efter-webbkallor');
 
         // 4. Facebook sist — sidbevakning + seed-fil (söket avstängt, se facebook/index.ts).
-        await runStep('facebook', scrapeFacebookEvents);
+        await runStep('facebook', runFacebookGuarded);
     } finally {
         // 5. Aggregera ALLTID — även om något ovan kraschade — så feeden uppdateras.
         await aggregate('aggregate-final');

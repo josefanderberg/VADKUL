@@ -534,7 +534,7 @@ COST_WARNINGS="$(grep '⚠️ KOSTNADSVAKT:' "$LOG_FILE" | sed 's/.*KOSTNADSVAKT
 INV_SUMMARY="$(grep -oE 'Invariantvakt-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Invariantvakt-summering: //')"
 INV_ALARMS="$(grep '🚨 INVARIANT:' "$LOG_FILE" | sed 's/.*INVARIANT: //' | head -5 | tr '\n' '|' | sed 's/|$//;s/|/ — /g' | cut -c1-400)"
 ALERTS_SUMMARY="$(grep -oE 'Scraperlarm-summering: .*' "$LOG_FILE" | tail -1 | sed 's/Scraperlarm-summering: //')"
-ALERTS_TOP="$(grep -E '^(❌|⚠️ ) \[(krasch|tyst|datumkluster)\]' "$LOG_FILE" | head -5 | tr '\n' '|' | sed 's/|$//;s/|/ — /g' | cut -c1-500)"
+ALERTS_TOP="$(grep -E '^(❌|⚠️ ) \[(krasch|tyst|datumkluster|häng)\]' "$LOG_FILE" | head -5 | tr '\n' '|' | sed 's/|$//;s/|/ — /g' | cut -c1-500)"
 
 # ─── Hämta Firebase-statistik (dubbletter, daglig fördelning, FB-info) ──────
 echo "" >> "$LOG_FILE"
