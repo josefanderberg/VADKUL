@@ -55,10 +55,19 @@
         <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>2</integer></dict>
     </array>
 
+    <!--
+      /usr/local/bin FÖRST, som nattkedjan: där ligger node 24, som
+      better-sqlite3 är byggd mot. Med /opt/homebrew/bin först tog
+      Homebrews node 26 (uppgraderad 18/9) över och jobbet dog direkt på
+      ERR_DLOPEN_FAILED, varje körning till 18/11 (#259). NODE_OPTIONS
+      samma IPv4-först som run-daily.sh (minins "fetch failed").
+    -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+        <key>NODE_OPTIONS</key>
+        <string>--dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=1000</string>
         <key>HOME</key>
         <string>/Users/ai</string>
     </dict>
