@@ -1,38 +1,45 @@
 {
-  "generatedAt": "2026-11-16T03:48:55.875Z",
+  "generatedAt": "2026-11-18T16:00:32.114Z",
   "counts": {
     "fel": 0,
-    "varning": 40,
-    "nollkoordinatTotalt": 436
+    "varning": 64,
+    "nollkoordinatTotalt": 334
   },
   "alerts": [
     {
       "level": "varning",
       "kind": "tyst",
-      "source": "almhult-cruncho",
-      "since": "2026-11-07",
-      "message": "gav 95 event 2026-11-04, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+      "source": "elitettan",
+      "since": "2026-11-15",
+      "message": "gav 7 event 2026-11-14, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "liseberg",
+      "since": "2026-11-10",
+      "message": "gav 1 event 2026-11-02, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "tickster-ort-lund-4",
+      "since": "2026-11-03",
+      "message": "gav 17 event 2026-10-27, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "alingsas",
-      "since": "2026-11-10",
+      "since": "2026-11-13",
       "message": "ger 29 event per körning, under källans golv 54 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "bastad",
-      "since": "2026-11-13",
-      "message": "ger 21 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
-    },
-    {
-      "level": "varning",
-      "kind": "volymras",
-      "source": "damallsvenskan",
       "since": "2026-11-14",
-      "message": "ger 7 event per körning mot 25 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "message": "ger 17 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
@@ -44,23 +51,16 @@
     {
       "level": "varning",
       "kind": "volymras",
-      "source": "havremagasinet",
-      "since": "2026-11-10",
-      "message": "ger 7 event per körning mot 137 tidigare — ändrad sajt, eller tolkningen tappar event?"
-    },
-    {
-      "level": "varning",
-      "kind": "volymras",
       "source": "jonkoping",
       "since": "2026-11-10",
-      "message": "ger 7 event per körning mot 161 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "message": "ger 7 event per körning mot 150 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "kungliga-operan",
       "since": "2026-11-09",
-      "message": "ger 17 event per körning mot 58 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "message": "ger 17 event per körning mot 57 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
@@ -80,7 +80,7 @@
       "level": "varning",
       "kind": "volymras",
       "source": "tingsryd",
-      "since": "2026-11-07",
+      "since": "2026-11-10",
       "message": "ger 5 event per körning, under källans golv 7 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
@@ -100,8 +100,62 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Arbrå-Undersviks församling",
+      "message": "8 av 13 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Askims församling",
+      "message": "9 av 12 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Boo församling",
+      "message": "6 av 10 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Ekerö församling",
+      "message": "7 av 10 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Farsta församling",
+      "message": "9 av 13 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Gävle församling",
+      "message": "7 av 10 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Halmstads församling",
+      "message": "12 av 20 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Hedemora Kommun",
-      "message": "48 av 70 kommande event ligger 2026-11-17 — sajtvitt datum i stället för eventets?"
+      "message": "15 av 23 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Hägerstens församling",
+      "message": "9 av 11 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Härnösands domkyrkoförsamling",
+      "message": "10 av 16 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -112,8 +166,80 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Järfälla församling",
+      "message": "8 av 13 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Karlstads domkyrkoförsamling",
+      "message": "8 av 11 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Kolmårdens församling",
+      "message": "7 av 11 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Korpen Vadstena",
+      "message": "8 av 13 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Kungsängen-Västra Ryds församling",
+      "message": "6 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Luleå domkyrkoförsamling",
+      "message": "8 av 12 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Mora församling",
+      "message": "13 av 18 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Oskarshamns församling",
+      "message": "9 av 15 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Skarpnäcks församling",
+      "message": "10 av 15 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Söndrum-Vapnö församling",
+      "message": "6 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Tunafors församling",
+      "message": "8 av 10 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Uppsala Danscenter",
       "message": "19 av 23 kommande event ligger 2026-11-27 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Uppåkra församling",
+      "message": "7 av 11 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -124,32 +250,51 @@
     {
       "level": "varning",
       "kind": "datumkluster",
+      "source": "Växjö stads- och domkyrkoförsamling",
+      "message": "9 av 14 kommande event ligger 2026-11-19 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
       "source": "Wisby Strand",
       "message": "29 av 32 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
+      "kind": "datumkluster",
+      "source": "Ålidhems församling",
+      "message": "11 av 15 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Ängelholms församling",
+      "message": "6 av 10 kommande event ligger 2026-11-18 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
       "kind": "nollkoordinat",
-      "source": "436 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Tickster Norge 19, ABF 16, Barnarp-Ödestugu församling 13, Söndrum-Vapnö församling 13, Förlösa-Kläckeberga församling 12"
+      "source": "334 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: ABF 15, Götabiblioteken 10, Studiefrämjandet 10, NBV 9, Mcf 9"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (8 av 233 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 220 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Vallentuna Kommun",
-      "message": "invariant-vakten larmar (1 av 50 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (1 av 42 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
-      "kind": "invariant",
-      "source": "Västmanlandsmusiken",
-      "message": "invariant-vakten larmar (9 av 11 event på samma tidsstämpel) — se nattloggen"
+      "kind": "karantan",
+      "source": "almhult-cruncho",
+      "since": "2026-11-18",
+      "message": "i karantän sedan 2026-11-18: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
