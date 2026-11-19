@@ -15,7 +15,8 @@
  *    tänds, lagren i stilen och vilken skylt ett tryck träffar, 14/11 2026,
  *    smhiWeather.ts = vädret i stadsplattans dagchip: tolkningen av SMHI:s
  *    prognos, vad plattan visar medan en ny ort laddas och minnet kring
- *    hämtningen, 15/11 2026)
+ *    hämtningen, 15/11 2026, revealSpread.ts = vilka brickor som tänds
+ *    utspritt över vyn när kartan är utzoomad, 19/11 2026)
  *
  * REGLER: paketet får aldrig bero på firebase, react eller node-API:er —
  * det ska gå att importera oförändrat i Next, Cloud Functions och React
@@ -37,3 +38,4 @@ export * from './boostCredit';
 export * from './eventClouds';
 export * from './poiSigns';
 export * from './smhiWeather';
+export * from './revealSpread';

@@ -101,8 +101,9 @@ export const CLOUD_REVEAL_RADIUS_PX = PUSH_MARGIN_PX;
 /** Så många event tänds som mest i hålet - de NÄRMASTE pekaren. Var 50 först
  *  samma dag; Josef 13/11: "Det blir kanske för stökigt att 50st händer med
  *  när man hovrar. det rör sig lite för mycket. Kanske bara att 3 event ska
- *  visas där man hovrar istället." */
-export const CLOUD_REVEAL_MAX = 3;
+ *  visas där man hovrar istället." Sedan 19/11 (#261) fem, på webben och i
+ *  appen: "där man klickar/håller. så ska de 5 närmsta synas". */
+export const CLOUD_REVEAL_MAX = 5;
 /** Hur långt ett moln som mest flyttar sig, som andel av räckvidden. */
 const PUSH_STRENGTH = 0.55;
 /** Hur mycket ett knuffat moln som mest tunnas ut. */

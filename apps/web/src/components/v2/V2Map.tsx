@@ -446,7 +446,7 @@ const REVEAL_STREAM_MS_MAX = 50;    // restid (ms) för LÅNGT hopp (hela skärm
 // Antal samtidigt TÄNDA reveal-markörer ska normalt ligga ≤ seed (50) / ≤ N-kring-tap
 // (50). Fler än så = något läcker (strandade brickor o.dyl.) → console.warn så man
 // ser direkt att det behöver korrigeras. (Logg + ev. varning via reportRevealCount.)
-// Hålet runt pekaren (#195) lägger bara till de 3 närmaste ovanpå seedet.
+// Hålet runt pekaren (#195) lägger bara till de CLOUD_REVEAL_MAX (5, #261) närmaste ovanpå seedet.
 const REVEAL_VISIBLE_WARN = 80;
 // Molnhålet (#195) räknas om högst så här ofta när muspekaren rör sig (ms).
 const CLOUD_HOVER_THROTTLE_MS = 60;
@@ -2474,7 +2474,7 @@ export default function V2Map({
     }, [nearestKeysTo, pickRevealKeys, reportRevealCount, writeReveal]);
     startRevealTravelRef.current = startRevealTravel;
 
-    // MOLNHÅLET (#195): de CLOUD_REVEAL_MAX (3) brickorna närmast muspekaren
+    // MOLNHÅLET (#195): de CLOUD_REVEAL_MAX (5 sedan #261) brickorna närmast muspekaren
     // (datorn) eller senaste trycket (pekskärm), inom hålets radie.
     // Ligger hålet i havet blir mängden tom - de närmaste långt bort tänds
     // aldrig. Hålet finns på alla zoomar, med eller utan moln.

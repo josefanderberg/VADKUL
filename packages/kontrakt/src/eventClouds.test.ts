@@ -324,8 +324,9 @@ describe('pickCloudRevealKeys', () => {
     it('tänder bara några få när man hovrar, inte en hel stad', () => {
         const many = Array.from({ length: 40 }, (_, i) => pt(`e${i}`, i));
         expect(pickCloudRevealKeys(many, STOCKHOLM, zoom, CLOUD_REVEAL_RADIUS_PX, CLOUD_REVEAL_MAX))
-            .toEqual(['e0', 'e1', 'e2']);
-        expect(CLOUD_REVEAL_MAX).toBeLessThanOrEqual(5);
+            .toEqual(['e0', 'e1', 'e2', 'e3', 'e4']);
+        // Josef 19/11 (#261): "där man klickar/håller. så ska de 5 närmsta synas".
+        expect(CLOUD_REVEAL_MAX).toBe(5);
     });
 
     it('radien räknas i skärmpixlar, så samma plats är utanför vid högre zoom', () => {
