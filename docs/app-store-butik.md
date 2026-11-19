@@ -77,13 +77,15 @@ _Utkast 12/10 2026 inför build 7. Gäller appen som den är från build 7: kont
 
 _17/11 2026 ca 13:05: In-App Event + header + sökbild INSKICKADE för granskning ("3 Items Submitted", upp till 48 h, mejl när klart). Reklamtexten bytt samma dag på liveversionen 1.1.1 (fältet var tomt där innan - oktobertexten följde inte med till 1.1.1)._
 
+_18/11 2026 ca 20:55: den inskickningen AVBRUTEN och ersatt av den röda julversionen (Josef 18/11: "rött tema och lite snöflingor som glittrar", granar mörkgröna, paket gula, "skriv göteborg större"). Ny inskickning: eventet med nya kort- och detaljbilder + `header-rod-3840x1646.png` + `sokbild-rod-3840x2560.jpg`, "3 Items Submitted" igen. Publiceringsstarten fick flyttas till 19/11 00:00 - Connect kräver att den ligger i framtiden när eventet läggs för granskning igen. De gröna tillgångarna från 17/11 ligger kvar oanvända i Asset Library (utan "rod" i namnet). En tillgång kan inte få en ny fil, bara laddas upp på nytt, och Apple kan bara avbryta en hel inskickning._
+
 **När granskningen är klar:** versionssidan (Distribution -> 1.1.1) har en plats "0 of 1 Header Asset - Browse approved assets". Den godkända headern måste väljas där och publiceras, annars syns den inte. Kolla samma sak för sökbilden. Fyll i status här.
 
-Bilderna ligger i `docs/butik-assets/app-store-jul-2026/` och är renderade med `docs/butik-assets/rendera-julkarta.mjs`: webbens kartstil mot egna Protomaps-kakel (samma licensväg som stadssidornas kartbilder, `docs/kartbilder.md`) och de riktiga julmarknaderna kring Göteborg som 🎄-brickor. Svenska ortnamn, ingen text i bilderna, inga alfakanaler.
+Bilderna ligger i `docs/butik-assets/app-store-jul-2026/` och är renderade med `docs/butik-assets/rendera-julkarta.mjs`: webbens kartstil mot egna Protomaps-kakel (samma licensväg som stadssidornas kartbilder, `docs/kartbilder.md`) och de riktiga julmarknaderna kring Göteborg som 🎄-brickor. Jultemat (`--jul`): vinterblek karta, mörkgröna granbrickor, gula paket och röda tomtar som extra brickor, kartans egna moln, glittrande snöflingor, "Göteborg" i stor kartstil (`--ort`) och "Julen är nära" i en röd bubbla på header och sökbild (inom Apples art safe area). Eventbilderna har ingen text utom ortnamnet - Apple lägger eventets namn ovanpå. Inga alfakanaler. Exakta renderkommandon finns i #192.
 
 **Header och sökbild (Asset Library, visas på iOS 27 och senare).** Granskas mot den senaste versionen och kräver ingen ny version. Byts tillbaka efter jul.
-- Header 21:9: `header-3840x1646.png`. Connect avvisade jpg-versionen ("File dimensions are invalid") trots rätt mått och att dokumentationen tillåter jpg - ladda upp headern som PNG.
-- Sökträff 3:2: `sokbild-3840x2560.jpg`
+- Header 21:9: `header-3840x1646.png` (i Connect: `header-rod-3840x1646.png`). Connect avvisade jpg-versionen ("File dimensions are invalid") trots rätt mått och att dokumentationen tillåter jpg - ladda upp headern som PNG.
+- Sökträff 3:2: `sokbild-3840x2560.jpg` (i Connect: `sokbild-rod-3840x2560.jpg`)
 
 **In-App Event**
 - Namn (30): Julmarknader nära dig
@@ -92,8 +94,8 @@ Bilderna ligger i `docs/butik-assets/app-store-jul-2026/` och är renderade med 
 - Märke: Special Event. Syfte: locka nya användare. Normal prioritet, inget köp krävs.
 - Period: 21/11-20/12 2026 (30 dagar; Apples tak är 31). Marknadsförs från godkännandet. Julmarknaderna per vecka 17/11: v47 170, v48 303, v49 243, v50 76, v51 10.
 - Djuplänk (krävs av Connect): `https://vadkul.se/sok?q=julmarknad` - appens sökskärm med julmarknader, närmast först.
-- Bara Sverige (1 av 175 länder). Synligt i App Store från 17/11 13:30, när det är godkänt.
-- Kortbild 16:9: `event-kort-1920x1080.jpg`. Detaljbild 9:16: `event-detalj-1080x1920.jpg`.
+- Bara Sverige (1 av 175 länder). Publiceringsstart 19/11 00:00, alltså synligt i App Store så fort det är godkänt.
+- Kortbild 16:9: `event-kort-1920x1080.jpg`. Detaljbild 9:16: `event-detalj-1080x1920.jpg` (i Connect med "-rod-" i namnet).
 
 **Reklamtext under säsongen (170, kräver ingen granskning):**
 Julmarknader nära dig: hundratals julmarknader och julbasarer i hela Sverige ligger på kartan. Se vad som är öppet idag och i helgen. Gratis, utan konto.
