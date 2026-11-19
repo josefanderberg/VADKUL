@@ -19,6 +19,14 @@
  * populäraste eventen på kartan. Alltså inte bara i mitten av skärmen", på
  * apparna likadant som på webben. Ändra här, aldrig i en kopia.
  *
+ * KANTMARGINALEN (#262, Josef 19/11: "många precis på kanterna lyser upp, så
+ * att mestadels av titlarna hamnar utanför. Kan vi sätta en liten margin på
+ * vilka eventbrickor som dyker upp"): inga brickor tänds i en ram längs
+ * bildens kanter (RevealInset) - spetsen måste stå så långt in att kroppen
+ * och en titel under den ryms i bilden. REVEAL_EDGE_INSET är brickans egna
+ * mått; appen lägger till sitt krom ovanpå. Gäller både utspridningen och
+ * urvalet kring mitten (insideRevealView).
+ *
  * Ren modul: inga webbläsar- eller kart-API:er.
  */
 
@@ -33,6 +41,26 @@ export interface SpreadCandidate {
 /** Rutornas sida i skärmpixlar. */
 export const REVEAL_SPREAD_CELL_PX = 180;
 
+/** Ramen längs bildens kanter där inga brickor tänds, i skärmpixlar. */
+export interface RevealInset {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+}
+export const NO_REVEAL_INSET: RevealInset = { top: 0, right: 0, bottom: 0, left: 0 };
+/**
+ * Brickans egna mått (#262): kroppen står ~55 px ovanför spetsen och 20 px åt
+ * sidorna, titeln under spetsen ~20 px ner och oftast 40-70 px åt varje håll.
+ * Sidorna och toppen räcker för kroppen plus luft, botten för en titelrad.
+ */
+export const REVEAL_EDGE_INSET: RevealInset = { top: 64, right: 40, bottom: 28, left: 40 };
+
+/** Två ramar på varandra (t.ex. brickans mått + appens krom). */
+export function addRevealInsets(a: RevealInset, b: RevealInset): RevealInset {
+    return { top: a.top + b.top, right: a.right + b.right, bottom: a.bottom + b.bottom, left: a.left + b.left };
+}
+
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const mercatorX = (lng: number) => (lng + 180) / 360;
 function mercatorY(lat: number): number {
@@ -41,9 +69,46 @@ function mercatorY(lat: number): number {
 }
 
 /**
+ * En punkts läge i skärmpixlar relativt bildens mitt (öster och söder
+ * positivt), vid en viss zoom - norr uppåt, ingen lutning (samma förenkling
+ * som utspridningen).
+ */
+export function revealViewOffset(
+    point: { lat: number; lng: number },
+    center: { lat: number; lng: number },
+    zoom: number,
+): { dx: number; dy: number } {
+    const world = 512 * Math.pow(2, zoom);
+    return {
+        dx: (mercatorX(point.lng) - mercatorX(center.lng)) * world,
+        dy: (mercatorY(point.lat) - mercatorY(center.lat)) * world,
+    };
+}
+
+/** Står punkten (spetsen) innanför bilden minus ramen? */
+export function insideRevealView(
+    point: { lat: number; lng: number },
+    center: { lat: number; lng: number },
+    zoom: number,
+    viewport: { width: number; height: number },
+    inset: RevealInset = NO_REVEAL_INSET,
+): boolean {
+    if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng) || !Number.isFinite(zoom)) return false;
+    const { dx, dy } = revealViewOffset(point, center, zoom);
+    return inViewOffset(dx, dy, viewport, inset);
+}
+
+function inViewOffset(dx: number, dy: number, viewport: { width: number; height: number }, inset: RevealInset): boolean {
+    const halfW = viewport.width / 2;
+    const halfH = viewport.height / 2;
+    return dx >= -halfW + inset.left && dx <= halfW - inset.right
+        && dy >= -halfH + inset.top && dy <= halfH - inset.bottom;
+}
+
+/**
  * De `count` brickor som ska tändas, utspridda över vyn. `center` är vyns mitt
- * och `viewport` dess storlek i skärmpixlar; bara event inom vyn räknas.
- * Returen är sorterad på avstånd till mitten.
+ * och `viewport` dess storlek i skärmpixlar; bara event inom vyn minus
+ * kantramen (`inset`, #262) räknas. Returen är sorterad på avstånd till mitten.
  */
 export function pickSpreadRevealKeys(
     points: readonly SpreadCandidate[],
@@ -52,14 +117,13 @@ export function pickSpreadRevealKeys(
     viewport: { width: number; height: number },
     count: number,
     cellPx: number = REVEAL_SPREAD_CELL_PX,
+    inset: RevealInset = NO_REVEAL_INSET,
 ): string[] {
     if (!(count > 0) || !Number.isFinite(zoom) || !(cellPx > 0)) return [];
     if (!(viewport.width > 0) || !(viewport.height > 0)) return [];
     const world = 512 * Math.pow(2, zoom);
     const cx = mercatorX(center.lng) * world;
     const cy = mercatorY(center.lat) * world;
-    const halfW = viewport.width / 2;
-    const halfH = viewport.height / 2;
 
     type Item = { key: string; pop: boolean; dCell: number; dCenter: number };
     const cells = new Map<string, { items: Item[]; dCenter: number; id: string }>();
@@ -69,7 +133,7 @@ export function pickSpreadRevealKeys(
         const ay = mercatorY(p.lat) * world;
         const dx = ax - cx;
         const dy = ay - cy;
-        if (Math.abs(dx) > halfW || Math.abs(dy) > halfH) continue;
+        if (!inViewOffset(dx, dy, viewport, inset)) continue;
         // Rutan i världskoordinater - står still när kartan panoreras.
         const col = Math.floor(ax / cellPx);
         const row = Math.floor(ay / cellPx);

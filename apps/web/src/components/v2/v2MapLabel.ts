@@ -15,6 +15,7 @@
 // samePlainFeatures-jämförelsen, och en helper som ger olika svar för samma
 // input skulle få varje no-op-push att se "ny" ut och döda våg-streamen.
 
+import { bySideExpression, TITLE_PLACEMENTS, type TitleAnchor, type TitlePlacement } from '@vadkul/kontrakt';
 import { EVENT_CATEGORIES, EventCategoryType } from '../../utils/categories';
 import {
     BRICKA_CENTER_ABOVE_COORD, BRICKA_IMG_PAD, BRICKA_IMG_S,
@@ -30,23 +31,27 @@ import {
 // (sedan #204) från de tända brickornas krockytor nedan. Offset i em av
 // textstorleken; MapLibre lägger själv på baslinjeskiftet (7/24 em) för top-
 // och bottom-ankarna, det räknar labelTextBox med.
-export type LabelAnchor =
-    'top' | 'left' | 'right' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-export const LABEL_TITLE_PLACEMENTS: ReadonlyArray<readonly [LabelAnchor, readonly [number, number]]> = [
-    ['top', [0, 0.35]],             // under brickan (föredras, som förut)
-    ['left', [2.4, -2.5]],          // till höger om kroppen, i höjd med dess mitt
-    ['right', [-2.4, -2.5]],        // till vänster om kroppen
-    ['bottom', [0, -5.3]],          // ovanför brickan
-    ['top-left', [-0.5, 0.35]],     // under, utdragen åt höger
-    ['top-right', [0.5, 0.35]],     // under, utdragen åt vänster
-    ['bottom-left', [-0.25, -5.3]], // ovanför, utdragen åt höger
-    ['bottom-right', [0.25, -5.3]], // ovanför, utdragen åt vänster (fri från +N-pillen)
-];
+// Lägena bor i @vadkul/kontrakt (mapTitles) sedan #262 - appen ställer
+// titlarna på SAMMA platser. Där finns också ordningen per sida av bilden:
+// i kanterna växer titeln inåt (titleAnchorOffsetsBySide nedan).
+export type LabelAnchor = TitleAnchor;
+export const LABEL_TITLE_PLACEMENTS: readonly TitlePlacement[] = TITLE_PLACEMENTS;
 // Kategorireserven står bara under brickan (7/10-regeln, se V2Map).
 export const LABEL_CAT_PLACEMENT: readonly [LabelAnchor, readonly [number, number]] = ['top', [0, 0.35]];
-// MapLibres layoutvärde för text-variable-anchor-offset.
+// MapLibres layoutvärde för text-variable-anchor-offset (den vanliga ordningen).
 export function titleAnchorOffsets(): ['literal', (LabelAnchor | [number, number])[]] {
-    return ['literal', LABEL_TITLE_PLACEMENTS.flatMap(([a, [x, y]]) => [a, [x, y] as [number, number]])];
+    return anchorOffsetsLiteral(LABEL_TITLE_PLACEMENTS);
+}
+function anchorOffsetsLiteral(placements: readonly TitlePlacement[]): ['literal', (LabelAnchor | [number, number])[]] {
+    return ['literal', placements.flatMap(([a, [x, y]]) => [a, [x, y] as [number, number]])];
+}
+// TITLARNA VÄXER MOT MITTEN (#262, Josef 19/11: "prioritera så att titlarna
+// visas mot mitten av skärmen. så att inte 50% av alla titlar är utanför
+// kanten"): samma lägen, men ordningen väljs per bricka på dess `side`
+// (kontraktets titleSide, satt av V2Map när spegeln synkas). Vänstra delen
+// provar lägena åt höger först, högra delen åt vänster.
+export function titleAnchorOffsetsBySide(): unknown[] {
+    return bySideExpression(anchorOffsetsLiteral);
 }
 
 // Etiketternas textstorlek per zoom (px) - samma steg som lagrens text-size.

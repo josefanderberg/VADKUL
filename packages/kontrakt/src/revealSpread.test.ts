@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { pickSpreadRevealKeys, REVEAL_SPREAD_CELL_PX, type SpreadCandidate } from './revealSpread';
+import {
+    addRevealInsets, insideRevealView, pickSpreadRevealKeys, REVEAL_EDGE_INSET, REVEAL_SPREAD_CELL_PX, revealViewOffset,
+    type SpreadCandidate,
+} from './revealSpread';
 
 const ZOOM = 11;
 const GBG = { lat: 57.7089, lng: 11.9746 };
@@ -84,5 +87,44 @@ describe('pickSpreadRevealKeys', () => {
             const flyttad = { lat: GBG.lat, lng: GBG.lng + (shift / world) * 360 };
             expect(pickSpreadRevealKeys(pts, flyttad, ZOOM, VIEW, 5).sort()).toEqual(forst);
         }
+    });
+});
+
+describe('kantramen (#262)', () => {
+    it('tänder inga brickor i ramen längs kanterna, men allt innanför', () => {
+        const halfW = VIEW.width / 2;
+        const halfH = VIEW.height / 2;
+        const points = [
+            at('mitten', 0, 0),
+            at('vänsterkant', -halfW + 10, 0),
+            at('högerkant', halfW - 10, 0),
+            at('toppkant', 0, -halfH + 30),
+            at('bottenkant', 0, halfH - 10),
+            at('innanför-vänster', -halfW + REVEAL_EDGE_INSET.left + 5, 0),
+            at('innanför-topp', 0, -halfH + REVEAL_EDGE_INSET.top + 5),
+        ];
+        const keys = pickSpreadRevealKeys(points, GBG, ZOOM, VIEW, 50, REVEAL_SPREAD_CELL_PX, REVEAL_EDGE_INSET);
+        expect(keys.sort()).toEqual(['innanför-topp', 'innanför-vänster', 'mitten']);
+        // Utan ram: som förut, allt i bild.
+        expect(pickSpreadRevealKeys(points, GBG, ZOOM, VIEW, 50)).toHaveLength(points.length);
+    });
+
+    it('insideRevealView följer samma ram', () => {
+        const halfW = VIEW.width / 2;
+        expect(insideRevealView(at('a', 0, 0), GBG, ZOOM, VIEW, REVEAL_EDGE_INSET)).toBe(true);
+        expect(insideRevealView(at('b', halfW - 10, 0), GBG, ZOOM, VIEW, REVEAL_EDGE_INSET)).toBe(false);
+        expect(insideRevealView(at('b', halfW - 10, 0), GBG, ZOOM, VIEW)).toBe(true);
+        expect(insideRevealView(at('c', halfW + 10, 0), GBG, ZOOM, VIEW)).toBe(false);
+    });
+
+    it('revealViewOffset ger skärmpixlar från mitten', () => {
+        const { dx, dy } = revealViewOffset(at('a', 120, -40), GBG, ZOOM);
+        expect(dx).toBeCloseTo(120, 6);
+        expect(dy).toBeCloseTo(-40, 6);
+    });
+
+    it('ramar adderas sida för sida', () => {
+        expect(addRevealInsets(REVEAL_EDGE_INSET, { top: 100, right: 0, bottom: 50, left: 2 }))
+            .toEqual({ top: REVEAL_EDGE_INSET.top + 100, right: REVEAL_EDGE_INSET.right, bottom: REVEAL_EDGE_INSET.bottom + 50, left: REVEAL_EDGE_INSET.left + 2 });
     });
 });

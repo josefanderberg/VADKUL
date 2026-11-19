@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     categoryLabel, eventLabels, labelFeaturesFrom, truncateLabel, wishLabels, LABEL_MAX_CHARS,
     LABEL_BADGE_BOX, LABEL_BODY_BOX, LABEL_CAT_PLACEMENT, LABEL_TEXT_SIZE_STOPS, LABEL_TITLE_PLACEMENTS,
-    boxesOverlap, labelSlotBox, labelTextBox, obstacleBoxAt, obstacleIcon, titleAnchorOffsets,
+    boxesOverlap, labelSlotBox, labelTextBox, obstacleBoxAt, obstacleIcon, titleAnchorOffsets, titleAnchorOffsetsBySide,
     type LabelAnchor, type LabelBox,
 } from './v2MapLabel';
 import { GL_ICON_SIZE_STOPS, interpolateZoomStops } from './v2MapBricka';
@@ -175,6 +175,16 @@ describe('etikettlägena mot den egna brickan (#204)', () => {
         expect(lit).toBe('literal');
         expect(values.slice(0, 4)).toEqual(['top', [0, 0.35], 'left', [2.4, -2.5]]);
         expect(values).toHaveLength(LABEL_TITLE_PLACEMENTS.length * 2);
+    });
+
+    it('titleAnchorOffsetsBySide (#262): mitten som förut, kanterna inåt först', () => {
+        const uttryck = titleAnchorOffsetsBySide() as [string, unknown, number, ['literal', unknown[]], number, ['literal', unknown[]], ['literal', unknown[]]];
+        expect(uttryck[0]).toBe('match');
+        const [, , , vänster, , höger, mitten] = uttryck;
+        expect(mitten).toEqual(titleAnchorOffsets());
+        expect(vänster[1].slice(0, 2)).toEqual(['top-left', [-0.5, 0.35]]);
+        expect(höger[1].slice(0, 2)).toEqual(['top-right', [0.5, 0.35]]);
+        for (const gren of [vänster, höger, mitten]) expect(gren[1]).toHaveLength(LABEL_TITLE_PLACEMENTS.length * 2);
     });
 });
 

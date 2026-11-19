@@ -29,15 +29,19 @@ import {
 } from './v2MapBricka';
 import {
     LABEL_BADGE_BOX, LABEL_BODY_BOX, LABEL_CAT_PLACEMENT, LABEL_SLOT_OFFSET_PX, LABEL_SLOT_SIZE_PX,
-    LABEL_TEXT_SIZE_STOPS, eventLabels, labelFeaturesFrom, obstacleIcon, titleAnchorOffsets, wishLabels,
+    LABEL_TEXT_SIZE_STOPS, eventLabels, labelFeaturesFrom, obstacleIcon, titleAnchorOffsets,
+    titleAnchorOffsetsBySide, wishLabels,
 } from './v2MapLabel';
+import { titleSide, TITLE_SIDE_PROP } from '@vadkul/kontrakt';
 import { attachEventClouds, cloudsCanHover, type EventClouds } from './v2MapClouds';
 import { attachPoiSignImages } from './v2MapPoiSignImages';
 import { createPoiSignPopup, type PoiSignPopup } from './v2MapPoiSignPopup';
 import {
     createSourceHealer, createTileRetrier, isFeatureIndexError, isRetryableTileFetch, type TileXYZ,
 } from './v2MapEngineHeal';
-import { pickSpreadRevealKeys } from '../../utils/revealSpread';
+import {
+    insideRevealView, pickSpreadRevealKeys, REVEAL_EDGE_INSET, REVEAL_SPREAD_CELL_PX,
+} from '../../utils/revealSpread';
 import {
     CLOUD_REVEAL_MAX, CLOUD_REVEAL_RADIUS_PX, pickCloudRevealKeys,
 } from '../../utils/eventClouds';
@@ -1830,16 +1834,25 @@ export default function V2Map({
             if (!src) return;
             // Cyklande grupper: skriv över rep-etiketten med DEN VISADE framens
             // event (samma uppslag som klicket använder) — texten följer emojin.
+            // TITLARNA VÄXER MOT MITTEN (#262): varje bricka får sin sida av
+            // bilden (kontraktets titleSide) - titellagren provar lägena inåt
+            // först i kanterna. Räknas om vid varje synk; moveend schemalägger
+            // en, så sidan följer med när kartan panorerats.
+            const canvasW = map.getCanvas().clientWidth;
             const feats = labelFeaturesFrom(plainFeaturesRef.current, revealWrittenRef.current).map(f => {
+                const [lng, lat] = f.geometry.coordinates;
+                const side = titleSide(map.project([lng, lat]).x - canvasW / 2, canvasW);
                 const rot = cycleRotationsRef.current.get(f.properties.key);
-                if (!rot || rot.icon !== f.properties.icon) return f;
-                const ev = shownCycleEvent(rot, cycleFrameIndexRef.current, groupsRef.current.get(f.properties.key) ?? []);
-                return ev ? { ...f, properties: { ...f.properties, ...eventLabels(ev.title, ev.category) } } : f;
+                const ev = rot && rot.icon === f.properties.icon
+                    ? shownCycleEvent(rot, cycleFrameIndexRef.current, groupsRef.current.get(f.properties.key) ?? [])
+                    : null;
+                return { ...f, properties: { ...f.properties, ...(ev ? eventLabels(ev.title, ev.category) : {}), [TITLE_SIDE_PROP]: side } };
             });
             // Titlarna visas på ALLA etikett-zoomar sedan 7/10 kväll (titel
             // före kategori när den får plats) — signaturen bär alltid båda
-            // fälten. (Zoom-tiern C/T vid z13 gick med steg-uttrycket.)
-            const sig = feats.map(f => `${f.properties.key}${f.properties.labelCat}${f.properties.labelTitle}`).join('');
+            // fälten, och sedan #262 brickans sida. (Zoom-tiern C/T vid z13
+            // gick med steg-uttrycket.)
+            const sig = feats.map(f => `${f.properties.key}${f.properties.labelCat}${f.properties.labelTitle}${f.properties[TITLE_SIDE_PROP]}`).join('');
             if (sig === labelSigRef.current) return;
             labelSigRef.current = sig;
             src.setData({ type: 'FeatureCollection', features: feats as unknown as GeoJSON.Feature[] });
@@ -2006,8 +2019,9 @@ export default function V2Map({
                 const placement: maplibregl.SymbolLayerSpecification['layout'] = isTitle
                     ? {
                         // Under, höger, vänster, över, sedan snett under/över -
-                        // första plats som är fri (#196, #204).
-                        'text-variable-anchor-offset': titleAnchorOffsets(),
+                        // första plats som är fri (#196, #204). I bildens
+                        // kanter inåt först (#262, brickans `side`).
+                        'text-variable-anchor-offset': titleAnchorOffsetsBySide() as unknown as ReturnType<typeof titleAnchorOffsets>,
                         'text-justify': 'auto',
                         // Spärren mot kategorin för samma bricka (se LABEL_SLOT_IMAGE).
                         // Valfri (#204): är platsen under spetsen tagen av en
@@ -2309,7 +2323,9 @@ export default function V2Map({
 
     // KANDIDATERNA kring en punkt: de REVEAL_SEED_COUNT närmaste, med avstånd
     // och populärflagga — samma billiga partiella urval som nearestKeysTo.
-    const nearestRevealCands = useCallback((lng: number, lat: number): { key: string; d2: number; pop: boolean }[] => {
+    const nearestRevealCands = useCallback((
+        lng: number, lat: number, accept?: (c: { lng: number; lat: number }) => boolean,
+    ): { key: string; d2: number; pop: boolean }[] => {
         const coords = revealCoordsRef.current;
         const kx = Math.cos(lat * Math.PI / 180);
         const cap = REVEAL_SEED_COUNT;
@@ -2317,6 +2333,7 @@ export default function V2Map({
         let worst = -Infinity, worstIdx = -1;
         for (let i = 0; i < coords.length; i++) {
             const c = coords[i];
+            if (accept && !accept(c)) continue;
             const dx = kx * (c.lng - lng), dy = c.lat - lat;
             const d2 = dx * dx + dy * dy;
             if (best.length < cap) {
@@ -2341,14 +2358,28 @@ export default function V2Map({
         const map = mapRef.current;
         const zoom = map?.getZoom() ?? START_ZOOM_MAX;
         // Utzoomat: utspritt över vyn, inte en klunga i tätaste trakten (#200).
+        // KANTRAMEN (#262, Josef 19/11: "många precis på kanterna lyser upp,
+        // så att mestadels av titlarna hamnar utanför"): inga brickor tänds
+        // så nära bildens kant att kroppen eller titeln hamnar utanför -
+        // varken i utspridningen eller i urvalet kring mitten.
         if (map && zoom < REVEAL_SPREAD_MAX_ZOOM) {
             const cv = map.getCanvas();
             return pickSpreadRevealKeys(
                 revealCoordsRef.current, { lng, lat }, zoom,
                 { width: cv.clientWidth, height: cv.clientHeight }, revealAllowance(zoom),
+                REVEAL_SPREAD_CELL_PX, REVEAL_EDGE_INSET,
             );
         }
-        const cand = nearestRevealCands(lng, lat);
+        let accept: ((c: { lng: number; lat: number }) => boolean) | undefined;
+        if (map) {
+            const cv = map.getCanvas();
+            const mid = map.getCenter();
+            const view = { width: cv.clientWidth, height: cv.clientHeight };
+            if (view.width > 0 && view.height > 0) {
+                accept = c => insideRevealView(c, mid, zoom, view, REVEAL_EDGE_INSET);
+            }
+        }
+        const cand = nearestRevealCands(lng, lat, accept);
         cand.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (a.d2 - b.d2));
         const picked = cand.slice(0, revealAllowance(zoom));
         picked.sort((a, b) => a.d2 - b.d2);
@@ -3812,6 +3843,9 @@ export default function V2Map({
         const revealFollowEnd = (e: { originalEvent?: unknown }) => {
             revealFollowLastAt = 0;
             revealFollowCenter(e);
+            // Brickornas sida av bilden (#262) räknas i spegelsynken - även
+            // när samma brickor står kvar efter panoreringen.
+            scheduleLabelSyncRef.current();
         };
         map.on('move', revealFollowCenter);
         map.on('moveend', revealFollowEnd);
