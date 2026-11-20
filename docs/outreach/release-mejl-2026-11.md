@@ -71,6 +71,15 @@ hej@vadkul.se) och innehåll är ifyllda. INGA mottagare valda, inget skickat.
   svarar 200). Utkastet laddades upp på nytt efter deployen, med betygsraden 1-5:
   varningen "Saknad(e) bild(er)" är borta och Zohos förhandsvisning visar hela mejlet
   med bilder. Ändras HTML:en igen: radera innehållet i utkastet och ladda upp filen på nytt.
+- **Mottagarna är valda (20/11 ca 20:40):** ny medlemslista byggd samma kväll, 1 260 konton
+  (155 nya sedan 30/10). Utan testgruppen (15 av de 18 har konto) blev det 1 245, importerade
+  till den nya Zoho-listan "Medlemmar nov 2026 utan Android-testare": 156 nya kontakter,
+  1 033 fanns redan, 56 ignorerades (avregistrerade eller studsade) = 1 189 mottagare.
+  Zoho visar "Din kampanj har godkänts". INTE skickat, Josef trycker Skicka.
+  Huvudlistan "Medlemmar" (1 046) är orörd och saknar de nya: bygg en ny lista per utskick.
+  Zoho varnar för plangränsen 2 000 vid import (räknar filen som helt ny): välj
+  "Importera till gräns", dubbletterna räknas inte. Kryssa ALDRIG i "Update subscription
+  type for existing contacts", då blir avregistrerade prenumeranter igen.
 - **Vit bakgrund sedan 20/11 kväll** (Josef: "jag vill inte ha blå bakgrund. vi kör
   vanligt utan det istället"): mörk text på vitt, blått i ordmärket, rubrikraderna,
   betygsknapparna och knapparna, Android-rutan ljusgrå. Utkastet är uppladdat på nytt
