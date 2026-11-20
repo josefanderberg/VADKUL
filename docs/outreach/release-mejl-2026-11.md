@@ -1,4 +1,4 @@
-# Medlemsmejl november 2026 - skyltarna, appen och fler Android-testare
+# Medlemsmejl november 2026 - nya kartan, appen och fler Android-testare
 
 Utkast skrivet 2026-11-20 (#265). HTML: `release-mejl-2026-11.html`, byggd ur
 `android-testare-mejl-2026-10.html` (samma blå bakgrund, ordmärke, signatur och
@@ -6,9 +6,12 @@ sidfot). INTE skickat.
 
 ## Budskapet
 
-1. **Nytt: platsskyltarna på kartan** (#216, #225, #231, #242). En riktig kartbild
-   och en bild som visar vilka skyltar som tänds på vilken höjd. Frågan till
-   medlemmarna: känns de bra, syns de lagom tidigt, saknas någon? Svar på mejlet.
+1. **Nytt: kartan har fått nytt utseende**, i tre delar (Josef 20/11: "Kan du
+   presentera andra saker. Designen på kartan och titlar som visas"):
+   kartdesignen (skog, sjöar, fält, vita vägar, moln: #222, #233, #234), titlarna
+   vid varje event (#261, #262) och platsskyltarna (#216, #225, #231, #242).
+   Frågan till medlemmarna: känns nya kartan bra, är titlarna lätta att läsa,
+   dyker skyltarna upp lagom tidigt? Svar på mejlet.
 2. **Android: vi behöver några testare till.** Google avslog produktionsansökan
    18/11 och vill se 14 dagars testning till med minst 12 testare (#157). 20/11
    räknade Play Console exakt 12, trots 19 medlemmar i Google-gruppen. Samma tre
@@ -24,18 +27,20 @@ INNEHÅLLSBILDER. Loggan är fortfarande text (30/10-beslutet står kvar).
 
 | Fil | Vad | Mått |
 |---|---|---|
+| `apps/web/public/mejl/2026-11/kartan-utzoomad.jpg` | Växjö med omnejd utzoomat, tagen från vadkul.se 20/11: skog, sjöar, vita vägar, moln och event med titlar. Platspricken (Josefs position) är bortlappad | 1040x516, 69 kB |
 | `apps/web/public/mejl/2026-11/skyltar-karta.jpg` | Kartan över centrala Växjö, tagen från vadkul.se 20/11: event plus skyltar för bio, lekplatser och park | 1080x612, 108 kB |
 | `apps/web/public/mejl/2026-11/skyltar-tre-hojder.png` | De 14 skyltarna i tre grupper: över staden, över kvarteret, nere på gatan | 1200x520, 38 kB |
 
 - **Bilderna måste ligga på vadkul.se innan mejlet skickas.** Mejlet pekar på
   `https://vadkul.se/mejl/2026-11/...`, och de adresserna finns först när filerna
   är pushade till main och deployen är klar. Kvittera med
-  `curl -sI https://vadkul.se/mejl/2026-11/skyltar-karta.jpg` (ska ge 200) före utskick.
+  `curl -sI https://vadkul.se/mejl/2026-11/kartan-utzoomad.jpg` (ska ge 200, samma för de två andra) före utskick.
 - Outlook och en del andra blockerar bilder tills mottagaren trycker "visa bilder".
   Båda bilderna har därför alt-text som säger samma sak, och all text och alla
   knappar står utanför bilderna.
 - Kartbilden: muspekaren är bortlappad och kartans krom (stadsplattan, dagväljaren)
-  bortklippt. Skripten ligger i `underlag/mejlkarta-2026-11.cjs` och
+  bortklippt. Skripten ligger i `underlag/mejlkarta-2026-11.cjs`,
+  `underlag/mejlkarta-utzoomad-2026-11.cjs` (tar källbild, målfil) och
   `underlag/mejlbilder-2026-11.cjs` (kör med node, sharp ur rotens node_modules).
   Skyltbilderna kommer ur appens bakade `vadkul-app/assets/skyltar/`.
 - Det blev ingen före-efter-bild: det finns ingen sparad bild av samma kartutsnitt
@@ -52,13 +57,13 @@ INNEHÅLLSBILDER. Loggan är fortfarande text (30/10-beslutet står kvar).
 - Typ: Regular email, HTML-editorn (klistra in koden). Ladda inte upp bilderna i
   editorn, de hämtas från vadkul.se.
 - Avsändare: hej@vadkul.se. Svaren på frågorna kommer dit.
-- Ämne: `Nya skyltar på kartan - och vi söker fler Android-testare 📍`
+- Ämne: `Kartan har fått nytt utseende - och vi söker fler Android-testare 📍`
 - Preheader ligger i HTML:en.
-- utm_campaign: `medlemsmejl-nov-2026` (utm_content: tagline, kartbild, karta,
+- utm_campaign: `medlemsmejl-nov-2026` (utm_content: tagline, kartbild-utzoomad, kartbild, karta,
   playlank, appstore, signatur, sidfot)
 - Taggar: `$[FNAME|där]$`, i sidfoten `$[LI:UNSUBSCRIBE]$` + `$[LI:SUB_PREF]$`
   (får aldrig tas bort).
-- Storlek 15 kB HTML, långt under Gmails 102 kB-klipp.
+- Storlek 17 kB HTML, långt under Gmails 102 kB-klipp.
 - **Mottagare: alla medlemmar UTOM de 18 som redan är med i testgruppen.** De fick
   ett eget mejl 20/11 (`android-testare-mejl-2026-11.md`). Adresserna ligger i
   `medlemmar-android-testare-2026-11-20.csv` (gitignorad, PII). Antingen väljs de
