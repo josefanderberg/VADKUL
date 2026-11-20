@@ -53,6 +53,20 @@ INNEHÅLLSBILDER. Loggan är fortfarande text (30/10-beslutet står kvar).
 
 ## Zoho Campaigns
 
+**UTKASTET FINNS (20/11):** kampanjen "Medlemsmejl nov 2026 (nya kartan + Android-testare)",
+id 292391000000395002, på kontot hej@vadkul.se. Ämne, avsändare (Josef på VADKUL,
+hej@vadkul.se) och innehåll är ifyllda. INGA mottagare valda, inget skickat.
+- Zoho visar "Saknad(e) bild(er)" för de tre bildadresserna tills de är pushade och
+  deployade. Ladda upp HTML-filen igen efter deployen om varningen står kvar.
+- Ämnet ligger UTAN 📍: emojin blev ett frågetecken när den skrevs in via Chrome.
+  Lägg till den för hand med emojiknappen i ämnesfältet om den ska med.
+- Vägen som fungerar: Skapa innehåll -> Importera/ladda upp HTML -> Ladda upp från
+  dator -> HTML-filen. "HTML-kodredigerare" är en vanlig textredigerare: inklistrad
+  kod hamnar som synlig text, och dess Redigera HTML-dialog kraschade (Zohos eget
+  skriptfel, knappen Infoga svarade inte).
+- Chrome måste vara inloggat på hej@vadkul.se. Ett annat Zoho-konto ger en
+  välkomstruta som vill skapa en ny organisation.
+
 - Kampanjnamn: `Medlemsmejl nov 2026 (skyltar + Android-testare)`
 - Typ: Regular email, HTML-editorn (klistra in koden). Ladda inte upp bilderna i
   editorn, de hämtas från vadkul.se.
