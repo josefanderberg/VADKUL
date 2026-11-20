@@ -19,6 +19,17 @@ sidfot). INTE skickat.
    krånglade), eftersom nästa ansökan måste kunna säga vad testarna tyckte.
 3. **Påminnelse om appen på App Store** för dem med iPhone.
 
+## Betygsraden 1-5 (20/11)
+
+Josef: "kan man göra det till ett formulär man skickar ut? ... typ att det finns att
+man röstar 1-5". Ett riktigt formulär går inte i mejl (de flesta mejlappar tar bort
+formulärfält). I stället fem runda knappar 1-5 under "Vad tycker du om nya kartan?".
+Varje knapp är en mailto-länk till hej@vadkul.se med färdigt ämne "Nya kartan: N av 5"
+och en rad att skriva på. Ingen kod på sajten behövs, och rösterna räknas genom att
+söka på ämnet i inkorgen. Nackdel: mottagaren måste trycka Skicka i sin mejlapp.
+Alternativet om svaren blir få: fem vanliga länkar till en tacksida på vadkul.se som
+räknar rösten (kräver kod och deploy).
+
 ## Bilderna (nytt, ägarbeslut 20/11)
 
 Josef 20/11: "sen vill jag att vi inkluderar bilder. det är bättre, så blir det
@@ -77,7 +88,7 @@ hej@vadkul.se) och innehåll är ifyllda. INGA mottagare valda, inget skickat.
   playlank, appstore, signatur, sidfot)
 - Taggar: `$[FNAME|där]$`, i sidfoten `$[LI:UNSUBSCRIBE]$` + `$[LI:SUB_PREF]$`
   (får aldrig tas bort).
-- Storlek 17 kB HTML, långt under Gmails 102 kB-klipp.
+- Storlek 19 kB HTML, långt under Gmails 102 kB-klipp.
 - **Mottagare: alla medlemmar UTOM de 18 som redan är med i testgruppen.** De fick
   ett eget mejl 20/11 (`android-testare-mejl-2026-11.md`). Adresserna ligger i
   `medlemmar-android-testare-2026-11-20.csv` (gitignorad, PII). Antingen väljs de
