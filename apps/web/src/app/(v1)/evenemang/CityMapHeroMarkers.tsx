@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BRICKA_DARK_BG, sourceGradientCss } from '@/components/v2/v2MapBricka';
 import { periodKeys } from './periods';
 import { useDayFilter } from './dayFilter';
 import CityHeroPeriodChips from './CityHeroPeriodChips';
 import { pickHeroMarkers, type HeroLiveEvent } from './heroMarkers';
+import { placeHeroTitles, HERO_TITLE_FONT_PX, HERO_TITLE_LINE_PX } from './heroTitles';
 
 /**
  * Brickorna ovanpå den FÖRRENDERADE kartbilden.
@@ -47,6 +48,33 @@ export default function CityMapHeroMarkers({ markers, bigMapHref }: {
         });
     }, [mounted, markers, sel, category, popularOnly]);
 
+    // TITLARNA (#267, 20/11): som på stora kartan står titeln under brickan,
+    // annars till höger, vänster eller över, och bara där den får plats
+    // (heroTitles). Kartrutan är flytande bred, så dess mått mäts här:
+    // brickornas offset räknas från mitten och en smal skärm beskär bilden.
+    const baseRef = useRef<HTMLButtonElement>(null);
+    const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+    useEffect(() => {
+        const el = baseRef.current;
+        if (!el) return;
+        const read = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+        read();
+        if (typeof ResizeObserver === 'undefined') return;
+        const ro = new ResizeObserver(read);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+    const titles = useMemo(() => {
+        if (!size) return [];
+        return placeHeroTitles(visible, {
+            halfW: size.w / 2,
+            halfH: size.h / 2,
+            // Periodchipsen i överkant: en rad, två när de bryts på smala
+            // telefoner (CityHeroPeriodChips, flex-wrap).
+            topReserve: size.w < 360 ? 58 : 32,
+        });
+    }, [visible, size]);
+
     return (
         <>
             {/* Kartbotten: klick utanför en bricka öppnar stora kartan över
@@ -54,6 +82,7 @@ export default function CityMapHeroMarkers({ markers, bigMapHref }: {
                 kartan" (Josef 24/8). Knapp, inte länk, så den aldrig
                 konkurrerar med sidans övriga länkar om tangentbordsfokus. */}
             <button
+                ref={baseRef}
                 type="button"
                 aria-label="Öppna hela kartan"
                 tabIndex={-1}
@@ -67,7 +96,7 @@ export default function CityMapHeroMarkers({ markers, bigMapHref }: {
                 <button
                     key={e.id}
                     type="button"
-                    aria-label={`Visa eventet på kartan${count > 1 ? ` (${count} på platsen)` : ''}`}
+                    aria-label={`Visa ${e.title || 'eventet'} på kartan${count > 1 ? ` (${count} på platsen)` : ''}`}
                     onClick={ev => { ev.stopPropagation(); window.location.assign(e.href); }}
                     className="absolute z-10 w-0 h-0 cursor-pointer"
                     style={{ left: `calc(50% + ${e.dx}px)`, top: `calc(50% + ${e.dy}px)` }}
@@ -91,6 +120,28 @@ export default function CityMapHeroMarkers({ markers, bigMapHref }: {
                     {count > 1 && (
                         <span className="absolute left-[8px] -top-[40px] min-w-[16px] h-[16px] px-1 rounded-full bg-white text-slate-900 text-[10px] font-black flex items-center justify-center shadow">
                             {count}
+                        </span>
+                    )}
+                    {/* Titeln: vit fet text med mörkgrå kontur, som stora
+                        kartans etiketter (text-halo). Ligger i knappen, så
+                        ett tryck på titeln öppnar eventet. Måtten måste följa
+                        heroTitles (HERO_TITLE_*), annars stämmer inte
+                        krockrutorna. */}
+                    {titles[i] && (
+                        <span
+                            aria-hidden
+                            className="hero-bricka-title absolute whitespace-nowrap font-bold text-white"
+                            style={{
+                                left: titles[i]!.x,
+                                top: titles[i]!.y,
+                                width: titles[i]!.w,
+                                fontSize: HERO_TITLE_FONT_PX,
+                                lineHeight: `${HERO_TITLE_LINE_PX}px`,
+                                textAlign: titles[i]!.side === 'right' ? 'left' : titles[i]!.side === 'left' ? 'right' : 'center',
+                                animationDelay: `${Math.min(i * 45, 500) + 150}ms`,
+                            }}
+                        >
+                            {titles[i]!.text}
                         </span>
                     )}
                 </button>

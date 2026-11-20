@@ -497,8 +497,24 @@ html:has([data-app="v2"]) body {
 .hero-bricka {
   animation: hero-bricka-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
+/* Titeln vid brickan i stads-heron (#267): vit text med mörkgrå kontur, samma
+   färger som stora kartans etiketter (text-halo rgba(51,65,85,0.8)). Tonas in
+   strax efter sin bricka. */
+@keyframes hero-bricka-title-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.hero-bricka-title {
+  text-shadow:
+    0 0 2px rgba(51, 65, 85, 0.95),
+    0 0 2px rgba(51, 65, 85, 0.95),
+    0 1px 3px rgba(51, 65, 85, 0.9),
+    0 0 4px rgba(51, 65, 85, 0.7);
+  animation: hero-bricka-title-in 0.3s ease-out both;
+}
 @media (prefers-reduced-motion: reduce) {
   .hero-bricka { animation: none; }
+  .hero-bricka-title { animation: none; }
 }
 
 /* Stads-herons PASSIVA men klickbara karta (CityMapHeroCanvas) — alla

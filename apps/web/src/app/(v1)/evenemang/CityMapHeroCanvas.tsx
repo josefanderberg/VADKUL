@@ -209,6 +209,46 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
                 mapRef.current = m;
                 markerCtorRef.current = Marker as unknown as new (o: object) => MapLibreMarker;
                 m.on('load', () => { if (!cancelled) setReady(true); });
+                // PLATSSKYLTARNA (#267): bara när kartbilderna renderas ur
+                // egna kakel (scripts/render-city-maps.mjs). Punkterna hämtas
+                // ur de djupaste kaklen och bakas in i bilden - se
+                // utils/heroPoiSigns. data-hero-signs talar om för skriptet
+                // när skyltarna är ritade (pending -> done/failed).
+                const egnaKakel = process.env.NEXT_PUBLIC_VECTOR_TILES_URL;
+                if (egnaKakel) {
+                    el.dataset.heroSigns = 'pending';
+                    m.once('load', async () => {
+                        try {
+                            const [signs, { preloadPoiSignImages }] = await Promise.all([
+                                import('@/utils/heroPoiSigns'),
+                                import('@/components/v2/v2MapPoiSignImages'),
+                            ]);
+                            const tiles = signs.heroPoiTiles({ lat, lng }, zoom, el.clientWidth, el.clientHeight);
+                            const data = await signs.loadHeroPois(tiles, async t => {
+                                const url = signs.tileUrl(egnaKakel, t);
+                                if (!url) throw new Error('NEXT_PUBLIC_VECTOR_TILES_URL saknar {z}/{x}/{y}');
+                                const res = await fetch(url);
+                                // 204/404 = kaklet finns inte (tomt hav).
+                                if (res.status === 204 || res.status === 404) return null;
+                                if (!res.ok) throw new Error(`kakel ${url}: HTTP ${res.status}`);
+                                return new Uint8Array(await res.arrayBuffer());
+                            });
+                            if (cancelled) return;
+                            // Bilderna FÖRE lagret: kartan står still, så en bild som
+                            // kommer efter att kaklet lagts ut ritas aldrig.
+                            preloadPoiSignImages(m, signs.HERO_POI_KEYS);
+                            m.addSource(signs.HERO_POI_SOURCE_ID, { type: 'geojson', data: data as unknown as GeoJSON.FeatureCollection });
+                            // Under ortsnamnen, som på stora kartan: de vinner en krock.
+                            const firstPlace = m.getStyle().layers.find(l => l.type === 'symbol' && (l as { 'source-layer'?: string })['source-layer'] === 'places');
+                            m.addLayer(signs.heroPoiSignLayer() as unknown as Parameters<typeof m.addLayer>[0], firstPlace?.id);
+                            el.dataset.heroSignCount = String(data.features.length);
+                            m.once('idle', () => { el.dataset.heroSigns = 'done'; });
+                        } catch (err) {
+                            console.error('Platsskyltarna gick inte att rita:', err);
+                            el.dataset.heroSigns = 'failed';
+                        }
+                    });
+                }
                 // Klick på kartbotten (inte på en markör) öppnar STORA kartan
                 // över staden — "missar man en bricka ska man se eventen på
                 // riktiga kartan" (Josef 24/8).

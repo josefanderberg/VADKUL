@@ -12,7 +12,7 @@
  * hämtas. Vilka skyltar som finns och var de står bestäms i utils/mapPoiSigns.
  */
 import type * as maplibregl from 'maplibre-gl';
-import { poiSignKeyFromImageId, type PoiSignKey } from '@/utils/mapPoiSigns';
+import { poiSignImageId, poiSignKeyFromImageId, type PoiSignKey } from '@/utils/mapPoiSigns';
 import { POI_SIGN_PICTOGRAMS } from '@/utils/poiSignPictograms';
 
 const PIXEL_RATIO = 2;
@@ -134,6 +134,21 @@ function drawSign(key: PoiSignKey): ImageData | null {
     const cv = drawSignCanvas(key);
     if (!cv) return null;
     return cv.getContext('2d')?.getImageData(0, 0, cv.width, cv.height) ?? null;
+}
+
+/**
+ * Lägg in skyltbilderna i kartan i förväg. Behövs där lagret läggs på en karta
+ * som sedan står still (stadssidornas kartbild, #267): 'styleimagemissing'
+ * kommer för sent för kaklet som redan lagts ut, och en stillastående karta
+ * lägger aldrig ut det igen - då saknades alla skyltar utom någon enstaka.
+ */
+export function preloadPoiSignImages(map: maplibregl.Map, keys: readonly PoiSignKey[]): void {
+    for (const key of keys) {
+        const id = poiSignImageId(key);
+        if (map.hasImage(id)) continue;
+        const image = drawSign(key);
+        if (image) map.addImage(id, image, { pixelRatio: PIXEL_RATIO });
+    }
 }
 
 /** Koppla skyltbilderna till kartan. Returnerar en städfunktion. */

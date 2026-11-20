@@ -35,10 +35,10 @@
  * Kräver node 22.18 eller senare: vakterna bor i src/utils/cartoTiles.ts och
  * node kör TypeScript-filen direkt. Tre terminaler:
  *
- *   1) kakelservern (se docs/kartbilder.md för hur sweden.pmtiles tas fram)
- *      node serve-tiles.mjs
+ *   1) kakelservern (se docs/kartbilder.md för hur stader.pmtiles tas fram)
+ *      pmtiles serve ~/kartkakel --port=8099 --cors='*' --interface=127.0.0.1
  *   2) dev-servern MED egna kakel:
- *      cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/{z}/{x}/{y}.pbf' npm run dev
+ *      cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/stader/{z}/{x}/{y}.mvt' npm run dev
  *   3) själva renderingen:
  *      node scripts/render-city-maps.mjs
  *
@@ -179,6 +179,20 @@ async function main() {
                 }, { timeout: 60_000 });
                 // …och sedan på att kaklen faktiskt ritats färdigt.
                 await sleep(2500);
+                // PLATSSKYLTARNA (#267) hämtas ur de djupaste kaklen efter att
+                // kartan laddat (utils/heroPoiSigns) och ska vara ritade innan
+                // bilden tas. En stad utan skyltar är ett fel, inte en bild:
+                // annars sparas 71 bilder utan skyltar utan att någon märker det.
+                await page.waitForFunction(() => {
+                    const s = document.querySelector('.city-hero-map')?.dataset.heroSigns;
+                    return s === 'done' || s === 'failed';
+                }, { timeout: 90_000 });
+                const skyltar = await page.evaluate(() => {
+                    const d = document.querySelector('.city-hero-map').dataset;
+                    return { status: d.heroSigns, antal: Number(d.heroSignCount ?? 0) };
+                });
+                if (skyltar.status !== 'done') throw new Error('platsskyltarna gick inte att rita (se dev-serverns konsol)');
+                await sleep(400);
 
                 // Dölj allt som INTE ska in i bilden: brickor, periodchips,
                 // kartkrediten. Bara kartbotten fotograferas.
@@ -241,7 +255,7 @@ async function main() {
                 }
                 await writeFile(mål, buf);
                 ok++;
-                console.log(`  [${i + 1}/${slugs.length}] ${slug} — ${Math.round(buf.length / 1024)} kB`);
+                console.log(`  [${i + 1}/${slugs.length}] ${slug} — ${Math.round(buf.length / 1024)} kB, ${skyltar.antal} skyltpunkter`);
             } catch (e) {
                 misslyckade.push(slug);
                 console.error(`  [${i + 1}/${slugs.length}] ${slug} — MISSLYCKADES: ${e.message}`);

@@ -14,6 +14,7 @@ const ev = (o: Partial<HeroLiveEvent> = {}): HeroLiveEvent => ({
     lat: 57,
     lng: 14,
     emoji: '🎵',
+    title: 'Quiz',
     hex: null,
     // Default: senare idag (inte passerat).
     t: NOW + 3 * 3_600_000,

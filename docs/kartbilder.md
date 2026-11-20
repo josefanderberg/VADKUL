@@ -20,16 +20,19 @@ skriven mot ett öppet kakelschema. Vi renderar därför samma stil mot egna
 kakel: identiskt utseende, egna kakel.
 
 **Schemat bytte i oktober 2026 (#205).** Voyager var skriven mot
-OpenMapTiles-schemat, och de 71 bilderna som ligger ute nu är renderade ur
-egna OpenMapTiles-kakel från planetiler. Sedan oktober hämtar Voyager CARTO:s
-v2-kakel (`tiles.basemaps.cartocdn.com/v/<datum>/vectortiles/carto.streets/v2/`),
+OpenMapTiles-schemat. Sedan oktober hämtar Voyager CARTO:s v2-kakel
+(`tiles.basemaps.cartocdn.com/v/<datum>/vectortiles/carto.streets/v2/`),
 källan heter `protomaps` och lagren följer **Protomaps-schemat** (earth, water,
 landuse, landcover, roads, places, pois, buildings, boundaries). CARTO:s v2-kakel
 och Protomaps eget öppna bygge har exakt samma lager, attribut och antal objekt
 (jämfört kakel för kakel 13/11 2026, zoom 6 och 12 över Sverige). De egna
-kaklen tas därför nu som ett utdrag ur Protomaps bygge. Planetilers gamla
+kaklen tas därför som ett utdrag ur Protomaps bygge. Planetilers gamla
 `sweden.pmtiles` passar inte längre: mot den nya stilen ritas bara vatten och
 bakgrund.
+
+**Bilderna renderades om ur Protomaps-kakel 20/11 2026 (#267)**, bygget
+`20261118`, med platsskyltarna inbakade (se nedan). Kartkrediten under heron
+namnger sedan dess Protomaps i stället för OpenMapTiles.
 
 Tre krediter behövs, och kartkrediten under heron namnger alla tre:
 
@@ -37,12 +40,7 @@ Tre krediter behövs, och kartkrediten under heron namnger alla tre:
 | --- | --- | --- |
 | Kartdatan (OSM) | ODbL | synlig kredit |
 | Utseendet (Voyager-stilen) | BSD-3 för koden, CC-BY 4.0 för designen | notis i källkod (finns i `v2MapBaseStyles.ts`) + **synlig** kredit till CARTO för designen |
-| Kakelschemat | OpenMapTiles, CC-BY 4.0 (bilderna som ligger ute nu) | synlig kredit |
-
-**När bilderna renderas om ur Protomaps-kakel:** byt OpenMapTiles-länken i
-kartkrediten (`CityMapHero.tsx`) mot Protomaps (https://protomaps.com), som
-står för schemat och bygget. Byt inte förrän bilderna är omrenderade, de som
-ligger ute nu följer fortfarande OpenMapTiles-schemat.
+| Kaklen och schemat | Protomaps bygge (kartdatan ODbL, schemat öppet) | synlig kredit |
 
 **Huvudkartan rörs inte.** Den hämtar kakel direkt från CARTO i besökarens
 webbläsare, vilket är uttryckligen tillåtet.
@@ -68,68 +66,78 @@ Behövs bara när en stad tillkommer eller kartstilen ändras. Inte i CI.
 
 Protomaps lägger ut ett färdigt bygge av hela världen varje dag
 (`https://build.protomaps.com/<ÅÅÅÅMMDD>.pmtiles`, listan finns på
-https://build-metadata.protomaps.dev/builds.json). Filen är ~140 GB men behöver
-inte laddas ner: `pmtiles extract` läser bara Sveriges del med HTTP-range.
-Ta ett bygge från samma period som Voyager-stilens kakel
-(`/v/<datum>/` i stilens källa) så att schemaversionen stämmer.
+https://build-metadata.protomaps.dev/builds.json; bara de senaste dagarna
+ligger kvar). Filen är ~140 GB men behöver inte laddas ner: `pmtiles extract`
+läser bara det begärda området med HTTP-range. Ta ett färskt bygge.
+
+Utdraget täcker bara en ruta per stad (`scripts/city-map-region.mjs` skriver
+området ur `cityPages.ts`), till zoom 15 eftersom skyltpunkterna hämtas där.
+71 städer blev 419 MB och tog cirka 9 minuter (20/11 2026).
 
 ```bash
 brew install pmtiles
 ```
 ```bash
-pmtiles extract https://build.protomaps.com/20261113.pmtiles sweden.pmtiles --bbox=10.5,55.0,24.5,69.5
+mkdir -p ~/kartkakel && cd apps/web && node scripts/city-map-region.mjs > ~/kartkakel/stader.geojson
+```
+```bash
+pmtiles extract https://build.protomaps.com/20261118.pmtiles ~/kartkakel/stader.pmtiles --region=$HOME/kartkakel/stader.geojson --maxzoom=15
 ```
 
-Lägg filen någonstans utanför repot, den ska inte committas. Den gamla
+Filen ska ligga utanför repot, den ska inte committas. Den gamla
 `sweden.pmtiles` från planetiler (OpenMapTiles) går inte att använda längre,
 schemavakten stoppar den.
 
 ### 2. Kakelservern
 
-MapLibre behöver kaklen över HTTP. Minimal server (`serve-tiles.mjs`, kräver
-`npm i pmtiles`):
+`pmtiles serve` ger kaklen över HTTP, på adressen
+`http://localhost:8099/stader/{z}/{x}/{y}.mvt` (filnamnet utan ändelse är
+första ledet). Kakel som saknas svarar 204.
 
-```js
-import { createServer } from 'http';
-import { PMTiles, FileSource } from 'pmtiles';
-import { openAsBlob } from 'fs';
-const FILE = '/sökväg/till/sweden.pmtiles';
-const blob = await openAsBlob(FILE);
-const pm = new PMTiles(new FileSource(Object.assign(blob, { name: FILE })));
-createServer(async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    const m = req.url.match(/^\/(\d+)\/(\d+)\/(\d+)\.(?:pbf|mvt)/);
-    if (!m) { res.writeHead(404).end(); return; }
-    const t = await pm.getZxy(+m[1], +m[2], +m[3]);
-    if (!t) { res.writeHead(204).end(); return; }
-    // INGEN Content-Encoding: biblioteket packar redan upp kaklen. Påstår man
-    // gzip här misslyckas avkodningen tyst och kartan blir en tom grön platta.
-    res.writeHead(200, { 'Content-Type': 'application/x-protobuf' });
-    res.end(Buffer.from(t.data));
-}).listen(8099);
+```bash
+pmtiles serve ~/kartkakel --port=8099 --cors='*' --interface=127.0.0.1
 ```
 
 ### 3. Rendera
 
-Tre terminaler:
+Dev-servern MED egna kakel (profilen `web-kartbilder` i `.claude/launch.json`
+har miljövariabeln satt; kolla först att ingen annan dev-server kör):
 
 ```bash
-node serve-tiles.mjs                                   # 1
+cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/stader/{z}/{x}/{y}.mvt' npm run dev
 ```
 ```bash
-cd apps/web && NEXT_PUBLIC_VECTOR_TILES_URL='http://localhost:8099/{z}/{x}/{y}.pbf' npm run dev   # 2
+cd apps/web && node scripts/render-city-maps.mjs
 ```
-```bash
-cd apps/web && node scripts/render-city-maps.mjs       # 3
-```
-
-Dev-servern kan också startas som `web-kartbilder` i `.claude/launch.json`,
-som redan har miljövariabeln satt.
 
 Flaggor: `--city=malmo,vaxjo`, `--keep` (hoppa över befintliga), `--base=`.
 
 Skriptet kräver node 22.18 eller senare: vakterna ligger i
 `src/utils/cartoTiles.ts` och node kör TypeScript-filen direkt.
+
+Titta på ett par bilder efteråt (en liten och en stor stad). Bilderna är
+webp; `sips -s format png <fil> --out <fil>.png` gör dem läsbara överallt.
+
+## Platsskyltarna i bilden (#267)
+
+Badplatser, museer, bibliotek, naturreservat, golfbanor, biografer, teatrar
+och arenor står som skyltar i bilden, samma skyltar som på stora kartan. På
+stora kartan tänds de först vid zoom 12-13, eftersom kaklen inte bär platserna
+tidigare. Stadssidans karta står på zoom 11, så vid renderingen hämtar
+`CityMapHeroCanvas` punkterna ur zoom 15-kaklen för kartrutan och lägger dem
+som en egen källa med kontraktets skyltlager (`src/utils/heroPoiSigns.ts`,
+testad). Det sker bara när `NEXT_PUBLIC_VECTOR_TILES_URL` är satt: en stad utan
+förrenderad bild får alltså inga skyltar hos besökaren förrän bilden finns.
+
+Lekplatser, parker, bollplaner, idrottsanläggningar och matställen är inte med
+(för många för en bild över hela staden). Skyltarna är 0,6 av full storlek
+(`HERO_POI_ICON_SIZE`) och har inga namn.
+
+- Skriptet väntar på `data-hero-signs="done"` och vägrar spara om skyltarna
+  inte gick att rita. Antalet skyltpunkter skrivs ut per stad.
+- **Skyltbilderna läggs in FÖRE lagret** (`preloadPoiSignImages`). Kartan står
+  still, och en bild som kommer via `styleimagemissing` efter att kaklet lagts
+  ut ritas aldrig: första försöket gav 3 skyltar av 38 i Växjö.
 
 ## Fällor som vakter redan fångar
 

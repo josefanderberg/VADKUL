@@ -38,6 +38,9 @@ export type HeroLiveEvent = {
     lat: number;
     lng: number;
     emoji: string;
+    /** Titeln vid brickan (#267, 20/11), redan kapad på servern med stora
+     *  kartans truncateLabel (18 tecken) så HTML:n inte sväller. */
+    title: string;
     hex: string | null;
     t: number;
     hour: number | null;

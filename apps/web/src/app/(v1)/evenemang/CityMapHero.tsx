@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { dayKey, hourOf, type City, type CityEvent } from './cityData';
 import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
 import { sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
+import { truncateLabel } from '@/components/v2/v2MapLabel';
 import { THEMEPARK_LAND_COLOR_NEAR } from '@/components/v2/v2MapBaseStyles';
 import CityMapHeroCanvas from './CityMapHeroCanvas';
 import CityMapHeroMarkers from './CityMapHeroMarkers';
@@ -113,8 +114,9 @@ type Brick = { id: string; emoji: string; bg: string; dx: number; dy: number };
 const MAX_LIVE_DATA = 350;
 
 /** Bygg den levande kartans eventdata (vid BUILD). Bara fälten markörerna
- *  behöver — titel/plats/klockslag åkte ut med hero-popupen 30/8 (mindre
- *  HTML-payload). */
+ *  behöver. Plats och klockslag åkte ut med hero-popupen 30/8 (mindre
+ *  HTML-payload); TITELN är tillbaka sedan 20/11 (#267, Josef: "att man ser
+ *  titlarna på eventen"), kapad till stora kartans etikettlängd. */
 function buildLiveEvents(city: City, events: CityEvent[], organizerSlug?: string): HeroLiveEvent[] {
     const center = worldPx(city.lat, city.lng, HERO_ZOOM);
     return events
@@ -134,6 +136,7 @@ function buildLiveEvents(city: City, events: CityEvent[], organizerSlug?: string
                 lat: e.lat,
                 lng: e.lng,
                 emoji: e.emoji || '📍',
+                title: truncateLabel(e.title || ''),
                 hex: cat?.markerHex ?? null,
                 t: Date.parse(e.time),
                 hour: e.hasSpecificTime ? hourOf(e.time) : null,
@@ -292,7 +295,9 @@ export default function CityMapHero({ city, events, recommended, organizerSlug }
               • Kartdatan är OpenStreetMap (ODbL) — vi renderar egna kakel.
               • Utseendet är CARTO:s Voyager-stil (BSD-3), som kräver att
                 upphovsrättsnotisen behålls.
-              • Schemat kaklen följer är OpenMapTiles (CC-BY 4.0).
+              • Kaklen är ett utdrag ur Protomaps öppna bygge och följer
+                deras schema (sedan omrenderingen 20/11 2026, #267; före
+                det OpenMapTiles - se docs/kartbilder.md).
             Samma lösning som stora kartan, där raden bor i välkomstrutan.
             Tar du bort raden måste krediten tillbaka någon annanstans. */}
         <p className="mt-1 text-right text-[10px] leading-none text-slate-400 dark:text-zinc-600">
@@ -307,12 +312,12 @@ export default function CityMapHero({ city, events, recommended, organizerSlug }
             </a>
             {' '}· stil © CARTO ·{' '}
             <a
-                href="https://openmaptiles.org/"
+                href="https://protomaps.com/"
                 target="_blank"
                 rel="noopener"
                 className="underline hover:text-slate-600 dark:hover:text-zinc-400"
             >
-                OpenMapTiles
+                Protomaps
             </a>
         </p>
         </>
