@@ -11,6 +11,10 @@
       "lastRetry": "2026-11-11",
       "emptyRetries": 5
     },
+    "damallsvenskan": {
+      "since": "2026-11-20",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "elin-sundbergs-vanforening": {
       "since": "2026-10-13",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -24,8 +28,8 @@
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-13",
-      "emptyRetries": 12
+      "lastRetry": "2026-11-20",
+      "emptyRetries": 13
     },
     "folk-goteborg": {
       "since": "2026-08-19",
@@ -38,6 +42,10 @@
       "reason": "4 raka tomma körningar (found=0, inga skips)",
       "lastRetry": "2026-11-19",
       "emptyRetries": 13
+    },
+    "liseberg": {
+      "since": "2026-11-20",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
     "ortraskbygdens-intresse-och-hembygdsfor": {
       "since": "2026-08-19",
@@ -76,8 +84,8 @@
     "storsjoyran": {
       "since": "2026-09-18",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-13",
-      "emptyRetries": 8
+      "lastRetry": "2026-11-20",
+      "emptyRetries": 9
     },
     "superettan": {
       "since": "2026-11-11",
@@ -88,8 +96,8 @@
     "tickster-ort-eskilstuna-2": {
       "since": "2026-10-23",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-13",
-      "emptyRetries": 3
+      "lastRetry": "2026-11-20",
+      "emptyRetries": 4
     },
     "tickster-ort-jonkoping-3": {
       "since": "2026-11-15",

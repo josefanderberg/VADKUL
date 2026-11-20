@@ -1,31 +1,17 @@
 {
-  "generatedAt": "2026-11-19T10:01:13.259Z",
+  "generatedAt": "2026-11-20T06:01:47.050Z",
   "counts": {
     "fel": 0,
-    "varning": 43,
-    "nollkoordinatTotalt": 607
+    "varning": 41,
+    "nollkoordinatTotalt": 514
   },
   "alerts": [
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "damallsvenskan",
-      "since": "2026-11-16",
-      "message": "gav 7 event 2026-11-15, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
     {
       "level": "varning",
       "kind": "tyst",
       "source": "kulturen",
       "since": "2026-11-13",
       "message": "gav 8 event 2026-11-09, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "liseberg",
-      "since": "2026-11-10",
-      "message": "gav 1 event 2026-11-02, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
     },
     {
       "level": "varning",
@@ -45,14 +31,14 @@
       "level": "varning",
       "kind": "volymras",
       "source": "alingsas",
-      "since": "2026-11-13",
-      "message": "ger 29 event per körning, under källans golv 54 (expectedMinEvents) — tappar tolkningen event?"
+      "since": "2026-11-14",
+      "message": "ger 30 event per körning, under källans golv 54 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "bastad",
-      "since": "2026-11-15",
+      "since": "2026-11-16",
       "message": "ger 16 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
@@ -67,14 +53,14 @@
       "kind": "volymras",
       "source": "jonkoping",
       "since": "2026-11-13",
-      "message": "ger 8 event per körning mot 150 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "message": "ger 8 event per körning mot 138 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "kungliga-operan",
       "since": "2026-11-13",
-      "message": "ger 13 event per körning mot 57 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "message": "ger 13 event per körning mot 56 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
@@ -89,13 +75,6 @@
       "source": "sb-vemdalen-se",
       "since": "2026-11-13",
       "message": "ger 13 event per körning mot 250 tidigare — ändrad sajt, eller tolkningen tappar event?"
-    },
-    {
-      "level": "varning",
-      "kind": "volymras",
-      "source": "tingsryd",
-      "since": "2026-11-10",
-      "message": "ger 5 event per körning, under källans golv 7 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
@@ -121,7 +100,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "S:t Peters klosters församling",
-      "message": "7 av 11 kommande event ligger 2026-11-25 — sajtvitt datum i stället för eventets?"
+      "message": "7 av 10 kommande event ligger 2026-11-25 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -133,31 +112,25 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Wisby Strand",
-      "message": "29 av 32 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
+      "message": "29 av 33 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "607 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 22, Söndrum-Vapnö församling 21, Barnarp-Ödestugu församling 16, ABF 14, Värö-Stråvalla församling 13"
-    },
-    {
-      "level": "varning",
-      "kind": "invariant",
-      "source": "Dramaten",
-      "message": "invariant-vakten larmar (1 av 11 event på samma tidsstämpel) — se nattloggen"
+      "source": "514 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 19, Söndrum-Vapnö församling 18, ABF 14, Barnarp-Ödestugu församling 14, Studiefrämjandet 12"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (7 av 223 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 219 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Vallentuna Kommun",
-      "message": "invariant-vakten larmar (1 av 39 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (1 av 37 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -172,6 +145,13 @@
       "source": "bjorndammens-masugn",
       "since": "2026-10-07",
       "message": "i karantän sedan 2026-10-07: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "damallsvenskan",
+      "since": "2026-11-20",
+      "message": "i karantän sedan 2026-11-20: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
@@ -207,6 +187,13 @@
       "source": "gotska-sandons-hembygdsforening",
       "since": "2026-08-19",
       "message": "i karantän sedan 2026-08-19: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "liseberg",
+      "since": "2026-11-20",
+      "message": "i karantän sedan 2026-11-20: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",
