@@ -607,8 +607,9 @@ INV_ALARMS="$INV_ALARMS" \
 ALERTS_SUMMARY="$ALERTS_SUMMARY" \
 ALERTS_TOP="$ALERTS_TOP" \
 LOG_FILE_PATH="$LOG_FILE" \
+DAGSINLAGG_LOGG="$SCRAPER_DIR/dagsinlagg-logg.json" \
 /usr/bin/python3 - >"$PAYLOAD_FILE" <<'PYEOF'
-import os, html
+import os, html, json, time
 esc = html.escape
 
 job        = os.environ["JOB_NAME"]
@@ -722,6 +723,38 @@ if alerts_summary:
 if alerts_top:
     alert_facts.append({"title": "🔧 Att kolla", "value": alerts_top})
 
+# ── Dagsinlägget (FB + IG varje morgon, se.vadkul.dagsinlagg) ──
+# Hjärtslag varje natt: när gick senaste inlägget ut? Dagsinlägget dog tyst
+# 3-18/11 2026 (fel node, #259) utan att något syntes här. Varnar efter 30 h.
+dags_facts = []
+dags_varning = False
+try:
+    with open(os.environ.get("DAGSINLAGG_LOGG", ""), encoding="utf-8") as f:
+        dl = json.load(f)
+    ute = [i for i in dl.get("inlagg", []) if i.get("status") == "publicerad" and i.get("publicerad")]
+    if ute:
+        sista = max(ute, key=lambda i: i["publicerad"])
+        alder_h = (time.time() * 1000 - sista["publicerad"]) / 3_600_000
+        t = time.localtime(sista["publicerad"] / 1000)
+        dag = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"][t.tm_wday]
+        vad = ", ".join(x for x in [sista.get("tema"), sista.get("stad")] if x)
+        dags_facts.append({"title": "Senast ute",
+                           "value": f"{dag} {t.tm_mday}/{t.tm_mon} {t.tm_hour:02d}:{t.tm_min:02d} ({vad})"})
+        if alder_h > 30:
+            dags_varning = True
+            dags_facts.append({"title": "⚠️ Varning",
+                               "value": f"inget dagsinlägg ute på {alder_h / 24:.1f} dygn - kolla dagsinlagg-err.log"})
+    else:
+        dags_varning = True
+        dags_facts.append({"title": "⚠️ Varning", "value": "inget dagsinlägg har publicerats än"})
+    lediga = [k for k in dl.get("klipp", []) if k.get("status") in ("ny", "godkänd")]
+    dags_facts.append({"title": "🎬 Inkorgen",
+                       "value": f"{len(lediga)} klipp (video tis och fre, annars bild)"})
+except FileNotFoundError:
+    pass
+except Exception as e:  # noqa: BLE001 - rapporten ska alltid gå ut
+    dags_facts.append({"title": "⚠️ Dagsinläggets logg", "value": f"kunde inte läsas: {e}"})
+
 def facts(rows):
     return "\n".join(f"• <b>{esc(r['title'])}:</b> {esc(r['value'])}" for r in rows)
 
@@ -731,6 +764,7 @@ def section(title, rows):
 parts = [
     f"{emoji} <b>VADKUL daily — {esc(job)}</b>",
     section("🚀 Scraper-resultat", run_facts),
+    section("⚠️ Dagsinlägget" if dags_varning else "📣 Dagsinlägget", dags_facts),
     section("🗺️ Kartstatistik", map_facts),
     section("👤 Facebook Events", fb_facts),
     section("⏸️ Källkarantän", quar_facts),

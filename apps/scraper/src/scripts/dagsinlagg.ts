@@ -28,6 +28,7 @@
  * tiden hamnar i inkorgen.
  */
 
+import '../utils/kraschlarm'; // FÖRST: larmar i Telegram om skriptet dör redan när modulerna laddas (#259)
 import fs from 'fs';
 import path from 'path';
 import { eventKey } from '../utils/eventKey';

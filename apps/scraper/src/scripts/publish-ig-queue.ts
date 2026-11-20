@@ -34,6 +34,7 @@
  * inte att dubbelposta den här vägen.
  */
 
+import '../utils/kraschlarm'; // FÖRST: larmar i Telegram om skriptet dör redan när modulerna laddas (#259)
 import {
     loadQueue, saveQueue, upsertQueueItem, dueItems, staleItems, forcedItems, replaceItem,
     queueId, QUEUE_PATH, type IgQueueItem,
