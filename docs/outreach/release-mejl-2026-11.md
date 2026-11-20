@@ -67,8 +67,10 @@ INNEHÅLLSBILDER. Loggan är fortfarande text (30/10-beslutet står kvar).
 **UTKASTET FINNS (20/11):** kampanjen "Medlemsmejl nov 2026 (nya kartan + Android-testare)",
 id 292391000000395002, på kontot hej@vadkul.se. Ämne, avsändare (Josef på VADKUL,
 hej@vadkul.se) och innehåll är ifyllda. INGA mottagare valda, inget skickat.
-- Zoho visar "Saknad(e) bild(er)" för de tre bildadresserna tills de är pushade och
-  deployade. Ladda upp HTML-filen igen efter deployen om varningen står kvar.
+- **Bilderna är ute sedan 20/11 ca 16:10** (deploy 44756028467 grön, alla tre adresserna
+  svarar 200). Utkastet laddades upp på nytt efter deployen, med betygsraden 1-5:
+  varningen "Saknad(e) bild(er)" är borta och Zohos förhandsvisning visar hela mejlet
+  med bilder. Ändras HTML:en igen: radera innehållet i utkastet och ladda upp filen på nytt.
 - Ämnet ligger UTAN 📍: emojin blev ett frågetecken när den skrevs in via Chrome.
   Lägg till den för hand med emojiknappen i ämnesfältet om den ska med.
 - Vägen som fungerar: Skapa innehåll -> Importera/ladda upp HTML -> Ladda upp från
