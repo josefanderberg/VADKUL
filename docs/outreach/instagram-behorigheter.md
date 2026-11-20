@@ -1,17 +1,22 @@
 # Instagram-publicering: behörigheterna som saknas
 
-**Status 2026-11-05: bildinlägg fungerar på både Facebook och Instagram.
-Dagsinlägget (`npm run dagsinlagg -- --kolla` på minin) saknar tre scopes:**
+**Status 2026-11-20: video på Facebook behöver INTE längre `publish_video`.**
+Dagsinlägget och studion lägger video som reel via Reels-API:t (`video_reels`),
+som bara kräver `pages_manage_posts`. Verifierat med den nuvarande sidtoken: en
+reel lades som utkast på sidan 20/11 (Metas kontroll klar, ingen
+upphovsrättsträff). Kvar att få är kommentar-scopen:
 
 | Scope | Behövs för |
 |---|---|
-| `publish_video` | videodagarna (Grok-klippen) på Facebook |
 | `pages_manage_engagement` | svaret på spelet och quizet som kommentar på Facebook |
 | `instagram_manage_comments` | samma svar som kommentar på Instagram |
 
+**Status 2026-11-05: bildinlägg fungerar på både Facebook och Instagram.**
+Då saknades också `publish_video` (videodagarna gick via `/videos`).
+
 Gör om steg 3-6 nedan med alla scopes i listan, spara den nya sidtoken på
-minin och kör `--kolla` igen. Utan dem går bildinläggen ut som vanligt, men
-videodagarna och morgondagens svar fallerar.
+minin och kör `--kolla` igen. Utan dem går bild- och videoinläggen ut som
+vanligt, men morgondagens svar på spelet och quizet fallerar.
 
 **Status 2026-09-02: FORTFARANDE BLOCKERAT — och ingen ny token har någonsin
 landat.** Token som ligger på MacBooken (`apps/scraper/.env`,

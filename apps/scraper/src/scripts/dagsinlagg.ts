@@ -37,7 +37,7 @@ import { cityPageFor, cityPages, cityPoints, citySlugFor } from '../utils/cityLo
 import {
     commentOnFacebookPost, commentOnInstagramMedia, fetchFacebookPostInsights, fetchInstagramMediaInsights,
     getFacebookPostPermalink, getTokenScopes, isFacebookConfigured, isInstagramConfigured, loadSocialSecrets,
-    postReelToInstagram, postToFacebook, postToInstagram, postVideoToFacebook,
+    postReelToFacebook, postReelToInstagram, postToFacebook, postToInstagram,
 } from '../utils/socialPublish';
 import { isTelegramConfigured, sendMessage, sendPhoto, sendVideo, flushPendingUpdates, waitForMessage } from '../utils/telegram';
 import type { CardEvent, DestEvent, Inlagg, Klipp, KlippTema, Logg, Tema } from '../utils/dagsinlagg/typer';
@@ -88,7 +88,9 @@ const LOCK_FILE = '/tmp/vadkul-dagsinlagg.lock';
 const PUBLICERINGSTID = '09:00';
 const LANK_BAS = 'https://vadkul.se';
 
-const SCOPES_KRAV = ['pages_manage_posts', 'publish_video', 'pages_manage_engagement', 'instagram_basic', 'instagram_content_publish', 'instagram_manage_comments'];
+// publish_video behövs inte längre: video går som reel via Reels-API:t (20/11 2026).
+// Kommentar-scopen behövs för spelets och quizets svar som kommentar (#167).
+const SCOPES_KRAV = ['pages_manage_posts', 'pages_manage_engagement', 'instagram_basic', 'instagram_content_publish', 'instagram_manage_comments'];
 
 // --- Hjälpare --------------------------------------------------------------------
 
@@ -477,11 +479,13 @@ async function publicera(logg: Logg, utkast: Utkast): Promise<Logg> {
     }
 
     if (isFacebookConfigured()) {
-        meta.fbPostId = inlagg.form === 'video'
-            ? await postVideoToFacebook(url, inlagg.text.fb, { title: `VADKUL ${DATUM}` })
+        // Video som reel: Reels-API:t kräver inte publish_video, som sidtokenen saknar (#167).
+        const fbPostId: string = inlagg.form === 'video'
+            ? await postReelToFacebook(url, inlagg.text.fb).then(r => r.postId ?? r.videoId)
             : await postToFacebook(inlagg.text.fb, [url], 1);
-        meta.permalink = await getFacebookPostPermalink(meta.fbPostId).catch(() => undefined);
-        log(`Facebook: ${meta.fbPostId}`);
+        meta.fbPostId = fbPostId;
+        meta.permalink = await getFacebookPostPermalink(fbPostId).catch(() => undefined);
+        log(`Facebook: ${fbPostId}`);
     } else {
         log('Facebook ej konfigurerat, hoppar över');
     }

@@ -10,7 +10,7 @@ import { postToFacebook, postToInstagram } from './socialPublish';
 /** Minimal Response-mock. */
 const jsonRes = (obj: unknown) => ({ json: async () => obj });
 
-type FetchCall = { url: string; body: any };
+type FetchCall = { url: string; body: any; headers?: Record<string, string> };
 let calls: FetchCall[];
 
 /**
@@ -211,6 +211,7 @@ describe('postToInstagram — karusell med påfyllnad', () => {
 
 import {
     postVideoToFacebook, postReelToInstagram, lookupInstagramUserId, getTokenScopes, facebookVideoPermalink,
+    postReelToFacebook,
 } from './socialPublish';
 
 /**
@@ -283,6 +284,60 @@ describe('postVideoToFacebook', () => {
 
     it('bygger permalinken ur sid-id + video-id', () => {
         expect(facebookVideoPermalink('PAGE', 'vid1')).toBe('https://www.facebook.com/PAGE/videos/vid1');
+    });
+});
+
+describe('postReelToFacebook', () => {
+    /** Reels-API:t: start → rupload (file_url i headern) → finish. */
+    function installReelMock(opts: { finishError?: string; uploadFails?: boolean } = {}) {
+        calls = [];
+        vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { body?: string; headers?: Record<string, string> }) => {
+            const body = init?.body ? JSON.parse(init.body) : undefined;
+            calls.push({ url, body, headers: init?.headers });
+            if (url.includes('rupload.facebook.com')) return jsonRes(opts.uploadFails ? { success: false, error: { message: 'trasig fil' } } : { success: true });
+            if (url.includes('/PAGE/video_reels') && body?.upload_phase === 'start') return jsonRes({ video_id: 'r1', upload_url: 'x' });
+            if (url.includes('/PAGE/video_reels') && body?.upload_phase === 'finish') {
+                return jsonRes(opts.finishError ? { error: { code: 100, message: opts.finishError } } : { success: true, post_id: '777' });
+            }
+            throw new Error(`Oväntad URL i test: ${url}`);
+        }));
+    }
+
+    it('start → uppladdning från file_url → finish PUBLISHED, utan /videos', async () => {
+        installReelMock();
+        const r = await postReelToFacebook(VIDEO, 'texten');
+        expect(r).toEqual({ videoId: 'r1', postId: 'PAGE_777' });
+        expect(calls.map(c => c.url)).toEqual([
+            'https://graph.facebook.com/v19.0/PAGE/video_reels',
+            'https://rupload.facebook.com/video-upload/v19.0/r1',
+            'https://graph.facebook.com/v19.0/PAGE/video_reels',
+        ]);
+        expect(calls[1].headers).toMatchObject({ Authorization: 'OAuth TOKEN', file_url: VIDEO });
+        expect(calls[2].body).toMatchObject({ upload_phase: 'finish', video_id: 'r1', video_state: 'PUBLISHED', description: 'texten', access_token: 'TOKEN' });
+        expect(calls.some(c => c.url.includes('/videos'))).toBe(false);
+    });
+
+    it('utkast och schemaläggning sätter video_state', async () => {
+        installReelMock();
+        await postReelToFacebook(VIDEO, 'x', { utkast: true });
+        expect(calls[2].body.video_state).toBe('DRAFT');
+        expect(calls[2].body.scheduled_publish_time).toBeUndefined();
+
+        installReelMock();
+        const when = Date.now() + 2 * 86_400_000;
+        await postReelToFacebook(VIDEO, 'x', { scheduledFor: when });
+        expect(calls[2].body).toMatchObject({ video_state: 'SCHEDULED', scheduled_publish_time: Math.floor(when / 1000) });
+    });
+
+    it('kräver https, vägrar fel schemafönster och lyfter Metas fel', async () => {
+        installReelMock();
+        await expect(postReelToFacebook('/tmp/klipp.mp4', 'x')).rejects.toThrow(/https/);
+        await expect(postReelToFacebook(VIDEO, 'x', { scheduledFor: Date.now() + 60_000 })).rejects.toThrow(/minst 10 min/);
+        expect(calls).toHaveLength(0);
+        installReelMock({ uploadFails: true });
+        await expect(postReelToFacebook(VIDEO, 'x')).rejects.toThrow(/uppladdningen gick inte \(trasig fil\)/);
+        installReelMock({ finishError: 'Video aspect ratio not supported' });
+        await expect(postReelToFacebook(VIDEO, 'x')).rejects.toThrow(/FB API 100: Video aspect ratio/);
     });
 });
 

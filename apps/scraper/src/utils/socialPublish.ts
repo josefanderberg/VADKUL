@@ -20,6 +20,8 @@ import path from 'path';
 import { formatDuration, formatStockholm } from './videoPost';
 
 const GRAPH = 'https://graph.facebook.com/v19.0';
+/** Reels-API:ts uppladdningsvärd (postReelToFacebook). */
+const RUPLOAD = 'https://rupload.facebook.com/video-upload/v19.0';
 
 let secretsLoaded = false;
 
@@ -403,6 +405,67 @@ export async function postVideoToFacebook(
     const data = await res.json() as any;
     if (data.error) throw new Error(`FB API ${data.error.code}: ${data.error.message}`);
     return data.id as string;
+}
+
+export interface FbReelOptions {
+    /** Schemalägg (10 min – 30 dygn fram) i stället för att publicera direkt. */
+    scheduledFor?: number;
+    /** Lägg reelen som utkast (syns bara för sidans admins i Business Suite). */
+    utkast?: boolean;
+}
+
+/**
+ * Reel på Facebook-sidan via Reels-API:t (`video_reels`): start → Meta hämtar
+ * videon från `file_url` → finish. Kräver bara pages_manage_posts, INTE
+ * publish_video som `/videos` (postVideoToFacebook) kräver. Sidtokenen saknar
+ * publish_video, och reelvägen verifierades 20/11 2026 med just den tokenen
+ * (ett utkast gick igenom, Metas kontroll klar). Reels-krav: 9:16, 3–90 s.
+ *
+ * Returnerar video-id och inläggs-id (sid-id_post-id, samma form som bildinläggen,
+ * så permalänk och insikter fungerar som för dem).
+ */
+export async function postReelToFacebook(
+    videoUrl: string,
+    description: string,
+    opts: FbReelOptions = {},
+): Promise<{ videoId: string; postId?: string }> {
+    const FB_PAGE_ID = fbPageId(), FB_PAGE_TOKEN = fbPageToken();
+    if (!videoUrl.startsWith('https://')) throw new Error('FB reel: videoUrl måste vara en publik https-URL');
+    const { scheduledFor, utkast } = opts;
+    if (scheduledFor !== undefined && !utkast) assertScheduleWindow(scheduledFor);
+
+    const post = async (url: string, body: Record<string, unknown>): Promise<any> => {
+        const res = await fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...body, access_token: FB_PAGE_TOKEN }),
+        });
+        const data = await res.json() as any;
+        if (data.error) throw new Error(`FB API ${data.error.code}: ${data.error.message}`);
+        return data;
+    };
+
+    const start = await post(`${GRAPH}/${FB_PAGE_ID}/video_reels`, { upload_phase: 'start' });
+    const videoId = String(start.video_id ?? '');
+    if (!videoId) throw new Error(`FB reel: inget video_id i startsvaret (${JSON.stringify(start).slice(0, 200)})`);
+
+    const upp = await fetch(`${RUPLOAD}/${videoId}`, {
+        method: 'POST',
+        headers: { Authorization: `OAuth ${FB_PAGE_TOKEN}`, file_url: videoUrl },
+    });
+    const uppData = await upp.json() as any;
+    if (!uppData.success) {
+        throw new Error(`FB reel: uppladdningen gick inte (${uppData.error?.message ?? JSON.stringify(uppData).slice(0, 200)})`);
+    }
+
+    const finish: Record<string, unknown> = {
+        upload_phase: 'finish', video_id: videoId, description,
+        video_state: utkast ? 'DRAFT' : scheduledFor !== undefined ? 'SCHEDULED' : 'PUBLISHED',
+    };
+    if (scheduledFor !== undefined && !utkast) finish.scheduled_publish_time = Math.floor(scheduledFor / 1000);
+    const klar = await post(`${GRAPH}/${FB_PAGE_ID}/video_reels`, finish);
+    if (!klar.success) throw new Error(`FB reel: finish misslyckades (${JSON.stringify(klar).slice(0, 200)})`);
+    const p = klar.post_id ? String(klar.post_id) : undefined;
+    return { videoId, postId: p && !p.includes('_') ? `${FB_PAGE_ID}_${p}` : p };
 }
 
 /** Länken till en sidvideo — fungerar först när den är publicerad. */
