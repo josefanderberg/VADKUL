@@ -1,7 +1,7 @@
 # Medlemsmejl november 2026 - nya kartan, appen och fler Android-testare
 
 Utkast skrivet 2026-11-20 (#265). HTML: `release-mejl-2026-11.html`, byggd ur
-`android-testare-mejl-2026-10.html` (samma blå bakgrund, ordmärke, signatur och
+`android-testare-mejl-2026-10.html` (samma ordmärke, signatur och
 sidfot). INTE skickat.
 
 ## Budskapet
@@ -71,6 +71,10 @@ hej@vadkul.se) och innehåll är ifyllda. INGA mottagare valda, inget skickat.
   svarar 200). Utkastet laddades upp på nytt efter deployen, med betygsraden 1-5:
   varningen "Saknad(e) bild(er)" är borta och Zohos förhandsvisning visar hela mejlet
   med bilder. Ändras HTML:en igen: radera innehållet i utkastet och ladda upp filen på nytt.
+- **Vit bakgrund sedan 20/11 kväll** (Josef: "jag vill inte ha blå bakgrund. vi kör
+  vanligt utan det istället"): mörk text på vitt, blått i ordmärket, rubrikraderna,
+  betygsknapparna och knapparna, Android-rutan ljusgrå. Utkastet är uppladdat på nytt
+  och Zohos förhandsvisning är genomgången uppifrån och ned.
 - Ämnet ligger UTAN 📍: emojin blev ett frågetecken när den skrevs in via Chrome.
   Lägg till den för hand med emojiknappen i ämnesfältet om den ska med.
 - Vägen som fungerar: Skapa innehåll -> Importera/ladda upp HTML -> Ladda upp från
