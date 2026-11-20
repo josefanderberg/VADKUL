@@ -13,7 +13,6 @@ import TopNav from '../TopNav';
 import CityMapHero, { cityMapHref } from '../CityMapHero';
 import CityVadkulSpotlight from '../CityVadkulSpotlight';
 import CityCreatePitch from '../CityCreatePitch';
-import CityWishes from '../CityWishes';
 import { DayFilterProvider } from '../dayFilter';
 import CityVisitBeacon from '@/components/analytics/CityVisitBeacon';
 import { showForFunOnCityPage } from '@/utils/partnerLinks';
@@ -236,7 +235,7 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 {/* Samma pitch som i botten men HOPFÄLLD (Josef 4/9: "i
                     Stockholm tar det aslång tid att scrolla ner") — nyttan av
                     att skapa/boosta ska synas även i storstäder. */}
-                <CityCreatePitch cityName={city.name} createHref={`${cityMapHref(city)}&skapa=1`} wishHref={`${cityMapHref(city)}&onska=1`} collapsible />
+                <CityCreatePitch cityName={city.name} createHref={`${cityMapHref(city)}&skapa=1`} collapsible />
 
                 {/* Filterraden (Idag/Imorgon/I helgen + timstaplar) ligger överst
                     i sektionen och styr allt under: kategorichipsen (children)
@@ -285,22 +284,11 @@ export default async function CityPage({ params }: { params: Promise<{ stad: str
                 {showForFunOnCityPage(city.slug, cityCategories.some(c => c.cat.slug === 'barn' && c.hasPage))
                     && <ForFunTips cityName={city.name} citySlug={city.slug} />}
 
-                {/* Önskningarna som AVSLUT (Josef 14/9: "ingen vill byta till
-                    en annan stad — bättre att ha önskningar där"): synlig
-                    efterfrågan + skapa-vägen. Klientkomponent utanför server-
-                    HTML:n (SEO-beslutet 1/9), samma Firestore-mönster som
-                    spotlighten. Stadslistan under är NEDTONAD till fotnot —
-                    de interna länkarna bär SEO:n mellan stadssidorna och ska
-                    vara kvar, men de är inte längre sidans slutpoäng. */}
-                <CityWishes
-                    cityName={city.name}
-                    cityLat={city.lat}
-                    cityLng={city.lng}
-                    radiusKm={city.small ? 20 : 35}
-                    createHref={`${cityMapHref(city)}&skapa=1`}
-                    wishHref={`${cityMapHref(city)}&onska=1`}
-                />
-
+                {/* Önskningarna (14/9) är BORTTAGNA från stadssidorna 20/11
+                    (#266, Josef: "ta bort den önska event på stadssidorna").
+                    Kartans önska-läge finns kvar. Stadslistan under är en
+                    NEDTONAD fotnot: de interna länkarna bär SEO:n mellan
+                    stadssidorna och ska vara kvar. */}
                 <div className="mt-10 pt-6 border-t border-slate-200 dark:border-zinc-800">
                     {organizers.length > 0 && (
                         <>

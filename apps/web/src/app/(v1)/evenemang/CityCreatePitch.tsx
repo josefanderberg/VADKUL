@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Det blå "arrangera själv"-blocket: vardagsexempel + exponeringstrappan
 // (Syns bra/mer/mest) + Skapa-CTA + nu-fokus-raden. Används TVÅ gånger på
@@ -18,10 +17,9 @@ import { ArrowRight, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 //
 // 22/9 (Josef: rutan "ser lite tråkig ut", "billig"): djup i stället för en
 // platt blå list, alltså en ljus kant upptill, en mjuk blå skugga under och
-// en liten trappa (dämpad, blå, guld) i stället för stjärnemojin. Under den
-// översta rutan ligger SNABBÖNSKAN (blå, utan emoji): skriv vad du saknar och tryck Önska, så
-// hamnar man på kartan i önska-läget med texten redan ifylld (?titel=).
-// Önskningarna ligger annars längst ner, dit många aldrig scrollar.
+// en liten trappa (dämpad, blå, guld) i stället för stjärnemojin.
+// SNABBÖNSKAN under den översta rutan (22/9) är BORTTAGEN 20/11 (#266, Josef:
+// "ta bort den önska event på stadssidorna"). Lägg inte tillbaka den.
 
 /** Rutans djup: skugga under + ljus kant upptill (delas av båda lägena). */
 const DEPTH = 'ring-1 ring-inset ring-white/15 shadow-[0_14px_32px_-14px_rgba(0,106,167,0.75),inset_0_1px_0_rgba(255,255,255,0.2)]';
@@ -37,62 +35,19 @@ function StairMark() {
     );
 }
 
-/** Snabbönskan under den översta rutan: texten följer med till kartans
- *  önska-formulär. Minst 3 tecken, som reglernas titelkrav. */
-function QuickWish({ cityName, wishHref }: { cityName: string; wishHref: string }) {
-    const router = useRouter();
-    const [title, setTitle] = useState('');
-    const ok = title.trim().length >= 3;
-    return (
-        <form
-            onSubmit={(ev) => {
-                ev.preventDefault();
-                if (!ok) return;
-                router.push(`${wishHref}&titel=${encodeURIComponent(title.trim().slice(0, 120))}`);
-            }}
-            className="mt-2.5 flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-1.5 pl-4 shadow-sm focus-within:border-[#006AA7]/50 dark:focus-within:border-sky-400/50 transition-colors"
-        >
-            <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder={`Vad saknas i ${cityName}? Önska ett event…`}
-                aria-label={`Önska ett event i ${cityName}`}
-                maxLength={120}
-                enterKeyHint="send"
-                className="flex-1 min-w-0 bg-transparent py-1.5 text-sm font-medium text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none"
-            />
-            <button
-                type="submit"
-                disabled={!ok}
-                // Sidans blå (Josef 22/9: lila + ✨-emojin såg "lite girly"
-                // ut). Stjärnorna är kvar som vit ikon, inte emojins färger.
-                // Kartans önske-läge behåller sin lila.
-                className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-[#006AA7] px-4 py-2 text-sm font-black text-white hover:bg-[#00598c] disabled:opacity-40 disabled:hover:bg-[#006AA7] transition-colors"
-            >
-                Önska
-                <Sparkles size={15} strokeWidth={2.5} aria-hidden />
-            </button>
-        </form>
-    );
-}
-
 interface Props {
     cityName: string;
     /** Kartlänk med &skapa=1 — platsval-först-flödet. */
     createHref: string;
     /** Utan rubrik-varianten "Slut på listan?" — kollapsad rad överst. */
     collapsible?: boolean;
-    /** Kartlänk med &onska=1. Finns den (översta rutan) står snabbönskan under. */
-    wishHref?: string;
 }
 
-export default function CityCreatePitch({ cityName, createHref, collapsible, wishHref }: Props) {
+export default function CityCreatePitch({ cityName, createHref, collapsible }: Props) {
     const [open, setOpen] = useState(!collapsible);
 
     if (collapsible && !open) {
         return (
-            <>
                 <button
                     type="button"
                     onClick={() => setOpen(true)}
@@ -107,13 +62,10 @@ export default function CityCreatePitch({ cityName, createHref, collapsible, wis
                         <ChevronDown size={15} />
                     </span>
                 </button>
-                {wishHref && <QuickWish cityName={cityName} wishHref={wishHref} />}
-            </>
         );
     }
 
     return (
-        <>
         <section className={`${collapsible ? 'mt-3' : 'mt-10'} rounded-3xl bg-gradient-to-br from-[#0a7cc2] via-[#006AA7] to-[#004B78] px-5 py-6 text-white ${DEPTH}`}>
             <div className="flex items-start justify-between gap-3">
                 <h2 className="text-xl font-black tracking-tight">
@@ -192,7 +144,5 @@ export default function CityCreatePitch({ cityName, createHref, collapsible, wis
                 fram fylls på när de närmar sig.
             </p>
         </section>
-        {collapsible && wishHref && <QuickWish cityName={cityName} wishHref={wishHref} />}
-        </>
     );
 }
