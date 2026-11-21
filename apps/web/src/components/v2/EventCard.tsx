@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment, type ReactNode } from 'react';
 import { isVadkulHostedEvent, LinkEvent, type EventRsvpStatus } from '../../types';
 import EventRsvpFooter, { EventRsvpTopBar } from './EventRsvpFooter';
+import { plateOverCover } from '@/utils/rsvpOverCover';
 import CardMoreRows, { type OrganizerRowData } from './CardMoreRows';
 import { Search, ListFilter as FilterIcon, X as XIcon } from 'lucide-react';
 import { eventOutlink } from '@/utils/eventExpand';
@@ -1903,6 +1904,41 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         sc.addEventListener('scroll', onScroll, { passive: true });
         return () => {
             sc.removeEventListener('scroll', onScroll);
+            if (raf) cancelAnimationFrame(raf);
+        };
+    }, [selectedEvent?.id, rsvpFooterVisible]);
+
+    // SVARSRADEN ÖVER BILDEN HAR INGEN PLATTA (ägarbeslut 13/11, #224): så
+    // länge hela den klistrade raden ligger inom omslagsbildens yta är den
+    // genomskinlig (plateOverCover). Mäts vid scroll OCH när containern byter
+    // storlek - arkets höjd skrivs direkt till DOM under en gest, utan
+    // scroll-händelser, och bilden kan landa i efterhand (kortlagret).
+    // useLayoutEffect: första mätningen görs FÖRE första utritningen, annars
+    // hinner plattan synas en bildruta när raden tänds.
+    const [rsvpOverCover, setRsvpOverCover] = useState(false);
+    useLayoutEffect(() => {
+        setRsvpOverCover(false);
+        const sc = scrollContainerRef.current;
+        if (!sc || !rsvpFooterVisible) return;
+        let raf = 0;
+        const check = () => {
+            raf = 0;
+            const plate = sc.querySelector('[data-rsvp-plate]');
+            const cover = sc.querySelector('[data-cover-area]');
+            setRsvpOverCover(plateOverCover(
+                plate ? plate.getBoundingClientRect() : null,
+                cover ? cover.getBoundingClientRect() : null,
+            ));
+        };
+        const schedule = () => { if (!raf) raf = requestAnimationFrame(check); };
+        check();
+        sc.addEventListener('scroll', schedule, { passive: true });
+        const ro = new ResizeObserver(schedule);
+        ro.observe(sc);
+        for (const child of Array.from(sc.children)) ro.observe(child);
+        return () => {
+            sc.removeEventListener('scroll', schedule);
+            ro.disconnect();
             if (raf) cancelAnimationFrame(raf);
         };
     }, [selectedEvent?.id, rsvpFooterVisible]);
@@ -4388,6 +4424,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                             cta={footerCta}
                             onVisitCta={recordCtaClick}
                             hidden={rsvpBarOn}
+                            overCover={rsvpOverCover}
                         />
                     </>)}
                     {/* Chatt per event — KRÄVER KONTO för att ens läsas

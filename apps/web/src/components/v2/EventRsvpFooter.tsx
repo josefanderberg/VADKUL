@@ -37,6 +37,8 @@ interface EventRsvpFooterProps {
      *  behåller sin plats i flödet, så det aldrig syns två
      *  knapprader samtidigt i bytet (Josef 8/10). */
     hidden?: boolean;
+    /** Raden ligger över omslagsbilden: ingen platta bakom knapparna (#224). */
+    overCover?: boolean;
 }
 
 /** Liten profilbild i avatarraden — grå siluett för anonyma svar (inbjudna
@@ -325,7 +327,7 @@ export function EventRsvpTopBar({ event, myRsvp, onSetRsvp, onInvite, cta = null
  * (EventRsvpTopBar) över - knapparna syns alltså hela vägen.
  * Döljs i kompaktläget (EventCard) så sträck-stoppet visar titel + tid.
  */
-export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, invite, onDismissInvite, cta = null, onVisitCta, onRequireLogin, hidden = false }: EventRsvpFooterProps) {
+export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, invite, onDismissInvite, cta = null, onVisitCta, onRequireLogin, hidden = false, overCover = false }: EventRsvpFooterProps) {
     const { user } = useAuth();
     const { goingCount, interestedCount } = useRsvpCounts(event, myRsvp);
 
@@ -446,8 +448,21 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
                     )}
                 </div>
             )}
-            {/* Själva footern: solid platta med border-t, som kortets övriga ytor. */}
-            <div className="pointer-events-auto bg-card border-t border-border px-3 py-2 flex flex-col gap-1">
+            {/* Själva footern: solid platta med border-t, som kortets övriga
+                ytor. ÖVER OMSLAGSBILDEN ÄR PLATTAN BORTA (ägarbeslut 13/11,
+                #224, Josef: "om man är över bilden med dem så ska de inte ha
+                en sådan vit bakgrund"): knapparna följer med nedför bilden
+                och plattan kommer tillbaka när raden hamnat under den
+                (overCover mäts i EventCard, utils/rsvpOverCover). Kanten
+                står kvar genomskinlig så raden inte hoppar en pixel, och
+                bara knapparna tar tryck - bilden bakom går att trycka på.
+                Vita knappar får skugga så de syns mot ljusa bilder. */}
+            <div
+                data-rsvp-plate
+                className={`border-t px-3 py-2 flex flex-col gap-1 ${overCover
+                    ? 'pointer-events-none bg-transparent border-transparent [&_button]:shadow-md'
+                    : 'pointer-events-auto bg-card border-border'}`}
+            >
             {/* EN rad, aldrig två (25/10) - RsvpRow. 8/10-radbrytningen
                 (ANMÄL ner på egen rad hellre än att raden sköt kortet i
                 sidled) är ersatt: raden får inte bli bredare än kortet, så
@@ -465,7 +480,9 @@ export default function EventRsvpFooter({ event, myRsvp, onSetRsvp, onInvite, in
             {/* Annons-märkningen för provisionslänkar — följde med BOKA hit
                 när kortets breda CTA revs (7/10 kväll). */}
             {cta?.affiliate && (
-                <p className="text-center text-[9px] font-semibold text-slate-400 dark:text-zinc-500 leading-none">
+                <p className={`text-center text-[9px] font-semibold leading-none ${overCover
+                    ? 'text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.8)]'
+                    : 'text-slate-400 dark:text-zinc-500'}`}>
                     {AFFILIATE_DISCLOSURE}
                 </p>
             )}

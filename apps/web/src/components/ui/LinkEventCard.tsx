@@ -789,7 +789,10 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                         landar). Landar lagret utan bild försvinner ytan -
                         "visas BARA när eventet har en riktig bild" gäller. */}
                     {cardsPending && !hasRealCover && (
-                        <div className="w-full h-56 bg-muted/30 border-t border-border animate-pulse flex flex-col items-center justify-center gap-2" aria-hidden>
+                        // data-cover-area: bildens yta för svarsradens mätning
+                        // (#224) - skelettet räknas med, så raden inte byter
+                        // utseende när bilden landar på samma plats.
+                        <div data-cover-area className="w-full h-56 bg-muted/30 border-t border-border animate-pulse flex flex-col items-center justify-center gap-2" aria-hidden>
                             <ImageIcon size={28} className="text-slate-300 dark:text-zinc-700" />
                             <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-600">Hämtar bild…</span>
                         </div>
@@ -803,6 +806,7 @@ export default function LinkEventCard({ linkEvent, isAdmin = false, distance, on
                             // öppnas aldrig (desktop-rapporten 14/9: "eventkortet
                             // åker ner när jag klickar på bilden").
                             data-cover-zone
+                            data-cover-area
                             className="relative w-full bg-muted/30 border-t border-border overflow-hidden flex justify-center cursor-pointer"
                             onClick={(e) => { e.stopPropagation(); setCoverFull(true); }}
                         >
