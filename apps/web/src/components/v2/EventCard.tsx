@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment, type R
 import { isVadkulHostedEvent, LinkEvent, type EventRsvpStatus } from '../../types';
 import EventRsvpFooter, { EventRsvpTopBar } from './EventRsvpFooter';
 import { plateOverCover } from '@/utils/rsvpOverCover';
+import { SMOKE_BLOW_MS } from '@/utils/smokePuff';
 import CardMoreRows, { type OrganizerRowData } from './CardMoreRows';
 import { Search, ListFilter as FilterIcon, X as XIcon } from 'lucide-react';
 import { eventOutlink } from '@/utils/eventExpand';
@@ -820,6 +821,43 @@ function NearbyRow({ evt, distanceKm, now, onSelect, showImages = true, hideWith
     );
 }
 
+/**
+ * En vald kategori/källa i listans flikrad. Trycket släpper filtret - och
+ * brickan AVDUNSTAR på stället först, som tipset "Gå till stadssidan"
+ * (ägarbeslut 22/11, Josef: "om jag kryssar en kategori som jag valt. jag vill
+ * att de ska försvinna som den gå till stadssidan"; samma .smoke-hint-blown
+ * och SMOKE_BLOW_MS som SmokeHint). Filtret släpps när brickan är borta, med
+ * reducerad rörelse direkt.
+ */
+function EvaporatingFilterChip({ filter: f, onRemove }: { filter: ActiveFilter; onRemove?: (key: string) => void }) {
+    const [leaving, setLeaving] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+    const onClick = () => {
+        if (leaving) return;
+        const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduced) { onRemove?.(f.key); return; }
+        setLeaving(true);
+        timerRef.current = setTimeout(() => onRemove?.(f.key), SMOKE_BLOW_MS);
+    };
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-label={`Släpp filtret ${f.label}`}
+            title={`Visar bara ${f.label.toLowerCase()} - tryck för att släppa`}
+            style={{ '--smoke-ms': `${SMOKE_BLOW_MS}ms` } as React.CSSProperties}
+            className={`shrink-0 inline-flex items-center gap-1 rounded-full bg-[#006AA7] text-white pl-2 pr-1.5 py-1 text-[10px] font-black uppercase tracking-wider whitespace-nowrap hover:bg-[#005590] ${
+                leaving ? 'smoke-hint-blown' : 'active:scale-95 transition'
+            }`}
+        >
+            <span aria-hidden className="normal-case">{f.emoji}</span>
+            {f.label}
+            <XIcon size={10} strokeWidth={3} aria-hidden />
+        </button>
+    );
+}
+
 function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastItems, now, onSelect, onLoadMore, coachMarkerRef, imagesOnly = false, showImages, onToggleImages, tab = 'all', onTabChange, allCount = 0, popularCount = 0, days = [], rankedRows, boostedRows, segmentCounts, fromToday, listZoom, daysHasMore = false, onLoadMoreDays, onLoadLaterDays, savedIds, onToggleSave, activeFilters = [], onRemoveFilter, filterChips }: NearbyEventsListProps) {
     const [showPast, setShowPast] = useState(false);
     // Kategoriraden utfälld under flikraden (filtersymbolen, 7/10 sent).
@@ -922,18 +960,7 @@ function NearbyEventsList({ upcomingItems, upcomingTotal, upcomingCount, pastIte
                     </span>
                 )}
                 {filterChips && activeFilters.map(f => (
-                    <button
-                        key={f.key}
-                        type="button"
-                        onClick={() => onRemoveFilter?.(f.key)}
-                        aria-label={`Släpp filtret ${f.label}`}
-                        title={`Visar bara ${f.label.toLowerCase()} - tryck för att släppa`}
-                        className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#006AA7] text-white pl-2 pr-1.5 py-1 text-[10px] font-black uppercase tracking-wider whitespace-nowrap hover:bg-[#005590] active:scale-95 transition"
-                    >
-                        <span aria-hidden className="normal-case">{f.emoji}</span>
-                        {f.label}
-                        <XIcon size={10} strokeWidth={3} aria-hidden />
-                    </button>
+                    <EvaporatingFilterChip key={f.key} filter={f} onRemove={onRemoveFilter} />
                 ))}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
