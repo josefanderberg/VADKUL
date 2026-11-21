@@ -28,6 +28,10 @@ interface WelcomeOverlayProps {
      *  under knapparna som stänger rutan och öppnar stadsväljaren. name null
      *  = "där du är". Utelämnad (väljaren kommer ändå efter rutan) → döljs. */
     startCity?: { name: string | null; onChange: () => void };
+    /** Sant när stadsväljaren kommer direkt efter "Utforska kartan" (första
+     *  besöket). Då står duken kvar när texten lämnar - annars blinkar kartan
+     *  fram mellan de två stegen (#268). */
+    pickerFollows?: boolean;
 }
 
 /** Exit-animationens längd — skickas till CSS via --welcome-exit-ms så de inte kan glida isär. */
@@ -65,11 +69,11 @@ function snöflingor(antal: number, frö: number, maxTop: number, storlek: [numb
         sway: Math.round((slump() * 2 - 1) * drift),
     }));
 }
-/** Över hela skärmen bakom kortet (Josef 17/11: "mer snö"). */
+/** Över hela skärmen bakom texten (Josef 17/11: "mer snö"). */
 const SNÖ_UTE = snöflingor(48, 1225, 0, [3, 8], [9, 16], 40);
-/** Glittrande stjärnor i kvällshimlen (Josef 17/11: "lite mörkare med massa
- *  glittrande stjärnor" i stället för julstjärnan). Samma fasta slump; top
- *  håller sig i himlens mörka övre del, dur = glittrets takt. */
+/** Glittrande stjärnor (Josef 17/11: "massa glittrande stjärnor" i stället
+ *  för julstjärnan). Samma fasta slump; top håller sig kring maskoten (rutans
+ *  kvällshimmel revs med rutan i #268), dur = glittrets takt. */
 const STJÄRNOR = snöflingor(26, 2412, 62, [5, 12], [1.6, 3.6], 0);
 
 /** Fyruddig glittrande stjärna (#255). */
@@ -132,14 +136,20 @@ function useCountUp(target: number, durationMs = 1200) {
 
 /**
  * Onboarding-skärm som visas vid VARJE besök för UTLOGGADE (inloggade slipper
- * den — gaten ligger i page.tsx) och släpper ut användaren på kartan: himmel
- * med sol + drivande moln, logga som poppar in bokstav för bokstav,
- * live-räknare och en zoom-exit ner i kartan.
- * Återbesökare får allt direkt utan stagger (.welcome-fast).
+ * den - gaten ligger i page.tsx) och släpper ut användaren på kartan.
+ *
+ * INGEN RUTA (#268, ägarbeslut 21/11, Josef: "det ska inte vara med bakgrund.
+ * utan det ska liksom ploppa fram texten. snyggt mjukt pop men mjukt i
+ * början"): texten står direkt över kartan, som tonas ner bakom, och poppar
+ * fram rad för rad - maskoten, loggan bokstav för bokstav, siffran, raderna,
+ * knapparna. Den vita rutan med himmel, sol och småmoln är RIVEN - bygg inte
+ * tillbaka den. Poppen och duken bor i globals.css (welcome-plopp).
+ * Återbesökare får samma pop i halva tiden (.welcome-fast).
  */
-export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose, underCard = false, startCity }: WelcomeOverlayProps) {
+export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekEventCount, onClose, underCard = false, startCity, pickerFollows = false }: WelcomeOverlayProps) {
     const [open, setOpen] = useState(true);
-    const [closing, setClosing] = useState(false);
+    // 'hold' = texten lämnar men duken står kvar åt stadsväljaren som följer.
+    const [closing, setClosing] = useState<false | 'fade' | 'hold'>(false);
     const [returning, setReturning] = useState(false);
     const closingRef = useRef(false);
     const cardRef = useRef<HTMLDivElement>(null);
@@ -149,6 +159,8 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     onCloseRef.current = onClose;
     const onChangeCityRef = useRef(startCity?.onChange);
     onChangeCityRef.current = startCity?.onChange;
+    const pickerFollowsRef = useRef(pickerFollows);
+    pickerFollowsRef.current = pickerFollows;
 
     // Julvarianten (#255): rutan öppnas bara i webbläsaren (welcomeOpen sätts
     // efter mount), så besökarens egen kalender avgör utan SSR-skillnad.
@@ -192,7 +204,9 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     const dismiss = useCallback((then: 'account' | 'city' | 'map' | null = null) => {
         if (closingRef.current) return;
         closingRef.current = true;
-        setClosing(true);
+        // Stadsväljaren tar över direkt ("Byt", eller första besökets
+        // "Utforska kartan")? Då lämnar bara texten - duken står kvar.
+        setClosing(then === 'city' || (then === null && pickerFollowsRef.current) ? 'hold' : 'fade');
         window.setTimeout(() => {
             setOpen(false);
             onCloseRef.current?.(then === 'map');
@@ -247,33 +261,45 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
     // (Spara/dela-raden fick lämna plats; max TVÅ rader, Josef 14/8.)
     const rows = [
         {
-            chip: 'bg-[#006AA7]/10',
-            icon: <Hand size={19} className="text-[#006AA7]" />,
-            text: <>Tryck <span className="font-bold text-slate-900">var som helst på kartan</span> för att se vad som händer just där.</>,
+            icon: <Hand size={19} className="text-white" />,
+            text: <>Tryck <span className="font-black text-white">var som helst på kartan</span> för att se vad som händer just där.</>,
         },
         {
-            chip: 'bg-emerald-100',
-            icon: <CalendarPlus size={19} className="text-emerald-600" />,
-            text: <>Med ett gratis konto kan du <span className="font-bold text-slate-900">lägga upp egna event</span> och spara favoriter.</>,
+            icon: <CalendarPlus size={19} className="text-emerald-300" />,
+            text: <>Med ett gratis konto kan du <span className="font-black text-white">lägga upp egna event</span> och spara favoriter.</>,
         },
     ];
+
+    // Varje rads plats i poppen (ms från start). CSS:en gångrar med takten,
+    // så återbesökare får samma ordning i halva tiden.
+    const d = (ms: number) => ({ '--d': `${ms}ms` } as React.CSSProperties);
+
+    // Det finns ingen ruta att trycka bredvid längre: ett tryck var som helst
+    // som inte träffar en knapp eller länk går rakt till kartan (Josef 8/10:
+    // "klicka på sidan för att stänga den och komma direkt till sin plats").
+    const onStageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if ((e.target as HTMLElement).closest('button, a, input')) return;
+        track('welcome_dismiss');
+        dismiss('map');
+    };
 
     return (
         <div
             role="dialog"
             aria-modal={!underCard}
             aria-label="Välkommen till VADKUL"
-            className={`fixed inset-0 ${underCard ? 'z-[1240]' : 'z-[2000]'} flex items-center justify-center p-4 ${closing ? 'welcome-backdrop-out' : ''}`}
+            data-start-screen
+            className={`fixed inset-0 ${underCard ? 'z-[1240]' : 'z-[2000]'} flex items-center justify-center p-4 ${closing === 'fade' ? 'welcome-backdrop-out' : ''}`}
             style={{ '--welcome-exit-ms': `${EXIT_MS}ms` } as React.CSSProperties}
         >
-            {/* Duken är MEDVETET tunn (Josef 13/8): bakom den reser kartan genom
-                Sverige med eventprickarna tända, och det är den resan som säljer
-                in tjänsten — 60 % svart gjorde den till en grå yta. 32 % räcker
-                för att kortet ska ha ro omkring sig, och prickarnas glöd
-                (intro-glow i V2Map) punchar igenom.
-                Ingen backdrop-blur: filter ovanpå WebGL-kartan är dyrt på svaga mobiler. */}
-            <div className="welcome-backdrop absolute inset-0 bg-black/[0.32]" onClick={() => { track('welcome_dismiss'); dismiss('map'); }} />
-            {/* Snön faller över hela skärmen bakom kortet (#255). Klick går
+            {/* DUKEN (#268): ingen ruta bakom texten, så kartan tonas ner i
+                stället - mörkast bakom textens mitt, tunnare mot kanterna
+                (.welcome-backdrop i globals.css). Fortfarande genomskinlig:
+                kartan med eventbrickorna ska synas bakom (Josef 13/8).
+                Ingen backdrop-blur: filter ovanpå WebGL-kartan är dyrt på
+                svaga mobiler. */}
+            <div className="welcome-backdrop absolute inset-0" onClick={() => { track('welcome_dismiss'); dismiss('map'); }} />
+            {/* Snön faller över hela skärmen bakom texten (#255). Klick går
                 igenom till duken; döljs helt med reducerad rörelse (CSS). */}
             {jul && (
                 <div className="welcome-snow-screen absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -293,62 +319,37 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                     ))}
                 </div>
             )}
+            {/* SPALTEN. Ingen bakgrund, ingen ram - bara texten (cardRef
+                heter så för Tab-fällans skull). px/py ger skuggor, maskotens
+                svävning och poppens överslag plats innanför scrollkanten. */}
             <div
                 ref={cardRef}
-                className={`relative w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden bg-white rounded-[28px] shadow-2xl ${
+                onClick={onStageClick}
+                className={`welcome-stage relative w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden no-scrollbar px-3 py-3 flex flex-col items-center gap-5 text-white ${
                     returning ? 'welcome-fast' : ''
-                } ${closing ? 'welcome-card-out' : 'animate-in fade-in zoom-in-95 duration-300'}`}
+                } ${closing ? 'welcome-card-out' : ''}`}
             >
-                {/* ── Himmel: sol + drivande moln + svävande maskot ── */}
-                <div className="relative h-[132px] overflow-hidden" aria-hidden="true">
-                    {/* Himlen ANDAS (1/9): gradientlagret är HÖGRE än headern
-                        (164px mot 132) och glider sakta ner/upp — det blå når
-                        ibland längre ner innan det vänder. */}
-                    {/* Stoppen är explicita (to-white vid 75 % = 132px av 176)
-                        så gradienten är HELT vit innan klippkanten i ALLA
-                        andningsfaser — annars mötte en blåtonad rest kortets
-                        vita kropp som en synlig kant (1/9). */}
-                    {/* Julhimlen (#255) är en kvällshimmel, mörkare blå upptill
-                        så att de glittrande stjärnorna syns; samma
-                        stopp, så den möter kortet lika vitt. */}
-                    <div className={`welcome-sky absolute inset-x-0 top-0 h-[176px] bg-gradient-to-b ${jul ? 'from-[#244f86] via-[#8fb8e0]' : 'from-[#b8e0ff] via-[#e3f3ff]'} via-40% to-white to-[75%]`} />
-                    {jul ? (
-                        /* GLITTRANDE STJÄRNOR (#255) i kvällshimlen i stället
-                           för solen. (En stor gul julstjärna i solens hörn
-                           prövades och togs bort samma dag, Josef 17/11.) */
-                        STJÄRNOR.map((s, i) => (
-                            <Glitter
-                                key={i}
-                                size={s.size}
-                                style={{ left: `${s.left}%`, top: s.top, animationDuration: `${s.dur}s`, animationDelay: `${s.delay}s` }}
-                            />
-                        ))
-                    ) : (
-                        /* Solen driver sakta (wrappern) med roterande strålar
-                           bakom sig; pulsen ligger kvar på själva solen. */
-                        <div className="welcome-sun-drift absolute -top-7 -right-7 w-24 h-24">
-                            {/* blur + radiell mask = mjuka strålar som tonar ut
-                                mot spetsarna (skarpa conic-kanter såg klippta ut). */}
-                            <div className="welcome-rays absolute -inset-16 rounded-full blur-[5px] [mask-image:radial-gradient(circle,black_30%,transparent_72%)]" />
-                            <div className="welcome-sun absolute inset-0 rounded-full bg-[#FECC02]" />
-                        </div>
-                    )}
-
-                    {/* (Snö i själva rutans himmel prövades och togs bort,
-                        Josef 17/11: "du behöver inte snö i själva
-                        welcomemodal". Snön faller bara bakom rutan.) */}
-
-                    {/* Småmoln som driver förbi i olika hastigheter */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/favicon.png" alt="" className="absolute top-3 w-14 h-14 opacity-40 animate-cloud-drift" style={{ animationDuration: '26s', animationDelay: '-4s' }} />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/favicon.png" alt="" className="absolute top-14 w-9 h-9 opacity-30 animate-cloud-drift" style={{ animationDuration: '38s', animationDelay: '-19s' }} />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/favicon.png" alt="" className="absolute top-8 w-11 h-11 opacity-25 animate-cloud-drift" style={{ animationDuration: '32s', animationDelay: '-11s' }} />
-
-                    {/* Maskoten: stort glatt moln som svävar. Med tomteluvan
-                        8 px längre ner så luvan får luft mot kanten (Josef 17/11). */}
-                    <div className={`absolute inset-x-0 ${jul ? 'top-7' : 'top-5'} flex justify-center`}>
+                {/* ── Maskoten: det glada molnet poppar först och svävar sedan.
+                    Göms på låga skärmar så knapparna alltid ryms. ── */}
+                <div
+                    className={`welcome-row welcome-row-big relative w-full shrink-0 ${jul ? 'h-[128px]' : 'h-[112px]'} [@media(max-height:640px)]:hidden`}
+                    style={d(0)}
+                    aria-hidden="true"
+                >
+                    {/* GLITTRANDE STJÄRNOR (#255) kring maskoten under jul.
+                        (En stor gul julstjärna prövades och togs bort samma
+                        dag, Josef 17/11. Snö i själva rutan likaså - snön
+                        faller bara över skärmen.) */}
+                    {jul && STJÄRNOR.map((s, i) => (
+                        <Glitter
+                            key={i}
+                            size={s.size}
+                            style={{ left: `${s.left}%`, top: s.top, animationDuration: `${s.dur}s`, animationDelay: `${s.delay}s` }}
+                        />
+                    ))}
+                    {/* Med tomteluvan längre ner så luvan får luft uppåt
+                        (Josef 17/11). */}
+                    <div className={`absolute inset-x-0 ${jul ? 'top-7' : 'top-3'} flex justify-center`}>
                         {/* Luvan svävar MED molnet: animationen sitter på
                             wrappern när det är jul (#255). */}
                         <div className={`relative w-24 h-24 ${jul ? 'animate-welcome-float' : ''}`}>
@@ -358,7 +359,7 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                                 src="/favicon.png"
                                 alt=""
                                 onLoad={maskotLaddad}
-                                className={`w-24 h-24 drop-shadow-[0_8px_16px_rgba(0,106,167,0.25)] ${jul ? '' : 'animate-welcome-float'}`}
+                                className={`w-24 h-24 drop-shadow-[0_10px_18px_rgba(0,20,45,0.5)] ${jul ? '' : 'animate-welcome-float'}`}
                             />
                             {/* (Ett tomteskägg prövades och togs bort samma
                                 dag, Josef 17/11: "ta bort skägget". Molnet
@@ -369,132 +370,128 @@ export default function WelcomeOverlay({ onCreateAccount, todayEventCount, weekE
                     </div>
                 </div>
 
-                <div className="relative px-7 pb-7 flex flex-col gap-5 -mt-2">
-                    {/* ── Logga: bokstäver som poppar in + gult streck som ritas ── */}
-                    <div className="flex flex-col items-center text-center gap-1.5">
-                        <h2 className="text-[34px] font-black italic text-[#006AA7] font-sans tracking-tighter leading-none uppercase select-none">
-                            {'VADKUL'.split('').map((ch, i) => (
-                                <span key={i} className="welcome-letter inline-block" style={{ animationDelay: `${140 + i * 60}ms` }}>{ch}</span>
-                            ))}
-                        </h2>
-                        <span className="welcome-underline block h-[5px] w-24 rounded-full bg-[#FECC02]" style={{ animationDelay: '560ms' }} />
-                        {/* SIFFRAN ÄR RUBRIKEN. Den satt förut inbakad mitt i en
-                            mening och läste som brödtext; nu är den det första
-                            ögat landar på efter loggan. VECKANS antal, inte
-                            dagens (Josef 11/8) — veckovolymen är det som visar
-                            hur stor databasen faktiskt är. */}
-                        {/* Tre rader (Josef 1/9 kväll, slutformen):
-                            "13 996 event" / "den närmaste veckan i hela
-                            Sverige" / "2 551 redan idag". Ordet event ligger
-                            med gemener och tydligt mellanrum bredvid siffran —
-                            versal-varianten med tracking läste som fastklistrad. */}
-                        <p className="mt-1 flex items-baseline justify-center gap-2">
-                            <span className="text-[38px] leading-none font-black tabular-nums text-[#006AA7]">
-                                {shownCount > 0 ? shownCount.toLocaleString('sv-SE') : '…'}
-                            </span>
-                            <span className="text-[16px] font-black uppercase tracking-wide text-slate-500">event</span>
-                        </p>
-                        <p className="text-[13px] font-bold text-slate-500 leading-snug px-2">
-                            den närmaste veckan i hela Sverige
-                        </p>
-                        {todayEventCount && todayEventCount > 0 ? (
-                            <p className="mt-1.5 text-[16px] font-black text-slate-500 leading-none tabular-nums">
-                                <span className="text-[19px] text-emerald-600">{shownToday.toLocaleString('sv-SE')}</span>
-                                {' '}redan idag
-                            </p>
-                        ) : null}
-                        {/* ("N börjar inom en timme"-badgen låg här — borttagen
-                            26/8 på ägarbeslut: lägg inte tillbaka den.) */}
-                    </div>
-
-                    {/* (Här låg tre riktiga event ur datan. Borttaget 14/8: rutan
-                        blev för mycket att läsa, och det man SJÄLV kan göra tas
-                        nu i ett eget steg efter att rutan stängts.) */}
-
-                    {/* ── Punkterna kaskadar in en och en ── */}
-                    <ul className="flex flex-col gap-3.5">
-                        {rows.map((row, i) => (
-                            <li key={i} className="welcome-row flex items-center gap-3" style={{ animationDelay: `${640 + i * 110}ms` }}>
-                                <span className={`shrink-0 grid place-items-center w-9 h-9 rounded-xl ${row.chip}`}>{row.icon}</span>
-                                <span className="text-[13.5px] font-semibold text-slate-600 leading-snug">{row.text}</span>
-                            </li>
+                {/* ── Logga: bokstäver som poppar in + gult streck som ritas ── */}
+                <div className="flex flex-col items-center text-center gap-1.5 -mt-2">
+                    <h2 className="welcome-logo text-[40px] font-black italic text-white font-sans tracking-tighter leading-none uppercase select-none">
+                        {'VADKUL'.split('').map((ch, i) => (
+                            <span key={i} className="welcome-letter inline-block" style={d(160 + i * 55)}>{ch}</span>
                         ))}
-                    </ul>
-
-                    <div className="welcome-row flex flex-col gap-2" style={{ animationDelay: '1050ms' }}>
-                        <button
-                            type="button"
-                            autoFocus
-                            onClick={() => { track('welcome_explore_map'); dismiss(); }}
-                            className="welcome-cta group relative w-full py-3.5 rounded-2xl bg-[#006AA7] hover:bg-[#005590] text-white font-black text-base shadow-lg shadow-[#006AA7]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 overflow-hidden outline-none focus-visible:ring-4 focus-visible:ring-[#FECC02]/70"
-                        >
-                            Utforska kartan
-                            <ArrowRight size={19} strokeWidth={2.5} className="transition-transform group-hover:translate-x-1" />
-                        </button>
-                        {/* Riktig sekundärknapp, inte textlänk (Josef 1/9 —
-                            registreringar är målet): samma tyngd som primären
-                            minus fyllningen. */}
-                        <button
-                            type="button"
-                            onClick={() => { track('welcome_create_account'); dismiss('account'); }}
-                            className="w-full py-3 rounded-2xl border-2 border-[#006AA7]/25 text-[#006AA7] hover:bg-[#006AA7]/5 hover:border-[#006AA7]/40 font-black text-sm active:scale-[0.98] transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#006AA7]/40"
-                        >
-                            Skapa gratis konto
-                        </button>
-                        {/* Startstaden (8/10): byts här vid varje besök -
-                            frågan efter rutan kommer bara en gång. */}
-                        {startCity && (
-                            <button
-                                type="button"
-                                onClick={() => { track('welcome_change_city'); dismiss('city'); }}
-                                className="self-center inline-flex items-center gap-1.5 pt-1 text-[12.5px] font-bold text-slate-500 hover:text-[#006AA7] transition-colors outline-none focus-visible:underline"
-                            >
-                                <MapPin size={13} aria-hidden />
-                                Kartan startar i {startCity.name ?? 'där du är'}
-                                <span className="font-black text-[#006AA7]">· Byt</span>
-                            </button>
-                        )}
-                    </div>
-
-                    {/* KARTANS KÄLLOR (15/9): kartans egen ⓘ-attribution är
-                        borttagen — 🔥 täckte hörnet. OSMF:s attributionsriktlinje
-                        godkänner attribution i en startruta som visas när man
-                        öppnar sidan, så länge den går att hitta igen via "Om"
-                        (profilpanelens Om VADKUL / inloggningsrutans länk öppnar
-                        just den här rutan). CARTO (baskartans kakel) kräver också
-                        att nämnas. Ta INTE bort raden utan att lägga tillbaka
-                        attributionen på kartan. */}
-                    {/* FRÅGOR? + mejlikon PÅ SAMMA RAD som kartkällorna
-                        (ägarbeslut 7/10 kväll, Josef: "Det räcker med en
-                        frågor? och mailikon på samma rad som det med kartan.
-                        inte att man skiver in mail för nyheter. bättre man
-                        direkt blir medlem" — mejlfältet för appnyheter är
-                        RIVET, lägg inte tillbaka det; medlemskapet säljs av
-                        Skapa gratis konto-knappen). Kontaktvägen för
-                        utloggade: rutan visas bara för dem. */}
-                    <p className="welcome-row -mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-semibold text-slate-400 leading-snug" style={{ animationDelay: '1150ms' }}>
-                        <a
-                            href="mailto:hej@vadkul.se"
-                            onClick={() => track('welcome_contact_mail')}
-                            title="Mejla hej@vadkul.se"
-                            className="inline-flex items-center gap-1 font-black hover:text-[#006AA7] transition-colors"
-                        >
-                            Frågor?
-                            <Mail size={12} aria-hidden />
-                        </a>
-                        <span aria-hidden>·</span>
-                        <span>
-                            Kartdata ©{' '}
-                            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" className="underline hover:text-slate-600">OpenStreetMap</a>
-                            {' '}· ©{' '}
-                            <a href="https://carto.com/attributions" target="_blank" rel="noopener" className="underline hover:text-slate-600">CARTO</a>
-                            {/* Vädret i stadsplattan (#202) - CC BY. (Höjddata Mapzen
-                                försvann med höjdreliefen från #197, riven i #203; #260.) */}
-                            {' '}· Väder{' '}
-                            <a href="https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning" target="_blank" rel="noopener" className="underline hover:text-slate-600">SMHI</a>
+                    </h2>
+                    <span className="welcome-underline block h-[5px] w-28 rounded-full bg-[#FECC02] shadow-[0_2px_8px_rgba(0,20,45,0.5)]" style={d(520)} />
+                    {/* SIFFRAN ÄR RUBRIKEN. VECKANS antal, inte dagens (Josef
+                        11/8) - veckovolymen är det som visar hur stor
+                        databasen faktiskt är. Tre rader (Josef 1/9 kväll):
+                        "13 996 event" / "den närmaste veckan i hela Sverige"
+                        / "2 551 redan idag". */}
+                    <p className="welcome-row welcome-row-big mt-2 flex items-baseline justify-center gap-2" style={d(620)}>
+                        <span className="text-[46px] leading-none font-black tabular-nums text-white">
+                            {shownCount > 0 ? shownCount.toLocaleString('sv-SE') : '…'}
                         </span>
+                        <span className="text-[17px] font-black uppercase tracking-wide text-[#FECC02]">event</span>
                     </p>
+                    <p className="welcome-row text-[14px] font-bold text-white/90 leading-snug px-2" style={d(720)}>
+                        den närmaste veckan i hela Sverige
+                    </p>
+                    {todayEventCount && todayEventCount > 0 ? (
+                        <p className="welcome-row mt-1 text-[16px] font-black text-white/90 leading-none tabular-nums" style={d(800)}>
+                            <span className="text-[20px] text-emerald-300">{shownToday.toLocaleString('sv-SE')}</span>
+                            {' '}redan idag
+                        </p>
+                    ) : null}
+                    {/* ("N börjar inom en timme"-badgen låg här - borttagen
+                        26/8 på ägarbeslut: lägg inte tillbaka den.) */}
                 </div>
+
+                {/* (Här låg tre riktiga event ur datan. Borttaget 14/8: rutan
+                    blev för mycket att läsa, och det man SJÄLV kan göra tas
+                    nu i ett eget steg efter att rutan stängts.) */}
+
+                {/* ── Punkterna poppar in en och en ── */}
+                <ul className="flex flex-col gap-3 w-full max-w-[19.5rem]">
+                    {rows.map((row, i) => (
+                        <li key={i} className="welcome-row flex items-center gap-3 text-left" style={d(900 + i * 90)}>
+                            <span className="shrink-0 grid place-items-center w-9 h-9 rounded-xl bg-white/15 ring-1 ring-inset ring-white/25">{row.icon}</span>
+                            <span className="text-[13.5px] font-semibold text-white/90 leading-snug">{row.text}</span>
+                        </li>
+                    ))}
+                </ul>
+
+                <div className="flex flex-col gap-2.5 w-full">
+                    <button
+                        type="button"
+                        autoFocus
+                        onClick={() => { track('welcome_explore_map'); dismiss(); }}
+                        className="welcome-row welcome-cta group relative w-full py-3.5 rounded-2xl bg-[#006AA7] hover:bg-[#005590] text-white font-black text-base [text-shadow:none] shadow-xl shadow-black/30 ring-1 ring-inset ring-white/30 active:scale-[0.98] transition-[background-color,transform] flex items-center justify-center gap-2 overflow-hidden outline-none focus-visible:ring-4 focus-visible:ring-[#FECC02]/70"
+                        style={d(1100)}
+                    >
+                        Utforska kartan
+                        <ArrowRight size={19} strokeWidth={2.5} className="transition-transform group-hover:translate-x-1" />
+                    </button>
+                    {/* Riktig sekundärknapp, inte textlänk (Josef 1/9 -
+                        registreringar är målet): samma tyngd som primären
+                        minus fyllningen. */}
+                    <button
+                        type="button"
+                        onClick={() => { track('welcome_create_account'); dismiss('account'); }}
+                        className="welcome-row w-full py-3 rounded-2xl border-2 border-white/45 bg-white/10 hover:bg-white/20 hover:border-white/70 text-white font-black text-sm active:scale-[0.98] transition-[background-color,border-color,transform] outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                        style={d(1180)}
+                    >
+                        Skapa gratis konto
+                    </button>
+                    {/* Startstaden (8/10): byts här vid varje besök -
+                        frågan efter rutan kommer bara en gång. */}
+                    {startCity && (
+                        <button
+                            type="button"
+                            onClick={() => { track('welcome_change_city'); dismiss('city'); }}
+                            className="welcome-row self-center inline-flex items-center gap-1.5 pt-1 text-[12.5px] font-bold text-white/85 hover:text-white transition-colors outline-none focus-visible:underline"
+                            style={d(1260)}
+                        >
+                            <MapPin size={13} aria-hidden />
+                            Kartan startar i {startCity.name ?? 'där du är'}
+                            <span className="font-black text-[#FECC02]">· Byt</span>
+                        </button>
+                    )}
+                </div>
+
+                {/* KARTANS KÄLLOR (15/9): kartans egen ⓘ-attribution är
+                    borttagen - 🔥 täckte hörnet. OSMF:s attributionsriktlinje
+                    godkänner attribution i en startruta som visas när man
+                    öppnar sidan, så länge den går att hitta igen via "Om"
+                    (profilpanelens Om VADKUL / inloggningsrutans länk öppnar
+                    just den här rutan). CARTO (baskartans kakel) kräver också
+                    att nämnas. Ta INTE bort raden utan att lägga tillbaka
+                    attributionen på kartan. */}
+                {/* FRÅGOR? + mejlikon PÅ SAMMA RAD som kartkällorna
+                    (ägarbeslut 7/10 kväll, Josef: "Det räcker med en
+                    frågor? och mailikon på samma rad som det med kartan.
+                    inte att man skiver in mail för nyheter. bättre man
+                    direkt blir medlem" - mejlfältet för appnyheter är
+                    RIVET, lägg inte tillbaka det; medlemskapet säljs av
+                    Skapa gratis konto-knappen). Kontaktvägen för
+                    utloggade: rutan visas bara för dem. */}
+                <p className="welcome-row -mt-1.5 flex flex-wrap items-center justify-center gap-x-1.5 text-center text-[11px] font-semibold text-white/70 leading-snug" style={d(1340)}>
+                    <a
+                        href="mailto:hej@vadkul.se"
+                        onClick={() => track('welcome_contact_mail')}
+                        title="Mejla hej@vadkul.se"
+                        className="inline-flex items-center gap-1 font-black hover:text-white transition-colors"
+                    >
+                        Frågor?
+                        <Mail size={12} aria-hidden />
+                    </a>
+                    <span aria-hidden>·</span>
+                    <span>
+                        Kartdata ©{' '}
+                        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" className="underline hover:text-white">OpenStreetMap</a>
+                        {' '}· ©{' '}
+                        <a href="https://carto.com/attributions" target="_blank" rel="noopener" className="underline hover:text-white">CARTO</a>
+                        {/* Vädret i stadsplattan (#202) - CC BY. (Höjddata Mapzen
+                            försvann med höjdreliefen från #197, riven i #203; #260.) */}
+                        {' '}· Väder{' '}
+                        <a href="https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning" target="_blank" rel="noopener" className="underline hover:text-white">SMHI</a>
+                    </span>
+                </p>
             </div>
         </div>
     );

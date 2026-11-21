@@ -10,6 +10,7 @@ import CreateEventButton from '@/components/v2/CreateEventButton';
 import CategoryChipRow, { SOURCE_EMOJI } from '@/components/v2/CategoryChipRow';
 import { categoryLabel } from '@/components/v2/v2MapLabel';
 import HoverLabel from '@/components/v2/HoverLabel';
+import SmokeHint from '@/components/v2/SmokeHint';
 import AuthModal from '@/components/v2/AuthModal';
 import EventCard, { type ActiveFilter } from '@/components/v2/EventCard';
 import ProfilePanel from '@/components/v2/ProfilePanel';
@@ -862,6 +863,15 @@ export default function HomePage() {
     // Ingen localStorage → inget null-läge och ingen hydreringsblink.
     const [toggleHintDone, setToggleHintDone] = useState(false);
     const markToggleHintDone = useCallback(() => setToggleHintDone(true), []);
+    // "Gå till stadssidan" under stadsplattan STÅR KVAR tills man trycker på
+    // den - då blåses den bort som ett rökmoln (#268, ägarbeslut 21/11, Josef:
+    // "se stadssida uppe den info texten till man antingen klickar på den
+    // texten och det försvinner som ett rökmoln"). PER BESÖK, som växla-
+    // skylten ovan: varje sidladdning börjar med tipset uppe. Det ersätter
+    // 15/9-regeln att texten bara syntes 4 s i visningsrundan. Bortblåst
+    // tips kommer inte tillbaka under besöket, inte heller i rundan - kvar
+    // är bara muspekarens vanliga hover-etikett.
+    const [cityHintGone, setCityHintGone] = useState(false);
 
     // Onboarding-rutan. Startar STÄNGD i servern/HTML:n.
     const [welcomeOpen, setWelcomeOpen] = useState(false);    // Onboarding vid start IGEN (Josef 11/8, ersätter 9/8-beslutet): utloggade
@@ -886,7 +896,9 @@ export default function HomePage() {
     // hamna där man är. Visas EN gång per enhet/konto (utils/startChoice);
     // ändras sedan via profilpanelen / inloggningsrutan. withCategories =
     // onboardingen (två steg); från profilen byter man bara stad.
-    const [startPicker, setStartPicker] = useState<{ withCategories: boolean } | null>(null);
+    // fromWelcome = väljaren tar över direkt efter välkomstskärmen: duken
+    // står redan framme och tonar inte in en gång till (#268).
+    const [startPicker, setStartPicker] = useState<{ withCategories: boolean; fromWelcome?: boolean } | null>(null);
     // Det aktiva valet, för väljarens markering och profilraden. Kameran
     // läser lagringen direkt (readChosenCity/readStartCity) så den aldrig
     // väntar på en omrendering.
@@ -903,6 +915,12 @@ export default function HomePage() {
     // Kromet (navbar, kategorikolumn, stadsruta …) ligger nere BARA under
     // välkomstrutan.
     const chromeHidden = welcomeOpen;
+    // Sidans eget krom (profil, filterknapp, stadsplatta, dagväljare) ligger
+    // nere även under stadsväljaren (#268): den har ingen ruta längre, så
+    // kromet lyste igenom bakom karusellen och knapparna. Kartan får
+    // fortfarande bara chromeHidden - dess sakta inzoomning hör till
+    // välkomstskärmen, inte till ett stadsbyte från profilen.
+    const uiHidden = chromeHidden || !!startPicker;
     // SIDOPANELEN (18/10, utils/sidePanel): på bred skärm dockar eventkortet
     // kant i kant längs vänsterkanten i full höjd. Kartkromet som annars
     // hamnat under panelen - profilen, stadsplattan, dagväljaren - flyttar
@@ -3119,7 +3137,10 @@ export default function HomePage() {
     // dag-vecka-dag har gått"), även medan landningspulsen kör. Räkningen går
     // på veckofönstret från vald dag och påverkas inte av pulsens växling.
     // (Grinden som väntade ut pulsen, landingPulseAllowsPrompt, är riven.)
-    const popularWeekQuiet = eventsSettledHere && mapPainted
+    // Tyst bakom startskärmen och stadsväljaren (#268): de har ingen ruta
+    // längre, så en banner på kartan lyser rakt igenom texten och knapparna.
+    // Den kommer i stället i samma stund som startskärmen stängs.
+    const popularWeekQuiet = eventsSettledHere && mapPainted && !welcomeOpen && !startPicker
         && creationMode === 'idle' && !selectedEvent && !selectedWish && !searchQuery.trim();
     // Två tal: `qualifying` = riktiga KOMMANDE populära (grinden "mer än 5"),
     // `shown` = exakt det dagväljarens veckorad visar efter trycket (samma
@@ -5007,7 +5028,7 @@ export default function HomePage() {
             {/* 1. Svävande transparent Navbar överst — BARA profilen sedan
                 7/10 (ägarbeslut: "vi kan ju ta bort sök och filter på kartan",
                 kortets sök/filter-ikon tog över jobbet; + bor i högra hörnet). */}
-            {!chromeHidden && (
+            {!uiHidden && (
             <FloatingNavbar
                 onLoginClick={() => openLogin()}
                 onOpenProfile={handleToggleProfile}
@@ -5024,7 +5045,7 @@ export default function HomePage() {
                 vita 44px-formspråk som profilknappen; blå prick när kartans
                 filter är på (6/10-receptet — arrangörsfiltret räknas inte,
                 det har sin banner). Ligger under eventkortet (z-1090). */}
-            {!chromeHidden && (
+            {!uiHidden && (
             <div className="fixed inset-x-0 top-6 px-4 z-[1090] pointer-events-none">
                 <div className="max-w-[1400px] mx-auto flex justify-end">
                     <button
@@ -5060,7 +5081,7 @@ export default function HomePage() {
                 Mörk platta som förut: kartan är ljus och vit skugg-text blir
                 gröt över ljusa kvarter. Gridet runt plattan håller den fri
                 från hörnknapparna (se kommentaren vid gridet). */}
-{!chromeHidden && (
+{!uiHidden && (
     <div className="fixed right-0 top-6 z-[1090] flex flex-col items-center gap-1.5 pointer-events-none transition-[left] duration-300" style={{ left: chromeLeft }}>
         {/* Plattans rad: samma kolumn som hörnknapparna (px-4 + max-w-[1400px])
             i ett tredelat grid. Sidokolumnerna delar luften lika (plattan står
@@ -5072,7 +5093,7 @@ export default function HomePage() {
             mitten är full kapas namnet med …. */}
         <div className="w-full px-4">
         <div className="max-w-[1400px] mx-auto grid grid-cols-[minmax(52px,1fr)_minmax(0,auto)_minmax(52px,1fr)]">
-        <div className="col-start-2 min-w-0 relative flex flex-col items-center">
+        <div className={`col-start-2 min-w-0 relative flex flex-col items-center transition-[padding] duration-300 ${cityHintGone ? '' : 'pb-8'}`}>
         <a
             key={cityTourTarget?.key ?? 0}
             href={cityLink.href}
@@ -5156,12 +5177,28 @@ export default function HomePage() {
             </span>
             <span className="sr-only">{cityLink.label}</span>
         </a>
-        {/* Visningsrundans sista steg ('city') SÄGER vad plattan gör (Josef
-            15/9: "skriva gå till stadssida typ") — samma pill som skapa- och
-            🔥-stegen, och på desktop även vid hover (peer på länken). */}
+        {/* TIPSET UNDER PLATTAN säger vad plattan gör (Josef 15/9: "skriva
+            gå till stadssida typ") och står kvar tills man trycker på det -
+            då blåses det bort som ett rökmoln (#268, se cityHintGone).
+            Visningsrundans sista steg ('city') gör det lite större i 4 s.
+            Bortblåst: bara hover-etiketten kvar (peer på länken, desktop). */}
         {/* absolute under plattan: i flödet gjorde den (osynlig, 126 px)
-            gridets mittkolumn bredare än plattan och knuffade den ur mitten. */}
-        <HoverLabel show={tourHint === 'city'} className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2">Gå till stadssidan</HoverLabel>
+            gridets mittkolumn bredare än plattan och knuffade den ur mitten.
+            Platsen den tar reserveras av kolumnens pb-8 ovan, så filter-
+            brickorna och arrangörsbannern hamnar under tipset, inte bakom. */}
+        {cityHintGone ? (
+            <HoverLabel className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2">Gå till stadssidan</HoverLabel>
+        ) : (
+            <SmokeHint
+                className="absolute top-full -mt-[26px] left-1/2 -translate-x-1/2"
+                emphasized={tourHint === 'city'}
+                dismissLabel="Dölj tipset Gå till stadssidan"
+                delayMs={450}
+                onGone={() => setCityHintGone(true)}
+            >
+                Gå till stadssidan
+            </SmokeHint>
+        )}
         </div>
         </div>
         </div>
@@ -5293,7 +5330,7 @@ export default function HomePage() {
                 padding) växer förbi den smalaste mobilvyn.
                 key på HOPP-nyckeln → tonar in på nytt vid stadshopp, precis
                 som stadsnamnet. */}
-{!chromeHidden && liveCityName && (
+{!uiHidden && liveCityName && (
     <div className="fixed right-0 bottom-[92px] z-[1090] flex justify-center px-2 pointer-events-none transition-[left] duration-300" style={{ left: chromeLeft }}>
         <div
             key={cityTourTarget?.key ?? 0}
@@ -6537,7 +6574,7 @@ export default function HomePage() {
                         // fråga (Josef 8/10 kväll) - den kommer nästa besök.
                         if (!toMap && !user && !readStartPickerDone() && !startPickerAskedRef.current) {
                             startPickerAskedRef.current = true;
-                            setStartPicker({ withCategories: true });
+                            setStartPicker({ withCategories: true, fromWelcome: true });
                         } else {
                             setWelcomeDone(true);
                             // Rakt till kartan "där man är" (ingen vald stad):
@@ -6546,13 +6583,18 @@ export default function HomePage() {
                         }
                     }}
                     underCard={!!selectedEvent}
-                    startCity={startPickerDone ? { name: chosenStart?.name ?? null, onChange: () => setStartPicker({ withCategories: false }) } : undefined}
+                    startCity={startPickerDone ? { name: chosenStart?.name ?? null, onChange: () => setStartPicker({ withCategories: false, fromWelcome: true }) } : undefined}
+                    // Samma villkor som onClose ovan: då följer väljaren på
+                    // "Utforska kartan" och duken ska stå kvar emellan.
+                    pickerFollows={!user && !startPickerDone && !startPickerAskedRef.current}
                 />
             )}
 
             {startPicker && (
                 <StartCityPicker
                     current={chosenStart}
+                    answered={startPickerDone}
+                    fromWelcome={startPicker.fromWelcome}
                     withCategories={startPicker.withCategories}
                     initialCategories={mapCategories}
                     initialPopular={popularOnly}

@@ -251,7 +251,7 @@ export default function InstallPrompt() {
     if (storeOffer) {
         const isAppStore = storeOffer.store === 'App Store';
         return (
-            <div className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[1100] animate-in slide-in-from-bottom duration-300">
+            <div data-install-prompt className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[1100] animate-in slide-in-from-bottom duration-300">
                 <div className="bg-[#006AA7] text-white rounded-2xl shadow-2xl p-4 border border-white/20">
                     {closeButton}
                     <div className="flex items-start gap-3">
@@ -298,7 +298,7 @@ export default function InstallPrompt() {
     }
 
     return (
-        <div className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[1100] animate-in slide-in-from-bottom duration-300">
+        <div data-install-prompt className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[1100] animate-in slide-in-from-bottom duration-300">
             <div className="bg-[#006AA7] text-white rounded-2xl shadow-2xl p-4 border border-white/20">
                 {closeButton}
                 <div className="flex items-start gap-3">

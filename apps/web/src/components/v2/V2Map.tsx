@@ -4896,6 +4896,10 @@ export default function V2Map({
                         overlayVisible ? 'opacity-100' : 'opacity-0'
                     }`}
                 >
+                    {/* Bakom startskärmen (chromeHidden) står bara frosten kvar:
+                        startskärmen har ingen ruta sedan #268, så texten och
+                        snurran här lyste rakt igenom dess egen text. */}
+                    {!chromeHidden && (
                     <div className="flex flex-col items-center gap-4 text-center px-6">
                         <span className="w-8 h-8 rounded-full border-4 border-white/20 border-t-[#FECC02] animate-spin" />
                         <div className="flex flex-col gap-1">
@@ -4907,6 +4911,7 @@ export default function V2Map({
                             </p>
                         </div>
                     </div>
+                    )}
                 </div>
             )}
 

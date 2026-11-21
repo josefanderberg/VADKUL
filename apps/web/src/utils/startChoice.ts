@@ -87,5 +87,32 @@ export function popularStartCities(limit = 12): CityPoint[] {
     return out;
 }
 
+/** En bricka i startskärmens stadsrad. city null = "Där jag är". */
+export interface StartCityChip {
+    key: string;
+    city: CityPoint | null;
+    /** Det gällande valet - bara när frågan faktiskt är besvarad. */
+    selected: boolean;
+}
+
+/**
+ * STARTSKÄRMENS STADSRAD (#268, Josef 21/11: "staden ska vara att man kan
+ * scrolla åt sidorna"): brickorna i den ordning de står i raden som rullar i
+ * sidled. Det gällande valet står FÖRST och är markerat (samma regel som
+ * kategoriradens valda chips), sedan "Där jag är", sedan snabbvalen utan
+ * dubblett. Har frågan aldrig besvarats är ingenting markerat - "Där jag är"
+ * står först men är inget val förrän man trycker. REN.
+ */
+export function startCityChips(current: CityPoint | null, answered: boolean, popular: readonly CityPoint[]): StartCityChip[] {
+    const chosen = answered ? current : null;
+    const here: StartCityChip = { key: 'där-jag-är', city: null, selected: answered && current === null };
+    const rest: StartCityChip[] = popular
+        .filter(c => c.name !== chosen?.name)
+        .map(c => ({ key: c.name, city: c, selected: false }));
+    return chosen
+        ? [{ key: chosen.name, city: chosen, selected: true }, here, ...rest]
+        : [here, ...rest];
+}
+
 /** Antal orter man kan välja - väljarens "alla N orter"-rad. */
 export const START_CITY_COUNT = CITY_POINTS.length;
