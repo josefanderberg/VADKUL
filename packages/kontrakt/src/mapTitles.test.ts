@@ -3,7 +3,7 @@ import {
     bySideExpression,
     TITLE_PLACEMENTS,
     TITLE_PLACEMENTS_BY_SIDE,
-    TITLE_SIDE_CENTER_SHARE,
+    TITLE_SIDE_EDGE_PX,
     TITLE_SIDE_PROP,
     titleSide,
 } from './mapTitles';
@@ -42,18 +42,31 @@ describe('titlarnas lägen', () => {
 
 describe('titleSide', () => {
     const W = 390;
-    const gräns = W * TITLE_SIDE_CENTER_SHARE;
+    const kant = W / 2 - TITLE_SIDE_EDGE_PX;
 
-    it('mittersta tredjedelen är mitten', () => {
+    it('allt utom kantremsorna är mitten: raka lägen först (#270)', () => {
         expect(titleSide(0, W)).toBe(0);
-        expect(titleSide(gräns, W)).toBe(0);
-        expect(titleSide(-gräns, W)).toBe(0);
+        expect(titleSide(kant, W)).toBe(0);
+        expect(titleSide(-kant, W)).toBe(0);
+        // Förr (tredjedelsregeln i #262) var det här redan "höger".
+        expect(titleSide(W / 6 + 1, W)).toBe(0);
     });
 
-    it('utanför den är vänster respektive höger', () => {
-        expect(titleSide(-gräns - 1, W)).toBe(1);
-        expect(titleSide(gräns + 1, W)).toBe(2);
+    it('i kantremsan växer titeln inåt', () => {
+        expect(titleSide(-kant - 1, W)).toBe(1);
+        expect(titleSide(kant + 1, W)).toBe(2);
         expect(titleSide(-W, W)).toBe(1);
+    });
+
+    it('på en bred skärm är remsan lika smal i pixlar', () => {
+        expect(titleSide(-(1440 / 2 - TITLE_SIDE_EDGE_PX - 1), 1440)).toBe(0);
+        expect(titleSide(-(1440 / 2 - TITLE_SIDE_EDGE_PX + 1), 1440)).toBe(1);
+    });
+
+    it('på en mycket smal bild möts remsorna aldrig', () => {
+        expect(titleSide(0, 120)).toBe(0);
+        expect(titleSide(-50, 120)).toBe(1);
+        expect(titleSide(50, 120)).toBe(2);
     });
 
     it('okända mått ger mitten (den vanliga ordningen)', () => {

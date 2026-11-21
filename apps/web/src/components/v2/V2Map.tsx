@@ -25,11 +25,12 @@ import {
 import {
     BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_STOPS, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
     BRICKA_BODY_ALPHA, brickaBodyHex, eventEmoji, groupIsPast, groupKeyOf, groupStartsWithinHour, isEventPast,
-    makeBrickaImageData, selectedMarkerColors, sourceGradientCss, zoomStopsExpr,
+    makeBrickaImageData, selectedMarkerColors, sourceGradientCss, zoomStopsExpr, SELECTED_MARKER_SCALE,
 } from './v2MapBricka';
 import {
     LABEL_BADGE_BOX, LABEL_BODY_BOX, LABEL_CAT_PLACEMENT, LABEL_SLOT_OFFSET_PX, LABEL_SLOT_SIZE_PX,
-    LABEL_TEXT_SIZE_STOPS, eventLabels, labelFeaturesFrom, obstacleIcon, titleAnchorOffsets,
+    LABEL_TEXT_SIZE_STOPS, eventLabels, labelFeaturesFrom, labelTimeLeft, titleTextField,
+    obstacleIconSizeExpr, selectedTitleAnchorOffsetsBySide, obstacleIcon, titleAnchorOffsets,
     titleAnchorOffsetsBySide, wishLabels,
 } from './v2MapLabel';
 import { titleSide, TITLE_SIDE_PROP } from '@vadkul/kontrakt';
@@ -126,7 +127,7 @@ type PlainFeature = {
     // stadsrutan → tonas ned och hamnar under de matchande i staplingen.
     // labelCat/labelTitle = etikettlagrens text (titeln när den får plats,
     // kategorin som reserv) — läses av spegelkällan 'plain-events-labels'.
-    properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean; dim: boolean; labelCat: string; labelTitle: string };
+    properties: { icon: string; key: string; count: number; color: string; sortKey: number; past: boolean; dim: boolean; labelCat: string; labelTitle: string; labelTime: string; labelSoon: boolean };
 };
 
 // En cyklande multibrickas rotation: den EGNA cykel-bildens id + frames i tur-
@@ -386,7 +387,8 @@ function samePlainFeatures(a: PlainFeature[], b: PlainFeature[]): boolean {
             // Etiketterna ingår i jämförelsen: en ändring som BARA byter etikett
             // (t.ex. ny representant vid stjärnmärkning) får inte skippas som
             // "identisk push" — då blir spegelkällans text stale.
-            pa.labelCat !== pb.labelCat || pa.labelTitle !== pb.labelTitle) return false;
+            pa.labelCat !== pb.labelCat || pa.labelTitle !== pb.labelTitle ||
+            pa.labelTime !== pb.labelTime || pa.labelSoon !== pb.labelSoon) return false;
         const ca = a[i].geometry.coordinates, cb = b[i].geometry.coordinates;
         if (ca[0] !== cb[0] || ca[1] !== cb[1]) return false;
     }
@@ -1229,7 +1231,9 @@ export default function V2Map({
             // cyklande grupper är detta frame 0-läget; cykel-pumpen skriver
             // över spegelkällans text i samma tick som emojin byter, så
             // etiketten ALLTID beskriver den synliga framen.
-            const { labelCat, labelTitle } = eventLabels(rep.title, rep.category);
+            // Tidsraden (#270): tiden kvar för samma event, i steg (minuteTick
+            // räknar om plainData varje minut, texten byts var femte).
+            const { labelCat, labelTitle, labelTime, labelSoon } = eventLabels(rep.title, rep.category, labelTimeLeft(rep, nowMs));
             features.push({
                 type: 'Feature',
                 geometry: { type: 'Point', coordinates: [rep.lng!, rep.lat!] },
@@ -1252,7 +1256,7 @@ export default function V2Map({
                         + (isSel ? 1_000_000 : 0),
                     past: groupIsPast(group, nowMs),
                     dim: !hit,
-                    labelCat, labelTitle,
+                    labelCat, labelTitle, labelTime, labelSoon,
                 },
             });
         }
@@ -1839,6 +1843,7 @@ export default function V2Map({
             // först i kanterna. Räknas om vid varje synk; moveend schemalägger
             // en, så sidan följer med när kartan panorerats.
             const canvasW = map.getCanvas().clientWidth;
+            const nowMs = Date.now();
             const feats = labelFeaturesFrom(plainFeaturesRef.current, revealWrittenRef.current).map(f => {
                 const [lng, lat] = f.geometry.coordinates;
                 const side = titleSide(map.project([lng, lat]).x - canvasW / 2, canvasW);
@@ -1846,13 +1851,13 @@ export default function V2Map({
                 const ev = rot && rot.icon === f.properties.icon
                     ? shownCycleEvent(rot, cycleFrameIndexRef.current, groupsRef.current.get(f.properties.key) ?? [])
                     : null;
-                return { ...f, properties: { ...f.properties, ...(ev ? eventLabels(ev.title, ev.category) : {}), [TITLE_SIDE_PROP]: side } };
+                return { ...f, properties: { ...f.properties, ...(ev ? eventLabels(ev.title, ev.category, labelTimeLeft(ev, nowMs)) : {}), [TITLE_SIDE_PROP]: side } };
             });
             // Titlarna visas på ALLA etikett-zoomar sedan 7/10 kväll (titel
             // före kategori när den får plats) — signaturen bär alltid båda
             // fälten, och sedan #262 brickans sida. (Zoom-tiern C/T vid z13
             // gick med steg-uttrycket.)
-            const sig = feats.map(f => `${f.properties.key}${f.properties.labelCat}${f.properties.labelTitle}${f.properties[TITLE_SIDE_PROP]}`).join('');
+            const sig = feats.map(f => `${f.properties.key}${f.properties.labelCat}${f.properties.labelTitle}${f.properties.labelTime}${f.properties.labelSoon ? 1 : 0}${f.properties[TITLE_SIDE_PROP]}`).join('');
             if (sig === labelSigRef.current) return;
             labelSigRef.current = sig;
             src.setData({ type: 'FeatureCollection', features: feats as unknown as GeoJSON.Feature[] });
@@ -2021,7 +2026,9 @@ export default function V2Map({
                         // Under, höger, vänster, över, sedan snett under/över -
                         // första plats som är fri (#196, #204). I bildens
                         // kanter inåt först (#262, brickans `side`).
-                        'text-variable-anchor-offset': titleAnchorOffsetsBySide() as unknown as ReturnType<typeof titleAnchorOffsets>,
+                        // Den valda (-top) bara under spetsen: brickan är
+                        // dubbelt så stor och täcker sidorna och över (#270).
+                        'text-variable-anchor-offset': (isTop ? selectedTitleAnchorOffsetsBySide() : titleAnchorOffsetsBySide()) as unknown as ReturnType<typeof titleAnchorOffsets>,
                         'text-justify': 'auto',
                         // Spärren mot kategorin för samma bricka (se LABEL_SLOT_IMAGE).
                         // Valfri (#204): är platsen under spetsen tagen av en
@@ -2052,7 +2059,8 @@ export default function V2Map({
                         ? ['>=', ['coalesce', ['get', 'sortKey'], 0], 1_000_000]
                         : ['<', ['coalesce', ['get', 'sortKey'], 0], 1_000_000],
                     layout: {
-                        'text-field': isTitle ? ['get', 'labelTitle'] : ['get', 'labelCat'],
+                        // Titeln + tidsraden under den när eventet börjar inom 5 h (#270).
+                        'text-field': (isTitle ? titleTextField() : ['get', 'labelCat']) as maplibregl.ExpressionSpecification,
                         'text-font': ['Open Sans Bold'],
                         'text-size': zoomStopsExpr(LABEL_TEXT_SIZE_STOPS),
                         ...placement,
@@ -2103,7 +2111,9 @@ export default function V2Map({
                         'icon-anchor': 'top-left',
                         // Skalas med icon-size, precis som brickan.
                         'icon-offset': o.icon.offset,
-                        'icon-size': zoomStopsExpr(GL_ICON_SIZE_STOPS),
+                        // Den valda brickans kropp är dubbelt så stor (#270):
+                        // rutan över den växer med, pillens ruta gör det inte.
+                        'icon-size': (o.badgeOnly ? zoomStopsExpr(GL_ICON_SIZE_STOPS) : obstacleIconSizeExpr()) as maplibregl.ExpressionSpecification,
                         'icon-padding': 0,
                         'icon-allow-overlap': true,
                         'icon-ignore-placement': false,
@@ -4468,6 +4478,8 @@ export default function V2Map({
                 // Multi-event-brickan krymps till single-event-storlek: DOM-brickans
                 // kropp är 44px, GL-single-brickans 40px → 40/44 ≈ 0.91. Enda kvar-
                 // varande skillnaden mot en single blir då siffer-badgen.
+                // Vald bricka är DUBBELT SÅ STOR sedan #270 (Josef 22/11: "typ 2x så
+                // stor, alltså så man verkligen ser vilken det är"). Förr 15 %:
                 // Vald bricka är LITE STÖRRE (Josef 30/9: "gör eventmarkören lite
                 // större istället, så man ser tydligare vilken man är på") -
                 // ersätter "bara vit kant, normal storlek". Växer runt bottom
@@ -4475,7 +4487,7 @@ export default function V2Map({
                 // förflyttning prövades förr och avvisades). Offseten nedan
                 // räknas på baseScale, INTE med valfaktorn, så det är spetsen
                 // och inte kroppens mitt som ligger kvar.
-                const SELECTED_SCALE = 1.15;
+                const SELECTED_SCALE = SELECTED_MARKER_SCALE;
                 const baseScale = count > 1 ? 0.91 : 1;
                 const shownScale = isSelected ? baseScale * SELECTED_SCALE : baseScale;
                 const scaleStyle = `scale(${shownScale})`;
@@ -4745,7 +4757,8 @@ export default function V2Map({
                 }
                 /* VALD bricka (ägarbeslut 30/9, Josef: "tydligare vilken markör
                    vi har valt" - den vita ramen såg ut som 🔥-brickornas):
-                   - lite STÖRRE (SELECTED_SCALE, spetsen kvar på platsen),
+                   - DUBBELT SÅ STOR sedan #270 (SELECTED_MARKER_SCALE, spetsen
+                     kvar på platsen; 15 % 30/9-22/11),
                    - KROPPEN = brickans färg till 50 % över VITT, i mörkt läge
                      över SVART (--sel-body från selectedMarkerColors; ingen
                      inline-bakgrund för vald). Ogenomskinlig - kartan syns

@@ -277,6 +277,16 @@ export const GL_ICON_SIZE_TOP = 0.98;
 // Hela icon-size-kurvan (zoom, storlek) för GL-brickorna. Delas av brick-
 // lagret, z-växlingens spegel och etiketternas krocklager (#204) - krockytan
 // måste växa exakt som brickan, annars hamnar titlarna under kanten.
+// DEN VALDA BRICKAN ÄR DUBBELT SÅ STOR (#270, ägarbeslut 22/11, Josef: "när
+// man har en vald så ska den bli typ 2x så stor, alltså så man verkligen ser
+// vilken det är som man är på när man klickar nästa") - ERSÄTTER 15 % från
+// 30/9. DOM-markörens skala i V2Map; växer runt bottom center, så spetsen
+// står kvar på koordinaten. Etikettlagren räknar med samma tal
+// (v2MapLabel: krockrutan under den valda och dess titel bara under spetsen).
+export const SELECTED_MARKER_SCALE = 2;
+// DOM-brickans kropp i px (.pin-bubble) - GL-brickans är BRICKA_IMG_S.
+export const DOM_BRICKA_BODY_PX = 44;
+
 export const GL_ICON_SIZE_STOPS: ReadonlyArray<readonly [number, number]> = [
     [4, 0.78], [9, 0.9], [13, GL_ICON_SIZE_TOP],
 ];

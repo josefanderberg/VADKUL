@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
     categoryLabel, eventLabels, labelFeaturesFrom, truncateLabel, wishLabels, LABEL_MAX_CHARS,
     LABEL_BADGE_BOX, LABEL_BODY_BOX, LABEL_CAT_PLACEMENT, LABEL_TEXT_SIZE_STOPS, LABEL_TITLE_PLACEMENTS,
-    boxesOverlap, labelSlotBox, labelTextBox, obstacleBoxAt, obstacleIcon, titleAnchorOffsets, titleAnchorOffsetsBySide,
+    boxesOverlap, labelSlotBox, labelTextBox, labelTimeLeft, titleTextField, obstacleIconSizeExpr, selectedTitleAnchorOffsetsBySide, SELECTED_OBSTACLE_ICON_SIZE, obstacleBoxAt, obstacleIcon, titleAnchorOffsets, titleAnchorOffsetsBySide,
     type LabelAnchor, type LabelBox,
 } from './v2MapLabel';
-import { GL_ICON_SIZE_STOPS, interpolateZoomStops } from './v2MapBricka';
+import { DOM_BRICKA_BODY_PX, GL_ICON_SIZE_STOPS, SELECTED_MARKER_SCALE, interpolateZoomStops } from './v2MapBricka';
 
 describe('truncateLabel', () => {
     it('lämnar korta titlar orörda', () => {
@@ -48,7 +48,7 @@ describe('categoryLabel', () => {
 describe('eventLabels', () => {
     it('kategori + kapad titel för eventet brickan visar', () => {
         expect(eventLabels('Yoga i det fria vid stranden', 'sport'))
-            .toEqual({ labelCat: 'Sport', labelTitle: 'Yoga i det fria vi…' });
+            .toEqual({ labelCat: 'Sport', labelTitle: 'Yoga i det fria vi…', labelTime: '', labelSoon: false });
     });
 
     it('okänd kategori faller tillbaka på Övrigt', () => {
@@ -61,9 +61,64 @@ describe('eventLabels', () => {
     });
 });
 
+describe('labelTimeLeft (#270)', () => {
+    const now = new Date(2026, 10, 22, 12, 0, 0).getTime();
+    const om = (min: number, extra: object = {}) => labelTimeLeft({ time: new Date(now + min * 60_000), ...extra }, now);
+
+    it('inom fem timmar: hela timmar, inte framhävt', () => {
+        expect(om(299)).toEqual({ text: 'om 4 h', soon: false });
+        expect(om(300)).toEqual({ text: 'om 5 h', soon: false });
+        expect(om(121)).toEqual({ text: 'om 2 h', soon: false });
+    });
+
+    it('längre bort än fem timmar: ingen rad', () => {
+        expect(om(301)).toBeNull();
+        expect(om(24 * 60)).toBeNull();
+    });
+
+    it('inom två timmar: minuter i femsteg, framhävt', () => {
+        expect(om(120)).toEqual({ text: 'om 2 h', soon: true });
+        expect(om(119)).toEqual({ text: 'om 1 h 55', soon: true });
+        expect(om(75)).toEqual({ text: 'om 1 h 15', soon: true });
+        expect(om(60)).toEqual({ text: 'om 1 h', soon: true });
+        expect(om(47)).toEqual({ text: 'om 45 min', soon: true });
+        expect(om(5)).toEqual({ text: 'om 5 min', soon: true });
+        expect(om(4)).toEqual({ text: 'nu', soon: true });
+    });
+
+    it('har börjat men inte "har varit" (start + 1 h): pågår', () => {
+        expect(om(0)).toEqual({ text: 'pågår', soon: true });
+        expect(om(-59)).toEqual({ text: 'pågår', soon: true });
+        expect(om(-60)).toBeNull();
+    });
+
+    it('event utan klockslag eller utan tid får ingen rad', () => {
+        expect(om(30, { hasSpecificTime: false })).toBeNull();
+        expect(labelTimeLeft({ time: null }, now)).toBeNull();
+        expect(labelTimeLeft({}, now)).toBeNull();
+    });
+
+    it('texten står still inom ett steg (signaturen ska inte fladdra)', () => {
+        expect(om(49)).toEqual(om(45));
+        expect(om(179)).toEqual(om(121));
+    });
+
+    it('eventLabels bär tidsraden', () => {
+        expect(eventLabels('Kvällskonsert', 'music', om(47)))
+            .toEqual({ labelCat: 'Musik', labelTitle: 'Kvällskonsert', labelTime: 'om 45 min', labelSoon: true });
+    });
+
+    it('titellagrens text-field: titeln och en egen rad bara när tiden finns', () => {
+        const f = titleTextField();
+        expect(f[0]).toBe('format');
+        expect(f[1]).toEqual(['get', 'labelTitle']);
+        expect(JSON.stringify(f[3])).toContain('\\n');
+    });
+});
+
 describe('wishLabels', () => {
     it('markerar önskan på båda zoomnivåerna', () => {
-        expect(wishLabels('Foodtruck-festival')).toEqual({ labelCat: 'Önskan', labelTitle: 'Önskas: Foodtruck-…' });
+        expect(wishLabels('Foodtruck-festival')).toEqual({ labelCat: 'Önskan', labelTitle: 'Önskas: Foodtruck-…', labelTime: '', labelSoon: false });
     });
 });
 
@@ -108,6 +163,19 @@ describe('etikettlägena mot den egna brickan (#204)', () => {
             for (const [anchor, offset] of LABEL_TITLE_PLACEMENTS) {
                 for (const w of WIDTHS) {
                     const box = labelTextBox(anchor, offset, text, w);
+                    expect(boxesOverlap(box, body), `${anchor} z${zoom} w${w}`).toBe(false);
+                }
+            }
+        }
+    });
+
+    it('inte heller med tidsraden under titeln (två rader, #270)', () => {
+        for (const zoom of ZOOMS) {
+            const { icon, text } = at(zoom);
+            const body = obstacleBoxAt(LABEL_BODY_BOX, icon);
+            for (const [anchor, offset] of LABEL_TITLE_PLACEMENTS) {
+                for (const w of WIDTHS) {
+                    const box = labelTextBox(anchor, offset, text, w, 2);
                     expect(boxesOverlap(box, body), `${anchor} z${zoom} w${w}`).toBe(false);
                 }
             }
@@ -185,6 +253,35 @@ describe('etikettlägena mot den egna brickan (#204)', () => {
         expect(vänster[1].slice(0, 2)).toEqual(['top-left', [-0.5, 0.35]]);
         expect(höger[1].slice(0, 2)).toEqual(['top-right', [0.5, 0.35]]);
         for (const gren of [vänster, höger, mitten]) expect(gren[1]).toHaveLength(LABEL_TITLE_PLACEMENTS.length * 2);
+    });
+});
+
+describe('den valda brickan är dubbelt så stor (#270)', () => {
+    it('titeln står bara under spetsen, i varje sidas ordning', () => {
+        const [, , , vänster, , höger, mitten] = selectedTitleAnchorOffsetsBySide() as unknown[];
+        const ankare = (v: unknown) => ((v as [string, unknown[]])[1]).filter(x => typeof x === 'string');
+        expect(ankare(mitten)).toEqual(['top', 'top-left', 'top-right']);
+        expect(ankare(vänster)).toEqual(['top-left', 'top', 'top-right']);
+        expect(ankare(höger)).toEqual(['top-right', 'top', 'top-left']);
+    });
+
+    it('krockrutan täcker den förstorade kroppen men inte titeln under', () => {
+        const body = obstacleBoxAt(LABEL_BODY_BOX, SELECTED_OBSTACLE_ICON_SIZE);
+        expect(body.x1 - body.x0).toBeGreaterThanOrEqual(SELECTED_MARKER_SCALE * DOM_BRICKA_BODY_PX);
+        for (const anchor of ['top', 'top-left', 'top-right'] as const) {
+            const [, offset] = LABEL_TITLE_PLACEMENTS.find(([a]) => a === anchor)!;
+            for (const text of [11, 12.5, 13.5]) {
+                expect(boxesOverlap(labelTextBox(anchor, offset, text, 130, 2), body), `${anchor} ${text}`).toBe(false);
+            }
+        }
+    });
+
+    it('krocklagrets icon-size: zoomstegen, och den valda fast', () => {
+        const e = obstacleIconSizeExpr();
+        expect(e.slice(0, 3)).toEqual(['interpolate', ['linear'], ['zoom']]);
+        expect(e[3]).toBe(GL_ICON_SIZE_STOPS[0][0]);
+        expect((e[4] as unknown[])[2]).toBe(SELECTED_OBSTACLE_ICON_SIZE);
+        expect((e[4] as unknown[])[3]).toBe(GL_ICON_SIZE_STOPS[0][1]);
     });
 });
 

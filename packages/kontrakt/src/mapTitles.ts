@@ -11,7 +11,8 @@
  * kanten"): en bricka i vänstra delen av bilden provar först lägena som
  * sträcker sig åt höger (under utdragen åt höger, höger om kroppen, ovanför
  * utdragen åt höger), en i högra delen spegelvänt. I mittdelen gäller den
- * vanliga ordningen. "Under brickan först" (#196) står kvar överallt - i
+ * vanliga ordningen. Sedan #270 är "vänstra/högra delen" bara en remsa
+ * längs kanten (TITLE_SIDE_EDGE_PX), inte en tredjedel av bilden. "Under brickan först" (#196) står kvar överallt - i
  * kanterna är det bara under, utdragen inåt.
  *
  * Sidan räknas när kartan stannat och följer med brickan som egenskapen
@@ -66,17 +67,24 @@ export const TITLE_PLACEMENTS_BY_SIDE: readonly (readonly TitlePlacement[])[] = 
 ];
 
 /**
- * Mittdelens halva bredd som andel av bildens bredd: bricktoppar inom
- * mittersta tredjedelen får den vanliga ordningen, utanför växer titeln inåt.
+ * Kantremsan i skärmpixlar: bara brickor som står närmare bildens vänster-
+ * eller högerkant än så växer inåt. Ungefär halva bredden av en full titel
+ * (18 tecken) plus luft - en titel rakt under en bricka längre in än så
+ * ryms i bild. ERSÄTTER tredjedelsregeln från #262 (#270, Josef 22/11:
+ * "Ibland tycker jag den väljer diagonalen när det inte behövs. när den
+ * likaväl hade kunnat vara över eller under"): förr fick två tredjedelar av
+ * bilden de sneda lägena först.
  */
-export const TITLE_SIDE_CENTER_SHARE = 1 / 6;
+export const TITLE_SIDE_EDGE_PX = 90;
 
 /** Sidan för en bricka `dxPx` skärmpixlar från bildens mitt (öster positivt). */
 export function titleSide(dxPx: number, viewportWidth: number): TitleSide {
     if (!Number.isFinite(dxPx) || !(viewportWidth > 0)) return 0;
-    const gräns = viewportWidth * TITLE_SIDE_CENTER_SHARE;
-    if (dxPx < -gräns) return 1;
-    if (dxPx > gräns) return 2;
+    const halv = viewportWidth / 2;
+    // Smal bild: remsorna får aldrig mötas - minst mittersta tredjedelen är rak.
+    const remsa = Math.min(TITLE_SIDE_EDGE_PX, viewportWidth / 3);
+    if (halv + dxPx < remsa) return 1;
+    if (halv - dxPx < remsa) return 2;
     return 0;
 }
 
