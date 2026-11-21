@@ -9,6 +9,7 @@ const marker = (dx: number, dy: number, title = 'Quizkväll', count = 1): HeroMa
         t: 0, hour: 17, day: '2026-11-20', category: 'music', title,
     } as HeroLiveEvent,
     count,
+    lastDay: '2026-11-20',
 });
 
 // Heron i sitt största läge: 630 x 318.

@@ -54,7 +54,36 @@ export type HeroLiveEvent = {
 };
 
 /** En placerad bricka: gruppens tidigaste event + hur många som delar platsen. */
-export type HeroMarker = { e: HeroLiveEvent; count: number };
+/** `lastDay` = gruppens senaste dag ('YYYY-MM-DD') - styr hur många dagar
+ *  stora kartan ska visa när man trycker på en multibricka (#273). */
+export type HeroMarker = { e: HeroLiveEvent; count: number; lastDay: string };
+
+/** Senaste dagen i en grupp (dagnycklarna sorterar som text). REN. */
+export function lastDayOf(group: readonly { day: string }[]): string {
+    return group.reduce((max, e) => (e.day > max ? e.day : max), group[0]?.day ?? '');
+}
+
+/** Flest dagar länken ber kartan visa (kartans eget tak för ?dagar=). */
+export const HERO_RANGE_MAX_DAYS = 31;
+
+/**
+ * Länken en herobricka öppnar (#273, Josef 22/11: "om jag klickar på typ en
+ * eventbricka som säger 41 ... så ska jag ju komma till hela veckan och visa
+ * det multieventet. nu kommer jag till området men för idag").
+ *
+ * Brickans siffra räknar alla event på platsen i den valda PERIODEN, men
+ * `href` öppnar bara det tidigaste eventet på dess egen dag. Spänner gruppen
+ * över fler dagar än så bär länken därför med sig `dag=0&dagar=N` (idag till
+ * och med gruppens sista dag), så stora kartan visar samma urval som brickan
+ * räknade. En ensam bricka, eller en grupp på en enda dag, får länken orörd.
+ * REN: `todayKey` = dagens dagnyckel i svensk tid.
+ */
+export function heroBrickHref(href: string, count: number, lastDay: string, todayKey: string): string {
+    if (count < 2 || !lastDay || !todayKey || lastDay <= todayKey) return href;
+    const dagar = Math.round((Date.parse(`${lastDay}T00:00:00Z`) - Date.parse(`${todayKey}T00:00:00Z`)) / 86_400_000) + 1;
+    if (!Number.isFinite(dagar) || dagar < 2) return href;
+    return `${href}${href.includes('?') ? '&' : '?'}dag=0&dagar=${Math.min(dagar, HERO_RANGE_MAX_DAYS)}`;
+}
 
 /**
  * Samma "har varit"-trappa som daglistan och stora kartan: med klockslag är
@@ -118,7 +147,7 @@ export function pickHeroMarkers(
         if (out.length >= maxLive) break;
         const rep = group[0];
         if (out.some(m => (m.e.dx - rep.dx) ** 2 + (m.e.dy - rep.dy) ** 2 < minDist ** 2)) continue;
-        out.push({ e: rep, count: group.length });
+        out.push({ e: rep, count: group.length, lastDay: lastDayOf(group) });
     }
     return out;
 }

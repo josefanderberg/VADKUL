@@ -5,10 +5,10 @@ import {
     THEMEPARK_LAND_COLOR_NEAR,
 } from '@/components/v2/v2MapBaseStyles';
 import { NO_TIME_PAST_HOUR, sourceGradientCss, BRICKA_DARK_BG } from '@/components/v2/v2MapBricka';
-import { periodKeys } from './periods';
+import { periodKeys, todayKey } from './periods';
 import { useDayFilter } from './dayFilter';
 import CityHeroPeriodChips from './CityHeroPeriodChips';
-import type { HeroLiveEvent } from './heroMarkers';
+import { heroBrickHref, lastDayOf, type HeroLiveEvent } from './heroMarkers';
 
 // Den RIKTIGA VADKUL-kartan i stads-heron — PASSIV men klickbar (Josef 24/8).
 // 18/8-varianten var fullt interaktiv (zoom/panorering, cooperativeGestures),
@@ -173,7 +173,8 @@ export default function CityMapHeroCanvas({ lat, lng, zoom, markers, bigMapHref,
             // "3/7"-pager på kortet.
             el.addEventListener('click', ev => {
                 ev.stopPropagation();
-                window.location.assign(rep.href);
+                // Multibrickan bär med sig perioden (#273).
+                window.location.assign(heroBrickHref(rep.href, group.length, lastDayOf(group), todayKey()));
             });
             const mk = new Marker({ element: el }).setLngLat([rep.lng, rep.lat]).addTo(map);
             liveMarkersRef.current.push(mk);

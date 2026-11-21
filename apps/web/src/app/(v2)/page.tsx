@@ -4461,8 +4461,21 @@ export default function HomePage() {
     const applyDeepLinkedEvent = useCallback((target: LinkEvent) => {
         const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
         const offset = Math.floor((target.time.getTime() - startOfToday.getTime()) / 86_400_000);
-        ownDaySwitchRef.current = offset;
-        setDayOffset(offset);
+        // PERIODEN FÖLJER MED (#273): stadssidans multibrickor länkar med
+        // ?dag=0&dagar=N (heroBrickHref) - då visas idag och N dagar framåt i
+        // stället för bara eventets egen dag, så brickan på kartan räknar
+        // samma event som brickan man tryckte på. Läses ur URL:en här, så
+        // alla vägar in (seed, aggregat, sen batch) gör likadant.
+        let rangeDays = 0;
+        try {
+            const p = new URLSearchParams(window.location.search);
+            const n = parseInt(p.get('dagar') ?? '', 10);
+            if (p.get('event') === target.id && p.get('dag') === '0' && n > 1 && offset >= 0 && offset < n) rangeDays = Math.min(n, 31);
+        } catch { /* ingen läsbar URL */ }
+        const shownOffset = rangeDays ? 0 : offset;
+        ownDaySwitchRef.current = shownOffset;
+        setDayOffset(shownOffset);
+        if (rangeDays) setDayRangeDays(rangeDays);
         setSelectedEvent(target);
         setFullOpenNonce(n => n + 1);
         // Landa där eventet ÄR — som ett skylt-hopp (samma kamerahopp OCH

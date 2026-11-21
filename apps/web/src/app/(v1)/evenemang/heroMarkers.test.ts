@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickHeroMarkers, isPastEv, type HeroLiveEvent } from './heroMarkers';
+import { HERO_RANGE_MAX_DAYS, heroBrickHref, lastDayOf, pickHeroMarkers, isPastEv, type HeroLiveEvent } from './heroMarkers';
 
 const NOW = Date.parse('2026-09-20T12:00:00+02:00');
 const DAY = '2026-09-20';
@@ -115,5 +115,27 @@ describe('pickHeroMarkers', () => {
     it('tomt urval ger tom lista, inte krasch', () => {
         expect(pickHeroMarkers([], { dayKeys: [DAY], category: null, now: NOW })).toEqual([]);
         expect(pickHeroMarkers([ev()], { dayKeys: [], category: null, now: NOW })).toEqual([]);
+    });
+});
+
+describe('heroBrickHref (#273)', () => {
+    const href = '/?event=abc';
+    it('en multibricka över flera dagar bär med sig perioden', () => {
+        expect(heroBrickHref(href, 41, '2026-11-28', '2026-11-22')).toBe('/?event=abc&dag=0&dagar=7');
+        expect(heroBrickHref(href, 2, '2026-11-23', '2026-11-22')).toBe('/?event=abc&dag=0&dagar=2');
+    });
+    it('ensam bricka eller grupp på dagens dag: länken orörd', () => {
+        expect(heroBrickHref(href, 1, '2026-11-28', '2026-11-22')).toBe(href);
+        expect(heroBrickHref(href, 5, '2026-11-22', '2026-11-22')).toBe(href);
+        expect(heroBrickHref(href, 5, '', '2026-11-22')).toBe(href);
+    });
+    it('aldrig fler dagar än kartan tar emot', () => {
+        expect(heroBrickHref(href, 9, '2027-03-01', '2026-11-22')).toBe(`/?event=abc&dag=0&dagar=${HERO_RANGE_MAX_DAYS}`);
+    });
+    it('månadsskifte räknas rätt', () => {
+        expect(heroBrickHref(href, 3, '2026-12-02', '2026-11-29')).toBe('/?event=abc&dag=0&dagar=4');
+    });
+    it('lastDayOf tar gruppens senaste dag, och pickHeroMarkers bär den', () => {
+        expect(lastDayOf([{ day: '2026-11-24' }, { day: '2026-11-30' }, { day: '2026-11-22' }])).toBe('2026-11-30');
     });
 });

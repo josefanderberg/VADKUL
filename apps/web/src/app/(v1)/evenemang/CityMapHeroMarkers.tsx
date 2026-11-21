@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BRICKA_DARK_BG, sourceGradientCss } from '@/components/v2/v2MapBricka';
-import { periodKeys } from './periods';
+import { periodKeys, todayKey } from './periods';
 import { useDayFilter } from './dayFilter';
 import CityHeroPeriodChips from './CityHeroPeriodChips';
-import { pickHeroMarkers, type HeroLiveEvent } from './heroMarkers';
+import { heroBrickHref, pickHeroMarkers, type HeroLiveEvent } from './heroMarkers';
 import { placeHeroTitles, HERO_TITLE_FONT_PX, HERO_TITLE_LINE_PX } from './heroTitles';
 
 /**
@@ -92,12 +92,14 @@ export default function CityMapHeroMarkers({ markers, bigMapHref }: {
 
             <CityHeroPeriodChips />
 
-            {visible.map(({ e, count }, i) => (
+            {visible.map(({ e, count, lastDay }, i) => (
                 <button
                     key={e.id}
                     type="button"
                     aria-label={`Visa ${e.title || 'eventet'} på kartan${count > 1 ? ` (${count} på platsen)` : ''}`}
-                    onClick={ev => { ev.stopPropagation(); window.location.assign(e.href); }}
+                    // En multibricka bär med sig perioden (#273): stora
+                    // kartan visar samma dagar som siffran räknade.
+                    onClick={ev => { ev.stopPropagation(); window.location.assign(heroBrickHref(e.href, count, lastDay, todayKey())); }}
                     className="absolute z-10 w-0 h-0 cursor-pointer"
                     style={{ left: `calc(50% + ${e.dx}px)`, top: `calc(50% + ${e.dy}px)` }}
                 >
