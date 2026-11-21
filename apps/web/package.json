@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "bash ../../scripts/dev-guard.sh",
     "dev": "next dev",
     "prebuild": "node scripts/build-events-today.mjs",
     "build": "rm -rf .next && next build",
