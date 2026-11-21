@@ -3,6 +3,7 @@ import {
     buildSmokePuffs,
     smokeDirFor,
     SMOKE_BLOW_MS,
+    SMOKE_DRIFT_MAX_PX,
     SMOKE_GONE_MS,
     SMOKE_PUFF_COUNT,
     SMOKE_PUFF_MAX_MS,
@@ -10,7 +11,7 @@ import {
     SMOKE_WAVE_MS,
 } from './smokePuff';
 
-// Tipset under stadsplattan blåses bort som ett rökmoln (#268).
+// Tipset under stadsplattan avdunstar på stället (#268, 22/11).
 const W = 126;
 const H = 26;
 
@@ -32,13 +33,18 @@ describe('buildSmokePuffs', () => {
         expect(buildSmokePuffs(W, H, 1)).toHaveLength(SMOKE_PUFF_COUNT);
     });
 
-    it('alla puffar driver med blåset', () => {
+    it('puffarna stiger på stället och flyger inte iväg åt sidan (22/11)', () => {
         for (const dir of [1, -1] as const) {
             for (const p of buildSmokePuffs(W, H, dir)) {
-                expect(Math.sign(p.dx)).toBe(dir);
-                expect(Math.abs(p.dx)).toBeGreaterThanOrEqual(70);
+                expect(Math.abs(p.dx)).toBeLessThanOrEqual(SMOKE_DRIFT_MAX_PX);
+                expect(p.dy).toBeLessThan(0);
             }
         }
+    });
+
+    it('det går fort: allt är borta inom en dryg halv sekund', () => {
+        expect(SMOKE_BLOW_MS).toBeLessThanOrEqual(400);
+        expect(SMOKE_GONE_MS).toBeLessThanOrEqual(600);
     });
 
     it('puffarna lossnar ur hela pillen, inte ur en klump', () => {
@@ -63,11 +69,6 @@ describe('buildSmokePuffs', () => {
         const firstL = left.reduce((a, b) => (a.delay <= b.delay ? a : b));
         const lastL = left.reduce((a, b) => (a.delay >= b.delay ? a : b));
         expect(firstL.x).toBeGreaterThan(lastL.x);
-    });
-
-    it('röken stiger: de flesta puffarna driver uppåt', () => {
-        const up = buildSmokePuffs(W, H, 1).filter(p => p.dy < 0).length;
-        expect(up).toBeGreaterThan(SMOKE_PUFF_COUNT / 2);
     });
 
     it('allt är borta innan tipset avmonteras', () => {

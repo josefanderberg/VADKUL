@@ -1,15 +1,17 @@
 /**
- * RÖKMOLNET (#268, Josef 21/11: "det försvinner som ett rökmoln. alltså mjukt
- * blås med kraftfullt"): när man trycker på tipset under stadsplattan blåses
- * det bort. Själva pillen sveps iväg av CSS:en (.smoke-hint-blown i
- * globals.css); här räknas rökpuffarna som lossnar ur den.
+ * ÅNGAN (#268, Josef 22/11: "den ska liksom avdunsta snabbt. inte flyga iväg
+ * sådär" - ersätter rökmolnet från 21/11 som blåstes åt sidan): när man
+ * trycker på tipset under stadsplattan löses det upp på stället. Själva
+ * pillen tonas bort av CSS:en (.smoke-hint-blown i globals.css); här räknas
+ * de små ångpuffarna som stiger ur den.
  *
- * Blåset kommer från sidan man tryckte på, så puffarna närmast den sidan
- * lossnar först och vågen går tvärs över pillen. Allt slumpas med ett FAST
- * frö: samma moln varje gång, och funktionen går att testa. REN.
+ * Puffarna stiger RAKT UPP och driver högst några pixlar åt sidan. Sidan man
+ * tryckte på avgör bara var upplösningen börjar: vågen går därifrån tvärs
+ * över pillen. Allt slumpas med ett FAST frö: samma ånga varje gång, och
+ * funktionen går att testa. REN.
  */
 
-/** Åt vilket håll det blåser: 1 = åt höger, -1 = åt vänster. */
+/** Åt vilket håll upplösningen går: 1 = från vänster åt höger, -1 = tvärtom. */
 export type SmokeDir = 1 | -1;
 
 export interface SmokePuff {
@@ -18,8 +20,8 @@ export interface SmokePuff {
     y: number;
     /** Diameter i px vid start. */
     size: number;
-    /** Hur långt puffen driver (px). dx har alltid blåsets tecken, dy är
-     *  uppåt (negativt) för de flesta - rök stiger. */
+    /** Hur långt puffen driver (px). dx är högst SMOKE_DRIFT_MAX_PX, dy är
+     *  alltid uppåt (negativt) - ånga stiger. */
     dx: number;
     dy: number;
     /** Slutskalan: puffen sväller medan den tunnas ut. */
@@ -31,16 +33,18 @@ export interface SmokePuff {
     duration: number;
 }
 
-export const SMOKE_PUFF_COUNT = 14;
+export const SMOKE_PUFF_COUNT = 10;
 /** Vågens längd: sista puffen lossnar så här långt efter den första. */
-export const SMOKE_WAVE_MS = 160;
-/** Kortaste och längsta livslängden för en puff. Röken ska hänga kvar en
- *  stund efter att pillen är borta - kortare än så blev det bara en blixt. */
-export const SMOKE_PUFF_MIN_MS = 720;
-export const SMOKE_PUFF_MAX_MS = 1150;
-/** Pillens egen bortblåsning (CSS: --smoke-ms). */
-export const SMOKE_BLOW_MS = 900;
+export const SMOKE_WAVE_MS = 70;
+/** Kortaste och längsta livslängden för en puff. Kort: det ska avdunsta,
+ *  inte bli hängande. */
+export const SMOKE_PUFF_MIN_MS = 260;
+export const SMOKE_PUFF_MAX_MS = 440;
+/** Pillens egen upplösning (CSS: --smoke-ms). */
+export const SMOKE_BLOW_MS = 340;
 /** När allt är borta och tipset kan avmonteras. */
+/** Längsta sidodriften för en puff (px): den stiger, den flyger inte. */
+export const SMOKE_DRIFT_MAX_PX = 8;
 export const SMOKE_GONE_MS = SMOKE_WAVE_MS + SMOKE_PUFF_MAX_MS + 40;
 
 /** Trycket avgör blåsets håll: vänstra halvan blåser åt höger och tvärtom.
@@ -61,18 +65,18 @@ export function buildSmokePuffs(width: number, height: number, dir: SmokeDir, co
         const along = (i + 0.15 + rand() * 0.7) / count;
         // 0 = sidan blåset kommer ifrån, 1 = läsidan.
         const fromWind = dir === 1 ? along : 1 - along;
-        const size = Math.round(h * (0.9 + rand() * 0.9));
-        // Lovart-puffarna har längst väg kvar genom pillen och driver längst.
-        const reach = 70 + (1 - fromWind) * 46 + rand() * 54;
-        const lift = -(8 + rand() * 30) + (rand() < 0.2 ? 14 : 0);
+        const size = Math.round(h * (0.7 + rand() * 0.6));
+        // Ånga stiger: rakt upp, med en liten drift åt upplösningens håll.
+        const drift = rand() * SMOKE_DRIFT_MAX_PX;
+        const lift = -(12 + rand() * 20);
         return {
             x: Math.round(along * w),
             y: Math.round(h * (0.25 + rand() * 0.5)),
             size,
-            dx: Math.round(dir * reach),
+            dx: Math.round(dir * drift),
             dy: Math.round(lift),
-            scale: +(1.7 + rand() * 1.3).toFixed(2),
-            opacity: +(0.55 + rand() * 0.4).toFixed(2),
+            scale: +(1.3 + rand() * 0.7).toFixed(2),
+            opacity: +(0.45 + rand() * 0.35).toFixed(2),
             delay: Math.round(fromWind * SMOKE_WAVE_MS),
             duration: Math.round(SMOKE_PUFF_MIN_MS + rand() * (SMOKE_PUFF_MAX_MS - SMOKE_PUFF_MIN_MS)),
         };

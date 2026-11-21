@@ -18,26 +18,16 @@ interface SmokeHintProps {
     delayMs?: number;
 }
 
-/** Vindstråken som far förbi i blåsets riktning: läge i höjdled (andel av
- *  pillens höjd), bredd (px), start (ms) och hur mycket de stiger (px). */
-const GUSTS = [
-    { top: 0.2, width: 44, delay: 0, rise: -9 },
-    { top: 0.55, width: 62, delay: 45, rise: -3 },
-    { top: 0.85, width: 36, delay: 90, rise: 4 },
-];
-
 /**
- * Ett tips som står kvar tills man trycker på det - och då BLÅSES bort som
- * ett rökmoln (#268, ägarbeslut 21/11, Josef: "se stadssida uppe den info
- * texten till man antingen klickar på den texten och det försvinner som ett
- * rökmoln. alltså mjukt blås med kraftfullt").
+ * Ett tips som står kvar tills man trycker på det - och då AVDUNSTAR på
+ * stället (#268, ägarbeslut 22/11, Josef: "den ska liksom avdunsta snabbt.
+ * inte flyga iväg sådär"; ersätter blåset från 21/11 som svepte iväg pillen
+ * åt sidan).
  *
  * Samma pill som HoverLabel, men den syns hela tiden och går att trycka på.
- * Blåset kommer från sidan man tryckte på: pillen trycks ihop en aning mot
- * vinden, sveps iväg och löses upp, medan rökpuffar lossnar ur den i en våg
- * och vindstråk far förbi. Pillens rörelse och puffarnas utseende bor i
- * globals.css (.smoke-hint-blown, .smoke-puff, .smoke-gust), puffarnas banor
- * i utils/smokePuff (testad).
+ * Pillen löses upp där den står och små ångpuffar stiger ur den. Pillens
+ * upplösning och puffarnas utseende bor i globals.css (.smoke-hint-blown,
+ * .smoke-puff), puffarnas banor i utils/smokePuff (testad).
  */
 export default function SmokeHint({ children, onGone, className = '', emphasized = false, dismissLabel, delayMs = 0 }: SmokeHintProps) {
     const [blow, setBlow] = useState<{ dir: SmokeDir; puffs: SmokePuff[]; width: number; height: number } | null>(null);
@@ -54,7 +44,7 @@ export default function SmokeHint({ children, onGone, className = '', emphasized
         // detail 0 = tangentbordet (Enter/mellanslag): inget tryckläge.
         const dir = smokeDirFor(e.detail === 0 ? null : e.clientX, rect.left, rect.width);
         setBlow({ dir, puffs: buildSmokePuffs(rect.width, rect.height, dir), width: rect.width, height: rect.height });
-        // Med reducerad rörelse tonar pillen bara ut (CSS) - vänta inte ut röken.
+        // Med reducerad rörelse tonar pillen bara ut (CSS) - vänta inte ut ångan.
         const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         timerRef.current = setTimeout(() => onGoneRef.current(), reduced ? 220 : SMOKE_GONE_MS);
     };
@@ -87,20 +77,6 @@ export default function SmokeHint({ children, onGone, className = '', emphasized
                 </button>
                 {blow && (
                     <span aria-hidden className="pointer-events-none absolute inset-0">
-                        {GUSTS.map((g, i) => (
-                            <span
-                                key={`g${i}`}
-                                className="smoke-gust"
-                                style={{
-                                    top: Math.round(blow.height * g.top),
-                                    left: blow.dir === 1 ? -8 : undefined,
-                                    right: blow.dir === -1 ? -8 : undefined,
-                                    width: g.width,
-                                    '--gust-delay': `${g.delay}ms`,
-                                    '--gust-dy': `${g.rise}px`,
-                                } as React.CSSProperties}
-                            />
-                        ))}
                         {blow.puffs.map((p, i) => (
                             <span
                                 key={i}
