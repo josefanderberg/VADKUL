@@ -1,11 +1,18 @@
 {
-  "generatedAt": "2026-11-20T06:01:47.050Z",
+  "generatedAt": "2026-11-21T07:32:47.689Z",
   "counts": {
     "fel": 0,
-    "varning": 41,
-    "nollkoordinatTotalt": 514
+    "varning": 44,
+    "nollkoordinatTotalt": 565
   },
   "alerts": [
+    {
+      "level": "varning",
+      "kind": "tyst",
+      "source": "almhult",
+      "since": "2026-11-06",
+      "message": "gav 3 event 2026-10-31, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
+    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -38,15 +45,15 @@
       "level": "varning",
       "kind": "volymras",
       "source": "bastad",
-      "since": "2026-11-16",
-      "message": "ger 16 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
+      "since": "2026-11-18",
+      "message": "ger 15 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "equmenia",
-      "since": "2026-11-09",
-      "message": "ger 12 event per körning, under källans golv 20 (expectedMinEvents) — tappar tolkningen event?"
+      "since": "2026-11-12",
+      "message": "ger 8 event per körning, under källans golv 20 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
@@ -60,7 +67,7 @@
       "kind": "volymras",
       "source": "kungliga-operan",
       "since": "2026-11-13",
-      "message": "ger 13 event per körning mot 56 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "message": "ger 13 event per körning mot 53 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
@@ -80,27 +87,32 @@
       "level": "varning",
       "kind": "volymras",
       "source": "uppsala",
-      "since": "2026-11-11",
+      "since": "2026-11-14",
       "message": "ger 300 event per körning, under källans golv 608 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
-      "kind": "volymras",
-      "source": "vallentuna-kommun",
-      "since": "2026-11-12",
-      "message": "ger 11 event per körning mot 38 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "kind": "datumkluster",
+      "source": "Botkyrka Kommun",
+      "message": "10 av 10 kommande event ligger 2026-11-21 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Conventum",
+      "message": "11 av 18 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "Jazzimalmo",
-      "message": "53 av 54 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
+      "message": "53 av 53 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
       "source": "S:t Peters klosters församling",
-      "message": "7 av 10 kommande event ligger 2026-11-25 — sajtvitt datum i stället för eventets?"
+      "message": "7 av 11 kommande event ligger 2026-11-25 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -117,8 +129,8 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "514 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 19, Söndrum-Vapnö församling 18, ABF 14, Barnarp-Ödestugu församling 14, Studiefrämjandet 12"
+      "source": "565 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Söndrum-Vapnö församling 21, Förlösa-Kläckeberga församling 20, Barnarp-Ödestugu församling 17, ABF 14, Spånga-Kista församling 12"
     },
     {
       "level": "varning",
@@ -130,7 +142,13 @@
       "level": "varning",
       "kind": "invariant",
       "source": "Vallentuna Kommun",
-      "message": "invariant-vakten larmar (1 av 37 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (1 av 45 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Västerviks bibliotek",
+      "message": "invariant-vakten larmar (1 av 16 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
