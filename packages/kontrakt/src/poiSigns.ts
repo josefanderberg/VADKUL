@@ -31,7 +31,8 @@
  *
  * Allt kommer ur baskartans EGNA kakel (source-layer 'pois', OpenStreetMap via
  * CARTO) - utom badplatserna sedan #279 (22/11 2026), som har en egen liten
- * fil så de kan tändas från zoom 9 (se BAD_SIGN_* nedan). Kaklen bär platserna olika djupt (mätt över Växjö
+ * fil så de kan tändas från zoom 9 (se BAD_SIGN_* nedan). Kaklen bär
+ * platserna olika djupt (mätt över Växjö
  * 13/11): naturreservat och golfbanor från z11, badplatser från z13, parker
  * z13-14, museer och bibliotek z14, lekplatser först z15.
  *
@@ -306,7 +307,7 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
             'icon-image': perKind(key => poiSignImageId(key), ''),
             // Långt ute (badlagret från zoom 9) är skylten mindre, så en
             // region full av bad inte blir en matta av skyltar.
-            'icon-size': from < 12
+            'icon-size': fromFile
                 ? ['interpolate', ['linear'], ['zoom'], from, 0.6 * scale, 13, 0.8 * scale, 16, scale]
                 : ['interpolate', ['linear'], ['zoom'], Math.min(from, 15), 0.8 * scale, 16, scale],
             // Stolpens fot står på platsen.
