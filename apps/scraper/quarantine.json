@@ -43,6 +43,10 @@
       "lastRetry": "2026-11-19",
       "emptyRetries": 13
     },
+    "kulturen": {
+      "since": "2026-11-22",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "liseberg": {
       "since": "2026-11-20",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
@@ -72,8 +76,8 @@
     "sollero-hembygdsforening": {
       "since": "2026-09-06",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-15",
-      "emptyRetries": 9
+      "lastRetry": "2026-11-22",
+      "emptyRetries": 10
     },
     "staffanstorp": {
       "since": "2026-08-19",
@@ -101,7 +105,9 @@
     },
     "tickster-ort-jonkoping-3": {
       "since": "2026-11-15",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-11-22",
+      "emptyRetries": 1
     },
     "tickster-ort-linkoping-2": {
       "since": "2026-11-04",
