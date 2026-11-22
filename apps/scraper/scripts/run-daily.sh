@@ -482,6 +482,22 @@ if [ "$JOB_NAME" = "nightly" ]; then
     fi
 fi
 
+# ─── Badplatsfilen (#279, bara nightly: måndagar eller när filen saknas) ────
+# Sveriges badplatser ur OSM (Overpass) till apps/web/public/badplatser.json,
+# som kartan ritar badskylten ur från zoom 9 (webb och app). OSM ändras
+# långsamt, så en Sverige-fråga i veckan räcker. Ett halvt svar skriver aldrig
+# över filen. Fel stoppar aldrig kedjan.
+BADPLATS_FIL="$REPO_ROOT/apps/web/public/badplatser.json"
+if [ "$JOB_NAME" = "nightly" ] && { [ "$(date +%u)" = "1" ] || [ ! -f "$BADPLATS_FIL" ]; }; then
+    echo "" >> "$LOG_FILE"
+    echo "── BADPLATSFILEN (OSM via Overpass) ──" >> "$LOG_FILE"
+    if npm run badplatser >> "$LOG_FILE" 2>&1; then
+        echo "Badplatsfilen OK" >> "$LOG_FILE"
+    else
+        echo "⚠️ Badplatsfilen misslyckades — förra veckans fil ligger kvar." >> "$LOG_FILE"
+    fi
+fi
+
 # ─── Git-synk UT (bara nightly): committa nattens data + pusha ──────────────
 # BARA whitelistade paths (aldrig add -A): aggregat-JSON:erna, FB-körloggen
 # och den genererade FB-watchlisten (skrivs om av måndags-snöbollen; om den
@@ -500,6 +516,11 @@ if [ "$JOB_NAME" = "nightly" ]; then
         apps/scraper/web-snowball-state.json \
         apps/scraper/src/sources/registry-snowball.ts \
         apps/scraper/src/scrapers/facebook/watchlist-national.ts >> "$LOG_FILE" 2>&1
+    # Badplatsfilen för sig: en sökväg som inte finns fäller hela add:en, och
+    # filen finns inte förrän första måndagskörningen lyckats (#279).
+    if [ -f "$BADPLATS_FIL" ]; then
+        git -C "$REPO_ROOT" add apps/web/public/badplatser.json >> "$LOG_FILE" 2>&1
+    fi
     if git -C "$REPO_ROOT" diff --cached --quiet; then
         echo "Inget nytt att committa (datafilerna oförändrade)." >> "$LOG_FILE"
     else

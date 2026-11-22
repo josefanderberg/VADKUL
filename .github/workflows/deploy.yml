@@ -29,6 +29,7 @@ on:
       - '.github/**'
       - 'docs/**'
       - 'apps/web/public/events-*.json'
+      - 'apps/web/public/badplatser.json'
       - 'apps/scraped_events.json'
       - 'apps/scraper/**'
   workflow_dispatch:

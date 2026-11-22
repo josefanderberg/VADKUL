@@ -84,6 +84,7 @@
     "daily-report": "ts-node src/scripts/daily-report.ts",
     "aggregate": "ts-node src/scripts/aggregate-events.ts",
     "organizer-stats": "ts-node src/scripts/export-organizer-stats.ts",
+    "badplatser": "ts-node src/scripts/badplatser.ts",
     "backfill-categories": "ts-node src/scripts/backfill-categories.ts",
     "backfill-content": "ts-node src/scripts/backfill-content-quality.ts",
     "price-refine": "ts-node src/scripts/price-refine.ts",

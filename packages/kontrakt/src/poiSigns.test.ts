@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-    addPoiSignLayers, pickPoiSignHit, POI_SIGN_CLOSE_KEYS, POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_CLOSE_MIN_ZOOM, POI_SIGN_HIT, POI_SIGN_KEYS, POI_SIGN_LABELS, POI_SIGN_LAYER_ID,
+    addPoiSignLayers, BAD_SIGN_LAYER_ID, BAD_SIGN_MIN_ZOOM, BAD_SIGN_SOURCE_ID, pickPoiSignHit, POI_SIGN_CLOSE_KEYS, POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_CLOSE_MIN_ZOOM, POI_SIGN_HIT, POI_SIGN_KEYS, POI_SIGN_LABELS, POI_SIGN_LAYER_ID,
     POI_SIGN_LAYER_IDS, POI_SIGN_MIN_ZOOM, POI_SIGN_NAME_ZOOM, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_LAYER_ID,
     POI_SIGN_NEAR_MIN_ZOOM, POI_SIGNS, poiSignImageId, poiSignInfo, poiSignKeyForKind, poiSignKeyFromImageId,
     type PoiSignStyle, type PoiSignStyleLayer,
@@ -70,8 +70,10 @@ describe('addPoiSignLayers', () => {
             'place_town', 'poi_park',
         ]);
         expect(lager(s, 'poi_park').layout?.visibility).toBe('none');
-        // Trycket frågar alla tre lagren.
-        expect(POI_SIGN_LAYER_IDS).toEqual([POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_CLOSE_LAYER_ID]);
+        // Trycket frågar alla lagren, även badlagret ur filen (#279).
+        expect(POI_SIGN_LAYER_IDS).toEqual([BAD_SIGN_LAYER_ID, POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_CLOSE_LAYER_ID]);
+        // Utan badfil: inget badlager, ingen källa - baden kommer ur kaklen som förut.
+        expect(s.sources![BAD_SIGN_SOURCE_ID]).toBeUndefined();
     });
 
     it('resmålen tänds vid zoom 13 med namn från 14,5, lekplats, plan och park först vid 15', () => {
@@ -155,6 +157,38 @@ describe('addPoiSignLayers', () => {
         for (const kind of ['bathing_place', 'cinema', 'sports_centre', 'playground', 'park']) {
             expect(matchFor(ordning, kind)).toBeLessThan(matchFor(ordning, 'restaurant') as number);
         }
+    });
+
+    // #279, Josef 22/11: "badplatser syns bara när man zoomar in jättemycket.
+    // Fixa så det är mycket högre upp synligt." Han valde zoom 9 med egen fil.
+    it('badplatsfilen: eget lager från zoom 9 överst, och kakellagret slutar bära bad', () => {
+        const s = voyagerLik();
+        expect(addPoiSignLayers(s, { badData: 'https://vadkul.se/badplatser.json', iconScale: 0.5 })).toBe(true);
+        expect(BAD_SIGN_MIN_ZOOM).toBe(9);
+        expect(s.sources![BAD_SIGN_SOURCE_ID]).toEqual({ type: 'geojson', data: 'https://vadkul.se/badplatser.json' });
+        expect(s.layers!.map(l => l.id)).toEqual([
+            'background', 'water', 'watername_lake',
+            POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_LAYER_ID, BAD_SIGN_LAYER_ID,
+            'place_town', 'poi_park',
+        ]);
+        const bad = lager(s, BAD_SIGN_LAYER_ID);
+        // GeoJSON-källan har inget source-layer.
+        expect(bad).toMatchObject({ type: 'symbol', source: BAD_SIGN_SOURCE_ID, minzoom: 9 });
+        expect(bad['source-layer']).toBeUndefined();
+        const kindsIn = (id: string) => (lager(s, id).filter as unknown[])[2] as string[];
+        expect(kindsIn(BAD_SIGN_LAYER_ID).sort()).toEqual(['bathing_place', 'beach', 'public_bath']);
+        for (const kind of ['bathing_place', 'beach', 'public_bath']) expect(kindsIn(POI_SIGN_LAYER_ID)).not.toContain(kind);
+        expect(kindsIn(POI_SIGN_LAYER_ID)).toEqual(expect.arrayContaining(['museum', 'nature_reserve', 'golf_course']));
+        expect(matchFor(bad.layout!['icon-image'], 'beach')).toBe(poiSignImageId('bad'));
+        // Mindre skylt långt ute, full storlek inzoomat; namnet som resmålens.
+        expect(bad.layout!['icon-size']).toEqual(['interpolate', ['linear'], ['zoom'], 9, 0.6 * 0.5, 13, 0.8 * 0.5, 16, 0.5]);
+        expect((bad.layout!['text-field'] as unknown[]).slice(0, 4)).toEqual(['step', ['zoom'], '', POI_SIGN_NAME_ZOOM]);
+        // Resmålens lager är oförändrat i övrigt.
+        expect(lager(s, POI_SIGN_LAYER_ID).minzoom).toBe(POI_SIGN_MIN_ZOOM);
+        // Startzoomen går att flytta.
+        const t = voyagerLik();
+        addPoiSignLayers(t, { badData: 'https://vadkul.se/badplatser.json', badMinZoom: 8 });
+        expect(lager(t, BAD_SIGN_LAYER_ID).minzoom).toBe(8);
     });
 
     it('barer, pubar och gym har ingen skylt', () => {

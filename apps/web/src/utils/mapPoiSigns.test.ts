@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type * as maplibregl from 'maplibre-gl';
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
-    addPoiSigns, POI_SIGN_DEEP_MIN_ZOOM, POI_SIGN_DEEP_NAME_ZOOM, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM,
+    addPoiSigns, BAD_SIGN_LAYER_ID, BAD_SIGN_MIN_ZOOM, BAD_SIGN_SOURCE_ID, POI_SIGN_DEEP_MIN_ZOOM, POI_SIGN_DEEP_NAME_ZOOM, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM,
     POI_SIGN_NAME_ZOOM, POI_SIGNS,
     POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_CLOSE_MIN_ZOOM, POI_SIGN_HIT, POI_SIGN_LABELS, POI_SIGN_LAYER_IDS, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_MIN_ZOOM, pickPoiSignHit, poiSignInfo, poiSignKeyForKind,
     poiSignImageId, poiSignKeyFromImageId, type PoiSignKey,
@@ -126,7 +126,8 @@ describe('addPoiSigns', () => {
 
     it('filtret släpper bara igenom platstyperna med skylt', () => {
         const s = färdig();
-        const kinds = POI_SIGN_LAYER_IDS.flatMap(id => {
+        // Utan badplatsfil (servern, testerna) finns inget badlager - baden kommer ur kaklen.
+        const kinds = POI_SIGN_LAYER_IDS.filter(id => s.layers.some(l => l.id === id)).flatMap(id => {
             const filter = (s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification).filter as unknown[];
             // ['match', ['get', 'kind'], [kinds], true, false] (kontraktets poiSigns).
             return filter[2] as string[];
@@ -149,7 +150,7 @@ describe('addPoiSigns', () => {
         expect(near.minzoom).toBe(POI_SIGN_NEAR_MIN_ZOOM);
         expect(POI_SIGN_NEAR_MIN_ZOOM).toBeGreaterThan(POI_SIGN_MIN_ZOOM);
         expect([...POI_SIGN_NEAR_KEYS].sort()).toEqual(['bollplan', 'idrott', 'lekplats', 'park']);
-        expect(POI_SIGN_LAYER_IDS).toEqual([POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_CLOSE_LAYER_ID]);
+        expect(POI_SIGN_LAYER_IDS).toEqual([BAD_SIGN_LAYER_ID, POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_CLOSE_LAYER_ID]);
     });
 
     it('restauranger och kaféer tänds först på gatunivå, zoom 16 (#242)', () => {
@@ -289,4 +290,49 @@ describe('tryck på en skylt (#225)', () => {
         expect(pickPoiSignHit([{ x: 900, y: 40 }], { x: 104, y: 178 })).toBeNull();
     });
 });
+});
+
+// #279, Josef 22/11: "badplatser syns bara när man zoomar in jättemycket. Fixa
+// så det är mycket högre upp synligt." - egen fil, badskylten från zoom 9.
+describe('badplatserna ur badplatsfilen', () => {
+    const medFil = (djup: boolean) => {
+        const s = voyagerLike();
+        if (djup) {
+            s.layers.splice(1, 0, { id: 'landuse', type: 'fill', source: 'protomaps', 'source-layer': 'landuse' });
+            addZoomedOutLandcover(s);
+        }
+        addPoiSigns(s, 'https://vadkul.se');
+        return s;
+    };
+    const lagret = (s: maplibregl.StyleSpecification, id: string) =>
+        s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification;
+    const kindsIn = (s: maplibregl.StyleSpecification, id: string) => (lagret(s, id).filter as unknown[])[2] as string[];
+
+    it('hämtar filen med hel adress och tänder badskylten från zoom 9', () => {
+        const s = medFil(false);
+        expect(s.sources[BAD_SIGN_SOURCE_ID]).toEqual({ type: 'geojson', data: 'https://vadkul.se/badplatser.json' });
+        expect(lagret(s, BAD_SIGN_LAYER_ID)).toMatchObject({ type: 'symbol', source: BAD_SIGN_SOURCE_ID, minzoom: 9 });
+        expect(BAD_SIGN_MIN_ZOOM).toBeLessThan(POI_SIGN_DEEP_MIN_ZOOM);
+        expect(validateStyleMin(s)).toEqual([]);
+    });
+
+    it('kaklen bär inga bad när filen används, med eller utan djup källa - aldrig två skyltar på samma bad', () => {
+        for (const djup of [false, true]) {
+            const s = medFil(djup);
+            for (const kind of ['bathing_place', 'beach', 'public_bath']) {
+                expect(kindsIn(s, POI_SIGN_LAYER_ID)).not.toContain(kind);
+                expect(kindsIn(s, BAD_SIGN_LAYER_ID)).toContain(kind);
+            }
+            // Alla platstyper finns fortfarande i exakt ett lager.
+            const alla = POI_SIGN_LAYER_IDS.flatMap(id => kindsIn(s, id));
+            expect(alla.sort()).toEqual(Object.values(POI_SIGNS).flatMap(x => [...x.kinds]).sort());
+            expect(validateStyleMin(s)).toEqual([]);
+        }
+    });
+
+    it('badlagret ligger överst bland skyltarna och under ortsnamnen', () => {
+        const ids = medFil(false).layers.map(l => l.id);
+        expect(ids.indexOf(BAD_SIGN_LAYER_ID)).toBe(ids.indexOf(POI_SIGN_LAYER_ID) + 1);
+        expect(ids.indexOf(BAD_SIGN_LAYER_ID)).toBeLessThan(ids.indexOf('place_hamlet'));
+    });
 });

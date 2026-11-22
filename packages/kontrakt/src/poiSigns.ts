@@ -30,8 +30,9 @@
  * tidigare", #232) ersätter sedan skylten.
  *
  * Allt kommer ur baskartans EGNA kakel (source-layer 'pois', OpenStreetMap via
- * CARTO) - även badplatserna, så ingenting extra hämtas och ingen egen datafil
- * behöver underhållas. Kaklen bär platserna olika djupt (mätt över Växjö
+ * CARTO) - utom badplatserna sedan #279 (22/11 2026), som har en egen liten
+ * fil så de kan tändas från zoom 9 (se BAD_SIGN_* nedan). Kaklen bär
+ * platserna olika djupt (mätt över Växjö
  * 13/11): naturreservat och golfbanor från z11, badplatser från z13, parker
  * z13-14, museer och bibliotek z14, lekplatser först z15.
  *
@@ -108,8 +109,22 @@ export const POI_SIGN_NEAR_KEYS: readonly PoiSignKey[] = ['idrott', 'lekplats', 
 export const POI_SIGN_CLOSE_LAYER_ID = 'vadkul-poi-signs-close';
 export const POI_SIGN_CLOSE_MIN_ZOOM = 16;
 export const POI_SIGN_CLOSE_KEYS: readonly PoiSignKey[] = ['restaurang', 'kafe'];
+// ── Badplatserna ur egen fil, från zoom 9 (#279) ──────────────────────────────
+// Josef 22/11: "badplatser syns bara när man zoomar in jättemycket. Fixa så det
+// är mycket högre upp synligt." Kaklen bär badplatserna först från z13 (de
+// djupare kaklen räcker till zoom 11-12), så badplatserna har en EGEN liten
+// GeoJSON-fil (apps/web/public/badplatser.json, byggd av nattkedjan ur OSM med
+// kaklens kind/name) och ett eget lager som tänds från BAD_SIGN_MIN_ZOOM. När
+// filen används äger den badplatserna på ALLA zoomar: resmålens kakellager
+// slutar bära bad, annars står två skyltar på samma bad. Josef valde zoom 9.
+export const BAD_SIGN_LAYER_ID = 'vadkul-poi-signs-bad';
+export const BAD_SIGN_SOURCE_ID = 'vadkul-badplatser';
+export const BAD_SIGN_MIN_ZOOM = 9;
+/** Filens sökväg på vadkul.se (webbens public/). */
+export const BADPLATS_DATA_PATH = '/badplatser.json';
+
 /** Alla skyltlagren - det som frågar efter skyltar (trycket) ska fråga alla. */
-export const POI_SIGN_LAYER_IDS = [POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_CLOSE_LAYER_ID] as const;
+export const POI_SIGN_LAYER_IDS = [BAD_SIGN_LAYER_ID, POI_SIGN_LAYER_ID, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_CLOSE_LAYER_ID] as const;
 const FAR_KEYS = KEYS.filter(key => !POI_SIGN_NEAR_KEYS.includes(key) && !POI_SIGN_CLOSE_KEYS.includes(key));
 const kindsOf = (keys: readonly PoiSignKey[]) => keys.flatMap(k => [...POI_SIGNS[k].kinds]);
 
@@ -198,7 +213,7 @@ export interface PoiSignStyleLayer {
 }
 export interface PoiSignStyle {
     layers?: PoiSignStyleLayer[];
-    sources?: Record<string, { type?: string } | undefined>;
+    sources?: Record<string, { type?: string; [key: string]: unknown } | undefined>;
 }
 
 export interface PoiSignLayerOptions {
@@ -219,6 +234,15 @@ export interface PoiSignLayerOptions {
      */
     nearMinZoom?: number;
     closeMinZoom?: number;
+    /**
+     * Badplatsfilens adress (#279). Satt = badplatserna ritas ur filen från
+     * BAD_SIGN_MIN_ZOOM och kakellagret slutar bära dem. Utelämnad = bad ur
+     * kaklen som förut. Måste vara en hel adress (https://...): webbens
+     * MapLibre hämtar GeoJSON i en worker och appens i native-koden.
+     */
+    badData?: string;
+    /** Startzoom för badlagret ur filen. Utelämnad = BAD_SIGN_MIN_ZOOM. */
+    badMinZoom?: number;
     /**
      * Faktor på skyltens storlek. Webben ritar bilden med egen pixeltäthet
      * (1); appen bakar den i högre upplösning och skalar ner lika mycket.
@@ -262,14 +286,17 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
     const font = Array.isArray(parkFont) ? parkFont as string[] : FALLBACK_FONT;
     if (park?.type === 'symbol') park.layout = { ...park.layout, visibility: 'none' };
 
+    const badFromFile = typeof options.badData === 'string' && options.badData.length > 0;
+    const badMinZoom = options.badMinZoom ?? BAD_SIGN_MIN_ZOOM;
+
     const label = ['coalesce', ['get', 'name'], perKind(key => POI_SIGN_LABELS[key], '')];
     const signLayer = (
         id: string, keys: readonly PoiSignKey[], from: number, text: Record<string, unknown>,
+        fromFile = false,
     ): PoiSignStyleLayer => ({
         id,
         type: 'symbol',
-        source,
-        'source-layer': 'pois',
+        ...(fromFile ? { source: BAD_SIGN_SOURCE_ID } : { source, 'source-layer': 'pois' }),
         minzoom: from,
         // match, inte in-uttrycket: MapLibre Native (appen) avgör på operatorn
         // om ett filter är ett uttryck, och en lista som börjar med "in" kan
@@ -278,7 +305,11 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
         filter: ['match', ['get', 'kind'], kindsOf(keys), true, false],
         layout: {
             'icon-image': perKind(key => poiSignImageId(key), ''),
-            'icon-size': ['interpolate', ['linear'], ['zoom'], Math.min(from, 15), 0.8 * scale, 16, scale],
+            // Långt ute (badlagret från zoom 9) är skylten mindre, så en
+            // region full av bad inte blir en matta av skyltar.
+            'icon-size': fromFile
+                ? ['interpolate', ['linear'], ['zoom'], from, 0.6 * scale, 13, 0.8 * scale, 16, scale]
+                : ['interpolate', ['linear'], ['zoom'], Math.min(from, 15), 0.8 * scale, 16, scale],
             // Stolpens fot står på platsen.
             'icon-anchor': 'bottom',
             'symbol-sort-key': perKind((_, i) => i, KEYS.length),
@@ -300,9 +331,10 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
     // Platsens namn, annars platstypen ("Lekplats", "Park") - Josef 13/11:
     // "kan du inte skriva lekplats under också, eller park, för de som de inte
     // dyker upp någon text under."
-    const layer = signLayer(POI_SIGN_LAYER_ID, FAR_KEYS, minZoom, {
-        'text-field': ['step', ['zoom'], '', nameZoom, label],
-    });
+    const farText = { 'text-field': ['step', ['zoom'], '', nameZoom, label] };
+    const layer = signLayer(POI_SIGN_LAYER_ID, badFromFile ? FAR_KEYS.filter(k => k !== 'bad') : FAR_KEYS, minZoom, farText);
+    // Badplatserna ur filen (#279), samma skylt och namnregel som resmålen.
+    const bad = badFromFile ? signLayer(BAD_SIGN_LAYER_ID, ['bad'], badMinZoom, farText, true) : null;
     // Kvartersnivån: texten står där direkt.
     const near = signLayer(POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_KEYS, nearMinZoom, { 'text-field': label });
     // Gatunivån (#242): matställena, också med texten direkt.
@@ -311,6 +343,8 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
     // Det nära lagret UNDER det vanliga, och matställena underst: symboler
     // placeras uppifrån, så ett bad eller museum vinner en krock mot en
     // lekplats, och lekplatsen mot en restaurang.
-    style.layers.splice(firstPlace >= 0 ? firstPlace : style.layers.length, 0, close, near, layer);
+    // Badlagret överst: badplatsen har alltid gått först (POI_SIGNS-ordningen).
+    if (bad) style.sources[BAD_SIGN_SOURCE_ID] = { type: 'geojson', data: options.badData };
+    style.layers.splice(firstPlace >= 0 ? firstPlace : style.layers.length, 0, close, near, layer, ...(bad ? [bad] : []));
     return true;
 }
