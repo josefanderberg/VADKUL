@@ -26,6 +26,10 @@ const TONES = {
         on: 'bg-white text-slate-900',
         idle: 'bg-white/10 text-white/85 hover:bg-white/20',
         popOn: 'bg-white text-[#c2410c]',
+        // 🎄 Jul (#272): julrött med guldkant på den mörka panelen.
+        julOn: 'bg-white text-[#b91c1c]',
+        julIdle: 'chip-jul bg-[#b91c1c]/45 text-white ring-1 ring-inset ring-[#fcd34d]/55 hover:bg-[#b91c1c]/65',
+        klinga: 'chip-klinga',
         mark: 'bg-transparent text-white ring-2 ring-inset ring-white',
         label: 'text-white/45',
         countOn: 'text-slate-500',
@@ -36,6 +40,10 @@ const TONES = {
         on: 'bg-[#006AA7] text-white',
         idle: 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700',
         popOn: 'bg-[#c2410c] text-white',
+        // 🎄 Jul (#272): ljusröd platta med grön kant på det vita kortet.
+        julOn: 'bg-[#b91c1c] text-white',
+        julIdle: 'chip-jul chip-jul-ljus bg-[#fef2f2] text-[#b91c1c] ring-1 ring-inset ring-[#15803d]/35 hover:bg-[#fee2e2] dark:bg-[#7f1d1d]/50 dark:text-red-50 dark:ring-[#fcd34d]/45 dark:hover:bg-[#7f1d1d]/70',
+        klinga: 'chip-klinga chip-klinga-varm',
         // Det öppna eventets kategori (7/10 sent): INTE vald, bara markerad -
         // vit platta med kant (vit kant på mörk yta; på det vita kortet syns
         // en vit kant inte, där bär kartblått kanten).
@@ -64,6 +72,10 @@ interface CategoryChipRowProps {
      *  botten-dockans högra hörn). Ett eget läge som kan kombineras med en
      *  kategori; utelämnad = inget chip (inga pop-flaggor i lagret). */
     popular?: { on: boolean; count: number; onToggle: () => void };
+    /** 🎄 JUL, tillfällig säsongskategori DIREKT TILL HÖGER OM 🔥 (ägarbeslut
+     *  22/11, #272). Eget läge som 🔥; sidan skickar den bara inom chippets
+     *  fönster (20/11 - 26/12), utelämnad = inget chip. */
+    jul?: { on: boolean; count: number; onToggle: () => void };
     /** Färgton: 'dark' (sökpanelen, default) eller 'light' (eventkortet, 6/10). */
     tone?: 'dark' | 'light';
     /** Scrollhjul i sidled (HScrollRow). AV i eventkortet — kortet äger hjulet. */
@@ -90,6 +102,15 @@ interface CategoryChipRowProps {
  * kategori (markerad, inte vald) går före ett avslaget 🔥 - "de kategorier
  * som är valda måste ju hamna längst åt vänster".
  *
+ * 🎄 JUL (ägarbeslut 22/11, #272, Josef: "Den ska ju vara åt höger om
+ * populära. som en tillfällig men relevant kategori. gärna lite coolt
+ * stylad"): eget läge (julOnly i sidan) byggt som 🔥, står direkt till höger
+ * om 🔥 och bara under julsäsongen. Påslaget flyttar det till vänsterkanten
+ * som alla val (efter ett påslaget 🔥). Blicken dras till båda: avslaget 🔥
+ * har en SVÄRDSBLINK (.chip-klinga, ett smalt snett ljussvep) och avslaget
+ * 🎄 TINDRAR till ungefär var tionde sekund (.chip-jul) - se globals.css.
+ * Effekterna bor bara på AVSLAGNA chip; ett valt chip står stilla.
+ *
  * FLER längst till höger (Josef 16/9, som stadssidornas Fler-chip): fäller
  * ut Svenska kyrkan, PRO och Korpen i samma rad. Ett källval betyder "visa
  * bara källan" — sidan släpper då kategorin och 🔥. Källor utan event i vyn
@@ -101,7 +122,7 @@ interface CategoryChipRowProps {
  * Själva rullningen bor i HScrollRow (delad med eventkortets rader).
  */
 export default function CategoryChipRow({
-    counts, selected, onToggle, sourceCounts, selectedSource, onSelectSource, popular, tone = 'dark', wheel = true, highlight = null,
+    counts, selected, onToggle, sourceCounts, selectedSource, onSelectSource, popular, jul, tone = 'dark', wheel = true, highlight = null,
 }: CategoryChipRowProps) {
     const t = TONES[tone];
     // VALDA LÄNGST TILL VÄNSTER, sedan det öppna eventets kategori (ägarbeslut
@@ -135,18 +156,30 @@ export default function CategoryChipRow({
     useEffect(() => {
         if (isFirstRender.current) { isFirstRender.current = false; return; }
         scrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
-    }, [selected, highlight]);
+    }, [selected, highlight, jul?.on]);
 
     const popularChip = popular && (
         <button
             type="button"
             aria-pressed={popular.on}
             onClick={popular.onToggle}
-            className={`${CHIP} ${popular.on ? t.popOn : t.idle}`}
+            className={`${CHIP} ${popular.on ? t.popOn : `${t.idle} ${t.klinga}`}`}
         >
             <span aria-hidden>🔥</span>
             Populära
             <span className={`tabular-nums ${popular.on ? t.countOn : t.countIdle}`}>{popular.count}</span>
+        </button>
+    );
+    const julChip = jul && (
+        <button
+            type="button"
+            aria-pressed={jul.on}
+            onClick={jul.onToggle}
+            className={`${CHIP} ${jul.on ? t.julOn : t.julIdle}`}
+        >
+            <span aria-hidden>🎄</span>
+            Jul
+            <span className={`tabular-nums ${jul.on ? t.countOn : 'opacity-70'}`}>{jul.count}</span>
         </button>
     );
     const categoryChip = ({ key, count }: { key: string; count: number }) => {
@@ -177,11 +210,13 @@ export default function CategoryChipRow({
             {/* -mx-4/px-4: raden rullar ända ut till panelens kanter. */}
             <HScrollRow ref={scrollRef} wheel={wheel} className="-mx-4 px-4 gap-2">
                 {popular?.on && popularChip}
-                {chips.length === 0 && !popular && (
+                {jul?.on && julChip}
+                {chips.length === 0 && !popular && !jul && (
                     <span className={`shrink-0 text-xs ${t.empty}`}>Inga kategorier i vyn</span>
                 )}
                 {leadChips.map(categoryChip)}
                 {popular && !popular.on && popularChip}
+                {jul && !jul.on && julChip}
                 {restChips.map(categoryChip)}
                 {sourceKeys.length > 0 && (
                     <button

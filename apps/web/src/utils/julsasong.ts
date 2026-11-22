@@ -23,3 +23,20 @@ export function förstaAdvent(år: number): Date {
     const dagarTillbaka = (veckodag === 0 ? 7 : veckodag) + 21;
     return new Date(år, 11, 25 - dagarTillbaka);
 }
+
+/**
+ * 🎄 JUL-CHIPPETS FÖNSTER (#272, ägarbeslut 22/11 2026) - INTE samma sak som
+ * julsäsongen ovan. Jultemat (stjärnor, snö, tomteluva) väntar på första
+ * advent; Jul-chippet i kategoriraden är ett sätt att HITTA juleventen och
+ * behövs tidigare - julmarknaderna börjar redan i slutet av november och
+ * reklamen för dem går redan. Synligt 20 november till och med 26 december
+ * (annandag jul), lokal tid. Ändra inte det ena fönstret för att det andra
+ * ska stämma.
+ */
+export function ärJulchipSäsong(datum: Date): boolean {
+    const månad = datum.getMonth(); // 0 = januari
+    const dag = datum.getDate();
+    if (månad === 10) return dag >= 20;
+    if (månad === 11) return dag <= 26;
+    return false;
+}

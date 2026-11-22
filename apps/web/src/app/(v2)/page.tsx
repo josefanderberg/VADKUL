@@ -29,6 +29,9 @@ import { EVENT_CATEGORIES, EventCategoryType, SPECIAL_CATEGORY_KEYS } from '@/ut
 import { classifySource, SOURCE_DEFS } from '@/utils/sources';
 import { mapEventsFor, optInSourcesOnMapAt, withInzoomSources } from '@/utils/optInZoom';
 import { passesPopularFilter } from '@/utils/popularFilter';
+import { passesModeFilter } from '@/utils/julFilter';
+import { ärJulevent } from '@/utils/julevent';
+import { ärJulchipSäsong } from '@/utils/julsasong';
 import { inListWindow, isPopularListed } from '@/utils/popularList';
 import { LIST_ZOOM_OUT_FLOOR, nearestOutsideBounds } from '@/utils/listZoomRings';
 import { shouldOfferPopularWeek } from '@/utils/popularWeekPrompt';
@@ -524,6 +527,19 @@ export default function HomePage() {
     // selectedCategories och Firestore-mapCategories (valideringen där avvisar
     // okända nycklar). Ingen persist i v1 — bara ?pop=1 i adressen.
     const [popularOnly, setPopularOnly] = useState(false);
+    // 🎄 JUL-LÄGET (#272, ägarbeslut 22/11): tillfällig säsongskategori,
+    // byggd som 🔥 - eget läge, ingen kategori, ?jul=1 i adressen. Gäller
+    // bara inom chippets fönster (utils/julsasong ärJulchipSäsong, 20/11 -
+    // 26/12): utanför det är läget AV även om länken säger ?jul=1, och
+    // chippet syns inte. Fönstret läses en gång vid start (som jultemat i
+    // WelcomeOverlay); chippet ritas först när kortet och eventen finns, så
+    // serverns och besökarens datum hinner aldrig ge olika markup. Sparas
+    // MEDVETET inte (varken localStorage eller users.mapFilter): ett
+    // tillfälligt läge ska inte ligga kvar som ett sparat filter när
+    // säsongen är slut.
+    const [julOnlyRaw, setJulOnly] = useState(false);
+    const [julSeason] = useState(() => ärJulchipSäsong(new Date()));
+    const julOnly = julOnlyRaw && julSeason;
     // Profilens hasChildren, sparad vid hydreringen — behövs (som age) för att
     // räkna fram standardläget igen utan att läsa om user-dokumentet.
     const profileHasChildrenRef = useRef<unknown>(undefined);
@@ -2415,7 +2431,8 @@ export default function HomePage() {
     // = 🔥-läget; sökets kategoriord (20/10) skickar false - de ersätter 🔥.
     // `sources` = källorna som räknas som ikryssade; kartans inzoomade lager
     // (#240, matchesInzoomFilter nedan) skickar in kyrkan, PRO och Korpen.
-    const matchesFilterFor = useCallback((evt: LinkEvent, cats: ReadonlySet<string> | null, source: string | null = null, popular: boolean = popularOnly, sources: ReadonlySet<string> = selectedCategories) => {
+    // `jul` = 🎄-läget (#272), samma plats i reglerna som 🔥.
+    const matchesFilterFor = useCallback((evt: LinkEvent, cats: ReadonlySet<string> | null, source: string | null = null, popular: boolean = popularOnly, sources: ReadonlySet<string> = selectedCategories, jul: boolean = julOnly) => {
         // Användarskapade event är sajtens kärna → de syns ALLTID och kringgår
         // hela filtret, även ett aktivt kategorival.
         if (evt.userCreated) return true;
@@ -2428,8 +2445,11 @@ export default function HomePage() {
         // så ska det vara både scen och populära, inte bara de populära inom
         // scen"): populära event visas UTÖVER de valda kategorierna.
         // Bypass-mängden bor i utils/popularFilter.
-        const passesPop = passesPopularFilter(evt, popular);
-        const unionPop = popular && hasCats && passesPop;
+        // 🎄 JUL (#272) är ett läge av samma slag: ensamt smalnar det till
+        // julevent, ihop med 🔥 och/eller kategorier är allt en union
+        // (utils/julFilter passesModeFilter).
+        const passesPop = passesModeFilter(evt, popular, jul);
+        const unionPop = (popular || jul) && hasCats && passesPop;
         if (!passesPop && !(hasCats && cats.has(cat))) return false;
         const src = classifySource(evt.url || evt.id);
         // Fler-källan (16/9): BARA den källans event — och de visas även om
@@ -2444,16 +2464,16 @@ export default function HomePage() {
         // göms aldrig här. Väljer man Familj-chippet vill man se dem.
         if (familyOptIn && cat === 'family') return selectedCategories.has('family') || (hasCats && cats.has('family'));
         return true;
-    }, [selectedCategories, familyOptIn, popularOnly]);
+    }, [selectedCategories, familyOptIn, popularOnly, julOnly]);
     // Under en kategorisökning ("konst växjö") gäller SÖKETS kategorier i
     // stället för kartfiltrets - kartan, listan och stadsraden följer söket,
     // och det valda eventet räknas inte som bortfiltrerat. Opt-in-källorna
     // och familjegrinden gäller som förut.
     const matchesFilter = useCallback(
         (evt: LinkEvent) => (categorySearch
-            ? matchesFilterFor(evt, searchCategories, null, false)
+            ? matchesFilterFor(evt, searchCategories, null, false, selectedCategories, false)
             : matchesFilterFor(evt, mapCategories, mapSource)),
-        [matchesFilterFor, mapCategories, mapSource, categorySearch, searchCategories],
+        [matchesFilterFor, mapCategories, mapSource, categorySearch, searchCategories, selectedCategories],
     );
     // KYRKAN, PRO OCH KORPEN INZOOMAT (#240, ägarbeslut 15/11, utils/
     // optInZoom): samma regler som matchesFilter, men med de tre källorna som
@@ -2464,9 +2484,9 @@ export default function HomePage() {
     const inzoomSources = useMemo(() => withInzoomSources(selectedCategories), [selectedCategories]);
     const matchesInzoomFilter = useCallback(
         (evt: LinkEvent) => (categorySearch
-            ? matchesFilterFor(evt, searchCategories, null, false, inzoomSources)
-            : matchesFilterFor(evt, mapCategories, mapSource, popularOnly, inzoomSources)),
-        [matchesFilterFor, mapCategories, mapSource, popularOnly, categorySearch, searchCategories, inzoomSources],
+            ? matchesFilterFor(evt, searchCategories, null, false, inzoomSources, false)
+            : matchesFilterFor(evt, mapCategories, mapSource, popularOnly, inzoomSources, julOnly)),
+        [matchesFilterFor, mapCategories, mapSource, popularOnly, julOnly, categorySearch, searchCategories, inzoomSources],
     );
 
     // Kategorifiltret appliceras sist i kedjan: dag → sök → kategori.
@@ -3021,7 +3041,7 @@ export default function HomePage() {
     const canOfferWeek = weekUnlocked && dayRangeDays < WEEK_RANGE_MIN_DAYS && (areaCounts?.week ?? 0) > 0;
     // Tomlägets filterfall: 🔥 och/eller kategorin har smalnat bort allt —
     // svaret är då "släpp filtret", inte "zooma ut".
-    const filterActive = popularOnly || mapCategories.size > 0 || mapSource !== null || mapOrganizer !== null;
+    const filterActive = popularOnly || julOnly || mapCategories.size > 0 || mapSource !== null || mapOrganizer !== null;
     const sourceLabel = mapSource ? (SOURCE_DEFS.find(s => s.key === mapSource)?.label ?? mapSource) : null;
     // "Sport", "Sport eller Musik", "Sport, Musik eller Quiz" — tomlägets fras
     // vid flerval (6/10).
@@ -3033,7 +3053,9 @@ export default function HomePage() {
     const filterPhrase = mapOrganizer
         ? `Inga kommande event från ${organizerName ?? 'arrangören'}`
         : popularOnly
-        ? `Inga populära event${katPhrase ? ` inom ${katPhrase}` : ''}`
+        ? `Inga populära event${julOnly ? ' eller julevent' : ''}${katPhrase ? ` inom ${katPhrase}` : ''}`
+        : julOnly
+        ? `Inga julevent${katPhrase ? ` inom ${katPhrase}` : ''}`
         : sourceLabel
             ? `Inget från ${sourceLabel}`
             : `Inget inom ${katPhrase}`;
@@ -3289,18 +3311,26 @@ export default function HomePage() {
     // utan det öppna eventet - fliken visar det inte heller. Sök/arrangör
     // smalnar som förut (searchFilteredEvents); utan dem räknas alla laddade
     // dagar, inte bara periodens slice. Veckobannern säger själv "i veckan".
-    const viewEvents = useMemo(
+    // `viewBaseEvents` = samma fönster UTAN lägessmalningen (🔥/🎄) - det
+    // är vad 🎄-chippets siffra räknar i (#272), så den inte krymper av att
+    // 🔥 är på.
+    const viewBaseEvents = useMemo(
         () => {
             const now = new Date();
             const nowMs = now.getTime();
             const base = searchQ || organizerEvents ? searchFilteredEvents : events;
-            // Sökets kategoriord ersätter 🔥 (20/10) - då smalnar 🔥 inte heller här.
             return base.filter(e => e.id !== selectedEvent?.id
                 && inMapView(e)
-                && passesPopularFilter(e, popularOnly && !categorySearch)
                 && inListWindow(e, dayOffset, now, evt => isEventPast(evt, nowMs)));
         },
-        [searchQ, organizerEvents, searchFilteredEvents, events, selectedEvent, inMapView, popularOnly, categorySearch, dayOffset],
+        [searchQ, organizerEvents, searchFilteredEvents, events, selectedEvent, inMapView, dayOffset],
+    );
+    const viewEvents = useMemo(
+        // Sökets kategoriord ersätter 🔥 och 🎄 (20/10) - då smalnar de inte heller här.
+        () => (categorySearch || (!popularOnly && !julOnly)
+            ? viewBaseEvents
+            : viewBaseEvents.filter(e => passesModeFilter(e, popularOnly, julOnly))),
+        [viewBaseEvents, popularOnly, julOnly, categorySearch],
     );
     // Eventkortets listflikar Alla · 🔥 Populärt (Josef 23/9, 24/9): eventen
     // i KARTANS RUTA som passerar kartans filter, ALLA dagar — inte bara den
@@ -3402,6 +3432,21 @@ export default function HomePage() {
         const nowMs = Date.now();
         return viewEvents.reduce((n, e) => n + (isPopularListed(e, nowMs) && matchesFilter(e) ? 1 : 0), 0);
     }, [viewEvents, matchesFilter]);
+    // 🎄 JUL-CHIPPET (#272): visas bara inom säsongsfönstret och när lagret
+    // har något julevent alls (eller läget är på, så det går att släppa).
+    // Siffran = juleventen i listans fönster med kartfiltret (kategorier,
+    // källa, opt-in- och familjegrindarna) men UTAN lägena - alltså vad
+    // jul-läget bidrar med, oavsett om 🔥 råkar vara på.
+    const julAvailable = useMemo(() => julSeason && events.some(e => ärJulevent(e.title)), [julSeason, events]);
+    const julChipCount = useMemo(
+        () => (julSeason
+            ? viewBaseEvents.reduce((n, e) => n + (ärJulevent(e.title)
+                && (categorySearch
+                    ? matchesFilterFor(e, searchCategories, null, false, selectedCategories, false)
+                    : matchesFilterFor(e, mapCategories, mapSource, false, selectedCategories, false)) ? 1 : 0), 0)
+            : 0),
+        [julSeason, viewBaseEvents, matchesFilterFor, categorySearch, searchCategories, mapCategories, mapSource, selectedCategories],
+    );
 
     // Dag-/kategori-/eventval renderar om stora träd (kortet, listorna) och
     // triggar kartans GL-uppdateringar — som transitions är omrenderingen
@@ -3428,6 +3473,16 @@ export default function HomePage() {
             if (turningOn) setMapSource(null);
         });
     }, [popularOnly]);
+    // 🎄 Jul (#272): samma regler som 🔥-klicket - ett aktivt val som fryser
+    // landningspulsen, och på släpper Fler-källan.
+    const handleToggleJul = useCallback(() => {
+        setPulseSuppressed(true);
+        const turningOn = !julOnly;
+        startTransition(() => {
+            setJulOnly(turningOn);
+            if (turningOn) setMapSource(null);
+        });
+    }, [julOnly]);
 
     // Kategoriradens val (16/9, FLERVAL 6/10) — ett AKTIVT val precis som
     // 🔥-klicket, så landningspulsen fryser i stället för att kasta tillbaka
@@ -3458,6 +3513,7 @@ export default function HomePage() {
             if (source) {
                 setMapCategories(new Set());
                 setPopularOnly(false);
+                setJulOnly(false);
             }
         });
     }, []);
@@ -3479,18 +3535,22 @@ export default function HomePage() {
                 label: SOURCE_DEFS.find(d => d.key === mapSource)?.label ?? mapSource,
             });
         }
+        // 🎄 Jul har ingen egen flik (som 🔥 har Populärt) - bricka här (#272).
+        if (julOnly) out.push({ key: 'jul', emoji: '🎄', label: 'Jul' });
         return out;
-    }, [mapCategories, mapSource]);
+    }, [mapCategories, mapSource, julOnly]);
     const handleRemoveCardFilter = useCallback((key: string) => {
         if (key.startsWith('cat:')) handleToggleMapCategory(key.slice(4) as EventCategoryType);
         else if (key.startsWith('src:')) handleSelectMapSource(null);
-    }, [handleToggleMapCategory, handleSelectMapSource]);
+        else if (key === 'jul') handleToggleJul();
+    }, [handleToggleMapCategory, handleSelectMapSource, handleToggleJul]);
     // Tomlägets "Visa alla": släpper kategorierna, Fler-källan och 🔥.
     const handleClearFilters = useCallback(() => {
         startTransition(() => {
             setMapCategories(new Set());
             setMapSource(null);
             setPopularOnly(false);
+            setJulOnly(false);
             setMapOrganizer(null);
         });
     }, []);
@@ -3683,6 +3743,7 @@ export default function HomePage() {
         startTransition(() => {
             setMapCategories(new Set(searchCategories));
             setPopularOnly(false);
+            setJulOnly(false);
             setMapSource(null);
         });
     }, [selectedEventId, searchCategories]);
@@ -3855,12 +3916,12 @@ export default function HomePage() {
     // varför listan inte följer dem. Samma som kartans val = ingen rad.
     const searchFilterNote = useMemo(() => {
         if (!categorySearch) return null;
-        const sameAsMap = !popularOnly && !mapSource && mapCategories.size === searchCategories.size
+        const sameAsMap = !popularOnly && !julOnly && !mapSource && mapCategories.size === searchCategories.size
             && [...searchCategories].every(c => mapCategories.has(c));
-        if (sameAsMap || (!popularOnly && !mapSource && mapCategories.size === 0)) return null;
+        if (sameAsMap || (!popularOnly && !julOnly && !mapSource && mapCategories.size === 0)) return null;
         const labels = [...searchCategories].map(c => categoryLabel(c)).join(' och ');
         return `Visar allt inom ${labels} - sökordet går före filtret.`;
-    }, [categorySearch, searchCategories, popularOnly, mapSource, mapCategories]);
+    }, [categorySearch, searchCategories, popularOnly, julOnly, mapSource, mapCategories]);
 
     // PLATSFRÅGAN (Josef 10/10): kartan frågar ALDRIG vid sidladdning - bara
     // tyst om platsen redan är tillåten. Frågan kommer när onboardingen slutar
@@ -4611,6 +4672,13 @@ export default function HomePage() {
             hydratedPop = true;
             urlHadKatRef.current = true;
         }
+        // 🎄-läget i en delad länk (#272). Bara inom chippets fönster: en
+        // gammal ?jul=1-länk i februari gör ingenting (julOnly är dessutom
+        // grindat på julSeason).
+        if (params.get('jul') === '1' && ärJulchipSäsong(new Date())) {
+            setJulOnly(true);
+            urlHadKatRef.current = true;
+        }
         // Armera filter-persistensen med hydreringens nyckel: spar-effekten
         // skriver bara när läget AVVIKER härifrån (eget val), aldrig för
         // hydreringens eget eko eller en delad länks filter.
@@ -4705,12 +4773,13 @@ export default function HomePage() {
             params.set('kategori', [...selectedCategories].join(','));
         }
         if (popularOnly) params.set('pop', '1');
+        if (julOnly) params.set('jul', '1');
         const kat = mapSource ?? ([...mapCategories].join(',') || null);
         if (kat) params.set('kat', kat);
         if (mapOrganizer) params.set('arrangor', mapOrganizer.slug);
         const qs = params.toString();
         window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user, popularOnly, mapCategories, mapSource, mapOrganizer]);
+    }, [dayOffset, dayRangeDays, selectedCategories, tourPlaying, user, popularOnly, julOnly, mapCategories, mapSource, mapOrganizer]);
 
     // SPARAT KARTFILTER, enhetsdelen (6/10): kategorivalet + 🔥 skrivs till
     // localStorage vid varje ändring så det överlever nästa besök (30 dagars
@@ -5069,7 +5138,7 @@ export default function HomePage() {
                         className="pointer-events-auto relative h-11 w-11 flex items-center justify-center bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-white/50 hover:bg-white hover:scale-105 active:scale-95 transition duration-200"
                     >
                         <FilterIcon size={19} className="text-slate-700" />
-                        {(popularOnly || mapCategories.size > 0 || mapSource !== null) && (
+                        {(popularOnly || julOnly || mapCategories.size > 0 || mapSource !== null) && (
                             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#006AA7] rounded-full border border-white" />
                         )}
                     </button>
@@ -5273,7 +5342,7 @@ export default function HomePage() {
                 </button>
             </div>
         )}
-        {(mapCategories.size > 0 || mapSource || popularOnly) && (
+        {(mapCategories.size > 0 || mapSource || popularOnly || julOnly) && (
         <div className="flex flex-wrap items-center justify-center gap-1.5">
         {popularOnly && (
             <button
@@ -5284,6 +5353,18 @@ export default function HomePage() {
             >
                 <span aria-hidden>🔥</span>
                 Populära
+                <X size={13} strokeWidth={3} className="text-slate-400" aria-hidden />
+            </button>
+        )}
+        {julOnly && (
+            <button
+                type="button"
+                onClick={handleToggleJul}
+                aria-label="Visar bara julevent - tryck för att visa alla"
+                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-[#b91c1c] shadow-lg border border-white/50 hover:bg-white active:scale-95 transition animate-in fade-in duration-200"
+            >
+                <span aria-hidden>🎄</span>
+                Jul
                 <X size={13} strokeWidth={3} className="text-slate-400" aria-hidden />
             </button>
         )}
@@ -6234,7 +6315,7 @@ export default function HomePage() {
             {nearbyIsEmpty && emptyPromptAllowedAt(mapZoom) && (
                 <div className="fixed inset-x-0 bottom-[228px] z-[1150] flex justify-center px-4 pointer-events-none">
                     <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-white/50 pl-3 pr-1.5 py-1.5 text-sm animate-in fade-in duration-300">
-                        <span aria-hidden>{popularOnly ? '🔥' : mapCategories.size > 0 ? EVENT_CATEGORIES[[...mapCategories][0]].emoji : canOfferWeek ? '📅' : '🤷'}</span>
+                        <span aria-hidden>{popularOnly ? '🔥' : julOnly ? '🎄' : mapCategories.size > 0 ? EVENT_CATEGORIES[[...mapCategories][0]].emoji : canOfferWeek ? '📅' : '🤷'}</span>
                         {/* 🔥-läget först: siffran är noll för att FILTRET smalnat
                             bort allt — svaret är då "släpp filtret", inte "zooma
                             ut" (samma ribba överallt är ägarbeslut 10/9). Har
@@ -6701,7 +6782,7 @@ export default function HomePage() {
                 cityLink={{ href: cityLink.href, label: cityLink.label }}
                 // Sök/filter-ikonen i knappraden lyser när kartfiltret är på
                 // (7/10) — arrangörsfiltret räknas inte (egen banner).
-                cardFilterOn={popularOnly || mapCategories.size > 0 || mapSource !== null}
+                cardFilterOn={popularOnly || julOnly || mapCategories.size > 0 || mapSource !== null}
                 // Kategorival som valt bort det ÖPPNA eventet → kortet växlar
                 // till listvyn (11/10, Josef: "då ska vi ju komma till listan
                 // ... som faktiskt har det man söker på").
@@ -6748,6 +6829,8 @@ export default function HomePage() {
                         selectedSource={mapSource}
                         onSelectSource={handleSelectMapSource}
                         popular={popularAvailable || popularOnly ? { on: popularOnly, count: popularChipCount, onToggle: handleTogglePopular } : undefined}
+                        // 🎄 Jul direkt till höger om 🔥 (#272) - bara i säsong.
+                        jul={julAvailable || julOnly ? { on: julOnly, count: julChipCount, onToggle: handleToggleJul } : undefined}
                         // Det öppna eventets kategori står först efter de
                         // valda, markerad men inte vald (7/10 sent).
                         highlight={selectedEvent ? (selectedEvent.category && selectedEvent.category in EVENT_CATEGORIES ? selectedEvent.category : 'other') : null}

@@ -513,6 +513,111 @@ body:has([data-start-screen]) [data-install-prompt] {
     #E8590C 0%, #F59E0B 50%, #E8590C 100%);
 }
 
+/* KATEGORIRADENS TVÅ BLICKFÅNG (#272, ägarbeslut 22/11, Josef: "populära kan
+   vara sådär svärds blink som man sveper över något skarpt och jul kan
+   blinka lite var 10 sekund eller så"). Bara på AVSLAGNA chip (klasserna
+   sätts i CategoryChipRow) - ett valt chip står stilla. Ingen av effekterna
+   rör ram eller storlek: ljuset ligger i ett pseudo-element OVANPÅ chippet.
+
+   SVÄRDSBLINKEN (.chip-klinga, 🔥 Populära): en smal, skarp, sned ljusstrimma
+   som far över chippet på en dryg halv sekund och sedan vilar - som ljus
+   över en klinga. Vit på den mörka sökpanelen; på eventkortets ljusa chip
+   (.chip-klinga-varm) syns vitt inte, där är strimman eldens guld. */
+@keyframes chip-klinga-svep {
+  0%        { transform: translateX(-260%) skewX(-24deg); opacity: 0; }
+  2%        { opacity: 1; }
+  11%       { opacity: 1; }
+  13%, 100% { transform: translateX(520%) skewX(-24deg); opacity: 0; }
+}
+.chip-klinga,
+.chip-jul {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.chip-klinga::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 26%;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--klinga-kant, rgba(255, 255, 255, 0.35)) 38%,
+    var(--klinga-egg, rgba(255, 255, 255, 0.95)) 50%,
+    var(--klinga-kant, rgba(255, 255, 255, 0.35)) 62%,
+    transparent 100%);
+  opacity: 0;
+  animation: chip-klinga-svep 5s cubic-bezier(0.3, 0, 0.2, 1) infinite;
+  animation-delay: 1.5s;
+}
+.chip-klinga-varm {
+  --klinga-kant: rgba(245, 158, 11, 0.3);
+  --klinga-egg: rgba(232, 89, 12, 0.6);
+}
+.dark .chip-klinga-varm {
+  --klinga-kant: rgba(255, 255, 255, 0.3);
+  --klinga-egg: rgba(255, 255, 255, 0.9);
+}
+
+/* JUL-TINDRET (.chip-jul, 🎄 Jul): var tionde sekund tänds en liten
+   guldstjärna i chippets övre högra hörn - två snabba glimtar - och ett
+   svagt guldsken drar över plattan i samma ögonblick. Resten av tiden är
+   chippet stilla i sina julfärger (rött med guld- eller grön kant, satta
+   per ton i CategoryChipRow). */
+@keyframes chip-jul-tindra {
+  0%, 88%   { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  91%       { opacity: 1; transform: scale(1.3) rotate(45deg); }
+  94%       { opacity: 0.35; transform: scale(0.7) rotate(70deg); }
+  97%       { opacity: 1; transform: scale(1.05) rotate(90deg); }
+  100%      { opacity: 0; transform: scale(0.2) rotate(120deg); }
+}
+@keyframes chip-jul-sken {
+  0%, 88%   { opacity: 0; }
+  92%       { opacity: 1; }
+  100%      { opacity: 0; }
+}
+.chip-jul::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(120% 140% at 85% 15%,
+    rgba(252, 211, 77, 0.6) 0%, rgba(252, 211, 77, 0) 60%);
+  opacity: 0;
+  animation: chip-jul-sken 10s ease-in-out infinite;
+}
+.chip-jul::after {
+  content: '✦';
+  position: absolute;
+  top: 0;
+  right: 5px;
+  font-size: 10px;
+  line-height: 1;
+  color: #fcd34d;
+  text-shadow: 0 0 4px rgba(252, 211, 77, 0.9);
+  pointer-events: none;
+  opacity: 0;
+  animation: chip-jul-tindra 10s ease-in-out infinite;
+}
+/* På den ljusa julplattan (eventkortet) drunknar ljust guld - mörkare guld. */
+.chip-jul-ljus::after {
+  color: #d97706;
+  text-shadow: 0 0 3px rgba(217, 119, 6, 0.55);
+}
+.dark .chip-jul-ljus::after {
+  color: #fcd34d;
+  text-shadow: 0 0 4px rgba(252, 211, 77, 0.9);
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip-klinga::after,
+  .chip-jul::before,
+  .chip-jul::after { animation: none; opacity: 0; }
+}
+
 /* Subtil pulserande guld-glöd för "Evenemang stad för stad"-knappen */
 @keyframes gold-glow-pulse {
   0%, 100% { box-shadow: 0 4px 16px rgba(0, 106, 167, 0.4), 0 0 0 0 rgba(254, 204, 2, 0.3); }

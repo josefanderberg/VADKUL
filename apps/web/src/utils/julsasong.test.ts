@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { förstaAdvent, ärJulsäsong } from './julsasong';
+import { förstaAdvent, ärJulchipSäsong, ärJulsäsong } from './julsasong';
 
 const d = (år: number, månad: number, dag: number, timme = 12) => new Date(år, månad - 1, dag, timme);
 
@@ -41,5 +41,33 @@ describe('ärJulsäsong', () => {
         expect(ärJulsäsong(d(2026, 6, 21))).toBe(false);
         expect(ärJulsäsong(d(2026, 10, 31))).toBe(false);
         expect(ärJulsäsong(d(2027, 2, 1))).toBe(false);
+    });
+});
+
+describe('ärJulchipSäsong (🎄 Jul-chippet, #272)', () => {
+    it('öppnar 20 november', () => {
+        expect(ärJulchipSäsong(d(2026, 11, 19, 23))).toBe(false);
+        expect(ärJulchipSäsong(d(2026, 11, 20, 0))).toBe(true);
+        expect(ärJulchipSäsong(d(2026, 11, 22))).toBe(true);
+    });
+
+    it('gäller till och med annandag jul', () => {
+        expect(ärJulchipSäsong(d(2026, 12, 1))).toBe(true);
+        expect(ärJulchipSäsong(d(2026, 12, 24))).toBe(true);
+        expect(ärJulchipSäsong(d(2026, 12, 26, 23))).toBe(true);
+        expect(ärJulchipSäsong(d(2026, 12, 27, 0))).toBe(false);
+    });
+
+    it('är av resten av året', () => {
+        expect(ärJulchipSäsong(d(2027, 1, 3))).toBe(false);
+        expect(ärJulchipSäsong(d(2026, 7, 15))).toBe(false);
+        expect(ärJulchipSäsong(d(2026, 11, 1))).toBe(false);
+    });
+
+    it('är skilt från jultemat, som väntar på första advent', () => {
+        expect(ärJulchipSäsong(d(2026, 11, 22))).toBe(true);
+        expect(ärJulsäsong(d(2026, 11, 22))).toBe(false);
+        expect(ärJulchipSäsong(d(2027, 1, 3))).toBe(false);
+        expect(ärJulsäsong(d(2027, 1, 3))).toBe(true);
     });
 });

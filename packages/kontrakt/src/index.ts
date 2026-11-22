@@ -18,7 +18,8 @@
  *    hämtningen, 15/11 2026, revealSpread.ts = vilka brickor som tänds
  *    utspritt över vyn när kartan är utzoomad och kantmarginalen där inga
  *    tänds, mapTitles.ts = titlarnas lägen runt brickan och att de växer mot
- *    bildens mitt, 19/11 2026)
+ *    bildens mitt, 19/11 2026, julevent.ts = vad som räknas som ett
+ *    julevent för det tillfälliga 🎄 Jul-chippet, 22/11 2026)
  *
  * REGLER: paketet får aldrig bero på firebase, react eller node-API:er —
  * det ska gå att importera oförändrat i Next, Cloud Functions och React
@@ -42,3 +43,4 @@ export * from './poiSigns';
 export * from './smhiWeather';
 export * from './revealSpread';
 export * from './mapTitles';
+export * from './julevent';
