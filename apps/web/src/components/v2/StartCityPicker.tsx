@@ -20,7 +20,8 @@ interface StartCityPickerProps {
     /** Kategoristeget visas bara i onboardingen - från profilen byter man
      *  bara stad (kategorierna har sitt eget filter i sökpanelen). */
     withCategories: boolean;
-    /** Förvalda kategorier i steg 2 (kartans nuvarande filter). */
+    /** Förvalda kategorier i steg 2: FAVORITERNA (#271) - en preferens som
+     *  ger tjockare ram och förtur i listan/Nästa, inte kartans filter. */
     initialCategories: ReadonlySet<EventCategoryType>;
     /** Förvalt 🔥- och Fler-läge (kartans nuvarande). */
     initialPopular: boolean;
@@ -452,7 +453,7 @@ export default function StartCityPicker({ current, answered = true, withCategori
                                 Vad gillar du?
                             </h2>
                             <p className="welcome-row text-[13px] font-semibold leading-snug text-white/85" style={d(110)}>
-                                {city ? `Vi visar det först i ${city.name}.` : 'Vi visar det först där du är.'} Välj ingen så ser du allt.
+                                {city ? `Vi visar det först i ${city.name}.` : 'Vi visar det först där du är.'} Du ser allt annat också.
                             </p>
                         </div>
 

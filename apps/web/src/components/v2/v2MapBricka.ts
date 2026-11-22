@@ -327,7 +327,10 @@ const BADGE_SIDE_PAD = 6;
 // (se COUNT_BADGE-kommentaren ovan för varför den inte är ett eget lager).
 // gold = GULD-kropp UTAN ⭐ (Ticketmaster, ägarbeslut 1/9: "som boost-eventen")
 // — ⭐-badgen förblir boostens/stjärngåvans kvitto och följer bara starred.
-export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false, count = 0, gold = false, pop = false): { data: ImageData; pixelRatio: number } | null {
+/** Ramens tjocklek (logiska px) för brickor i en favoritkategori (#271). */
+export const BRICKA_FAV_BORDER_PX = 4;
+
+export function makeBrickaImageData(emoji: string, bodyColor?: string, selected = false, saved = false, wish = false, starred = false, count = 0, gold = false, pop = false, fav = false): { data: ImageData; pixelRatio: number } | null {
     if (typeof document === 'undefined') return null;
     const DPR = 2.5;
     const S = BRICKA_IMG_S;      // brickans kropp (logiska px), nära DOM:ens 44
@@ -417,8 +420,11 @@ export function makeBrickaImageData(emoji: string, bodyColor?: string, selected 
     // brickans kategorikant (rgba(255,255,255,0.55) över kroppen). 🔥 populär
     // = samma nyans, lite tjockare (Josef 10/9 + 30/9) - syns även med
     // filtret AV. (Förr: svag vit kant 0.28 och nästan opak vit för 🔥.)
+    // FAVORITKATEGORI (#271, ägarbeslut 22/11: "de som jag valt ska ha
+    // tjockare border"): samma ljusare nyans, tydligt tjockare (4 px) - går
+    // före 🔥:s 3 px. Vald, guld, sparad och önskan behåller sina kanter.
     if (wish) ctx.setLineDash([5, 4]);
-    ctx.lineWidth = selected ? 3.5 : goldBody || saved ? 2.5 : pop ? 3 : 2;
+    ctx.lineWidth = selected ? 3.5 : goldBody || saved ? 2.5 : fav && !wish ? BRICKA_FAV_BORDER_PX : pop ? 3 : 2;
     if (selBase) {
         // Ramen i brickans egen färg (30/9) - inte den gamla vita.
         ctx.strokeStyle = selBase;

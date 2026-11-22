@@ -36,6 +36,9 @@ export interface SpreadCandidate {
     lng: number;
     /** Populär (🔥) eller guld - först inom sin ruta. */
     pop: boolean;
+    /** Favoritkategori (#271, introts val) - efter populära/guld men före
+     *  övriga inom sin ruta. Utelämnad = dagens ordning. */
+    fav?: boolean;
 }
 
 /** Rutornas sida i skärmpixlar. */
@@ -125,7 +128,7 @@ export function pickSpreadRevealKeys(
     const cx = mercatorX(center.lng) * world;
     const cy = mercatorY(center.lat) * world;
 
-    type Item = { key: string; pop: boolean; dCell: number; dCenter: number };
+    type Item = { key: string; pop: boolean; fav: boolean; dCell: number; dCenter: number };
     const cells = new Map<string, { items: Item[]; dCenter: number; id: string }>();
     for (const p of points) {
         if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
@@ -148,6 +151,7 @@ export function pickSpreadRevealKeys(
         cell.items.push({
             key: p.key,
             pop: p.pop,
+            fav: p.fav === true,
             dCell: (dx - mx) * (dx - mx) + (dy - my) * (dy - my),
             dCenter: dx * dx + dy * dy,
         });
@@ -155,7 +159,7 @@ export function pickSpreadRevealKeys(
 
     const order = [...cells.values()].sort((a, b) => a.dCenter - b.dCenter || (a.id < b.id ? -1 : 1));
     for (const c of order) {
-        c.items.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (a.dCell - b.dCell) || (a.key < b.key ? -1 : 1));
+        c.items.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (Number(b.fav) - Number(a.fav)) || (a.dCell - b.dCell) || (a.key < b.key ? -1 : 1));
     }
     const picked: Item[] = [];
     for (let round = 0; picked.length < count; round++) {

@@ -44,6 +44,7 @@ import { familyIsOptIn } from '@/utils/familyFilter';
 import { defaultSpecialCategories, specialDefaultsKey } from '@/utils/categoryDefaults';
 import { toggleCategory, keepOptInCategories } from '@/utils/categoryToggle';
 import { readMapFilter, writeMapFilter } from '@/utils/mapFilter';
+import { readFavoriteCategories, writeFavoriteCategories } from '@/utils/favoriteCategories';
 import { normalizePriceLabel } from '@/utils/priceLabel';
 import { searchCities, nearestCityPoint, type CityPoint } from '@/utils/cityPoints';
 import { normalizeSearchQuery, filterSearchMatches, rankSearchResults, splitCityFromQuery, CITY_SEARCH_RADIUS_KM, parseCategoryQuery, nearestOrigin } from '@/utils/eventSearch';
@@ -461,6 +462,15 @@ export default function HomePage() {
     // persistensen okej nu är att valet ALLTID syns som brickor med ✕ under
     // dagplattan. Ta aldrig bort brickorna utan att ta bort persistensen.
     const [mapCategories, setMapCategories] = useState<ReadonlySet<EventCategoryType>>(() => new Set());
+    // FAVORITKATEGORIERNA (#271, ägarbeslut 22/11, Josef: "om man väljer
+    // några kategorier på 3 steget av introt, då ska inte bara de visas.
+    // utan alla ska fortfarande visas ... de som jag valt ska ha tjockare
+    // border och prioriteras när jag scrollar ner till listan eller klickar
+    // på nästa"): introts kategorival är en PREFERENS, inte ett filter -
+    // ERSÄTTER att det sattes som mapCategories. Inget göms; favoriterna
+    // får tjockare ram (V2Map) och går först i listan och Nästa (EventCard).
+    // Sparas på enheten (utils/favoriteCategories), läses i URL-effekten.
+    const [favoriteCategories, setFavoriteCategories] = useState<ReadonlySet<EventCategoryType>>(() => new Set());
     // FLER-KÄLLAN (16/9): "visa bara" Svenska kyrkan / PRO / Korpen — Fler-
     // chippet längst till höger i kategoriraden, som på stadssidorna.
     // Utesluter kategorin (en sak åt gången) och 🔥 (källorna är aldrig
@@ -4096,12 +4106,15 @@ export default function HomePage() {
         setStartPickerDone(true);
         setChosenStart(city);
         saveAccountStartChoice(city);
-        // Kategorierna blir kartans vanliga sparade filter (utils/mapFilter +
-        // users.mapFilter) - alltid synliga som brickor, 15/9-läxan håller.
-        // 🔥 sparas med (mapFilter.pop); Fler-källan gäller besöket, som i
-        // sökpanelen - den sparas medvetet aldrig (utils/mapFilter).
+        // Kategorierna är en PREFERENS, inte ett filter (#271, ägarbeslut
+        // 22/11): de sparas som favoriter (tjockare ram, först i listan och
+        // Nästa) och kartfiltret mapCategories rörs INTE - allt visas.
+        // 🔥 är fortfarande kartans sparade filter (mapFilter.pop, bricka
+        // med ✕); Fler-källan gäller besöket, som i sökpanelen - den sparas
+        // medvetet aldrig (utils/mapFilter).
         if (filter) {
-            setMapCategories(new Set(filter.kats));
+            setFavoriteCategories(new Set(filter.kats));
+            writeFavoriteCategories(filter.kats);
             setPopularOnly(filter.pop);
             setMapSource(filter.source);
         }
@@ -4631,6 +4644,9 @@ export default function HomePage() {
             setSelectedCategories(new Set(valid));
             urlHadCategoriesRef.current = true;
         }
+        // Favoritkategorierna (#271): enhetens preferens från introt.
+        const favs = readFavoriteCategories();
+        if (favs.length) setFavoriteCategories(new Set(favs));
         // SPARAT KARTFILTER (6/10): enhetens localStorage-läge appliceras
         // FÖRST, så att en delad ?kat=/?pop=-länk nedan kan skriva över det.
         // Kontots sparade filter (inloggade) appliceras i user-hydreringen
@@ -5753,6 +5769,7 @@ export default function HomePage() {
                 onSelectEvent={handleSelectEventFromMap}
                 savedEventIds={savedEventIds}
                 discardedEventIds={discardedEventIds}
+                favoriteCategories={favoriteCategories}
                 cardExpanded={cardExpanded}
                 onCenterChange={handleMapCenterChange}
                 eventsLoaded={eventsLoaded}
@@ -6690,7 +6707,7 @@ export default function HomePage() {
                     answered={startPickerDone}
                     fromWelcome={startPicker.fromWelcome}
                     withCategories={startPicker.withCategories}
-                    initialCategories={mapCategories}
+                    initialCategories={favoriteCategories}
                     initialPopular={popularOnly}
                     initialSource={mapSource}
                     onDone={handleStartPickerDone}
@@ -6754,6 +6771,7 @@ export default function HomePage() {
                 // i bild-vakten, nästa dag med event i bild, och dagsteget
                 // (dagväljarens pilhandler → landningspulsen tystas lika).
                 inView={inTourView}
+                favoriteCategories={favoriteCategories}
                 nextDayOffset={nextTourDayOffset}
                 onDayStep={handleCardDayStep}
                 onRequireLogin={() => openLogin('Logga in för att chatta')}

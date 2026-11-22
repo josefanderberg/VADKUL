@@ -39,6 +39,12 @@ describe('pickSpreadRevealKeys', () => {
         expect(pickSpreadRevealKeys(pts, GBG, ZOOM, VIEW, 1)).toEqual(['pop']);
     });
 
+    it('favoritkategori går före övriga men efter populära inom sin ruta (#271)', () => {
+        const fav = (key: string, dx: number, dy: number): SpreadCandidate => ({ ...at(key, dx, dy), fav: true });
+        expect(pickSpreadRevealKeys([at('vanlig', 2, 2), fav('fav', 60, 60)], GBG, ZOOM, VIEW, 1)).toEqual(['fav']);
+        expect(pickSpreadRevealKeys([fav('fav', 2, 2), at('pop', 60, 60, true)], GBG, ZOOM, VIEW, 1)).toEqual(['pop']);
+    });
+
     it('tar ett varv till när alla rutor har fått sitt', () => {
         const pts = [at('a1', 5, 5), at('a2', 20, 20), at('b1', -400, 0)];
         expect(pickSpreadRevealKeys(pts, GBG, ZOOM, VIEW, 3).sort()).toEqual(['a1', 'a2', 'b1']);

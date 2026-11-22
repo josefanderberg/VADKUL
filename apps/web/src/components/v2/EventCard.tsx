@@ -22,6 +22,7 @@ import EventCardGroupList from './EventCardGroupList';
 import { categoryLabel } from './v2MapLabel';
 import { eventDays, isPopularListed, LIST_HORIZON_DAYS, takeRows } from '@/utils/popularList';
 import { featuredFirst, isFeaturedAt } from '@/utils/featured';
+import { favoritesFirst, isFavoriteEvent, pickFavoriteFirst } from '@/utils/favoriteCategories';
 import BoostStar from '../ui/BoostStar';
 import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
@@ -1336,6 +1337,10 @@ interface EventCardProps {
      *  och ovanför kortet. Sidan äger kartrutan (utils/viewportTour), kortet
      *  får bara predikatet. Utelämnad = alla event räknas som i bild. */
     inView?: (evt: LinkEvent) => boolean;
+    /** FAVORITKATEGORIERNA (#271, introts kategorival - en preferens, inget
+     *  filter): deras event går först i Nästa (bland dem i bild) och inom
+     *  varje dag i listan under kortet. Tom/utelämnad = dagens ordning. */
+    favoriteCategories?: ReadonlySet<string>;
     /** Nästa dag (offset) som HAR event i bild, eller null när inget mer
      *  finns inom datahorisonten. Är eventen i bild genomgångna går Nästa
      *  dit i stället för att börja om — knappen visar dagens namn som
@@ -1469,7 +1474,7 @@ interface EventCardProps {
     searchFilterNote?: string | null;
 }
 
-export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet, onSearchChange, cityHits, onPickCity, listOrigin = null, searchFilterNote = null }: EventCardProps) {
+export default function EventCard({ events, dayCount, eventsLoaded = true, eventsSettled = true, selectedEvent, onSelectEvent, groupChoice = null, onPickFromGroup, onBackToGroup, backToGroupCount = 0, onSelectGroup, onSaveEvent, onDiscardEvent, discardedEventIds, savedEventIds, userPos, onUnsaveEvent, onCardExpandedChange, onNavigate, pinShotHits = 0, dayOffset, dayRangeDays = 1, onDayRangeChange, inView, nextDayOffset = null, onDayStep, onSunClick, mainCloudOffScreen, sunCloudOffScreen, onRecallMainCloud, onRecallSunCloud, recallMainBlink, onRecenter, recenterBlink, slingshotReady, slingshotEngaged, gameMode = false, onRequireLogin, currentUserUid, onDeleteOwnEvent, onEditOwnEvent, onBoostOwnEvent, onSelectOrganizer, hideEmptyHint = false, starredEventIds, canPlaceStar = false, onPlaceStar, fullOpenNonce = 0, viewEvents, myRsvp = null, onSetRsvp, onInviteFriend, cardInvite = null, onDismissInvite, organizerRow = null, cityLink, filterChips, cardFilterOn = false, selectedFilteredOut = false, searchSheet = false, onCloseSearchSheet, popularFilterOn = false, activeFilters, onRemoveFilter, onListZoomOut, onOpenSearchSheet, onSearchChange, cityHits, onPickCity, listOrigin = null, searchFilterNote = null, favoriteCategories }: EventCardProps) {
     // Peek-höjd när kortet öppnas från stängt läge eller när användaren väljer
     // ett nytt ankar-event på kartan. Navigering med Nästa/Föregående bevarar
     // den höjd användaren själv dragit till.
@@ -2885,8 +2890,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
             const days = eventDays(kept, 0, nowDate, e => isEventPast(e, now), include).map(day => {
                 // Filterlistan (20/10): närmast först inom dagen. Boostade
                 // först inom dagen (4/11), därefter den vanliga ordningen.
+                // Favoritkategorierna (#271) först inom dagen, i samma
+                // inbördes ordning; boostade ligger kvar allra överst.
                 const ordered = featuredFirst(
-                    nearestFirstFrom ? sortNearestFirst(day.events, nearestFirstFrom) : day.events,
+                    favoritesFirst(
+                        nearestFirstFrom ? sortNearestFirst(day.events, nearestFirstFrom) : day.events,
+                        e => isFavoriteEvent(e, favoriteCategories),
+                    ),
                     e => isFeaturedAt(e.featuredUntil, now),
                 );
                 const items = ordered.map(withDistance);
@@ -2903,7 +2913,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         };
         return { all: build(), popular: build(e => isPopularListed(e, now)) };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewEvents, discardedEventIds, selectedEvent, shownDay, listTodayAt, now, userPos, imagesOnlyList, matchesCardSearch, rankedSearch, cardSearchQ, listOrigin, nearestFirstFrom]);
+    }, [viewEvents, discardedEventIds, selectedEvent, shownDay, listTodayAt, now, userPos, imagesOnlyList, matchesCardSearch, rankedSearch, cardSearchQ, listOrigin, nearestFirstFrom, favoriteCategories]);
     const rankedTabRows = tabDays[listTab].rows;
     const activeTabDays = tabDays[listTab].days;
     // Zoomringarna (8/10): det som fanns före varje utzoomning står kvar
@@ -3017,6 +3027,18 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         onSelectEvent(sameSpotGroup[(idx + 1) % sameSpotGroup.length]);
     };
 
+    // NÄSTA MED FAVORITER FÖRST (#271, ägarbeslut 22/11: "de som jag valt ska
+    // ... prioriteras när jag ... klickar på nästa"): samma spiral utåt från
+    // ankaret, men först bland poolens event i en favoritkategori och först
+    // när de är genomgångna bland övriga. Utan favoriter = findNearestEvent.
+    // Delas av pickNext, förhandsvisningen och bildförvärmningen.
+    const findNextEvent = (anchor: LinkEvent, pool: LinkEvent[], visited: Set<string>): LinkEvent | null =>
+        pickFavoriteFirst(
+            pool,
+            e => isFavoriteEvent(e, favoriteCategories),
+            cands => findNearestEvent(anchor, cands, discardedEventIds, visited),
+        );
+
     // ── Förladda kommande event-bilder ──────────────────────────────────────
     // "Nästa" landar nästan alltid på det geografiskt närmaste icke-besökta
     // eventet. Vi simulerar de kommande hoppen (utan att röra state) och värmer
@@ -3040,7 +3062,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
 
         for (let i = 0; i < PRELOAD_COUNT; i++) {
             simVisited.add(current.id);
-            const next = findNearestEvent(anchor, pool, discardedEventIds, simVisited);
+            const next = findNextEvent(anchor, pool, simVisited);
             // Slut i bild → inget varv till (Nästa går till nästa dag i stället).
             if (!next || upcoming.some(e => e.id === next.id)) break;
             upcoming.push(next);
@@ -3069,7 +3091,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
                 fav.src = `https://icons.duckduckgo.com/ip3/${host}.ico`;
             } catch { /* ogiltig URL — hoppa över favicon */ }
         }
-    }, [selectedEvent?.id, anchorId, events, discardedEventIds, visitedEventIds, nearbyEvents]);
+    }, [selectedEvent?.id, anchorId, events, discardedEventIds, visitedEventIds, nearbyEvents, favoriteCategories]);
 
     // Kandidat-pool för "Nästa": klickade man på ett KOMMANDE event hoppar
     // Nästa aldrig till event som redan har varit — de är inte aktuella att
@@ -3106,7 +3128,7 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const anchor = events.find(e => e.id === anchorId) ?? current;
         const pool = visiblePool(anchor);
         const newVisited = withSpotVisited(current);
-        const next = findNearestEvent(anchor, pool, discardedEventIds, newVisited);
+        const next = findNextEvent(anchor, pool, newVisited);
         setVisitedEventIds(newVisited);
         if (next) expectedNextIdRef.current = next.id;
         return next;
@@ -3695,8 +3717,8 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         const anchor = events.find(e => e.id === anchorId) ?? selectedEvent;
         const pool = visiblePool(anchor);
         // null = alla i bild genomgångna → knappen visar zoom-ut eller nästa dag.
-        return findNearestEvent(anchor, pool, discardedEventIds, withSpotVisited(selectedEvent));
-    }, [selectedEvent, events, forwardStack, dayOffset, anchorId, visitedEventIds, discardedEventIds, now, inView]);
+        return findNextEvent(anchor, pool, withSpotVisited(selectedEvent));
+    }, [selectedEvent, events, forwardStack, dayOffset, anchorId, visitedEventIds, discardedEventIds, now, inView, favoriteCategories]);
 
     // Antal event i nästa events grupp (om det är en multibricka)
     const nextEventGroupCount = useMemo(() => {

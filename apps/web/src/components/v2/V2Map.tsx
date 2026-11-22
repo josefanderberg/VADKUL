@@ -10,6 +10,7 @@ import { EVENT_CATEGORIES } from '../../utils/categories';
 import { isValidLatLng, WEEK_VIEW_MIN_ZOOM, zoomForSpan, sameCityView, LABEL_TITLE_MIN_ZOOM } from '../../utils/mapUtils';
 import { parsePlatsParam, readStartCity } from '../../utils/startCity';
 import { isTicketmasterEvent } from '../../utils/ticketmasterEvent';
+import { compareRevealRank, isFavoriteEvent } from '../../utils/favoriteCategories';
 import { nextFront, overlapClusters, type OverlapPoint } from '../../utils/overlapCycle';
 import { zoomOutStepsToReveal } from '../../utils/viewportTour';
 import { isEventFeatured } from '../../services/linkEventService';
@@ -137,7 +138,7 @@ type PlainFeature = {
 type CycleRotation = {
     icon: string;
     count: number;
-    frames: { emoji: string; color?: string; saved?: boolean; gold?: boolean; pop?: boolean; eventId: string }[];
+    frames: { emoji: string; color?: string; saved?: boolean; gold?: boolean; pop?: boolean; fav?: boolean; eventId: string }[];
 };
 
 // Det event vars frame en cyklande multibricka visar JUST NU. frameIdx (pumpens
@@ -151,7 +152,7 @@ function shownCycleEvent(rot: CycleRotation | undefined, frameIdx: Map<string, n
 }
 
 // Info-posten en brick-bild bakas ur (argumenten till makeBrickaImageData).
-type BrickIconInfo = { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; pop?: boolean; count?: number };
+type BrickIconInfo = { emoji: string; color?: string; selected?: boolean; saved?: boolean; starred?: boolean; wish?: boolean; gold?: boolean; pop?: boolean; fav?: boolean; count?: number };
 
 // ── EN grupps brick-utseende ──────────────────────────────────────────────────
 // Härleder representant, flaggor (sav/star/guld/pop), bild-id:n och ev. cykel-
@@ -175,6 +176,7 @@ function deriveGroupBrick(
     highlightEmoji: string | null,
     icons: Map<string, BrickIconInfo>,
     rotations: Map<string, CycleRotation> | null,
+    favoriteCategories: ReadonlySet<string> | null = null,
 ): { rep: LinkEvent; emoji: string; color?: string; drawStar: boolean; badgeCount: number; finalIcon: string } | null {
     // Stjärn-gåvan ⭐: ett (ännu inte passerat) stjärnmärkt event blir
     // gruppens REPRESENTANT — dess emoji/färg visas på brickan, även i
@@ -232,14 +234,22 @@ function deriveGroupBrick(
     // 10/9) så de sticker ut även med filtret AV. Guld/vald/sparad
     // vinner ram-striden i bakningen — pop ändrar bara default-kanten.
     const drawPop = group.some(e => e.pop && !isEventPast(e, nowMs));
+    // FAVORITKATEGORI (#271, ägarbeslut 22/11): gruppen har minst ett ej
+    // passerat event i en kategori man valde i introt → tydligt tjockare
+    // ram i samma ljusare nyans. Följer GRUPPEN (som pop) så ramen inte
+    // byter tjocklek när emoji-cykeln byter frame. Flaggan bärs i ikon-
+    // registret även för guld/sparad (som behåller sina kanter) - reveal-
+    // urvalet läser den därifrån.
+    const drawFav = !!favoriteCategories && favoriteCategories.size > 0
+        && group.some(e => isFavoriteEvent(e, favoriteCategories) && !isEventPast(e, nowMs));
     const baseIcon = color ? `bricka:${color}:${emoji}` : `bricka:${emoji}`;
     // count i bild-id:t: "+N"-siffran bakas IN i bilden (se v2MapBricka),
     // så två grupper med samma emoji men olika antal får OLIKA bilder —
     // och ett ändrat antal ger ett nytt id (gamla bilden återanvänds
     // aldrig med fel siffra).
     const badgeCount = group.length > 1 ? group.length : 0;
-    const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
-    if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, gold: drawGold, pop: drawPop, count: badgeCount });
+    const iconId = `${baseIcon}${drawSel ? ':sel' : ''}${drawSav ? ':sav' : ''}${drawStar ? ':star' : drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}${drawFav ? ':fav' : ''}${badgeCount ? `:c${badgeCount}` : ''}`;
+    if (!icons.has(iconId)) icons.set(iconId, { emoji, color, selected: drawSel, saved: drawSav, starred: drawStar, gold: drawGold, pop: drawPop, fav: drawFav, count: badgeCount });
     // Bygg gruppens rotation (ej för den valda — den sköts av DOM-synken).
     // Blir den ≥2 frames pekar brickan på gruppens EGEN cykel-bild i
     // stället för rep-ikonen.
@@ -276,8 +286,8 @@ function deriveGroupBrick(
             // mellan guld och kategori-färg när pumpen byter pixlar.
             // drawPop följer gruppen (som guldet): kanten ska inte
             // blinka av/på när cykeln byter frame.
-            frames.push({ emoji: em, color: col, saved: drawSav, gold: drawGold, pop: drawPop, eventId: ev.id });
-            frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}${drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}`);
+            frames.push({ emoji: em, color: col, saved: drawSav, gold: drawGold, pop: drawPop, fav: drawFav, eventId: ev.id });
+            frameIds.push(`${col ? `bricka:${col}:${em}` : `bricka:${em}`}${drawSav ? ':sav' : ''}${drawGold ? ':tm' : ''}${drawPop ? ':pop' : ''}${drawFav ? ':fav' : ''}`);
         }
         if (frames.length > 1) {
             // Gruppnyckeln i bild-id:t → aldrig delat mellan grupper.
@@ -289,7 +299,7 @@ function deriveGroupBrick(
             const cycleId = `cycle:${key}:c${badgeCount}:${frameIds.join('|')}`;
             // Registrera cykel-bilden med frame 0 som utgångsutseende så
             // syncPlainLayer bakar + addImage:ar den som alla andra.
-            if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, gold: frames[0].gold, pop: frames[0].pop, count: badgeCount });
+            if (!icons.has(cycleId)) icons.set(cycleId, { emoji: frames[0].emoji, color: frames[0].color, saved: frames[0].saved, gold: frames[0].gold, pop: frames[0].pop, fav: frames[0].fav, count: badgeCount });
             if (rotations) rotations.set(key, { icon: cycleId, count: badgeCount, frames });
             finalIcon = cycleId;
         }
@@ -557,6 +567,10 @@ interface V2MapProps {
     onSelectEvent: (evt: LinkEvent | null) => void;
     savedEventIds?: Set<string>;
     discardedEventIds?: Set<string>;
+    /** FAVORITKATEGORIERNA (#271, introts kategorival): brickor med event i
+     *  dem får tjockare ram och går före övriga i reveal-urvalet. Inget
+     *  göms. Tom/utelämnad = dagens utseende. Håll referensen stabil. */
+    favoriteCategories?: ReadonlySet<string>;
     cardExpanded?: boolean;
     /** Rapporterar kartans mitt + zoomnivå + synliga bounds efter varje rörelse
      *  (throttlat). Zoomen driver bl.a. upplåsningen av veckovyn i dagväljaren;
@@ -719,6 +733,7 @@ export default function V2Map({
     onSelectEvent,
     savedEventIds = new Set(),
     discardedEventIds = new Set(),
+    favoriteCategories,
     cardExpanded = false,
     onCenterChange,
     onMapDrag,
@@ -1216,7 +1231,7 @@ export default function V2Map({
             // ningen bor i deriveGroupBrick (modulnivå) så förbakningen av
             // intilliggande dagar använder EXAKT samma logik. Kommentarerna om
             // stjärn-representant, guld, cykling m.m. bor där numera.
-            const brick = deriveGroupBrick(group, key, nowMs, isSel, savedEventIds, starredEventIds, discardedEventIds, highlightEmoji, icons, rotations);
+            const brick = deriveGroupBrick(group, key, nowMs, isSel, savedEventIds, starredEventIds, discardedEventIds, highlightEmoji, icons, rotations, favoriteCategories);
             if (!brick) continue;
             const { rep, color, drawStar, finalIcon } = brick;
             // Emoji-raden under stadsrutan: matchar gruppen den framklickade
@@ -1290,7 +1305,7 @@ export default function V2Map({
         // uppdateras "har varit"-statusen bara när datan råkar byggas om. Oförändrade
         // minuter kortsluts av samePlainFeatures-vakten → ingen onödig setData.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds, starredEventIds, wishes, minuteTick, highlightEmoji]);
+    }, [groups, isSpecialGroup, selectedEvent, savedEventIds, discardedEventIds, starredEventIds, wishes, minuteTick, highlightEmoji, favoriteCategories]);
     const plainFeaturesRef = useRef<PlainFeature[]>([]);
     // Nyckel → feature-uppslag för klick-/hover-träffar (pickHoverKey): byggs en
     // gång per databygge så träffbedömningen kan gå via de ~50 tända nycklarna
@@ -1443,7 +1458,7 @@ export default function V2Map({
     const revealHoverRef = useRef<Set<string>>(new Set());
     const cloudPointerPxRef = useRef<{ x: number; y: number } | null>(null);
     const cloudTouchPtRef = useRef<{ lng: number; lat: number } | null>(null);
-    const revealCoordsRef = useRef<{ key: string; lng: number; lat: number; pop: boolean }[]>([]); // platt lista för avstånd + populärrank
+    const revealCoordsRef = useRef<{ key: string; lng: number; lat: number; pop: boolean; fav: boolean }[]>([]); // platt lista för avstånd + populärrank
     const revealWrittenRef = useRef<Map<string, number>>(new Map());      // senast skrivet opacitetsvärde (skippa redundanta skrivningar)
     const revealRafRef = useRef<number | null>(null);
     const revealCleanupRef = useRef<null | (() => void)>(null);
@@ -1505,7 +1520,7 @@ export default function V2Map({
         if (!info) return;
         let baked = bakedIconsRef.current.get(id);
         if (!baked) {
-            const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0, info.gold, info.pop);
+            const b = makeBrickaImageData(info.emoji, info.color, info.selected, info.saved, info.wish, info.starred, info.count ?? 0, info.gold, info.pop, info.fav);
             if (b) { bakedIconsRef.current.set(id, b); baked = b; }
         }
         if (baked) map.addImage(id, baked.data, { pixelRatio: baked.pixelRatio });
@@ -2335,11 +2350,11 @@ export default function V2Map({
     // och populärflagga — samma billiga partiella urval som nearestKeysTo.
     const nearestRevealCands = useCallback((
         lng: number, lat: number, accept?: (c: { lng: number; lat: number }) => boolean,
-    ): { key: string; d2: number; pop: boolean }[] => {
+    ): { key: string; d2: number; pop: boolean; fav: boolean }[] => {
         const coords = revealCoordsRef.current;
         const kx = Math.cos(lat * Math.PI / 180);
         const cap = REVEAL_SEED_COUNT;
-        const best: { key: string; d2: number; pop: boolean }[] = [];
+        const best: { key: string; d2: number; pop: boolean; fav: boolean }[] = [];
         let worst = -Infinity, worstIdx = -1;
         for (let i = 0; i < coords.length; i++) {
             const c = coords[i];
@@ -2347,10 +2362,10 @@ export default function V2Map({
             const dx = kx * (c.lng - lng), dy = c.lat - lat;
             const d2 = dx * dx + dy * dy;
             if (best.length < cap) {
-                best.push({ key: c.key, d2, pop: c.pop });
+                best.push({ key: c.key, d2, pop: c.pop, fav: c.fav });
                 if (d2 > worst) { worst = d2; worstIdx = best.length - 1; }
             } else if (d2 < worst) {
-                best[worstIdx] = { key: c.key, d2, pop: c.pop };
+                best[worstIdx] = { key: c.key, d2, pop: c.pop, fav: c.fav };
                 worst = -Infinity;
                 for (let j = 0; j < cap; j++) if (best[j].d2 > worst) { worst = best[j].d2; worstIdx = j; }
             }
@@ -2390,7 +2405,8 @@ export default function V2Map({
             }
         }
         const cand = nearestRevealCands(lng, lat, accept);
-        cand.sort((a, b) => (Number(b.pop) - Number(a.pop)) || (a.d2 - b.d2));
+        // Populära/guld, sedan favoritkategorier (#271), närmast först i varje skikt.
+        cand.sort(compareRevealRank);
         const picked = cand.slice(0, revealAllowance(zoom));
         picked.sort((a, b) => a.d2 - b.d2);
         return picked.map(c => c.key);
@@ -2673,6 +2689,8 @@ export default function V2Map({
             return {
                 key: f.properties.key, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
                 pop: !!(info?.pop || info?.gold),
+                // Favoritkategori (#271): efter populära/guld, före övriga.
+                fav: !!info?.fav,
             };
         });
         const map = mapRef.current;
@@ -2750,7 +2768,7 @@ export default function V2Map({
                         if (bucket) bucket.push(evt); else gmap.set(key, [evt]);
                     }
                     for (const [key, group] of gmap) {
-                        deriveGroupBrick(group, key, nowMs, false, savedEventIds, starredEventIds, discardedEventIds, null, icons, null);
+                        deriveGroupBrick(group, key, nowMs, false, savedEventIds, starredEventIds, discardedEventIds, null, icons, null, favoriteCategories);
                     }
                 }
                 ids = [...icons.keys()];
@@ -2778,7 +2796,7 @@ export default function V2Map({
             if (timer) clearTimeout(timer);
             if (idleId != null && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
         };
-    }, [prebakeEvents, savedEventIds, starredEventIds, discardedEventIds, bakeSingleIcon]);
+    }, [prebakeEvents, savedEventIds, starredEventIds, discardedEventIds, bakeSingleIcon, favoriteCategories]);
 
     // Släck ladda-pillen för gott (latch) först när ALLT landat OCH kartan
     // faktiskt målat symbolerna: inga omgångar i kön + minst en genomförd
@@ -3087,10 +3105,10 @@ export default function V2Map({
             // siffra och får ALDRIG delas med en bild utan (eller med annan)
             // badge, annars byter pumpen bort siffran vid nästa tick.
             const bakedFrame = (fr: CycleRotation['frames'][number]) => {
-                const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}${fr.gold ? ':tm' : ''}:c${pick.rot.count}`;
+                const frameId = `${fr.color ? `bricka:${fr.color}:${fr.emoji}` : `bricka:${fr.emoji}`}${fr.saved ? ':sav' : ''}${fr.gold ? ':tm' : ''}${fr.fav ? ':fav' : ''}:c${pick.rot.count}`;
                 let baked = bakedIconsRef.current.get(frameId);
                 if (!baked) {
-                    const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved, false, false, pick.rot.count, fr.gold, fr.pop);
+                    const b = makeBrickaImageData(fr.emoji, fr.color, false, fr.saved, false, false, pick.rot.count, fr.gold, fr.pop, fr.fav);
                     if (b) { bakedIconsRef.current.set(frameId, b); baked = b; }
                 }
                 return baked;
