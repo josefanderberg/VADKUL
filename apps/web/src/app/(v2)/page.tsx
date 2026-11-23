@@ -4100,7 +4100,7 @@ export default function HomePage() {
             .catch(e => console.warn('Kunde inte spara startstaden:', e));
     }, [user]);
 
-    const handleStartPickerDone = useCallback(({ city, filter }: { city: CityPoint | null; filter?: { kats: EventCategoryType[]; pop: boolean; source: string | null } }) => {
+    const handleStartPickerDone = useCallback(({ city, filter }: { city: CityPoint | null; filter?: { kats: EventCategoryType[]; pop: boolean } }) => {
         const changed = (readChosenCity()?.name ?? null) !== (city?.name ?? null);
         writeChosenCity(city);
         setStartPickerDone(true);
@@ -4110,13 +4110,12 @@ export default function HomePage() {
         // 22/11): de sparas som favoriter (tjockare ram, först i listan och
         // Nästa) och kartfiltret mapCategories rörs INTE - allt visas.
         // 🔥 är fortfarande kartans sparade filter (mapFilter.pop, bricka
-        // med ✕); Fler-källan gäller besöket, som i sökpanelen - den sparas
-        // medvetet aldrig (utils/mapFilter).
+        // med ✕). Fler-källorna finns inte i introt (#283) - de nås via
+        // sökpanelen.
         if (filter) {
             setFavoriteCategories(new Set(filter.kats));
             writeFavoriteCategories(filter.kats);
             setPopularOnly(filter.pop);
-            setMapSource(filter.source);
         }
         setStartPicker(null);
         setWelcomeDone(true);
@@ -6709,7 +6708,6 @@ export default function HomePage() {
                     withCategories={startPicker.withCategories}
                     initialCategories={favoriteCategories}
                     initialPopular={popularOnly}
-                    initialSource={mapSource}
                     onDone={handleStartPickerDone}
                     onSkip={handleStartPickerSkip}
                     onPickHere={() => askLocation(true)}

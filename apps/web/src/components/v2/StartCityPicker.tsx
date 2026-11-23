@@ -8,8 +8,6 @@ import { searchCities, type CityPoint } from '@/utils/cityPoints';
 import { popularStartCities, startCityChips, START_CITY_COUNT, type StartCityChip } from '@/utils/startChoice';
 import { focusedTile, scrollLeftFor, stepTile, tileFocus } from '@/utils/cityCarousel';
 import { EVENT_CATEGORIES, type EventCategoryType } from '@/utils/categories';
-import { SOURCE_DEFS } from '@/utils/sources';
-import { SOURCE_EMOJI } from './CategoryChipRow';
 
 interface StartCityPickerProps {
     /** Nuvarande val (markeras), null = "där jag är". */
@@ -23,9 +21,8 @@ interface StartCityPickerProps {
     /** Förvalda kategorier i steg 2: FAVORITERNA (#271) - en preferens som
      *  ger tjockare ram och förtur i listan/Nästa, inte kartans filter. */
     initialCategories: ReadonlySet<EventCategoryType>;
-    /** Förvalt 🔥- och Fler-läge (kartans nuvarande). */
+    /** Förvalt 🔥-läge (kartans nuvarande). */
     initialPopular: boolean;
-    initialSource: string | null;
     /** Sant när väljaren tar över direkt efter välkomstskärmen: duken står
      *  redan framme och ska inte tona in en gång till. */
     fromWelcome?: boolean;
@@ -33,7 +30,7 @@ interface StartCityPickerProps {
      *  samma regler som sökpanelens rad: Fler-källan utesluter kategorierna
      *  och 🔥 (Josef 8/10 kväll: "populära först … fler så man kan välja pro,
      *  svenska kyrkan och korpen"). */
-    onDone: (choice: { city: CityPoint | null; filter?: { kats: EventCategoryType[]; pop: boolean; source: string | null } }) => void;
+    onDone: (choice: { city: CityPoint | null; filter?: { kats: EventCategoryType[]; pop: boolean } }) => void;
     /** "Hoppa över" - ett SVAR: dagens beteende, frågan kommer inte igen. */
     onSkip: () => void;
     /** Kryss/utanför/Escape - INGET svar (Josef 8/10: "man kanske vill kunna
@@ -79,14 +76,12 @@ function track(name: string) {
  * Räkningen bor i utils/cityCarousel (testad), utseendet i globals.css
  * (.game-tile, .game-btn).
  */
-export default function StartCityPicker({ current, answered = true, withCategories, initialCategories, initialPopular, initialSource, fromWelcome = false, onDone, onSkip, onDismiss, onPickHere }: StartCityPickerProps) {
+export default function StartCityPicker({ current, answered = true, withCategories, initialCategories, initialPopular, fromWelcome = false, onDone, onSkip, onDismiss, onPickHere }: StartCityPickerProps) {
     const [step, setStep] = useState<'city' | 'categories'>('city');
     const [query, setQuery] = useState('');
     const [city, setCity] = useState<CityPoint | null>(current);
     const [kats, setKats] = useState<Set<EventCategoryType>>(() => new Set(initialCategories));
     const [pop, setPop] = useState(initialPopular);
-    const [source, setSource] = useState<string | null>(initialSource);
-    const [moreOpen, setMoreOpen] = useState(initialSource !== null);
     const [closing, setClosing] = useState(false);
     const closingRef = useRef(false);
     const stageRef = useRef<HTMLDivElement>(null);
@@ -253,7 +248,7 @@ export default function StartCityPicker({ current, answered = true, withCategori
         else leave(() => onDone({ city: c }));
     };
 
-    const toggleKat = (k: EventCategoryType) => { setSource(null); setKats(prev => {
+    const toggleKat = (k: EventCategoryType) => { setKats(prev => {
         const next = new Set(prev);
         if (next.has(k)) next.delete(k); else next.add(k);
         return next;
@@ -461,7 +456,7 @@ export default function StartCityPicker({ current, answered = true, withCategori
                             <button
                                 type="button"
                                 aria-pressed={pop}
-                                onClick={() => { setPop(v => !v); setSource(null); }}
+                                onClick={() => setPop(v => !v)}
                                 className={`${chipBase} ${pop ? 'bg-[#ea580c] text-white [text-shadow:none]' : chipOff}`}
                             >
                                 <span aria-hidden className="mr-1">🔥</span>
@@ -482,43 +477,19 @@ export default function StartCityPicker({ current, answered = true, withCategori
                                     </button>
                                 );
                             })}
-                            <button
-                                type="button"
-                                aria-expanded={moreOpen}
-                                onClick={() => setMoreOpen(v => !v)}
-                                className={`${chipBase} bg-white/10 text-white/80 ring-1 ring-inset ring-white/20 hover:bg-white/20`}
-                            >
-                                {moreOpen ? 'Färre' : 'Fler …'}
-                            </button>
-                            {moreOpen && SOURCE_DEFS.map(s => {
-                                const on = source === s.key;
-                                return (
-                                    <button
-                                        key={s.key}
-                                        type="button"
-                                        aria-pressed={on}
-                                        onClick={() => {
-                                            const next = on ? null : s.key;
-                                            setSource(next);
-                                            if (next) { setKats(new Set()); setPop(false); }
-                                        }}
-                                        className={`${chipBase} ${on ? chipOn : chipOff}`}
-                                    >
-                                        <span aria-hidden className="mr-1">{SOURCE_EMOJI[s.key] ?? '•'}</span>
-                                        {s.label}
-                                    </button>
-                                );
-                            })}
+                            {/* Inga källchips här (#283, ägarbeslut 23/11): "Fler …" med
+                                kyrkan, PRO och Korpen var "visa bara källan" och släckte
+                                kategorierna. Källorna nås via Fler i sökpanelen. */}
                         </div>
 
                         <button
                             type="button"
                             autoFocus
-                            onClick={() => { track('startstad_done'); leave(() => onDone({ city, filter: { kats: [...kats], pop, source } })); }}
+                            onClick={() => { track('startstad_done'); leave(() => onDone({ city, filter: { kats: [...kats], pop } })); }}
                             className="welcome-row game-btn group flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[17px] font-black italic uppercase leading-none tracking-tight outline-none focus-visible:ring-4 focus-visible:ring-white/80"
                             style={d(340)}
                         >
-                            <span className="py-0.5">{kats.size > 0 || pop || source ? 'Visa kartan' : 'Visa allt'}</span>
+                            <span className="py-0.5">{kats.size > 0 || pop ? 'Visa kartan' : 'Visa allt'}</span>
                             <ArrowRight size={19} strokeWidth={3} className="transition-transform group-hover:translate-x-1" aria-hidden />
                         </button>
                     </div>
