@@ -293,7 +293,8 @@ describe('tryck på en skylt (#225)', () => {
 });
 
 // #279, Josef 22/11: "badplatser syns bara när man zoomar in jättemycket. Fixa
-// så det är mycket högre upp synligt." - egen fil, badskylten från zoom 9.
+// så det är mycket högre upp synligt." - egen fil, badskylten från zoom 10
+// (zoom 9 först, ett steg senare 23/11 i #281).
 describe('badplatserna ur badplatsfilen', () => {
     const medFil = (djup: boolean) => {
         const s = voyagerLike();
@@ -308,10 +309,10 @@ describe('badplatserna ur badplatsfilen', () => {
         s.layers.find(l => l.id === id) as maplibregl.SymbolLayerSpecification;
     const kindsIn = (s: maplibregl.StyleSpecification, id: string) => (lagret(s, id).filter as unknown[])[2] as string[];
 
-    it('hämtar filen med hel adress och tänder badskylten från zoom 9', () => {
+    it('hämtar filen med hel adress och tänder badskylten från zoom 10', () => {
         const s = medFil(false);
         expect(s.sources[BAD_SIGN_SOURCE_ID]).toEqual({ type: 'geojson', data: 'https://vadkul.se/badplatser.json' });
-        expect(lagret(s, BAD_SIGN_LAYER_ID)).toMatchObject({ type: 'symbol', source: BAD_SIGN_SOURCE_ID, minzoom: 9 });
+        expect(lagret(s, BAD_SIGN_LAYER_ID)).toMatchObject({ type: 'symbol', source: BAD_SIGN_SOURCE_ID, minzoom: 10 });
         expect(BAD_SIGN_MIN_ZOOM).toBeLessThan(POI_SIGN_DEEP_MIN_ZOOM);
         expect(validateStyleMin(s)).toEqual([]);
     });
