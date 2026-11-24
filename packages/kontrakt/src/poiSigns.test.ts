@@ -161,11 +161,11 @@ describe('addPoiSignLayers', () => {
 
     // #279, Josef 22/11: "badplatser syns bara när man zoomar in jättemycket.
     // Fixa så det är mycket högre upp synligt." Han valde zoom 9 med egen fil,
-    // och 23/11 ett steg senare (#281): "en zoom enhet mindre synlig långt ifrån".
-    it('badplatsfilen: eget lager från zoom 10 överst, och kakellagret slutar bära bad', () => {
+    // 23/11 ett steg senare (#281), och 24/11 till 12 som resmålen (#284).
+    it('badplatsfilen: eget lager från zoom 12 överst, och kakellagret slutar bära bad', () => {
         const s = voyagerLik();
         expect(addPoiSignLayers(s, { badData: 'https://vadkul.se/badplatser.json', iconScale: 0.5 })).toBe(true);
-        expect(BAD_SIGN_MIN_ZOOM).toBe(10);
+        expect(BAD_SIGN_MIN_ZOOM).toBe(12);
         expect(s.sources![BAD_SIGN_SOURCE_ID]).toEqual({ type: 'geojson', data: 'https://vadkul.se/badplatser.json' });
         expect(s.layers!.map(l => l.id)).toEqual([
             'background', 'water', 'watername_lake',
@@ -174,7 +174,7 @@ describe('addPoiSignLayers', () => {
         ]);
         const bad = lager(s, BAD_SIGN_LAYER_ID);
         // GeoJSON-källan har inget source-layer.
-        expect(bad).toMatchObject({ type: 'symbol', source: BAD_SIGN_SOURCE_ID, minzoom: 10 });
+        expect(bad).toMatchObject({ type: 'symbol', source: BAD_SIGN_SOURCE_ID, minzoom: 12 });
         expect(bad['source-layer']).toBeUndefined();
         const kindsIn = (id: string) => (lager(s, id).filter as unknown[])[2] as string[];
         expect(kindsIn(BAD_SIGN_LAYER_ID).sort()).toEqual(['bathing_place', 'beach', 'public_bath']);
@@ -182,7 +182,7 @@ describe('addPoiSignLayers', () => {
         expect(kindsIn(POI_SIGN_LAYER_ID)).toEqual(expect.arrayContaining(['museum', 'nature_reserve', 'golf_course']));
         expect(matchFor(bad.layout!['icon-image'], 'beach')).toBe(poiSignImageId('bad'));
         // Mindre skylt långt ute, full storlek inzoomat; namnet som resmålens.
-        expect(bad.layout!['icon-size']).toEqual(['interpolate', ['linear'], ['zoom'], 10, 0.6 * 0.5, 13, 0.8 * 0.5, 16, 0.5]);
+        expect(bad.layout!['icon-size']).toEqual(['interpolate', ['linear'], ['zoom'], 12, 0.6 * 0.5, 13, 0.8 * 0.5, 16, 0.5]);
         expect((bad.layout!['text-field'] as unknown[]).slice(0, 4)).toEqual(['step', ['zoom'], '', POI_SIGN_NAME_ZOOM]);
         // Resmålens lager är oförändrat i övrigt.
         expect(lager(s, POI_SIGN_LAYER_ID).minzoom).toBe(POI_SIGN_MIN_ZOOM);

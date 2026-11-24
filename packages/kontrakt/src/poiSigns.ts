@@ -31,7 +31,7 @@
  *
  * Allt kommer ur baskartans EGNA kakel (source-layer 'pois', OpenStreetMap via
  * CARTO) - utom badplatserna sedan #279 (22/11 2026), som har en egen liten
- * fil så de kan tändas från zoom 10 (se BAD_SIGN_* nedan). Kaklen bär
+ * fil så de kan tändas från zoom 12 i appen också (se BAD_SIGN_* nedan). Kaklen bär
  * platserna olika djupt (mätt över Växjö
  * 13/11): naturreservat och golfbanor från z11, badplatser från z13, parker
  * z13-14, museer och bibliotek z14, lekplatser först z15.
@@ -109,7 +109,7 @@ export const POI_SIGN_NEAR_KEYS: readonly PoiSignKey[] = ['idrott', 'lekplats', 
 export const POI_SIGN_CLOSE_LAYER_ID = 'vadkul-poi-signs-close';
 export const POI_SIGN_CLOSE_MIN_ZOOM = 16;
 export const POI_SIGN_CLOSE_KEYS: readonly PoiSignKey[] = ['restaurang', 'kafe'];
-// ── Badplatserna ur egen fil, från zoom 10 (#279, #281) ───────────────────────
+// ── Badplatserna ur egen fil, från zoom 12 (#279, #281, #284) ─────────────────
 // Josef 22/11: "badplatser syns bara när man zoomar in jättemycket. Fixa så det
 // är mycket högre upp synligt." Kaklen bär badplatserna först från z13 (de
 // djupare kaklen räcker till zoom 11-12), så badplatserna har en EGEN liten
@@ -118,10 +118,13 @@ export const POI_SIGN_CLOSE_KEYS: readonly PoiSignKey[] = ['restaurang', 'kafe']
 // filen används äger den badplatserna på ALLA zoomar: resmålens kakellager
 // slutar bära bad, annars står två skyltar på samma bad. Josef valde zoom 9,
 // och 23/11 ett steg senare (#281): "badplatserna kan vara en zoom enhet mindre
-// synlig långt ifrån".
+// synlig långt ifrån". 24/11 (#284) till 12, samma som resmålen: "Man ser de
+// fortfarande för tidigt och alla andra för sent. Iaf på mobilen" -> "sätt
+// badplatser på 12-13". Filen behövs ändå: appen har ingen djup källa, och
+// kaklen bär baden först från z13.
 export const BAD_SIGN_LAYER_ID = 'vadkul-poi-signs-bad';
 export const BAD_SIGN_SOURCE_ID = 'vadkul-badplatser';
-export const BAD_SIGN_MIN_ZOOM = 10;
+export const BAD_SIGN_MIN_ZOOM = 12;
 /** Filens sökväg på vadkul.se (webbens public/). */
 export const BADPLATS_DATA_PATH = '/badplatser.json';
 
@@ -307,7 +310,7 @@ export function addPoiSignLayers(style: PoiSignStyle, options: PoiSignLayerOptio
         filter: ['match', ['get', 'kind'], kindsOf(keys), true, false],
         layout: {
             'icon-image': perKind(key => poiSignImageId(key), ''),
-            // Långt ute (badlagret från zoom 10) är skylten mindre, så en
+            // Första zoomsteget (badlagret från zoom 12) är skylten mindre, så en
             // region full av bad inte blir en matta av skyltar.
             'icon-size': fromFile
                 ? ['interpolate', ['linear'], ['zoom'], from, 0.6 * scale, 13, 0.8 * scale, 16, scale]
