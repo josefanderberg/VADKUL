@@ -22,6 +22,8 @@ import {
     THEMEPARK_LAND_COLOR, fetchAndTransformThemeParkStyle,
     applyProjection,
 } from './v2MapBaseStyles';
+// Kartan lutar sig nära inpå (#286): kurvan lutning-per-zoom bor i kontraktet.
+import { needsTiltEase, pitchForZoom, TILT_EASE_MS } from '../../utils/cameraTilt';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
     BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_STOPS, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
@@ -808,7 +810,7 @@ export default function V2Map({
         // +0.7 zoom över 2 minuter, linjärt — rörelse man anar, inte ser.
         const target = map.getZoom() + AMBIENT_ZOOM_IN;
         ambientStartRef.current = { at: performance.now(), target };
-        map.easeTo({ zoom: target, duration: AMBIENT_SLOW_MS, easing: t => t });
+        map.easeTo({ zoom: target, pitch: pitchForZoom(target), duration: AMBIENT_SLOW_MS, easing: t => t });
     }, [chromeHidden, selectedEvent, mapInstance]);
 
     // ── Molnlagret (#191) ────────────────────────────────────────────────
@@ -965,7 +967,8 @@ export default function V2Map({
                 const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 setUserPos(next);
                 setLocating(false);
-                map.flyTo({ center: [next.lng, next.lat], zoom: Math.max(map.getZoom(), 12), duration: 1200 });
+                const zoom = Math.max(map.getZoom(), 12);
+                map.flyTo({ center: [next.lng, next.lat], zoom, pitch: pitchForZoom(zoom), duration: 1200 });
             },
             (err) => {
                 setLocating(false);
@@ -985,14 +988,16 @@ export default function V2Map({
         const map = mapRef.current;
         if (!map) return;
         if (selectedEvent && isValidLatLng(selectedEvent.lat, selectedEvent.lng)) {
-            map.flyTo({ center: [selectedEvent.lng!, selectedEvent.lat!], zoom: Math.max(map.getZoom(), 13), duration: 900 });
+            const zoom = Math.max(map.getZoom(), 13);
+            map.flyTo({ center: [selectedEvent.lng!, selectedEvent.lat!], zoom, pitch: pitchForZoom(zoom), duration: 900 });
             return;
         }
         const pts = events.filter(e => isValidLatLng(e.lat, e.lng));
         if (pts.length === 0) return;
         const b = new maplibregl.LngLatBounds([pts[0].lng!, pts[0].lat!], [pts[0].lng!, pts[0].lat!]);
         pts.forEach(e => b.extend([e.lng!, e.lat!]));
-        map.fitBounds(b, { padding: 80, maxZoom: 13, duration: 900 });
+        // maxZoom 13 ligger under lutningens startzoom (#286), så vyn landar plan.
+        map.fitBounds(b, { padding: 80, maxZoom: 13, pitch: 0, duration: 900 });
     };
     useEffect(() => {
         const map = mapRef.current;
@@ -1499,9 +1504,11 @@ export default function V2Map({
         const container = map.getContainer();
         const yOffset = container.clientHeight * (0.40 - 0.5);
         const targetZoom = zoomForSpan(container.clientWidth, ev.lat!, FIRST_CLICK_SPAN_M);
+        const zoom = Math.max(map.getZoom(), targetZoom);
         map.flyTo({
             center: [ev.lng!, ev.lat!],
-            zoom: Math.max(map.getZoom(), targetZoom),
+            zoom,
+            pitch: pitchForZoom(zoom),
             offset: [0, yOffset],
             duration: 900,
         });
@@ -2856,6 +2863,7 @@ export default function V2Map({
                 : rampDz + r2 * (s - R);
             map.easeTo({
                 zoom: ambientStartRef.current.target,
+                pitch: pitchForZoom(ambientStartRef.current.target),
                 duration: S * 1000,
                 easing: t => f(t * S) / dz,
             });
@@ -3364,6 +3372,15 @@ export default function V2Map({
             // (?plats=-djuplänken vinner över bägge.)
             center: startCenter,
             zoom: startZoom,
+            // KARTAN LUTAR SIG NÄRA INPÅ (#286, Josef 24/11: "som i gta 6 ...
+            // kartan vinklas och bli 3d i slutet när man är nära"): lutningen
+            // följer ZOOMEN (pitchForZoom i kontraktet) och inget annat. Därför
+            // äger kartan själv lutningen: tvåfingerdraget och högerknapps-
+            // vridningen får inte luta den, annars slåss gesten med kurvan vid
+            // nästa zoomstopp. Vridningen (bearing) är kvar som förut.
+            pitch: pitchForZoom(startZoom),
+            touchPitch: false,
+            pitchWithRotate: false,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
             // världen (zoom 0) vilket kraschar appen — massor av tiles gör att
             // WebGL tappar renderingskontexten. 4 ≈ hela Sverige i bild: gott om
@@ -3554,6 +3571,24 @@ export default function V2Map({
         // fastnar i true om en zoom-animation byts ut innan 180 ms-timern hann gå.
         // I vila är detta en no-op (redan false), så ingen flimmer/extra omritning.
         map.on('moveend', exitZooming);
+
+        // ── KARTAN LUTAR SIG NÄRA INPÅ (#286) ─────────────────────────────────
+        // När kartan stannat (zoomstopp, landning, slutet på ett eget hopp)
+        // jämnas lutningen ut till kurvans värde för zoomen: plan till 14,
+        // sedan upp mot 50 grader vid 16. Egna kamerahopp skickar dessutom
+        // med målets lutning direkt (pitchForZoom vid varje flyTo/easeTo/
+        // jumpTo som byter zoom), så en stadslandning från en lutad kvartersvy
+        // flyger plan i stället för att rätta sig efteråt. Lutningen kan inte
+        // ändras MITT I en gest utan att gesten dör (setPitch -> jumpTo ->
+        // stop() nollar handlers), därav moveend och inte zoom. En ren
+        // lutningsutjämning byter inte zoom och fyrar därför inget zoomend;
+        // dess eget moveend landar på kurvan och blir en no-op.
+        const followTilt = () => {
+            const zoom = map.getZoom();
+            if (!needsTiltEase(map.getPitch(), zoom)) return;
+            map.easeTo({ pitch: pitchForZoom(zoom), duration: TILT_EASE_MS });
+        };
+        map.on('moveend', followTilt);
 
         // MOTORBUGGEN "feature index out of bounds" (#206, se v2MapEngineHeal):
         // ett kakel i en geojson-källa med feature-state kan fällas vid
@@ -4109,9 +4144,11 @@ export default function V2Map({
         // Zooma in LITE åt gången (+2 nivåer per klick) i stället för att hoppa
         // hela vägen in — klicka flera gånger för att komma närmare. Klampas vid
         // kartans maxzoom.
+        const zoom = Math.min(map.getMaxZoom(), map.getZoom() + 2);
         map.flyTo({
             center: [selectedEvent.lng!, selectedEvent.lat!],
-            zoom: Math.min(map.getMaxZoom(), map.getZoom() + 2),
+            zoom,
+            pitch: pitchForZoom(zoom),
             offset: [0, yOffset],
             duration: 600,
         });
@@ -4127,10 +4164,8 @@ export default function V2Map({
         prevZoomOutRef.current = zoomOutTrigger;
         const map = mapRef.current;
         if (!map) return;
-        map.easeTo({
-            zoom: Math.max(map.getMinZoom(), map.getZoom() - 2),
-            duration: 600,
-        });
+        const zoom = Math.max(map.getMinZoom(), map.getZoom() - 2);
+        map.easeTo({ zoom, pitch: pitchForZoom(zoom), duration: 600 });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [zoomOutTrigger]);
 
@@ -4153,10 +4188,8 @@ export default function V2Map({
         const steps = zoomOutStepsToReveal(target.x - center.x, target.y - center.y, el.clientWidth, el.clientHeight);
         const out = Math.max(zoomRevealTarget.minSteps ?? 0, steps > 0 ? steps + 0.15 : 0);
         if (out <= 0) return;
-        map.easeTo({
-            zoom: Math.max(map.getMinZoom(), map.getZoom() - out),
-            duration: 900,
-        });
+        const zoom = Math.max(map.getMinZoom(), map.getZoom() - out);
+        map.easeTo({ zoom, pitch: pitchForZoom(zoom), duration: 900 });
     }, [zoomRevealTarget]);
 
     // 2c2. Auto-inzoomning till veckovyn (31/8): stadsrutans "Hela veckan"-
@@ -4171,7 +4204,7 @@ export default function V2Map({
         prevWeekZoomInRef.current = weekZoomInTrigger;
         const map = mapRef.current;
         if (!map || map.getZoom() >= WEEK_VIEW_MIN_ZOOM) return;
-        map.easeTo({ zoom: WEEK_VIEW_MIN_ZOOM + 0.2, duration: 700 });
+        map.easeTo({ zoom: WEEK_VIEW_MIN_ZOOM + 0.2, pitch: pitchForZoom(WEEK_VIEW_MIN_ZOOM + 0.2), duration: 700 });
     }, [weekZoomInTrigger]);
 
     // (2e. Zoomknapparna vid stad-för-stad-pillen med etikettsteg-banner låg
@@ -4219,6 +4252,7 @@ export default function V2Map({
             map.jumpTo({
                 center: [cityTourTarget.lng, cityTourTarget.lat],
                 zoom: cityTourTarget.zoom,
+                pitch: pitchForZoom(cityTourTarget.zoom),
             });
 
             // En PÅGÅENDE tap-migration (startRevealTravel) marscherar mot en

@@ -8,6 +8,7 @@ import { addZoomedOutLandcover } from '../../utils/mapLandcover';
 import { DEEP_PROTOCOL, loadDeepTile } from '../../utils/deepTiles';
 import { addPoiSigns } from '../../utils/mapPoiSigns';
 import { swapCartoVectorSources } from '../../utils/cartoTiles';
+import { addBuilding3dLayer, type TiltStyle } from '../../utils/cameraTilt';
 
 // ── WORKER-FIXEN (prodstoppet 25/9 kväll) ───────────────────────────────────
 // maplibre 6 laddar sin worker som en RIKTIG modulfil (maplibre-gl-worker.mjs,
@@ -230,6 +231,13 @@ export async function fetchAndTransformThemeParkStyle(): Promise<maplibregl.Styl
         addZoomedOutLandcover(style);
         // PLATSSKYLTAR (#216): badplatser, parker, museer m.m. från zoom 13.
         addPoiSigns(style);
+        // 3D-HUSEN (#286): kaklens byggnader som fill-extrusion från zoom 14,
+        // där kartan börjar luta sig (pitchForZoom i V2Map). Höjden ur
+        // kaklens `height` där den finns, annars schablon - se kontraktet.
+        // Läggs före första symbol-lagret: vägarna ligger på marken under
+        // husen, ortsnamn, skyltar och V2Maps brickor ritas ovanpå. Det
+        // platta `building`-lagret står kvar som fotavtryck under 14.
+        addBuilding3dLayer(style as unknown as TiltStyle);
     }
 
     return style;

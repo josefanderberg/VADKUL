@@ -19,7 +19,9 @@
  *    utspritt över vyn när kartan är utzoomad och kantmarginalen där inga
  *    tänds, mapTitles.ts = titlarnas lägen runt brickan och att de växer mot
  *    bildens mitt, 19/11 2026, julevent.ts = vad som räknas som ett
- *    julevent för det tillfälliga 🎄 Jul-chippet, 22/11 2026)
+ *    julevent för det tillfälliga 🎄 Jul-chippet, 22/11 2026, cameraTilt.ts =
+ *    kartans lutning nära inpå och 3D-husen: kurvan lutning-per-zoom och
+ *    fill-extrusion-lagret, 24/11 2026)
  *
  * REGLER: paketet får aldrig bero på firebase, react eller node-API:er —
  * det ska gå att importera oförändrat i Next, Cloud Functions och React
@@ -44,3 +46,4 @@ export * from './smhiWeather';
 export * from './revealSpread';
 export * from './mapTitles';
 export * from './julevent';
+export * from './cameraTilt';
