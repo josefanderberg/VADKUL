@@ -22,6 +22,8 @@ import {
     THEMEPARK_LAND_COLOR, fetchAndTransformThemeParkStyle,
     applyProjection,
 } from './v2MapBaseStyles';
+// Kartan lutar sig nära inpå (#286): kurvan lutning-per-zoom bor i kontraktet.
+import { pitchForZoom } from '../../utils/cameraTilt';
 // Brick-utseendet: emoji-/färguppslag + canvas-bakningen av GL-brickbilderna.
 import {
     BRICKA_CENTER_ABOVE_COORD, BRICKA_DARK_BG, GL_ICON_SIZE_STOPS, GL_ICON_SIZE_TOP, WISH_DOT_HEX,
@@ -3364,6 +3366,24 @@ export default function V2Map({
             // (?plats=-djuplänken vinner över bägge.)
             center: startCenter,
             zoom: startZoom,
+            // KARTAN LUTAR SIG NÄRA INPÅ (#286, Josef 24/11: "som i gta 6 ...
+            // kartan vinklas och bli 3d i slutet när man är nära", och efter
+            // första varvet: "ändrar vinkel samtidigt som man zoomar in så
+            // det blir mer smooth och lite tidigare längre upp"): lutningen
+            // ÄR kurvans värde för zoomen (pitchForZoom i kontraktet), i varje
+            // bildruta. transformCameraUpdate är MapLibres egen krok för det:
+            // den körs på varje kamerauppdatering - nypet, hjulet, dubbel-
+            // tappen, inertin, flyTo/easeTo/jumpTo och starten - INNAN
+            // move-händelserna fyras, så DOM-brickor och etiketter alltid ser
+            // den färdiga vyn. (setPitch mitt i en gest dödar gesten: jumpTo
+            // -> stop() nollar handlers. En utjämning på moveend prövades
+            // först, 24/11, och lutade bara när man släppt - "inte smooth".)
+            // Kartan äger därmed lutningen: tvåfingerdraget och högerknapps-
+            // vridningen får inte luta den (de hade ändå skrivits över i
+            // nästa bildruta). Vridningen (bearing) är kvar som förut.
+            transformCameraUpdate: ({ zoom }) => ({ pitch: pitchForZoom(zoom) }),
+            touchPitch: false,
+            pitchWithRotate: false,
             // Hur långt man får zooma UT. Utan gräns kan man zooma ut till hela
             // världen (zoom 0) vilket kraschar appen — massor av tiles gör att
             // WebGL tappar renderingskontexten. 4 ≈ hela Sverige i bild: gott om
