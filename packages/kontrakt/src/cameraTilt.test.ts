@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
     addBuilding3dLayer, BUILDING_3D_FALLBACK_M, BUILDING_3D_LAYER_ID, BUILDING_3D_MIN_ZOOM,
-    needsTiltEase, pitchForZoom, TILT_FULL_ZOOM, TILT_MAX_DEG, TILT_START_ZOOM, type TiltStyle,
+    pitchForZoom, TILT_FULL_ZOOM, TILT_MAX_DEG, TILT_START_ZOOM, type TiltStyle,
 } from './cameraTilt';
 
 describe('pitchForZoom', () => {
-    it('är plan upp till startzoomen', () => {
+    it('är plan upp till startzoomen, alltså genom hela stadslandningen', () => {
         expect(pitchForZoom(4)).toBe(0);
         expect(pitchForZoom(10.5)).toBe(0);
+        expect(pitchForZoom(12)).toBe(0);
         expect(pitchForZoom(TILT_START_ZOOM)).toBe(0);
     });
 
@@ -20,7 +21,8 @@ describe('pitchForZoom', () => {
     it('är en rak ramp däremellan', () => {
         const mitten = (TILT_START_ZOOM + TILT_FULL_ZOOM) / 2;
         expect(pitchForZoom(mitten)).toBeCloseTo(TILT_MAX_DEG / 2, 6);
-        expect(pitchForZoom(TILT_START_ZOOM + 0.5)).toBeCloseTo(TILT_MAX_DEG / 4, 6);
+        const span = TILT_FULL_ZOOM - TILT_START_ZOOM;
+        expect(pitchForZoom(TILT_START_ZOOM + span / 5)).toBeCloseTo(TILT_MAX_DEG / 5, 6);
     });
 
     it('växer aldrig nedåt och håller sig inom MapLibres tak', () => {
@@ -36,20 +38,6 @@ describe('pitchForZoom', () => {
     it('ger plan karta för ogiltig zoom', () => {
         expect(pitchForZoom(NaN)).toBe(0);
         expect(pitchForZoom(Infinity)).toBe(0);
-    });
-});
-
-describe('needsTiltEase', () => {
-    it('jämnar inte ut när kartan redan står på kurvan', () => {
-        expect(needsTiltEase(0, 12)).toBe(false);
-        expect(needsTiltEase(TILT_MAX_DEG, 17)).toBe(false);
-        expect(needsTiltEase(pitchForZoom(15) + 0.2, 15)).toBe(false);
-    });
-
-    it('jämnar ut när kartan står fel', () => {
-        expect(needsTiltEase(TILT_MAX_DEG, 10.5)).toBe(true);
-        expect(needsTiltEase(0, 16)).toBe(true);
-        expect(needsTiltEase(0, TILT_START_ZOOM + 0.5)).toBe(true);
     });
 });
 

@@ -8,10 +8,13 @@
  * lutar inte själv:
  *
  *  1. LUTNINGEN (`pitchForZoom`): plan karta upp till TILT_START_ZOOM, sedan
- *     en rak ramp upp till TILT_MAX_DEG vid TILT_FULL_ZOOM. Klienten jämnar
- *     ut till kurvans värde när kartan stannat (zoomstopp, landning) och
- *     skickar med det i egna kamerahopp, så en stadslandning från en lutad
- *     kvartersvy flyger plan.
+ *     en rak ramp upp till TILT_MAX_DEG vid TILT_FULL_ZOOM. Klienten sätter
+ *     kurvans värde i VARJE bildruta av varje kamerarörelse (webben via
+ *     MapLibres transformCameraUpdate), så lutningen glider med medan man
+ *     nyper - Josef 24/11 efter första varvet med utjämning vid zoomstoppet:
+ *     "ändrar vinkel samtidigt som man zoomar in så det blir mer smooth och
+ *     lite tidigare längre upp". En stadslandning från en lutad kvartersvy
+ *     blir plan av sig själv eftersom lutningen följer zoomen hela vägen.
  *
  *  2. 3D-HUSEN (`addBuilding3dLayer`): kaklens byggnader som fill-extrusion
  *     från BUILDING_3D_MIN_ZOOM, med höjden intonad över ett zoomsteg så husen
@@ -26,16 +29,17 @@
  * ett löst typat objekt, precis som i poiSigns.ts.
  */
 
-/** Zoomen där kartan börjar luta sig. Under den är den plan. */
-export const TILT_START_ZOOM = 14;
+/**
+ * Zoomen där kartan börjar luta sig. Under den är den plan. 13 = strax
+ * innanför stadslandningen (~10,5) och där titlarna börjar synas brett
+ * (LABEL_TITLE_MIN_ZOOM); var 14 i första varvet, Josef: "lite tidigare
+ * längre upp".
+ */
+export const TILT_START_ZOOM = 13;
 /** Zoomen där lutningen nått sitt max. */
-export const TILT_FULL_ZOOM = 16;
+export const TILT_FULL_ZOOM = 15.5;
 /** Största lutningen i grader. MapLibres tak är 60; 50 lämnar horisonten utanför bild. */
 export const TILT_MAX_DEG = 50;
-/** Mindre skillnad än så här jämnas inte ut - annars rycker kartan efter varje liten rörelse. */
-export const TILT_EPSILON_DEG = 0.5;
-/** Hur länge utjämningen till kurvans värde tar. */
-export const TILT_EASE_MS = 550;
 
 /**
  * Lutningen (grader) kartan ska ha på en given zoom. Rak ramp mellan start
@@ -46,11 +50,6 @@ export function pitchForZoom(zoom: number): number {
     if (zoom <= TILT_START_ZOOM) return 0;
     if (zoom >= TILT_FULL_ZOOM) return TILT_MAX_DEG;
     return ((zoom - TILT_START_ZOOM) / (TILT_FULL_ZOOM - TILT_START_ZOOM)) * TILT_MAX_DEG;
-}
-
-/** Ska kartan jämnas ut från `current` till kurvans värde på `zoom`? */
-export function needsTiltEase(current: number, zoom: number): boolean {
-    return Math.abs(pitchForZoom(zoom) - current) > TILT_EPSILON_DEG;
 }
 
 /** Zoomen där 3D-husen börjar resa sig (höjden 0 där, full ett steg senare). */
