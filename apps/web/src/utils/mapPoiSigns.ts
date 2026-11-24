@@ -66,7 +66,7 @@ export const POI_SIGN_DEEP_NAME_ZOOM = POI_SIGN_NAME_ZOOM - 1;
 export function addPoiSigns(style: maplibregl.StyleSpecification, origin = badplatsOrigin()) {
     // Den djupa källan när den finns (läggs in av addZoomedOutLandcover före oss).
     const deep = style.sources?.[DEEP_SOURCE_ID]?.type === 'vector';
-    // BADPLATSERNA FRÅN ZOOM 9 (#279): ur public/badplatser.json, som
+    // BADPLATSERNA (#279, från zoom 12 sedan #284): ur public/badplatser.json, som
     // nattkedjan bygger. Hel adress - MapLibre hämtar GeoJSON i sin worker,
     // där en relativ sökväg inte går att lösa.
     const badData = origin ? new URL(BADPLATS_DATA_PATH, origin).href : undefined;
