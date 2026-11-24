@@ -30,14 +30,14 @@
  */
 
 /**
- * Zoomen där kartan börjar luta sig. Under den är den plan. 13 = strax
- * innanför stadslandningen (~10,5) och där titlarna börjar synas brett
- * (LABEL_TITLE_MIN_ZOOM); var 14 i första varvet, Josef: "lite tidigare
- * längre upp".
+ * Zoomen där kartan börjar luta sig. Under den är den plan. 12 = där molnen
+ * är helt borta (CLOUD_GONE_ZOOM) och utspridningen av brickorna slutar;
+ * stadslandningen (~10,5) är plan. Var 14 i första varvet och 13 i andra -
+ * Josef 24/11 (#288): "allt kan flyttas 1 zoomsteg längre ut/bort".
  */
-export const TILT_START_ZOOM = 13;
+export const TILT_START_ZOOM = 12;
 /** Zoomen där lutningen nått sitt max. */
-export const TILT_FULL_ZOOM = 15.5;
+export const TILT_FULL_ZOOM = 14.5;
 /** Största lutningen i grader. MapLibres tak är 60; 50 lämnar horisonten utanför bild. */
 export const TILT_MAX_DEG = 50;
 
@@ -52,8 +52,11 @@ export function pitchForZoom(zoom: number): number {
     return ((zoom - TILT_START_ZOOM) / (TILT_FULL_ZOOM - TILT_START_ZOOM)) * TILT_MAX_DEG;
 }
 
-/** Zoomen där 3D-husen börjar resa sig (höjden 0 där, full ett steg senare). */
-export const BUILDING_3D_MIN_ZOOM = 14;
+/**
+ * Zoomen där 3D-husen börjar resa sig (höjden 0 där, full ett steg senare).
+ * 13 = där Voyagers byggnadslager börjar; var 14 före #288.
+ */
+export const BUILDING_3D_MIN_ZOOM = 13;
 /** Höjd i meter för hus utan `height` i kaklen - ett tvåvåningshus. */
 export const BUILDING_3D_FALLBACK_M = 8;
 /** Lagrets id i stilen. */
