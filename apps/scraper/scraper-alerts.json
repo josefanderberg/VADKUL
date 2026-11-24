@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-23T06:56:39.682Z",
+  "generatedAt": "2026-11-24T07:48:13.094Z",
   "counts": {
     "fel": 0,
-    "varning": 42,
-    "nollkoordinatTotalt": 542
+    "varning": 44,
+    "nollkoordinatTotalt": 574
   },
   "alerts": [
     {
@@ -23,13 +23,6 @@
     {
       "level": "varning",
       "kind": "tyst",
-      "source": "tickster-ort-lund-4",
-      "since": "2026-11-03",
-      "message": "gav 17 event 2026-10-27, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
-    {
-      "level": "varning",
-      "kind": "tyst",
       "source": "tickster-ort-orebro-4",
       "since": "2026-11-05",
       "message": "gav 3 event 2026-10-29, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
@@ -44,23 +37,30 @@
     {
       "level": "varning",
       "kind": "volymras",
+      "source": "allsvenskan",
+      "since": "2026-11-22",
+      "message": "ger 10 event per körning mot 26 tidigare — ändrad sajt, eller tolkningen tappar event?"
+    },
+    {
+      "level": "varning",
+      "kind": "volymras",
       "source": "bastad",
-      "since": "2026-11-20",
+      "since": "2026-11-21",
       "message": "ger 15 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "equmenia",
-      "since": "2026-11-12",
-      "message": "ger 8 event per körning, under källans golv 20 (expectedMinEvents) — tappar tolkningen event?"
+      "since": "2026-11-15",
+      "message": "ger 7 event per körning, under källans golv 20 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "jonkoping",
       "since": "2026-11-15",
-      "message": "ger 8 event per körning mot 135 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "message": "ger 8 event per körning mot 131 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
@@ -75,6 +75,13 @@
       "source": "norsjo",
       "since": "2026-11-15",
       "message": "ger 9 event per körning, under källans golv 23 (expectedMinEvents) — tappar tolkningen event?"
+    },
+    {
+      "level": "varning",
+      "kind": "volymras",
+      "source": "ockero",
+      "since": "2026-11-10",
+      "message": "ger 13 event per körning mot 73 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
@@ -99,8 +106,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Jazzimalmo",
-      "message": "53 av 53 kommande event ligger 2026-11-23 — sajtvitt datum i stället för eventets?"
+      "source": "Korpen Vänersborg",
+      "message": "8 av 10 kommande event ligger 2026-12-06 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -117,20 +124,20 @@
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "542 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 25, Söndrum-Vapnö församling 24, Barnarp-Ödestugu församling 20, Spånga-Kista församling 13, ABF 12"
+      "source": "574 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 25, Söndrum-Vapnö församling 23, Barnarp-Ödestugu församling 19, Värö-Stråvalla församling 13, ABF 12"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (7 av 215 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 213 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
       "kind": "invariant",
       "source": "Västerviks bibliotek",
-      "message": "invariant-vakten larmar (1 av 12 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (1 av 10 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
@@ -278,6 +285,13 @@
       "source": "tickster-ort-linkoping-2",
       "since": "2026-11-04",
       "message": "i karantän sedan 2026-11-04: 4 raka tomma körningar (found=0, inga skips)"
+    },
+    {
+      "level": "varning",
+      "kind": "karantan",
+      "source": "tickster-ort-lund-4",
+      "since": "2026-11-24",
+      "message": "i karantän sedan 2026-11-24: 4 raka tomma körningar (found=0, inga skips)"
     },
     {
       "level": "varning",

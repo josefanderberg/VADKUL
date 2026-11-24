@@ -17,448 +17,358 @@
 import { FacebookPageWatch } from './watchlist';
 
 export const FACEBOOK_PAGE_WATCHLIST_NATIONAL: FacebookPageWatch[] = [
-    { slug: 'svenskakammarorkestern', name: 'Visit Örebro' }, // 158 ev i juli, 8 synliga
-    { slug: 'gkmmsplit', name: 'Gradska knjiznica Marka Marulica Split' }, // 70 ev i juli, 6 synliga
-    { slug: 'eventkalix', name: 'Kalix Kommun', city: 'Luleå' }, // 67 ev i juli, 8 synliga
-    { slug: 'fkpscorpio', name: 'FKP Scorpio' }, // 65 ev i juli, 8 synliga
-    { slug: 'vaxjobibliotek', name: 'Växjö bibliotek' }, // 58 ev i juli, 4 synliga
-    { slug: 'studioexpress.se', name: 'Studioexpress.se', city: 'Eskilstuna' }, // 50 ev i juli, 8 synliga
-    { slug: 'livenationswe', name: 'Live Nation Sweden', city: 'Stockholm' }, // 48 ev i juli, 8 synliga
-    { slug: 'kulturaktiebolaget', name: 'Kulturaktiebolaget', city: 'Västervik' }, // 47 ev i juli, 8 synliga
-    { slug: 'guppyentertainmentab', name: 'Guppy Entertainment', city: 'Kristianstad' }, // 43 ev i juli, 8 synliga
-    { slug: 'nieuscene', name: 'Nieu Torshov' }, // 42 ev i juli, 7 synliga
-    { slug: 'rodakvarnhbg', name: 'Röda Kvarn Helsingborg', city: 'Helsingborg' }, // 34 ev i juli, 8 synliga
-    { slug: 'vastmanlandslansmuseum', name: 'Västmanlands läns museum', city: 'Västerås' }, // 33 ev i juli, 8 synliga
-    { slug: 'livenationnorway', name: 'Live Nation Norway' }, // 31 ev i juli, 5 synliga
+    { slug: 'svenskakammarorkestern', name: 'Visit Örebro' }, // 167 ev i juli, 8 synliga
+    { slug: 'fkpscorpio', name: 'FKP Scorpio' }, // 70 ev i juli, 8 synliga
+    { slug: 'gkmmsplit', name: 'Gradska knjiznica Marka Marulica Split' }, // 53 ev i juli, 8 synliga
+    { slug: 'studioexpress.se', name: 'Studioexpress.se', city: 'Linköping' }, // 50 ev i juli, 8 synliga
+    { slug: 'eventkalix', name: 'Kalix Kommun', city: 'Luleå' }, // 50 ev i juli, 8 synliga
+    { slug: 'livenationswe', name: 'Live Nation Sweden', city: 'Stockholm' }, // 49 ev i juli, 8 synliga
+    { slug: 'vaxjobibliotek', name: 'Växjö bibliotek' }, // 45 ev i juli, 1 synliga
+    { slug: 'guppyentertainmentab', name: 'Guppy Entertainment', city: 'Karlstad' }, // 45 ev i juli, 8 synliga
+    { slug: 'kulturaktiebolaget', name: 'Kulturaktiebolaget', city: 'Kristianstad' }, // 44 ev i juli, 8 synliga
+    { slug: 'nieuscene', name: 'Nieu Torshov' }, // 39 ev i juli, 7 synliga
+    { slug: 'rodakvarnhbg', name: 'Röda Kvarn Helsingborg', city: 'Helsingborg' }, // 36 ev i juli, 8 synliga
+    { slug: 'Ostgota', name: 'Östgöta Nation', city: 'Lund' }, // 33 ev i juli, 8 synliga
+    { slug: 'vastmanlandslansmuseum', name: 'Västmanlands läns museum' }, // 32 ev i juli, 8 synliga
     { slug: 'FKPscorpiosweden', name: 'FKP Scorpio Sverige', city: 'Stockholm' }, // 31 ev i juli, 8 synliga
     { slug: 'Megascope', name: 'Megascope' }, // 30 ev i juli, 8 synliga
-    { slug: 'Ostgota', name: 'Östgöta Nation', city: 'Lund' }, // 30 ev i juli, 8 synliga
-    { slug: 'planbmalmo', name: 'Plan B - malmö' }, // 28 ev i juli, 8 synliga
-    { slug: 'rockefelleroslo', name: 'Rockefeller / John Dee / Sentrum Scene' }, // 27 ev i juli, 7 synliga
-    { slug: 'trinitymusicberlin', name: 'Trinity Music' }, // 27 ev i juli, 8 synliga
-    { slug: 'Musikhuset', name: 'Musikhuset Gävle', city: 'Gävle' }, // 27 ev i juli, 8 synliga
-    { slug: 'stadsbiblioteketgbg', name: 'Göteborgs stadsbibliotek' }, // 27 ev i juli, 8 synliga
-    { slug: 'stormspakhus', name: 'Storms Pakhus' }, // 26 ev i juli, 6 synliga
-    { slug: 'Debasersthlm', name: 'Debaser', city: 'Stockholm' }, // 26 ev i juli, 7 synliga
-    { slug: 'folkuniversitetetregionsyd', name: 'Folkuniversitetet Syd', city: 'Kristianstad' }, // 25 ev i juli, 8 synliga
-    { slug: 'KonserthusetStockholm', name: 'Konserthuset Stockholm', city: 'Stockholm' }, // 25 ev i juli, 8 synliga
-    { slug: '61587843912500', name: 'Skinnskattebergs Kommun' }, // 24 ev i juli, 6 synliga
-    { slug: 'thekaliberroom', name: 'The Kaliber Room', city: 'Uppsala' }, // 24 ev i juli, 8 synliga
-    { slug: 'Honggymnastikforening', name: 'Høng GF' }, // 24 ev i juli, 8 synliga
-    { slug: 'kulturhusetstadsteatern', name: 'Kulturhuset Stadsteatern' }, // 24 ev i juli, 8 synliga
-    { slug: 'jazzclubfasching', name: 'Fasching' }, // 24 ev i juli, 7 synliga
-    { slug: 'Scalateatern', name: 'Scalateatern i Karlstad', city: 'Karlstad' }, // 23 ev i juli, 6 synliga
-    { slug: 'lerumsbibliotek', name: 'Kultur och bibliotek i Lerum', city: 'Alingsås' }, // 23 ev i juli, 8 synliga
-    { slug: 'jubelAB', name: 'Jubel', city: 'Uppsala' }, // 23 ev i juli, 8 synliga
+    { slug: 'trinitymusicberlin', name: 'Trinity Music' }, // 29 ev i juli, 8 synliga
+    { slug: 'jubelAB', name: 'Jubel', city: 'Uppsala' }, // 29 ev i juli, 8 synliga
+    { slug: 'rockefelleroslo', name: 'Rockefeller / John Dee / Sentrum Scene' }, // 29 ev i juli, 8 synliga
+    { slug: 'stormspakhus', name: 'Storms Pakhus' }, // 28 ev i juli, 7 synliga
+    { slug: '61587843912500', name: 'Skinnskattebergs Kommun' }, // 28 ev i juli, 6 synliga
+    { slug: 'livenationnorway', name: 'Live Nation Norway' }, // 28 ev i juli, 8 synliga
+    { slug: 'grandliveab', name: 'Grand Live', city: 'Kungsbacka' }, // 28 ev i juli, 8 synliga
+    { slug: 'folketsbiomalmo', name: 'Biograf Panora Malmö' }, // 26 ev i juli, 7 synliga
+    { slug: 'kollektivetlivetbar', name: 'Kollektivet Livet' }, // 25 ev i juli, 8 synliga
+    { slug: 'Musikhuset', name: 'Musikhuset Gävle', city: 'Gävle' }, // 25 ev i juli, 8 synliga
+    { slug: 'Kulturenshus', name: 'Kulturens hus Luleå' }, // 24 ev i juli, 8 synliga
+    { slug: 'hundesenteretitrondheim', name: 'Hundesenteret' }, // 24 ev i juli, 8 synliga
+    { slug: 'csnoje.se', name: 'CS Nöje', city: 'Skövde' }, // 24 ev i juli, 8 synliga
+    { slug: 'KonserthusetStockholm', name: 'Konserthuset Stockholm', city: 'Stockholm' }, // 23 ev i juli, 8 synliga
+    { slug: 'Debasersthlm', name: 'Debaser', city: 'Stockholm' }, // 23 ev i juli, 7 synliga
+    { slug: 'planbmalmo', name: 'Plan B - malmö' }, // 23 ev i juli, 8 synliga
+    { slug: 'jazzclubfasching', name: 'Fasching' }, // 23 ev i juli, 8 synliga
     { slug: 'vasteraskonserthus', name: 'Västerås Konserthus', city: 'Västerås' }, // 22 ev i juli, 8 synliga
-    { slug: 'RalingenBibliotek', name: 'Rælingen bibliotek' }, // 22 ev i juli, 8 synliga
     { slug: 'StudieforbundetVuxenskolanVast', name: 'Studieförbundet Vuxenskolan Väst', city: 'Uddevalla' }, // 22 ev i juli, 7 synliga
-    { slug: 'norrlandsoperan', name: 'Norrlandsoperan' }, // 21 ev i juli, 6 synliga
-    { slug: 'Kulturenshus', name: 'Kulturens hus Luleå' }, // 21 ev i juli, 8 synliga
-    { slug: 'hundesenteretitrondheim', name: 'Hundesenteret' }, // 21 ev i juli, 8 synliga
-    { slug: 'skogsvargarna', name: 'OK Skogsvargarna' }, // 20 ev i juli, 7 synliga
-    { slug: 'kollektivetlivetbar', name: 'Kollektivet Livet' }, // 20 ev i juli, 8 synliga
-    { slug: 'baerumkulturhus', name: 'Bærum Kulturhus' }, // 20 ev i juli, 6 synliga
-    { slug: 'svdalsland', name: 'Studieförbundet Vuxenskolan i Dalsland' }, // 19 ev i juli, 8 synliga
-    { slug: 'parkenkulturhus', name: 'Parken kulturhus' }, // 19 ev i juli, 4 synliga
-    { slug: 'grandliveab', name: 'Grand Live', city: 'Kungsbacka' }, // 19 ev i juli, 8 synliga
-    { slug: 'folketsbiomalmo', name: 'Biograf Panora Malmö' }, // 19 ev i juli, 8 synliga
-    { slug: 'NefertitiGBG', name: 'Nefertiti' }, // 19 ev i juli, 8 synliga
-    { slug: 'bibliotekeniboras', name: 'Biblioteken i Borås', city: 'Borås' }, // 19 ev i juli, 8 synliga
-    { slug: 'uppsalakonsertkongress', name: 'Uppsala Konsert & Kongress', city: 'Uppsala' }, // 18 ev i juli, 8 synliga
-    { slug: 'stalletvarldensmusik', name: 'Stallet - Världens Musik', city: 'Stockholm' }, // 18 ev i juli, 8 synliga
-    { slug: 'kulturkvarteret', name: 'Kulturkvarteret Kristianstad', city: 'Kristianstad' }, // 18 ev i juli, 7 synliga
-    { slug: 'KulturcentrumSandviken', name: 'Kulturcentrum Sandviken', city: 'Sandviken' }, // 18 ev i juli, 5 synliga
-    { slug: 'hyltebiblioteken', name: 'Hyltebiblioteken' }, // 18 ev i juli, 8 synliga
-    { slug: 'gavlebibliotek', name: 'Gävle bibliotek', city: 'Gävle' }, // 18 ev i juli, 8 synliga
+    { slug: 'Honggymnastikforening', name: 'Høng GF' }, // 22 ev i juli, 8 synliga
+    { slug: 'KulturcentrumSandviken', name: 'Kulturcentrum Sandviken', city: 'Sandviken' }, // 22 ev i juli, 7 synliga
+    { slug: 'uppsalakonsertkongress', name: 'Uppsala Konsert & Kongress', city: 'Uppsala' }, // 21 ev i juli, 8 synliga
+    { slug: 'Smalands', name: 'Smålands Nation', city: 'Lund' }, // 21 ev i juli, 6 synliga
+    { slug: 'thekaliberroom', name: 'The Kaliber Room', city: 'Uppsala' }, // 21 ev i juli, 8 synliga
+    { slug: 'folkuniversitetetregionsyd', name: 'Folkuniversitetet Syd', city: 'Helsingborg' }, // 21 ev i juli, 8 synliga
+    { slug: 'skogsvargarna', name: 'OK Skogsvargarna' }, // 20 ev i juli, 4 synliga
+    { slug: 'kulturkvarteret', name: 'Kulturkvarteret Kristianstad', city: 'Kristianstad' }, // 20 ev i juli, 6 synliga
+    { slug: 'kulturhusetstadsteatern', name: 'Kulturhuset Stadsteatern' }, // 20 ev i juli, 7 synliga
+    { slug: 'stadsbiblioteketgbg', name: 'Göteborgs stadsbibliotek' }, // 20 ev i juli, 7 synliga
+    { slug: 'baerumkulturhus', name: 'Bærum Kulturhus' }, // 20 ev i juli, 5 synliga
+    { slug: 'porterpelle', name: 'Porter Pelle' }, // 19 ev i juli, 8 synliga
+    { slug: 'Scalateatern', name: 'Scalateatern i Karlstad', city: 'Karlstad' }, // 19 ev i juli, 3 synliga
+    { slug: 'Gummifabriken', name: 'Gummifabriken i Värnamo' }, // 19 ev i juli, 8 synliga
+    { slug: 'eksjobibliotek', name: 'Eksjö stadsbibliotek' }, // 19 ev i juli, 7 synliga
+    { slug: 'bioroy', name: 'Bio Roy' }, // 19 ev i juli, 8 synliga
+    { slug: 'nationalmuseumswe', name: 'Nationalmuseum', city: 'Stockholm' }, // 18 ev i juli, 6 synliga
+    { slug: 'lerumsbibliotek', name: 'Kultur och bibliotek i Lerum' }, // 18 ev i juli, 7 synliga
     { slug: 'drammenkulturhus', name: 'Drammen kulturhus' }, // 18 ev i juli, 8 synliga
-    { slug: 'cnemanorrkoping', name: 'Cnema', city: 'Norrköping' }, // 18 ev i juli, 8 synliga
-    { slug: 'csnoje.se', name: 'CS Nöje', city: 'Stockholm' }, // 18 ev i juli, 8 synliga
-    { slug: 'Tangokompaniet', name: 'Tangokompaniet' }, // 17 ev i juli, 8 synliga
-    { slug: 'Smalands', name: 'Smålands Nation', city: 'Lund' }, // 17 ev i juli, 8 synliga
-    { slug: 'kramforsbibliotek', name: 'Kramfors bibliotek' }, // 17 ev i juli, 6 synliga
-    { slug: 'folkuniversitetetvisby', name: 'Folkuniversitetet Visby', city: 'Visby' }, // 17 ev i juli, 6 synliga
-    { slug: 'eksjobibliotek', name: 'Eksjö stadsbibliotek' }, // 17 ev i juli, 7 synliga
-    { slug: 'feverup', name: 'Fever' }, // 17 ev i juli, 8 synliga
-    { slug: 'Bibliotekenilulea', name: 'Biblioteken i Luleå' }, // 17 ev i juli, 7 synliga
-    { slug: 'allthingslivesweden', name: 'All Things Live Sweden', city: 'Stockholm' }, // 17 ev i juli, 5 synliga
-    { slug: 'vrakdykarpensionatet', name: 'Vrakdykarpensionatet' }, // 16 ev i juli, 8 synliga
-    { slug: 'medborgarskolanjamtland', name: 'Medborgarskolan' }, // 16 ev i juli, 8 synliga
-    { slug: 'katalinsjazzbar', name: 'Katalins Bakficka', city: 'Uppsala' }, // 16 ev i juli, 8 synliga
-    { slug: 'norrbottensteatern', name: 'Norrbottensteatern' }, // 16 ev i juli, 4 synliga
-    { slug: 'HarrysStenungsund', name: 'Harrys' }, // 16 ev i juli, 6 synliga
-    { slug: 'hudiksvalls.bibliotek', name: 'Biblioteken i Hudiksvalls kommun', city: 'Hudiksvall' }, // 16 ev i juli, 7 synliga
-    { slug: 'bjorn.carlsson', name: 'Carlsson På Kajen', city: 'Västerås' }, // 16 ev i juli, 8 synliga
-    { slug: 'bergenlive', name: 'Bergen Live' }, // 16 ev i juli, 8 synliga
-    { slug: 'abf.stockholm', name: 'ABF Stockholm', city: 'Stockholm' }, // 16 ev i juli, 6 synliga
-    { slug: 'medleymalmo', name: 'medley malmö' }, // 15 ev i juli, 8 synliga
-    { slug: 'vasterasbibliotek', name: 'Västerås bibliotek', city: 'Västerås' }, // 15 ev i juli, 6 synliga
-    { slug: 'varnamobibliotekochkultur', name: 'Värnamo bibliotek och kultur' }, // 15 ev i juli, 8 synliga
-    { slug: 'Victoriateatern', name: 'Victoriateatern Malmö' }, // 15 ev i juli, 4 synliga
+    { slug: 'barumbibliotek', name: 'Bærum bibliotek' }, // 18 ev i juli, 7 synliga
+    { slug: 'Bibliotekenilulea', name: 'Biblioteken i Luleå' }, // 18 ev i juli, 8 synliga
+    { slug: 'svdalsland', name: 'Studieförbundet Vuxenskolan i Dalsland' }, // 17 ev i juli, 8 synliga
+    { slug: 'RalingenBibliotek', name: 'Rælingen bibliotek' }, // 17 ev i juli, 7 synliga
+    { slug: 'parkenkulturhus', name: 'Parken kulturhus' }, // 17 ev i juli, 3 synliga
+    { slug: 'norrlandsoperan', name: 'Norrlandsoperan' }, // 17 ev i juli, 6 synliga
+    { slug: 'HarrysStenungsund', name: 'Harrys' }, // 17 ev i juli, 7 synliga
+    { slug: 'cnemanorrkoping', name: 'Cnema', city: 'Norrköping' }, // 17 ev i juli, 6 synliga
+    { slug: 'medleymalmo', name: 'medley malmö' }, // 16 ev i juli, 8 synliga
+    { slug: 'vasterasbibliotek', name: 'Västerås bibliotek', city: 'Västerås' }, // 16 ev i juli, 6 synliga
+    { slug: 'Victoriateatern', name: 'Victoriateatern Malmö' }, // 16 ev i juli, 7 synliga
+    { slug: 'tranemo.bibliotek', name: 'Tranemo bibliotek' }, // 16 ev i juli, 5 synliga
+    { slug: 'Tangokompaniet', name: 'Tangokompaniet' }, // 16 ev i juli, 8 synliga
+    { slug: 'northeventAB', name: 'Northevent AB', city: 'Linköping' }, // 16 ev i juli, 8 synliga
+    { slug: 'hyltebiblioteken', name: 'Hyltebiblioteken' }, // 16 ev i juli, 6 synliga
+    { slug: 'folkuniversitetetvisby', name: 'Folkuniversitetet Visby', city: 'Visby' }, // 16 ev i juli, 2 synliga
+    { slug: 'bokmassandalarna', name: 'Bokmässan Dalarna', city: 'Borlänge' }, // 16 ev i juli, 8 synliga
+    { slug: 'Alergotura', name: 'Alergotura', city: 'Nora' }, // 16 ev i juli, 8 synliga
+    { slug: 'feverup', name: 'Fever', city: 'Stockholm' }, // 16 ev i juli, 8 synliga
+    { slug: 'trivselhussverige', name: 'Trivselhus' }, // 15 ev i juli, 4 synliga
     { slug: 'sodertaljestadsscen', name: 'Södertälje stadsscen' }, // 15 ev i juli, 8 synliga
-    { slug: 'situpcomedy', name: 'Sit-up comedy show' }, // 15 ev i juli, 4 synliga
-    { slug: 'SalemsBibliotek', name: 'Salems bibliotek' }, // 15 ev i juli, 5 synliga
-    { slug: 'rodakvarnkulturhus', name: 'Röda Kvarn Kultur' }, // 15 ev i juli, 8 synliga
-    { slug: 'nationalmuseumswe', name: 'Nationalmuseum', city: 'Stockholm' }, // 15 ev i juli, 7 synliga
-    { slug: 'malmodanceweek', name: 'Malmö Dance Week' }, // 15 ev i juli, 8 synliga
-    { slug: 'latinamerikaifokus', name: 'Latinamerika i Fokus', city: 'Lund' }, // 15 ev i juli, 4 synliga
-    { slug: 'NyaHouseofBlues', name: 'House of blues Borlänge- HOBB', city: 'Borlänge' }, // 15 ev i juli, 6 synliga
-    { slug: 'hotelskansenoland', name: 'Hotel Skansen' }, // 15 ev i juli, 8 synliga
-    { slug: 'gemenskapikungsor', name: 'Gemenskap i Kungsör' }, // 15 ev i juli, 8 synliga
-    { slug: 'barumbibliotek', name: 'Bærum bibliotek' }, // 15 ev i juli, 7 synliga
+    { slug: 'stageumea', name: 'Stage Umeå' }, // 15 ev i juli, 8 synliga
+    { slug: 'Regionteatern', name: 'Regionteatern Blekinge Kronoberg', city: 'Karlshamn' }, // 15 ev i juli, 7 synliga
+    { slug: 'nygatan6', name: 'Nygatan 6' }, // 15 ev i juli, 5 synliga
+    { slug: 'norrbottensteatern', name: 'Norrbottensteatern' }, // 15 ev i juli, 3 synliga
+    { slug: 'iggesundsfolkan', name: 'Folkets Hus - Iggesund' }, // 15 ev i juli, 7 synliga
+    { slug: 'hudiksvalls.bibliotek', name: 'Biblioteken i Hudiksvalls kommun', city: 'Hudiksvall' }, // 15 ev i juli, 7 synliga
     { slug: 'barnbiblioteken', name: 'Barnbiblioteken', city: 'Strängnäs' }, // 15 ev i juli, 5 synliga
-    { slug: 'ulrikabeijeryoga', name: 'UB Yoga, Sång & Ceremoni', city: 'Hudiksvall' }, // 14 ev i juli, 6 synliga
-    { slug: 'steamhotel', name: 'The Steam Hotel', city: 'Västerås' }, // 14 ev i juli, 6 synliga
-    { slug: 'trivselhussverige', name: 'Trivselhus' }, // 14 ev i juli, 3 synliga
-    { slug: 'Sundsvallsmuseum', name: 'Sundsvalls museum' }, // 14 ev i juli, 6 synliga
-    { slug: 'porterpelle', name: 'Porter Pelle' }, // 14 ev i juli, 8 synliga
-    { slug: 'oslonye', name: 'Oslo Nye Teater' }, // 14 ev i juli, 8 synliga
+    { slug: 'vilhelmina.folketshus.7', name: 'Vilhelmina Folkets Hus' }, // 14 ev i juli, 4 synliga
+    { slug: 'varnamobibliotekochkultur', name: 'Värnamo bibliotek och kultur' }, // 14 ev i juli, 8 synliga
     { slug: 'SundsvallsStadsbibliotek', name: 'Sundsvalls Stadsbibliotek', city: 'Sundsvall' }, // 14 ev i juli, 8 synliga
+    { slug: 'stalletvarldensmusik', name: 'Stallet - Världens Musik', city: 'Stockholm' }, // 14 ev i juli, 8 synliga
+    { slug: 'malmostadsbibliotek', name: 'Stadsbiblioteket i Malmö' }, // 14 ev i juli, 8 synliga
+    { slug: 'situpcomedy', name: 'Sit-up comedy show' }, // 14 ev i juli, 4 synliga
+    { slug: 'NefertitiGBG', name: 'Nefertiti' }, // 14 ev i juli, 8 synliga
+    { slug: 'rodakvarnkulturhus', name: 'Röda Kvarn Kultur' }, // 14 ev i juli, 8 synliga
+    { slug: 'MusikiChristinae', name: 'Musik i Christinae', city: 'Alingsås' }, // 14 ev i juli, 6 synliga
+    { slug: 'Midsommargarden', name: 'Midsommargården' }, // 14 ev i juli, 8 synliga
     { slug: 'gasasteget', name: 'Lunds Dansklubb Gåsasteget', city: 'Lund' }, // 14 ev i juli, 8 synliga
-    { slug: 'Hjaltevadshus', name: 'Hjältevadshus', city: 'Uppsala' }, // 14 ev i juli, 8 synliga
-    { slug: 'NordiskaAkvarellmuseet', name: 'Nordiska Akvarellmuseet' }, // 14 ev i juli, 8 synliga
-    { slug: 'Gummifabriken', name: 'Gummifabriken i Värnamo' }, // 14 ev i juli, 8 synliga
-    { slug: 'enkopingskommunbibliotek', name: 'Enköpings kommunbibliotek', city: 'Enköping' }, // 14 ev i juli, 4 synliga
-    { slug: 'iggesundsfolkan', name: 'Folkets Hus - Iggesund' }, // 14 ev i juli, 7 synliga
-    { slug: 'dalarnasmuseum', name: 'Dalarnas museum', city: 'Falun' }, // 14 ev i juli, 4 synliga
-    { slug: 'vnmuseum', name: 'Västernorrlands museum', city: 'Härnösand' }, // 13 ev i juli, 7 synliga
-    { slug: 'tranemo.bibliotek', name: 'Tranemo bibliotek' }, // 13 ev i juli, 6 synliga
-    { slug: 'tingsrydsbibliotekochkultur', name: 'Tingsryds bibliotek och kultur' }, // 13 ev i juli, 5 synliga
-    { slug: 'Sormlandsmuseum', name: 'Sörmlands museum', city: 'Nyköping' }, // 13 ev i juli, 6 synliga
-    { slug: 'stageway', name: 'Stageway' }, // 13 ev i juli, 8 synliga
-    { slug: 'stageumea', name: 'Stage Umeå' }, // 13 ev i juli, 8 synliga
-    { slug: 'malmostadsbibliotek', name: 'Stadsbiblioteket i Malmö' }, // 13 ev i juli, 8 synliga
-    { slug: 'Regionteatern', name: 'Regionteatern Blekinge Kronoberg', city: 'Karlshamn' }, // 13 ev i juli, 7 synliga
-    { slug: 'nygatan6', name: 'Nygatan 6' }, // 13 ev i juli, 6 synliga
-    { slug: 'northeventAB', name: 'Northevent AB', city: 'Norrköping' }, // 13 ev i juli, 8 synliga
-    { slug: 'kalmarnationlund', name: 'Kalmar Nation', city: 'Lund' }, // 13 ev i juli, 5 synliga
-    { slug: 'hedvigeleonora', name: 'Hedvig Eleonora kyrka' }, // 13 ev i juli, 6 synliga
-    { slug: 'MusikiChristinae', name: 'Musik i Christinae', city: 'Alingsås' }, // 13 ev i juli, 7 synliga
-    { slug: 'BorasDansforening', name: 'Borås Dansförening', city: 'Borås' }, // 13 ev i juli, 3 synliga
-    { slug: 'bioroy', name: 'Bio Roy' }, // 13 ev i juli, 8 synliga
+    { slug: 'NyaHouseofBlues', name: 'House of blues Borlänge- HOBB', city: 'Borlänge' }, // 14 ev i juli, 6 synliga
+    { slug: 'hotelskansenoland', name: 'Hotel Skansen' }, // 14 ev i juli, 8 synliga
+    { slug: 'gemenskapikungsor', name: 'Gemenskap i Kungsör' }, // 14 ev i juli, 7 synliga
+    { slug: 'vastergotlandsmuseum', name: 'Västergötlands museum' }, // 13 ev i juli, 5 synliga
+    { slug: 'oslonye', name: 'Oslo Nye Teater' }, // 13 ev i juli, 7 synliga
+    { slug: 'mejeriet', name: 'Mejeriet', city: 'Lund' }, // 13 ev i juli, 6 synliga
+    { slug: 'katalinsjazzbar', name: 'Katalins Bakficka', city: 'Uppsala' }, // 13 ev i juli, 8 synliga
+    { slug: 'kalmarnationlund', name: 'Kalmar Nation', city: 'Lund' }, // 13 ev i juli, 7 synliga
+    { slug: 'Hjaltevadshus', name: 'Hjältevadshus', city: 'Uppsala' }, // 13 ev i juli, 1 synliga
+    { slug: 'bjorn.carlsson', name: 'Carlsson På Kajen', city: 'Västerås' }, // 13 ev i juli, 8 synliga
+    { slug: 'Eskilstunastadsbibliotek', name: 'Eskilstuna stadsbibliotek', city: 'Eskilstuna' }, // 13 ev i juli, 8 synliga
+    { slug: 'allthingslivesweden', name: 'All Things Live Sweden', city: 'Stockholm' }, // 13 ev i juli, 4 synliga
     { slug: 'Vaxjodyksport', name: 'Växjödyksport', city: 'Växjö' }, // 12 ev i juli, 8 synliga
-    { slug: 'tradgarn', name: 'Trädgår\'n' }, // 12 ev i juli, 8 synliga
-    { slug: 'TheTivoli', name: 'The Tivoli', city: 'Helsingborg' }, // 12 ev i juli, 8 synliga
-    { slug: 'taystase', name: 'Taysta', city: 'Västerås' }, // 12 ev i juli, 8 synliga
-    { slug: 'rpsb50', name: 'TRENDERs', city: 'Alingsås' }, // 12 ev i juli, 8 synliga
-    { slug: 'sv.vasternorrland', name: 'Studieförbundet Vuxenskolan Västernorrland', city: 'Sundsvall' }, // 12 ev i juli, 8 synliga
-    { slug: 'sigtunastiftelsen', name: 'Sigtunastiftelsen' }, // 12 ev i juli, 5 synliga
-    { slug: 'monument031', name: 'Monument 031' }, // 12 ev i juli, 8 synliga
-    { slug: 'klostretiystad', name: 'Klostret i Ystad', city: 'Ystad' }, // 12 ev i juli, 6 synliga
-    { slug: 'katalin.uppsala', name: 'Katalin And All That Jazz Östra Station' }, // 12 ev i juli, 8 synliga
-    { slug: 'inrenatur', name: 'Inre natur' }, // 12 ev i juli, 6 synliga
-    { slug: 'bibliotekenitierp', name: 'Biblioteken i Tierps kommun' }, // 12 ev i juli, 8 synliga
-    { slug: 'bibliotekljusdal', name: 'Biblioteken i Ljusdals kommun' }, // 12 ev i juli, 5 synliga
-    { slug: 'BibliotekeniKalmarkommun', name: 'Biblioteken i Kalmar kommun', city: 'Kalmar' }, // 12 ev i juli, 8 synliga
-    { slug: 'vastergotlandsmuseum', name: 'Västergötlands museum' }, // 11 ev i juli, 5 synliga
+    { slug: 'steamhotel', name: 'The Steam Hotel', city: 'Västerås' }, // 12 ev i juli, 5 synliga
+    { slug: 'junisalvsborgdistrikt', name: 'Movendi Älvsborg', city: 'Borås' }, // 12 ev i juli, 8 synliga
+    { slug: 'lorenskogbibliotek', name: 'Lørenskog bibliotek' }, // 12 ev i juli, 8 synliga
+    { slug: 'lagerhusetsbibliotek', name: 'Lagerhusets Bibliotek' }, // 12 ev i juli, 7 synliga
+    { slug: 'kramforsbibliotek', name: 'Kramfors bibliotek' }, // 12 ev i juli, 5 synliga
+    { slug: 'hedvigeleonora', name: 'Hedvig Eleonora kyrka' }, // 12 ev i juli, 6 synliga
+    { slug: 'babblarnalive', name: 'Babblarna på scen', city: 'Jönköping' }, // 12 ev i juli, 4 synliga
+    { slug: 'vrakdykarpensionatet', name: 'Vrakdykarpensionatet' }, // 11 ev i juli, 8 synliga
+    { slug: 'ulrikabeijeryoga', name: 'UB Yoga, Sång & Ceremoni', city: 'Hudiksvall' }, // 11 ev i juli, 6 synliga
     { slug: 'throwbackeventsldn', name: 'Throwback Events' }, // 11 ev i juli, 8 synliga
-    { slug: 'TheBruceSpringsteenTribute', name: 'The Bruce Springsteen Tribute - Best of the Boss', city: 'Trollhättan' }, // 11 ev i juli, 8 synliga
-    { slug: 'seniortraffen', name: 'Seniorträffen, Oxelösund' }, // 11 ev i juli, 6 synliga
-    { slug: 'junisalvsborgdistrikt', name: 'Movendi Älvsborg', city: 'Borås' }, // 11 ev i juli, 8 synliga
-    { slug: 'Landskronabibliotek', name: 'Landskrona bibliotek', city: 'Landskrona' }, // 11 ev i juli, 8 synliga
-    { slug: 'Midsommargarden', name: 'Midsommargården' }, // 11 ev i juli, 8 synliga
-    { slug: 'gavlekonserthus', name: 'Gävle Konserthus', city: 'Gävle' }, // 11 ev i juli, 8 synliga
-    { slug: 'Falkopingsbibliotek', name: 'Falköpings bibliotek' }, // 11 ev i juli, 5 synliga
-    { slug: 'Eskilstunastadsbibliotek', name: 'Eskilstuna stadsbibliotek', city: 'Eskilstuna' }, // 11 ev i juli, 8 synliga
-    { slug: 'atalantegbg', name: 'Atalante' }, // 11 ev i juli, 3 synliga
-    { slug: 'Alergotura', name: 'Alergotura', city: 'Nora' }, // 11 ev i juli, 6 synliga
-    { slug: 'vaxjokommun', name: 'Växjö kommun' }, // 10 ev i juli, 5 synliga
-    { slug: 'vastmanlandsteater', name: 'Västmanlands Teater', city: 'Västerås' }, // 10 ev i juli, 6 synliga
+    { slug: 'lorenskoghus', name: 'Lørenskog hus' }, // 11 ev i juli, 7 synliga
+    { slug: 'inrenatur', name: 'Inre natur' }, // 11 ev i juli, 5 synliga
+    { slug: 'Falkopingsbibliotek', name: 'Falköpings bibliotek' }, // 11 ev i juli, 6 synliga
+    { slug: 'ideadrottninghog', name: 'Idé A Drottninghög', city: 'Helsingborg' }, // 11 ev i juli, 8 synliga
+    { slug: 'absaloncph', name: 'Værksteder i Absalon' }, // 10 ev i juli, 8 synliga
+    { slug: 'varldskulturmuseet', name: 'Världskulturmuseet' }, // 10 ev i juli, 8 synliga
     { slug: 'litensmula', name: 'Vita Huset - En Liten Smula', city: 'Norrtälje' }, // 10 ev i juli, 8 synliga
-    { slug: 'vilhelmina.folketshus.7', name: 'Vilhelmina Folkets Hus' }, // 10 ev i juli, 4 synliga
-    { slug: 'vadstenabibliotek', name: 'Vadstena bibliotek' }, // 10 ev i juli, 5 synliga
-    { slug: 'SVGoteborg', name: 'Studieförbundet Vuxenskolan Göteborg', city: 'Göteborg' }, // 10 ev i juli, 8 synliga
-    { slug: 'planthousehuntersville', name: 'PlantHouse' }, // 10 ev i juli, 8 synliga
-    { slug: 'monovaxjo', name: 'Mono Växjö' }, // 10 ev i juli, 8 synliga
-    { slug: 'mejeriet', name: 'Mejeriet', city: 'Lund' }, // 10 ev i juli, 7 synliga
-    { slug: 'LBSDK', name: 'Luleå Bugg och Swing Dansklubb' }, // 10 ev i juli, 6 synliga
-    { slug: 'lindblomacademy', name: 'Lindblom Academy Inner Spirit Light', city: 'Västerås' }, // 10 ev i juli, 8 synliga
-    { slug: 'lagerhusetsbibliotek', name: 'Lagerhusets Bibliotek' }, // 10 ev i juli, 7 synliga
-    { slug: 'krallentertainment', name: 'Krall Entertainment', city: 'Helsingborg' }, // 10 ev i juli, 8 synliga
-    { slug: 'kollektivkrogen', name: 'Kollektivkrogen' }, // 10 ev i juli, 8 synliga
-    { slug: 'jadanskurs', name: 'JAdans' }, // 10 ev i juli, 6 synliga
+    { slug: 'Sundsvallsmuseum', name: 'Sundsvalls museum' }, // 10 ev i juli, 4 synliga
+    { slug: 'taystase', name: 'Taysta', city: 'Västerås' }, // 10 ev i juli, 8 synliga
+    { slug: 'musikidalarna', name: 'Musik i Dalarna', city: 'Falun' }, // 10 ev i juli, 8 synliga
+    { slug: 'magasinetfalun', name: 'Magasinet Falun', city: 'Falun' }, // 10 ev i juli, 8 synliga
+    { slug: 'kulturmagasinetsundsvall', name: 'Kulturmagasinet Sundsvall', city: 'Sundsvall' }, // 10 ev i juli, 8 synliga
+    { slug: 'jadanskurs', name: 'JAdans' }, // 10 ev i juli, 8 synliga
+    { slug: 'konstepidemin', name: 'Konstepidemin' }, // 10 ev i juli, 4 synliga
+    { slug: 'gallivarekommunsfolkbibliotek', name: 'Gällivare kommuns folkbibliotek', city: 'Gällivare' }, // 10 ev i juli, 4 synliga
     { slug: 'gretasgothenburg', name: 'Gretas Göteborg', city: 'Göteborg' }, // 10 ev i juli, 8 synliga
-    { slug: 'ideadrottninghog', name: 'Idé A Drottninghög', city: 'Helsingborg' }, // 10 ev i juli, 8 synliga
-    { slug: 'ebba.dansklubb', name: 'EBBA Dansklubb' }, // 10 ev i juli, 5 synliga
-    { slug: 'bjuvsbibliotek', name: 'Bjuvs bibliotek' }, // 10 ev i juli, 8 synliga
-    { slug: 'babblarnalive', name: 'Babblarna på scen', city: 'Jönköping' }, // 10 ev i juli, 4 synliga
-    { slug: 'DanshusetDkBuggie', name: 'Dansklubben Buggie i Ulricehamn' }, // 10 ev i juli, 5 synliga
+    { slug: 'bibliotekljusdal', name: 'Biblioteken i Ljusdals kommun' }, // 10 ev i juli, 5 synliga
+    { slug: 'BibliotekeniKalmarkommun', name: 'Biblioteken i Kalmar kommun', city: 'Kalmar' }, // 10 ev i juli, 8 synliga
+    { slug: 'askerkulturhus', name: 'Asker kulturhus' }, // 10 ev i juli, 8 synliga
     { slug: 'ABFsorm', name: 'ABF Sörmland', city: 'Eskilstuna' }, // 10 ev i juli, 8 synliga
-    { slug: 'VaerkstederiAbsalon', name: 'Værksteder i Absalon' }, // 9 ev i juli, 8 synliga
-    { slug: 'karlecafe', name: 'karl-e' }, // 9 ev i juli, 8 synliga
-    { slug: 'yogaskolan.karlstad', name: 'Yogaskolan Karlstad', city: 'Karlstad' }, // 9 ev i juli, 4 synliga
-    { slug: 'vadhanderistockholm', name: 'Vad händer i Stockholm', city: 'Stockholm' }, // 9 ev i juli, 3 synliga
+    { slug: 'almhultsbibliotek', name: 'Älmhults bibliotek' }, // 9 ev i juli, 5 synliga
+    { slug: 'vadstenabibliotek', name: 'Vadstena bibliotek' }, // 9 ev i juli, 4 synliga
+    { slug: 'VintervikensTradgard', name: 'Vintervikens Trädgård', city: 'Stockholm' }, // 9 ev i juli, 8 synliga
+    { slug: 'TheBruceSpringsteenTribute', name: 'The Bruce Springsteen Tribute - Best of the Boss', city: 'Trollhättan' }, // 9 ev i juli, 8 synliga
     { slug: 'ostergotlandsbokmassa', name: 'TellUs bok- och berättarmässa i Linköping', city: 'Linköping' }, // 9 ev i juli, 8 synliga
-    { slug: 'tornqvisteventandmusic', name: 'Törnqvist Event & Music', city: 'Linköping' }, // 9 ev i juli, 8 synliga
-    { slug: 'regionmuseetskane', name: 'Regionmuseet Skåne', city: 'Kristianstad' }, // 9 ev i juli, 5 synliga
-    { slug: 'puskasmusikk', name: 'Puskas Musikk & Platebar' }, // 9 ev i juli, 6 synliga
-    { slug: 'NalenStockholm', name: 'Nalen', city: 'Stockholm' }, // 9 ev i juli, 7 synliga
-    { slug: 'malmolive', name: 'Malmö Live' }, // 9 ev i juli, 4 synliga
-    { slug: 'magasinetfalun', name: 'Magasinet Falun', city: 'Falun' }, // 9 ev i juli, 8 synliga
-    { slug: 'kulturhusetkaken', name: 'Kulturhuset Kåken' }, // 9 ev i juli, 8 synliga
-    { slug: 'Kafebredsjon', name: 'Kafe Bredsjön' }, // 9 ev i juli, 5 synliga
+    { slug: 'StoraTeatern', name: 'Stora Teatern' }, // 9 ev i juli, 6 synliga
+    { slug: 'sigtunastiftelsen', name: 'Sigtunastiftelsen' }, // 9 ev i juli, 6 synliga
+    { slug: 'sarakulturhus', name: 'Sara kulturhus' }, // 9 ev i juli, 8 synliga
+    { slug: 'puskasmusikk', name: 'Puskas Musikk & Platebar' }, // 9 ev i juli, 3 synliga
+    { slug: 'Kafebredsjon', name: 'Kafe Bredsjön' }, // 9 ev i juli, 4 synliga
+    { slug: 'HotelEggers', name: 'Hôtel Eggers' }, // 9 ev i juli, 5 synliga
+    { slug: 'gavlebibliotek', name: 'Gävle bibliotek', city: 'Gävle' }, // 9 ev i juli, 8 synliga
+    { slug: 'gavlekonserthus', name: 'Gävle Konserthus', city: 'Gävle' }, // 9 ev i juli, 8 synliga
+    { slug: 'fhuddevalla', name: 'Folkets Hus Uddevalla', city: 'Uddevalla' }, // 9 ev i juli, 6 synliga
     { slug: 'fhsater', name: 'Folkets Hus Säter' }, // 9 ev i juli, 8 synliga
-    { slug: 'Familjecentralen.Ulricehamn', name: 'Familjecentralen, Öppna förskolan i Ulricehamn' }, // 9 ev i juli, 5 synliga
-    { slug: 'attentionmolndal', name: 'Attention Mölndal' }, // 9 ev i juli, 7 synliga
-    { slug: 'ostersundsbibliotek', name: 'Östersunds Bibliotek' }, // 8 ev i juli, 8 synliga
-    { slug: 'almhultsbibliotek', name: 'Älmhults bibliotek' }, // 8 ev i juli, 6 synliga
-    { slug: 'varldskulturmuseet', name: 'Världskulturmuseet' }, // 8 ev i juli, 8 synliga
-    { slug: 'tibrobibliotek', name: 'Tibro bibliotek' }, // 8 ev i juli, 5 synliga
-    { slug: 'svkalmarlan', name: 'Studieförbundet Vuxenskolan Kalmar län', city: 'Nybro' }, // 8 ev i juli, 7 synliga
-    { slug: 'biblioteketsimrishamn', name: 'Simrishamns bibliotek', city: 'Simrishamn' }, // 8 ev i juli, 8 synliga
-    { slug: 'reisdegkomikerklubb', name: 'Reis Deg Komikerklubb' }, // 8 ev i juli, 4 synliga
+    { slug: 'Eslovsstadsbibliotek', name: 'Eslövs stadsbibliotek', city: 'Eslöv' }, // 9 ev i juli, 6 synliga
+    { slug: 'bibliotekenitierp', name: 'Biblioteken i Tierps kommun' }, // 9 ev i juli, 8 synliga
+    { slug: 'arvikabibliotek', name: 'Arvika Bibliotek', city: 'Arvika' }, // 9 ev i juli, 6 synliga
+    { slug: 'abf.stockholm', name: 'ABF Stockholm', city: 'Stockholm' }, // 9 ev i juli, 6 synliga
+    { slug: 'orebro.salsafriends.9', name: 'Örebro Salsafriends' }, // 8 ev i juli, 3 synliga
+    { slug: 'vaniumeasida', name: 'Vän i Umeå' }, // 8 ev i juli, 8 synliga
+    { slug: 'visituddevalla', name: 'Visit Uddevalla', city: 'Uddevalla' }, // 8 ev i juli, 2 synliga
+    { slug: 'regionmuseetskane', name: 'Regionmuseet Skåne', city: 'Kristianstad' }, // 8 ev i juli, 3 synliga
     { slug: 'oxiebiblioteket', name: 'Oxiebiblioteket' }, // 8 ev i juli, 5 synliga
-    { slug: 'movehomesverige', name: 'Movehome' }, // 8 ev i juli, 4 synliga
-    { slug: 'lassewinnerback', name: 'Lars Winnerbäck', city: 'Linköping' }, // 8 ev i juli, 8 synliga
-    { slug: 'HotelEggers', name: 'Hôtel Eggers' }, // 8 ev i juli, 5 synliga
-    { slug: 'GothenburgSymphonyOrchestra', name: 'Göteborgs Symfoniker' }, // 8 ev i juli, 4 synliga
-    { slug: 'gavlesymfoniorkester', name: 'Gävle Symfoniorkester', city: 'Gävle' }, // 8 ev i juli, 2 synliga
-    { slug: 'gallivarekommunsfolkbibliotek', name: 'Gällivare kommuns folkbibliotek', city: 'Gällivare' }, // 8 ev i juli, 3 synliga
-    { slug: 'falkenbergsstadsteater', name: 'Falkenbergs Stadsteater', city: 'Falkenberg' }, // 8 ev i juli, 8 synliga
-    { slug: 'drakenlive', name: 'Draken Live' }, // 8 ev i juli, 6 synliga
-    { slug: 'ckwano1', name: 'CK Wano', city: 'Varberg' }, // 8 ev i juli, 8 synliga
-    { slug: 'BrassUnit', name: 'BrassUnit', city: 'Stockholm' }, // 8 ev i juli, 5 synliga
-    { slug: 'bibliotekenihalmstad', name: 'Biblioteken i Halmstad', city: 'Halmstad' }, // 8 ev i juli, 8 synliga
-    { slug: 'ystadsbibliotek', name: 'Ystads bibliotek', city: 'Ystad' }, // 7 ev i juli, 8 synliga
-    { slug: 'visituddevalla', name: 'Visit Uddevalla', city: 'Uddevalla' }, // 7 ev i juli, 4 synliga
-    { slug: 'VintervikensTradgard', name: 'Vintervikens Trädgård', city: 'Stockholm' }, // 7 ev i juli, 8 synliga
-    { slug: 'UpplevSkovde', name: 'Upplev Skövde', city: 'Skövde' }, // 7 ev i juli, 4 synliga
+    { slug: 'RadissonBluGothenburg', name: 'Radisson Blu Scandinavia Hotel, Gothenburg (Göteborg)', city: 'Göteborg' }, // 8 ev i juli, 5 synliga
+    { slug: 'NaturumVattenriket', name: 'Naturum Vattenriket' }, // 8 ev i juli, 2 synliga
+    { slug: 'lundsallhelgonakyrka', name: 'Lunds Allhelgonakyrka' }, // 8 ev i juli, 5 synliga
+    { slug: 'kulturhusetkaken', name: 'Kulturhuset Kåken' }, // 8 ev i juli, 8 synliga
+    { slug: 'kulturbolaget', name: 'Kulturbolaget' }, // 8 ev i juli, 8 synliga
+    { slug: 'kristinehamnsbibliotek', name: 'Kristinehamns bibliotek', city: 'Kristinehamn' }, // 8 ev i juli, 7 synliga
+    { slug: 'krallentertainment', name: 'Krall Entertainment', city: 'Jönköping' }, // 8 ev i juli, 6 synliga
+    { slug: 'borgmastarvilla', name: 'Hotell Humbla', city: 'Sölvesborg' }, // 8 ev i juli, 2 synliga
+    { slug: 'ebba.dansklubb', name: 'EBBA Dansklubb' }, // 8 ev i juli, 6 synliga
+    { slug: 'drakenlive', name: 'Draken Live' }, // 8 ev i juli, 8 synliga
+    { slug: 'christmasnighttour', name: 'Christmas Night', city: 'Uppsala' }, // 8 ev i juli, 8 synliga
+    { slug: 'musikenshusgbg', name: 'Café Hängmattan' }, // 8 ev i juli, 8 synliga
+    { slug: 'bjuvsbibliotek', name: 'Bjuvs bibliotek' }, // 8 ev i juli, 8 synliga
+    { slug: 'BestermanAB', name: 'Besterman', city: 'Uppsala' }, // 8 ev i juli, 8 synliga
+    { slug: 'atalantegbg', name: 'Atalante' }, // 8 ev i juli, 3 synliga
+    { slug: 'anebybibliotek', name: 'Aneby bibliotek' }, // 8 ev i juli, 4 synliga
+    { slug: 'umeafilmfestival', name: 'Umeå Filmfestival' }, // 7 ev i juli, 8 synliga
+    { slug: 'tibrobibliotek', name: 'Tibro bibliotek' }, // 7 ev i juli, 6 synliga
     { slug: 'Storlihytta', name: 'Storlihytta' }, // 7 ev i juli, 8 synliga
-    { slug: 'Showtic', name: 'Showtic', city: 'Jönköping' }, // 7 ev i juli, 6 synliga
-    { slug: 'SalemStavanger', name: 'Salem Stavanger' }, // 7 ev i juli, 3 synliga
-    { slug: 'OdeumLundsUniversitet', name: 'Odeum', city: 'Lund' }, // 7 ev i juli, 8 synliga
+    { slug: 'Sjoangen', name: 'Sjöängen i Askersund' }, // 7 ev i juli, 5 synliga
+    { slug: 'sisselkyrkjebo', name: 'Sissel Kyrkjebø', city: 'Stockholm' }, // 7 ev i juli, 8 synliga
+    { slug: 'shrekraveofficial', name: 'Shrek Rave' }, // 7 ev i juli, 8 synliga
+    { slug: 'reisdegkomikerklubb', name: 'Reis Deg Komikerklubb' }, // 7 ev i juli, 4 synliga
+    { slug: 'planthousehuntersville', name: 'PlantHouse' }, // 7 ev i juli, 8 synliga
+    { slug: 'nojespartner', name: 'Nöjespartner', city: 'Varberg' }, // 7 ev i juli, 1 synliga
+    { slug: 'northcreativenodes', name: 'North Creative Nodes', city: 'Boden' }, // 7 ev i juli, 7 synliga
     { slug: 'molndalsdansskola', name: 'Mölndals Dansskola' }, // 7 ev i juli, 8 synliga
-    { slug: 'medeltidsmuseet', name: 'Medeltidsmuseet', city: 'Stockholm' }, // 7 ev i juli, 7 synliga
-    { slug: 'musikochteatervanner', name: 'Musik & Teatervänner' }, // 7 ev i juli, 8 synliga
-    { slug: 'MahalayaCenter', name: 'Mahalaya - Center for Holistic Growth' }, // 7 ev i juli, 5 synliga
-    { slug: 'lorenskoghus', name: 'Lørenskog hus' }, // 7 ev i juli, 7 synliga
-    { slug: 'linkopingairswing', name: 'Linköping Air Swing', city: 'Linköping' }, // 7 ev i juli, 8 synliga
-    { slug: 'kulturhusetfregatten', name: 'Kulturhuset Fregatten' }, // 7 ev i juli, 4 synliga
+    { slug: 'NalenStockholm', name: 'Nalen', city: 'Stockholm' }, // 7 ev i juli, 7 synliga
+    { slug: 'konstmuseummalmo', name: 'Malmö Konstmuseum' }, // 7 ev i juli, 5 synliga
+    { slug: 'movehomesverige', name: 'Movehome' }, // 7 ev i juli, 3 synliga
+    { slug: 'LBSDK', name: 'Luleå Bugg och Swing Dansklubb' }, // 7 ev i juli, 4 synliga
+    { slug: 'linkopingsstadsbibliotek', name: 'Linköpings stadsbibliotek', city: 'Linköping' }, // 7 ev i juli, 8 synliga
+    { slug: 'latinamerikaifokus', name: 'Latinamerika i Fokus', city: 'Lund' }, // 7 ev i juli, 8 synliga
+    { slug: 'Landskronabibliotek', name: 'Landskrona bibliotek', city: 'Landskrona' }, // 7 ev i juli, 8 synliga
     { slug: 'konstmuseet', name: 'Konstmuseet', city: 'Skövde' }, // 7 ev i juli, 4 synliga
-    { slug: 'konstepidemin', name: 'Konstepidemin' }, // 7 ev i juli, 5 synliga
-    { slug: 'JiAdagarna', name: 'JiA-Dagarna | Juridiska Föreningens arbetsmarknadsdagar | www.jf.se/jia', city: 'Lund' }, // 7 ev i juli, 8 synliga
-    { slug: 'halmstadsteater', name: 'Halmstads Teater' }, // 7 ev i juli, 7 synliga
-    { slug: 'Glimmingehus', name: 'Glimmingehus' }, // 7 ev i juli, 5 synliga
-    { slug: 'freemoveyogastudio.nu', name: 'Freemove Yogastudio' }, // 7 ev i juli, 5 synliga
-    { slug: 'folketshusborlange', name: 'Folkets Hus Borlänge', city: 'Borlänge' }, // 7 ev i juli, 8 synliga
-    { slug: 'centrumhusbiografen', name: 'Centrumhusbiografen' }, // 7 ev i juli, 6 synliga
-    { slug: 'musikenshusgbg', name: 'Café Hängmattan' }, // 7 ev i juli, 8 synliga
-    { slug: 'allthingslivenorway', name: 'All Things Live Norway' }, // 7 ev i juli, 8 synliga
-    { slug: 'WoodyWestGbg', name: 'Woody West' }, // 6 ev i juli, 8 synliga
-    { slug: 'orebro.salsafriends.9', name: 'Örebro Salsafriends' }, // 6 ev i juli, 3 synliga
-    { slug: 'vedeldspizzan', name: 'Vedeldspizzan', city: 'Göteborg' }, // 6 ev i juli, 2 synliga
-    { slug: 'umeafilmfestival', name: 'Umeå Filmfestival' }, // 6 ev i juli, 8 synliga
-    { slug: 'tangojamt', name: 'TangoJamt' }, // 6 ev i juli, 4 synliga
-    { slug: 'lena.lingensjo', name: 'Söndsvalls damer �' }, // 6 ev i juli, 5 synliga
-    { slug: 'studieframjandetumea', name: 'Studiefrämjandet Västerbotten' }, // 6 ev i juli, 8 synliga
-    { slug: 'seniorikungsbacka', name: 'Senior i Kungsbacka', city: 'Kungsbacka' }, // 6 ev i juli, 4 synliga
-    { slug: 'SensusRCN', name: 'Rättighetscentrum Norrbotten - mot diskriminering' }, // 6 ev i juli, 6 synliga
-    { slug: 'pustervik', name: 'Pustervik' }, // 6 ev i juli, 8 synliga
-    { slug: 'palladiummalmo1', name: 'Palladium' }, // 6 ev i juli, 8 synliga
-    { slug: 'kavlingeoldtimespub', name: 'Old Times Pub' }, // 6 ev i juli, 6 synliga
-    { slug: 'NaturumVattenriket', name: 'Naturum Vattenriket' }, // 6 ev i juli, 3 synliga
+    { slug: 'Inkonst3', name: 'Inkonst' }, // 7 ev i juli, 8 synliga
+    { slug: 'hjartatshus', name: 'Hjärtats hus', city: 'Jönköping' }, // 7 ev i juli, 5 synliga
+    { slug: 'KappaBarMalmo', name: 'Kappa Bar Malmö' }, // 7 ev i juli, 8 synliga
+    { slug: 'GothenburgSymphonyOrchestra', name: 'Göteborgs Symfoniker' }, // 7 ev i juli, 3 synliga
+    { slug: 'gavlesymfoniorkester', name: 'Gävle Symfoniorkester', city: 'Gävle' }, // 7 ev i juli, 3 synliga
+    { slug: 'Familjecentralen.Ulricehamn', name: 'Familjecentralen, Öppna förskolan i Ulricehamn' }, // 7 ev i juli, 5 synliga
+    { slug: 'falkenbergsstadsteater', name: 'Falkenbergs Stadsteater', city: 'Falkenberg' }, // 7 ev i juli, 8 synliga
+    { slug: 'enkopingskommunbibliotek', name: 'Enköpings kommunbibliotek', city: 'Enköping' }, // 7 ev i juli, 3 synliga
+    { slug: 'EncoreSundbyberg', name: 'Encore, Sundbyberg' }, // 7 ev i juli, 8 synliga
+    { slug: 'DanshusetDkBuggie', name: 'Dansklubben Buggie i Ulricehamn' }, // 7 ev i juli, 4 synliga
+    { slug: 'barnensscen', name: 'Barnens Scen' }, // 7 ev i juli, 4 synliga
+    { slug: 'ystadsbibliotek', name: 'Ystads bibliotek', city: 'Ystad' }, // 6 ev i juli, 8 synliga
+    { slug: 'varlokal', name: 'Vår lokal' }, // 6 ev i juli, 7 synliga
+    { slug: 'sundsvallskommun', name: 'Sundsvalls kommun', city: 'Sundsvall' }, // 6 ev i juli, 7 synliga
+    { slug: 'royal.roland.5623', name: 'SoundTrack Roland' }, // 6 ev i juli, 2 synliga
+    { slug: 'skovdekulturhus', name: 'Skövde Kulturhus', city: 'Skövde' }, // 6 ev i juli, 8 synliga
+    { slug: '100046421744875', name: 'Råda Rum' }, // 6 ev i juli, 6 synliga
+    { slug: 'OdeumLundsUniversitet', name: 'Odeum', city: 'Lund' }, // 6 ev i juli, 7 synliga
+    { slug: 'nbvost', name: 'NBV Öst' }, // 6 ev i juli, 3 synliga
+    { slug: 'monument031', name: 'Monument 031' }, // 6 ev i juli, 8 synliga
     { slug: 'moriskapaviljongen', name: 'Moriska Paviljongen' }, // 6 ev i juli, 8 synliga
-    { slug: 'musikidalarna', name: 'Musik i Dalarna', city: 'Falun' }, // 6 ev i juli, 4 synliga
-    { slug: 'kulturcentrumebeneser', name: 'Kulturcentrum Ebeneser' }, // 6 ev i juli, 8 synliga
-    { slug: 'kristianstadsfilmstudio', name: 'Kristianstads Filmstudio', city: 'Kristianstad' }, // 6 ev i juli, 6 synliga
-    { slug: 'goteborgsstad', name: 'Göteborgs Stad', city: 'Göteborg' }, // 6 ev i juli, 5 synliga
-    { slug: 'globallivingvasteras', name: 'Global Living', city: 'Västerås' }, // 6 ev i juli, 7 synliga
-    { slug: 'fhuddevalla', name: 'Folkets Hus Uddevalla', city: 'Uddevalla' }, // 6 ev i juli, 5 synliga
-    { slug: 'boulognerskogenparkrun', name: 'Boulognerskogen parkrun, Gävle', city: 'Gävle' }, // 6 ev i juli, 6 synliga
-    { slug: 'arbogabio', name: 'Arboga bio' }, // 6 ev i juli, 1 synliga
-    { slug: '59anLysekil', name: '59an i Lysekil' }, // 6 ev i juli, 3 synliga
-    { slug: 'ostfoldteater', name: 'Østfold Teater' }, // 5 ev i juli, 5 synliga
-    { slug: 'ostergotlandsmuseum', name: 'Östergötlands museum' }, // 5 ev i juli, 7 synliga
-    { slug: 'Levochmaval', name: 'ViveVale', city: 'Lund' }, // 5 ev i juli, 2 synliga
-    { slug: 'vewcs', name: 'Victor Evelina West Coast Swing', city: 'Uppsala' }, // 5 ev i juli, 5 synliga
-    { slug: 'villalidkopingbk', name: 'Villa Lidköping BK', city: 'Lidköping' }, // 5 ev i juli, 1 synliga
-    { slug: 'vardagibalans', name: 'Vardag i Balans', city: 'Lund' }, // 5 ev i juli, 2 synliga
-    { slug: 'UppsalaBudoklubb', name: 'Uppsala Budoklubb', city: 'Uppsala' }, // 5 ev i juli, 6 synliga
-    { slug: 'Upplandsmuseet', name: 'Upplandsmuseet', city: 'Uppsala' }, // 5 ev i juli, 6 synliga
-    { slug: 'umefox', name: 'UmeFox' }, // 5 ev i juli, 4 synliga
-    { slug: 'ungscenost', name: 'Ung Scen Öst', city: 'Norrköping' }, // 5 ev i juli, 2 synliga
-    { slug: 'teatervasternorrland', name: 'Teater Västernorrland' }, // 5 ev i juli, 2 synliga
+    { slug: 'malmolive', name: 'Malmö Live' }, // 6 ev i juli, 4 synliga
+    { slug: 'kafedeluxe', name: 'Kafé de luxe' }, // 6 ev i juli, 6 synliga
+    { slug: 'harnosandsbibliotek', name: 'Härnösands bibliotek', city: 'Härnösand' }, // 6 ev i juli, 2 synliga
+    { slug: 'hallundafolketshus', name: 'Hallunda Folkets Hus' }, // 6 ev i juli, 8 synliga
+    { slug: 'globallivingvasteras', name: 'Global Living', city: 'Västerås' }, // 6 ev i juli, 6 synliga
+    { slug: 'eskilstunakompaniet', name: 'Eskilstunakompaniet', city: 'Eskilstuna' }, // 6 ev i juli, 8 synliga
+    { slug: 'bollnasbibliotek', name: 'Bollnäs bibliotek och Kulturhuset Bollnäs' }, // 6 ev i juli, 6 synliga
+    { slug: 'alvestabibliotek', name: 'Biblioteken i Alvesta kommun' }, // 6 ev i juli, 7 synliga
+    { slug: 'arbogabio', name: 'Arboga bio' }, // 6 ev i juli, 8 synliga
+    { slug: '59anLysekil', name: '59an i Lysekil' }, // 6 ev i juli, 2 synliga
+    { slug: 'yogaskolan.karlstad', name: 'Yogaskolan Karlstad', city: 'Karlstad' }, // 5 ev i juli, 5 synliga
+    { slug: 'WoodyWestGbg', name: 'Woody West' }, // 5 ev i juli, 8 synliga
     { slug: 'stockholmsmarknader', name: 'Stockholmsmarknader' }, // 5 ev i juli, 5 synliga
-    { slug: 'sundsvallskommun', name: 'Sundsvalls kommun', city: 'Sundsvall' }, // 5 ev i juli, 8 synliga
-    { slug: 'reumatikerforeningenlinkoping', name: 'Reumatikerföreningen Linköping', city: 'Linköping' }, // 5 ev i juli, 3 synliga
-    { slug: 'Reimersholmehotel', name: 'Reimersholme Hotel', city: 'Stockholm' }, // 5 ev i juli, 8 synliga
-    { slug: 'obosisverige', name: 'OBOS i Sverige', city: 'Lund' }, // 5 ev i juli, 3 synliga
-    { slug: 'musikvalvetbaggen', name: 'Musikvalvet Baggen' }, // 5 ev i juli, 5 synliga
-    { slug: 'NiklasStromstedtMusic', name: 'Niklas Strömstedt', city: 'Uppsala' }, // 5 ev i juli, 7 synliga
-    { slug: 'nordicsociety.org', name: 'Nordic society', city: 'Stockholm' }, // 5 ev i juli, 3 synliga
-    { slug: 'naturumblekinge', name: 'Naturum Blekinge', city: 'Ronneby' }, // 5 ev i juli, 3 synliga
-    { slug: 'MotalaBasket', name: 'Motala Basket - W72', city: 'Motala' }, // 5 ev i juli, 2 synliga
-    { slug: 'malmosaluhall', name: 'Malmö Saluhall' }, // 5 ev i juli, 2 synliga
-    { slug: 'mikespubskovde', name: 'Mikes pub och restaurang', city: 'Skövde' }, // 5 ev i juli, 1 synliga
-    { slug: 'MariaLundqvistOffentlig', name: 'Maria Lundqvist', city: 'Eskilstuna' }, // 5 ev i juli, 1 synliga
-    { slug: 'malmabuggarna', name: 'Malmabuggarna' }, // 5 ev i juli, 2 synliga
-    { slug: 'Kulturhjaltarna', name: 'Kulturhjältarna' }, // 5 ev i juli, 8 synliga
-    { slug: 'MAKSIMconcertPianist', name: 'Kultur For Folket' }, // 5 ev i juli, 8 synliga
+    { slug: 'stadshallen', name: 'Stadshallen', city: 'Lund' }, // 5 ev i juli, 7 synliga
+    { slug: 'SensusRCN', name: 'Rättighetscentrum Norrbotten - mot diskriminering' }, // 5 ev i juli, 2 synliga
+    { slug: 'pustervik', name: 'Pustervik' }, // 5 ev i juli, 8 synliga
+    { slug: 'pitea.se', name: 'Piteå kommun', city: 'Piteå' }, // 5 ev i juli, 1 synliga
+    { slug: 'Parkbiografen', name: 'Parkbiografen' }, // 5 ev i juli, 2 synliga
+    { slug: 'lokstallet.skovde', name: 'Lokstallet', city: 'Skövde' }, // 5 ev i juli, 8 synliga
+    { slug: 'Kulturhusetibergen', name: 'Kulturhuset i Bergen' }, // 5 ev i juli, 7 synliga
+    { slug: 'kulturhusetmobeln', name: 'Kulturhuset Möbeln' }, // 5 ev i juli, 8 synliga
+    { slug: 'kpdmellerud', name: 'Kulturbruket på Dal' }, // 5 ev i juli, 5 synliga
     { slug: 'Kapellet.telje', name: 'Kapellet', city: 'Norrtälje' }, // 5 ev i juli, 8 synliga
-    { slug: 'KLUBBDODSWE', name: 'KLUBB DÖD' }, // 5 ev i juli, 8 synliga
+    { slug: 'JiAdagarna', name: 'JiA-Dagarna | Juridiska Föreningens arbetsmarknadsdagar | www.jf.se/jia', city: 'Lund' }, // 5 ev i juli, 8 synliga
     { slug: 'jagvagarstuffa', name: 'Jag vågar stuffa', city: 'Karlshamn' }, // 5 ev i juli, 6 synliga
-    { slug: 'JacyzHotel', name: 'Jacy\'z Hotel & Resort' }, // 5 ev i juli, 6 synliga
-    { slug: 'hjartatshus', name: 'Hjärtats hus', city: 'Jönköping' }, // 5 ev i juli, 5 synliga
-    { slug: 'gronakallanalvkarleby', name: 'Gröna Källan - Älvkarleby' }, // 5 ev i juli, 4 synliga
-    { slug: 'energiheaxorna', name: 'Energihäxorna' }, // 5 ev i juli, 4 synliga
-    { slug: 'DDRKgbg', name: 'DDRKgbg' }, // 5 ev i juli, 4 synliga
-    { slug: 'WheelsOfCarlshamn', name: 'Cykelklubben Wheels Of Carlshamn', city: 'Karlshamn' }, // 5 ev i juli, 8 synliga
-    { slug: 'dansofolkton', name: 'Dans & Folkton' }, // 5 ev i juli, 3 synliga
-    { slug: 'catscornermalmo', name: 'Cats\' Corner' }, // 5 ev i juli, 3 synliga
-    { slug: 'backyardfalun', name: 'Backyard Club', city: 'Falun' }, // 5 ev i juli, 4 synliga
-    { slug: 'ArbogaFolketsPark', name: 'Arboga Folkets Park' }, // 5 ev i juli, 8 synliga
-    { slug: 'backa.teater', name: 'Backa Teater' }, // 5 ev i juli, 2 synliga
-    { slug: 'abfnorrkalix', name: 'ABF Norr Kalix' }, // 5 ev i juli, 5 synliga
-    { slug: 'alltpascen', name: 'Allt På Scen & Mycke Nöje', city: 'Lund' }, // 5 ev i juli, 8 synliga
-    { slug: 'WermlandOpera', name: 'Wermland Opera', city: 'Karlstad' }, // 4 ev i juli, 2 synliga
-    { slug: 'vaxjoloparklubb', name: 'Växjö Löparklubb' }, // 4 ev i juli, 4 synliga
-    { slug: 'svinorrabohuslan', name: 'Studieförbundet Vuxenskolan i Norra Bohuslän' }, // 4 ev i juli, 3 synliga
-    { slug: 'Studieforbundetbildanord', name: 'Studieförbundet Bilda Nord' }, // 4 ev i juli, 8 synliga
-    { slug: 'stuckonlive', name: 'Stuck On - Live' }, // 4 ev i juli, 8 synliga
-    { slug: 'stadshallen', name: 'Stadshallen', city: 'Lund' }, // 4 ev i juli, 7 synliga
-    { slug: 'royal.roland.5623', name: 'SoundTrack Roland' }, // 4 ev i juli, 2 synliga
-    { slug: 'SoulRelax.Motala', name: 'SoulRelax', city: 'Motala' }, // 4 ev i juli, 3 synliga
-    { slug: 'quiztyreso', name: 'QUIZ - Tyresö' }, // 4 ev i juli, 1 synliga
-    { slug: 'slagelsebib', name: 'Slagelse Bibliotekerne' }, // 4 ev i juli, 8 synliga
+    { slug: 'harkekonstcentrum', name: 'Härke Konstcentrum' }, // 5 ev i juli, 2 synliga
+    { slug: 'eyragarden', name: 'Eyragården, Kävlinge Kommun' }, // 5 ev i juli, 5 synliga
+    { slug: 'energiheaxorna', name: 'Energihäxorna' }, // 5 ev i juli, 3 synliga
+    { slug: 'bolgenkulturhus', name: 'Bølgen Kulturhus' }, // 5 ev i juli, 3 synliga
+    { slug: 'biograffokusjonkoping', name: 'Biograf Fokus Jönköping', city: 'Jönköping' }, // 5 ev i juli, 5 synliga
+    { slug: 'biokontrastiggesund', name: 'Bio Kontrast - Folkets Hus Iggesund' }, // 5 ev i juli, 2 synliga
+    { slug: 'amplifiedvast', name: 'Amplified Väst', city: 'Borås' }, // 5 ev i juli, 5 synliga
+    { slug: 'Vardklockanskyrka', name: 'Vårdklockans kyrka', city: 'Visby' }, // 4 ev i juli, 1 synliga
+    { slug: 'villalidkopingbk', name: 'Villa Lidköping BK', city: 'Lidköping' }, // 4 ev i juli, 2 synliga
+    { slug: 'vewcs', name: 'Victor Evelina West Coast Swing', city: 'Uppsala' }, // 4 ev i juli, 4 synliga
+    { slug: 'vardagibalans', name: 'Vardag i Balans', city: 'Lund' }, // 4 ev i juli, 3 synliga
+    { slug: 'UpplevSkovde', name: 'Upplev Skövde', city: 'Skövde' }, // 4 ev i juli, 4 synliga
+    { slug: 'teatervasternorrland', name: 'Teater Västernorrland' }, // 4 ev i juli, 1 synliga
+    { slug: 'tasspalatset.se', name: 'Tasspalatset' }, // 4 ev i juli, 5 synliga
+    { slug: 'sundsbysateri', name: 'Sundsby Säteri' }, // 4 ev i juli, 4 synliga
+    { slug: 'studieframjandetumea', name: 'Studiefrämjandet Västerbotten' }, // 4 ev i juli, 6 synliga
+    { slug: 'stuckonlive', name: 'Stuck On - Live' }, // 4 ev i juli, 7 synliga
     { slug: 'rabagastalta', name: 'Rabagast' }, // 4 ev i juli, 8 synliga
+    { slug: 'quiztyreso', name: 'QUIZ - Tyresö' }, // 4 ev i juli, 1 synliga
     { slug: 'poffertjes.se', name: 'Poffertjes.se' }, // 4 ev i juli, 8 synliga
-    { slug: 'NojetKonsert', name: 'Nöjet Konsert AB', city: 'Sundsvall' }, // 4 ev i juli, 8 synliga
-    { slug: 'nojesfabriken', name: 'Nöjesfabriken', city: 'Karlstad' }, // 4 ev i juli, 8 synliga
-    { slug: 'nbvost', name: 'NBV Öst' }, // 4 ev i juli, 4 synliga
-    { slug: 'monica.karlsson.399', name: 'Motala biologiska förening', city: 'Motala' }, // 4 ev i juli, 3 synliga
+    { slug: 'nordicsociety.org', name: 'Nordic society', city: 'Stockholm' }, // 4 ev i juli, 3 synliga
+    { slug: 'NiklasStromstedtMusic', name: 'Niklas Strömstedt' }, // 4 ev i juli, 8 synliga
+    { slug: 'mikespubskovde', name: 'Mikes pub och restaurang', city: 'Skövde' }, // 4 ev i juli, 1 synliga
     { slug: 'mats.fuchs.9', name: 'Mats Fuchs' }, // 4 ev i juli, 1 synliga
-    { slug: 'lorenskogbibliotek', name: 'Lørenskog bibliotek' }, // 4 ev i juli, 8 synliga
-    { slug: 'lyckselemusikoteater', name: 'Lycksele Musik & Teaterförening-en del av Riksteatern', city: 'Lycksele' }, // 4 ev i juli, 2 synliga
-    { slug: 'lundchoralfestival.lcf', name: 'Lund Choral Festival', city: 'Lund' }, // 4 ev i juli, 8 synliga
-    { slug: 'kulturhusetbollnas', name: 'Kulturhuset Bollnäs' }, // 4 ev i juli, 8 synliga
+    { slug: 'malmomuseum', name: 'Malmö museum', city: 'Malmö' }, // 4 ev i juli, 5 synliga
+    { slug: 'MahalayaCenter', name: 'Mahalaya - Center for Holistic Growth' }, // 4 ev i juli, 6 synliga
+    { slug: 'malmabuggarna', name: 'Malmabuggarna' }, // 4 ev i juli, 1 synliga
+    { slug: 'lyckselemusikoteater', name: 'Lycksele Musik & Teaterförening-en del av Riksteatern', city: 'Lycksele' }, // 4 ev i juli, 5 synliga
+    { slug: 'lassewinnerback', name: 'Lars Winnerbäck', city: 'Linköping' }, // 4 ev i juli, 8 synliga
+    { slug: 'kulturhusetfregatten', name: 'Kulturhuset Fregatten' }, // 4 ev i juli, 4 synliga
+    { slug: 'kristianstadsfilmstudio', name: 'Kristianstads Filmstudio', city: 'Kristianstad' }, // 4 ev i juli, 4 synliga
     { slug: 'visitsoderhamn', name: 'Kulturen Söderhamn', city: 'Söderhamn' }, // 4 ev i juli, 1 synliga
-    { slug: 'kpdmellerud', name: 'Kulturbruket på Dal' }, // 4 ev i juli, 5 synliga
-    { slug: 'KappaBarMalmo', name: 'Kappa Bar Malmö' }, // 4 ev i juli, 4 synliga
     { slug: 'kalixkommun', name: 'Kalix kommun' }, // 4 ev i juli, 7 synliga
-    { slug: 'kbwestgbg', name: 'KB West' }, // 4 ev i juli, 8 synliga
-    { slug: 'kalix.bibliotek', name: 'Kalix Bibliotek' }, // 4 ev i juli, 2 synliga
-    { slug: 'michael.haggmark.1', name: 'JLS Jämtlands Lokalhistoriker och Släktforskare' }, // 4 ev i juli, 1 synliga
-    { slug: 'jazzklubbensundsvall.se', name: 'Jazzklubben Sundsvall', city: 'Sundsvall' }, // 4 ev i juli, 5 synliga
-    { slug: 'trumhakan', name: 'Jansson Communication' }, // 4 ev i juli, 6 synliga
-    { slug: 'IntimanTeatern', name: 'Intiman', city: 'Stockholm' }, // 4 ev i juli, 2 synliga
+    { slug: 'trumhakan', name: 'Jansson Communication' }, // 4 ev i juli, 5 synliga
+    { slug: 'KSHHealing', name: 'KSH Healing', city: 'Kalmar' }, // 4 ev i juli, 5 synliga
     { slug: 'icfalkenberg', name: 'IC Falkenberg', city: 'Falkenberg' }, // 4 ev i juli, 8 synliga
-    { slug: 'hovmantorps.folketshus', name: 'Hovmantorps Folkets Hus' }, // 4 ev i juli, 4 synliga
     { slug: 'huddingeparkrun', name: 'Huddinge Parkrun' }, // 4 ev i juli, 8 synliga
-    { slug: 'HotellHavanna', name: 'Hotell Havanna', city: 'Varberg' }, // 4 ev i juli, 2 synliga
-    { slug: 'SwinginHepTown', name: 'HepTown' }, // 4 ev i juli, 8 synliga
-    { slug: 'gnosjobibliotek', name: 'Gnosjö kultur & bibliotek' }, // 4 ev i juli, 2 synliga
-    { slug: 'eyragarden', name: 'Eyragården, Kävlinge Kommun' }, // 4 ev i juli, 4 synliga
-    { slug: 'BorlangeDance', name: 'Borlänge Dance', city: 'Borlänge' }, // 4 ev i juli, 5 synliga
-    { slug: 'bokmassandalarna', name: 'Bokmässan Dalarna', city: 'Borlänge' }, // 4 ev i juli, 8 synliga
-    { slug: 'BestermanAB', name: 'Besterman', city: 'Uppsala' }, // 4 ev i juli, 8 synliga
-    { slug: 'befreenow.se', name: 'Befreenow' }, // 4 ev i juli, 6 synliga
-    { slug: 'bergsakers', name: 'Bergsåker', city: 'Sundsvall' }, // 4 ev i juli, 2 synliga
-    { slug: 'alingsaskulturhus', name: 'Alingsås kulturhus', city: 'Alingsås' }, // 4 ev i juli, 4 synliga
-    { slug: 'mountainfilm', name: 'Banff Mountain Film Festival Scandinavia' }, // 4 ev i juli, 2 synliga
-    { slug: 'AlingsasHK', name: 'Alingsås HK', city: 'Alingsås' }, // 4 ev i juli, 2 synliga
-    { slug: 'ostgotamusiken', name: 'Östgötamusiken', city: 'Linköping' }, // 3 ev i juli, 7 synliga
-    { slug: 'ostersundskommun', name: 'Östersunds kommun - Staaren tjïelte' }, // 3 ev i juli, 3 synliga
-    { slug: 'VXOevent', name: 'VXO event' }, // 3 ev i juli, 4 synliga
-    { slug: 'teaterhalland', name: 'Teater Halland', city: 'Varberg' }, // 3 ev i juli, 3 synliga
-    { slug: 'tangosundsvall', name: 'TangoSundsvall', city: 'Sundsvall' }, // 3 ev i juli, 2 synliga
-    { slug: 'tangovarberg', name: 'Tango Varberg', city: 'Varberg' }, // 3 ev i juli, 3 synliga
-    { slug: 'soderhamnsbibblan', name: 'Söderhamns Stadsbibliotek', city: 'Söderhamn' }, // 3 ev i juli, 3 synliga
-    { slug: 'SoderhamnsKonstforening', name: 'Söderhamns Konstförening', city: 'Söderhamn' }, // 3 ev i juli, 1 synliga
-    { slug: 'StoraTeatern', name: 'Stora Teatern' }, // 3 ev i juli, 4 synliga
-    { slug: 'stabekkjazzclub', name: 'Stabekk Jazz Club' }, // 3 ev i juli, 3 synliga
-    { slug: 'skovdeyogacentrum', name: 'Skövde YogaCentrum', city: 'Skövde' }, // 3 ev i juli, 2 synliga
-    { slug: 'sisselkyrkjebo', name: 'Sissel Kyrkjebø', city: 'Stockholm' }, // 3 ev i juli, 8 synliga
-    { slug: 'rimboprastgard', name: 'Rimbo Prästgård' }, // 3 ev i juli, 8 synliga
-    { slug: 'pinkprogramming', name: 'Pink Programming', city: 'Lund' }, // 3 ev i juli, 2 synliga
-    { slug: 'Parkbiografen', name: 'Parkbiografen' }, // 3 ev i juli, 1 synliga
-    { slug: 'Mordmysterium', name: 'Mordmysterium' }, // 3 ev i juli, 2 synliga
+    { slug: 'hovmantorps.folketshus', name: 'Hovmantorps Folkets Hus' }, // 4 ev i juli, 3 synliga
+    { slug: 'estrad.norr', name: 'Estrad Norr' }, // 4 ev i juli, 3 synliga
+    { slug: 'centrumhusbiografen', name: 'Centrumhusbiografen' }, // 4 ev i juli, 5 synliga
+    { slug: 'catscornermalmo', name: 'Cats\' Corner' }, // 4 ev i juli, 2 synliga
+    { slug: 'boulognerskogenparkrun', name: 'Boulognerskogen parkrun, Gävle', city: 'Gävle' }, // 4 ev i juli, 5 synliga
+    { slug: 'Boras.Stadsteater', name: 'Borås Stadsteater', city: 'Borås' }, // 4 ev i juli, 4 synliga
+    { slug: 'BorlangeDance', name: 'Borlänge Dance', city: 'Borlänge' }, // 4 ev i juli, 6 synliga
+    { slug: 'boca.vasteras', name: 'Boca Västerås', city: 'Västerås' }, // 4 ev i juli, 2 synliga
+    { slug: 'haningebibliotek', name: 'Biblioteken i Haninge' }, // 4 ev i juli, 3 synliga
+    { slug: 'backyardfalun', name: 'Backyard Club', city: 'Falun' }, // 4 ev i juli, 4 synliga
+    { slug: 'arbetetsmuseum', name: 'Arbetets museum', city: 'Norrköping' }, // 4 ev i juli, 3 synliga
+    { slug: 'alingsaskulturhus', name: 'Alingsås kulturhus', city: 'Alingsås' }, // 4 ev i juli, 3 synliga
+    { slug: 'ostgotateatern', name: 'Östgötateatern', city: 'Norrköping' }, // 3 ev i juli, 3 synliga
+    { slug: 'vaxjokonserthus', name: 'Växjö Konserthus' }, // 3 ev i juli, 8 synliga
+    { slug: 'WermlandOpera', name: 'Wermland Opera', city: 'Karlstad' }, // 3 ev i juli, 3 synliga
+    { slug: 'vasteraskongress', name: 'Västerås Kongress', city: 'Västerås' }, // 3 ev i juli, 8 synliga
+    { slug: 'Levochmaval', name: 'ViveVale', city: 'Lund' }, // 3 ev i juli, 2 synliga
+    { slug: 'BokskogeniTorup', name: 'Torups Slott' }, // 3 ev i juli, 3 synliga
+    { slug: 'stasartistas', name: 'Stas Artist' }, // 3 ev i juli, 4 synliga
+    { slug: 'SoulRelax.Motala', name: 'SoulRelax', city: 'Motala' }, // 3 ev i juli, 3 synliga
+    { slug: 'skaneskonst', name: 'Skånes konstförening' }, // 3 ev i juli, 1 synliga
+    { slug: 'SkolsimmarnaIK', name: 'Skolsimmarna IK' }, // 3 ev i juli, 3 synliga
+    { slug: 'seniorikungsbacka', name: 'Senior i Kungsbacka', city: 'Kungsbacka' }, // 3 ev i juli, 3 synliga
+    { slug: 'nojesfabriken', name: 'Nöjesfabriken', city: 'Karlstad' }, // 3 ev i juli, 8 synliga
+    { slug: 'natminkulturhus', name: 'Nationella minoriteters kulturhus' }, // 3 ev i juli, 3 synliga
+    { slug: 'musikvalvetbaggen', name: 'Musikvalvet Baggen' }, // 3 ev i juli, 2 synliga
     { slug: 'mollan.mitt', name: 'Mitt Möllan' }, // 3 ev i juli, 3 synliga
+    { slug: 'bodyandsoulmovement', name: 'Maria Slättorp - Body & Soul Movement' }, // 3 ev i juli, 5 synliga
     { slug: 'statarmuseet', name: 'Malmö Stad' }, // 3 ev i juli, 2 synliga
+    { slug: 'malmocityskaters', name: 'Malmö City Skaters' }, // 3 ev i juli, 4 synliga
+    { slug: 'lundsstadsbibliotek', name: 'Lunds stadsbibliotek', city: 'Lund' }, // 3 ev i juli, 8 synliga
     { slug: 'louisdegeernorrkoping', name: 'Louis De Geer, Norrköping', city: 'Norrköping' }, // 3 ev i juli, 8 synliga
-    { slug: 'lommafolketshus', name: 'Lomma Folkets Hus' }, // 3 ev i juli, 4 synliga
-    { slug: 'lisebergab', name: 'Liseberg' }, // 3 ev i juli, 2 synliga
-    { slug: 'lesbisktrumuppsala', name: 'Lesbiskt rum Uppsala', city: 'Uppsala' }, // 3 ev i juli, 4 synliga
-    { slug: 'Kungalvsparken', name: 'Kungälvs Parken', city: 'Borås' }, // 3 ev i juli, 4 synliga
-    { slug: 'kristnaregnbagsrorelsen', name: 'Kristna regnbågsrörelsen - Riksförbundet EKHO' }, // 3 ev i juli, 2 synliga
-    { slug: 'jonkopingcity', name: 'Jönköping City', city: 'Jönköping' }, // 3 ev i juli, 3 synliga
-    { slug: 'hemfranderome', name: 'Hem från Derome' }, // 3 ev i juli, 8 synliga
-    { slug: 'hiphopweekendkalmar', name: 'Hip Hop Weekend' }, // 3 ev i juli, 8 synliga
+    { slug: 'Kulturhjaltarna', name: 'Kulturoasen' }, // 3 ev i juli, 8 synliga
+    { slug: 'kulturhusetmollegarden', name: 'Kulturhuset Möllegården' }, // 3 ev i juli, 4 synliga
+    { slug: 'Kajmanpite', name: 'Kajman' }, // 3 ev i juli, 4 synliga
+    { slug: 'jonkopingcity', name: 'Jönköping City', city: 'Jönköping' }, // 3 ev i juli, 2 synliga
+    { slug: 'bio.juniora', name: 'Juniora' }, // 3 ev i juli, 3 synliga
+    { slug: 'jiversdancingclub', name: 'Jivers Dancing Club' }, // 3 ev i juli, 8 synliga
+    { slug: 'jazzklubbensundsvall.se', name: 'Jazzklubben Sundsvall', city: 'Sundsvall' }, // 3 ev i juli, 4 synliga
+    { slug: 'michael.haggmark.1', name: 'JLS Jämtlands Lokalhistoriker och Släktforskare' }, // 3 ev i juli, 1 synliga
+    { slug: 'HotellHavanna', name: 'Hotell Havanna', city: 'Varberg' }, // 3 ev i juli, 3 synliga
     { slug: 'hedemorafolketspark', name: 'Hedemora Folkets Park' }, // 3 ev i juli, 8 synliga
-    { slug: 'Gardenoffeathers', name: 'Garden of Feathers', city: 'Staffanstorp' }, // 3 ev i juli, 8 synliga
-    { slug: 'forfattarcentrumvast', name: 'Författarcentrum Väst' }, // 3 ev i juli, 4 synliga
-    { slug: 'FylgjaHelandeHarmoni', name: 'Fylgja - helande harmoni', city: 'Sundsvall' }, // 3 ev i juli, 7 synliga
-    { slug: 'Folkuniversitetet.Goteborg', name: 'Folkuniversitetet Göteborg', city: 'Göteborg' }, // 3 ev i juli, 5 synliga
-    { slug: 'forumbiblioteken', name: 'Forumbiblioteken i Nacka' }, // 3 ev i juli, 2 synliga
-    { slug: 'FyrisComedy', name: 'FYRIS Comedy' }, // 3 ev i juli, 3 synliga
-    { slug: 'dragonflystudioavesta', name: 'Dragonfly Studio' }, // 3 ev i juli, 2 synliga
+    { slug: 'hiphopweekendkalmar', name: 'Hip Hop Weekend' }, // 3 ev i juli, 8 synliga
+    { slug: 'helsingborgcity', name: 'HBG City', city: 'Helsingborg' }, // 3 ev i juli, 4 synliga
+    { slug: 'artstheatregeorge', name: 'George Arts Theatre' }, // 3 ev i juli, 2 synliga
+    { slug: 'gasklockorna', name: 'Gasklockorna Gävle', city: 'Gävle' }, // 3 ev i juli, 8 synliga
+    { slug: 'forfattarcentrumvast', name: 'Författarcentrum Väst' }, // 3 ev i juli, 2 synliga
+    { slug: 'Folkuniversitetet.Goteborg', name: 'Folkuniversitetet Göteborg', city: 'Göteborg' }, // 3 ev i juli, 4 synliga
     { slug: 'Clubsoundkilla', name: 'Club Soundkilla' }, // 3 ev i juli, 2 synliga
-    { slug: 'couleurkonsthandel', name: 'Couleur Konsthandel', city: 'Stockholm' }, // 3 ev i juli, 2 synliga
-    { slug: 'bolgenkulturhus', name: 'Bølgen Kulturhus' }, // 3 ev i juli, 5 synliga
-    { slug: 'clarionsundsvall', name: 'Clarion Hotel Sundsvall', city: 'Sundsvall' }, // 3 ev i juli, 2 synliga
-    { slug: 'MuseetBollnasKonsthall', name: 'Bollnäs Museum & Konsthall' }, // 3 ev i juli, 1 synliga
-    { slug: 'BlaKaktus', name: 'Bluesföreningen Blå Kaktus' }, // 3 ev i juli, 7 synliga
-    { slug: 'arbetetsmuseum', name: 'Arbetets museum', city: 'Norrköping' }, // 3 ev i juli, 3 synliga
-    { slug: 'amplifiedvast', name: 'Amplified Väst', city: 'Borås' }, // 3 ev i juli, 4 synliga
+    { slug: 'clarionostersund', name: 'Clarion Hotel Grand Östersund (Östersund)' }, // 3 ev i juli, 7 synliga
+    { slug: 'clarionsundsvall', name: 'Clarion Hotel Sundsvall', city: 'Sundsvall' }, // 3 ev i juli, 1 synliga
+    { slug: 'BorasDansforening', name: 'Borås Dansförening', city: 'Borås' }, // 3 ev i juli, 6 synliga
+    { slug: 'backa.teater', name: 'Backa Teater' }, // 3 ev i juli, 1 synliga
+    { slug: 'bibliotekeniburlov', name: 'Biblioteken i Burlöv' }, // 3 ev i juli, 6 synliga
+    { slug: 'AlingsasDansklubb', name: 'Alingsås Dansklubb', city: 'Alingsås' }, // 3 ev i juli, 2 synliga
+    { slug: 'abfmalmo', name: 'ABF Malmö', city: 'Trelleborg' }, // 3 ev i juli, 7 synliga
+    { slug: 'alltpascen', name: 'Allt På Scen & Mycke Nöje', city: 'Lund' }, // 3 ev i juli, 8 synliga
+    { slug: 'ostfoldteater', name: 'Østfold Teater' }, // 2 ev i juli, 5 synliga
     { slug: 'folkanteater', name: 'Örnsköldsviks Riksteaterförening' }, // 2 ev i juli, 8 synliga
-    { slug: 'ObackaJazz', name: 'Öbacka Jazz&Blues Härnösand', city: 'Härnösand' }, // 2 ev i juli, 3 synliga
-    { slug: 'vasteraskongress', name: 'Västerås Kongress', city: 'Västerås' }, // 2 ev i juli, 8 synliga
-    { slug: 'VisitOstersund', name: 'VisitÖstersund', city: 'Östersund' }, // 2 ev i juli, 8 synliga
-    { slug: 'hamarvenues', name: 'Venues' }, // 2 ev i juli, 8 synliga
+    { slug: 'ystadicentrum', name: 'Ystad i centrum', city: 'Ystad' }, // 2 ev i juli, 3 synliga
+    { slug: '61575848977708', name: 'WIESE' }, // 2 ev i juli, 6 synliga
     { slug: 'varakonserthus', name: 'Vara Konserthus' }, // 2 ev i juli, 8 synliga
-    { slug: 'Uddevallakassetten', name: 'Uddevallakassetten', city: 'Uddevalla' }, // 2 ev i juli, 7 synliga
-    { slug: 'tunapark.se', name: 'Tuna Park', city: 'Eskilstuna' }, // 2 ev i juli, 2 synliga
-    { slug: 'tillsammansforkumla', name: 'Tillsammans för Kumla' }, // 2 ev i juli, 8 synliga
-    { slug: 'stockholmjazz', name: 'Stockholm Jazz Festival', city: 'Stockholm' }, // 2 ev i juli, 8 synliga
-    { slug: 'stenegardjarvso', name: 'Stenegård i Järvsö' }, // 2 ev i juli, 2 synliga
-    { slug: 'stasartistas', name: 'Stas Artist' }, // 2 ev i juli, 3 synliga
-    { slug: 'rfsisuvn', name: 'Stadshuset Kronan, Örnskökdsvik' }, // 2 ev i juli, 3 synliga
-    { slug: 'spirisvisma', name: 'Spiris Visma', city: 'Stockholm' }, // 2 ev i juli, 2 synliga
-    { slug: 'skeppetgbg', name: 'Skeppet GBG' }, // 2 ev i juli, 8 synliga
-    { slug: 'silvenska', name: 'Silvénska villan' }, // 2 ev i juli, 2 synliga
-    { slug: 'scenknuten', name: 'Scenknuten', city: 'Eskilstuna' }, // 2 ev i juli, 2 synliga
-    { slug: 'stfostraskane', name: 'STF Östra Skåne Lokalavdelning' }, // 2 ev i juli, 3 synliga
-    { slug: 'sagateaterboras', name: 'Sagateatern', city: 'Borås' }, // 2 ev i juli, 8 synliga
-    { slug: 'StahlEntertainment', name: 'STAHL Entertainment' }, // 2 ev i juli, 8 synliga
-    { slug: 'skrotmusik', name: 'SKROT', city: 'Ystad' }, // 2 ev i juli, 1 synliga
-    { slug: 'signalsignal.org', name: 'SIGNAL' }, // 2 ev i juli, 2 synliga
-    { slug: 'selammusic', name: 'SELAM', city: 'Stockholm' }, // 2 ev i juli, 2 synliga
-    { slug: 'sstudentermalmo', name: 'S-Studenter Malmö' }, // 2 ev i juli, 8 synliga
-    { slug: 'Riksteaternvaxjo', name: 'Riksteatern Växjö' }, // 2 ev i juli, 3 synliga
-    { slug: 'regionkronoberg', name: 'Region Kronoberg' }, // 2 ev i juli, 2 synliga
-    { slug: 'programivaven', name: 'Program i Väven' }, // 2 ev i juli, 8 synliga
-    { slug: 'tantensgronaskafferi', name: 'Piprot' }, // 2 ev i juli, 2 synliga
-    { slug: 'PitebygdensMusikforbund', name: 'Pitebygdens Musikförbund' }, // 2 ev i juli, 2 synliga
-    { slug: 'OnTheFloor2014', name: 'On the Floor', city: 'Karlshamn' }, // 2 ev i juli, 7 synliga
-    { slug: 'nykopings.folkhogskola', name: 'Nyköpings Folkhögskola', city: 'Nyköping' }, // 2 ev i juli, 2 synliga
-    { slug: 'naturskyddsforeningenigoteborg', name: 'Naturskyddsföreningen i Göteborg', city: 'Göteborg' }, // 2 ev i juli, 2 synliga
-    { slug: 'naturskyddsforeningen.vanersborg', name: 'Naturskyddsföreningen Vänersborg' }, // 2 ev i juli, 4 synliga
-    { slug: 'liverestaurangen', name: 'Luleå Energi Arena' }, // 2 ev i juli, 8 synliga
-    { slug: 'luleabasket', name: 'Luleå Basket' }, // 2 ev i juli, 1 synliga
-    { slug: 'LandskronaMusikochTeater', name: 'Landskrona Musik & Teater - en del av Riksteatern', city: 'Landskrona' }, // 2 ev i juli, 3 synliga
-    { slug: 'kulturhusetmollegarden', name: 'Kulturhuset Möllegården' }, // 2 ev i juli, 6 synliga
-    { slug: 'ScenkonstH', name: 'Kulturhuset Glada Hudik' }, // 2 ev i juli, 1 synliga
-    { slug: 'kristianstadskommun', name: 'Kristianstads kommun', city: 'Kristianstad' }, // 2 ev i juli, 8 synliga
-    { slug: 'karlstadskommun', name: 'Karlstads kommun', city: 'Karlstad' }, // 2 ev i juli, 3 synliga
-    { slug: 'Kajmanpite', name: 'Kajman' }, // 2 ev i juli, 6 synliga
-    { slug: '100054229401426', name: 'Karolina Leifsdotter' }, // 2 ev i juli, 4 synliga
-    { slug: 'jadedheartmusic', name: 'Jaded Heart' }, // 2 ev i juli, 8 synliga
-    { slug: '100064844764389', name: 'Herrljunga Folkets Park' }, // 2 ev i juli, 3 synliga
-    { slug: 'kraniosakralterapihastochmanniska', name: 'Jennies HelhetsHälsa' }, // 2 ev i juli, 1 synliga
-    { slug: 'headstompproductions', name: 'Headstomp Productions' }, // 2 ev i juli, 8 synliga
-    { slug: 'hagforskulturochbibliotek', name: 'Hagfors kultur och bibliotek' }, // 2 ev i juli, 2 synliga
-    { slug: 'gamlahalmstad', name: 'Gamla Halmstad', city: 'Halmstad' }, // 2 ev i juli, 2 synliga
-    { slug: 'foreningensm', name: 'Föreningen Söderhamns Museum', city: 'Söderhamn' }, // 2 ev i juli, 6 synliga
-    { slug: 'forskarnasgalleri', name: 'Forskarnas galleri - Malmö universitetsbibliotek' }, // 2 ev i juli, 2 synliga
-    { slug: 'FrokenLarssonHandelsbod', name: 'Fröken Larsson Vintage, Antikt & Secondhand' }, // 2 ev i juli, 4 synliga
-    { slug: 'delsbohembygdsforening', name: 'Delsbo Forngård' }, // 2 ev i juli, 1 synliga
-    { slug: 'dismitt', name: 'Dis-Mitt' }, // 2 ev i juli, 8 synliga
-    { slug: 'clarionostersund', name: 'Clarion Hotel Grand Östersund (Östersund)' }, // 2 ev i juli, 8 synliga
-    { slug: 'blekingska', name: 'Blekingska nationen', city: 'Lund' }, // 2 ev i juli, 8 synliga
-    { slug: 'billstromska.fhsk', name: 'Billströmska folkhögskolan' }, // 2 ev i juli, 2 synliga
-    { slug: 'backayardbeats', name: 'Back a Yard Beats', city: 'Stockholm' }, // 2 ev i juli, 2 synliga
-    { slug: 'babetteskafferi', name: 'Babettes Kafferi', city: 'Linköping' }, // 2 ev i juli, 6 synliga
-    { slug: 'angustheultimatetribute', name: 'Angus - The Ultimate Tribute' }, // 2 ev i juli, 8 synliga
-    { slug: 'annelundsgarden', name: 'Annelundsgården' }, // 2 ev i juli, 8 synliga
-    { slug: 'alexeklundofficial', name: 'Alex Eklund', city: 'Eskilstuna' }, // 2 ev i juli, 2 synliga
-    { slug: 'absaloncph', name: 'Absalon' }, // 2 ev i juli, 8 synliga
+    { slug: 'upplevskara', name: 'Upplev Skara' }, // 2 ev i juli, 4 synliga
+    { slug: 'UnionScene', name: 'Union Scene' }, // 2 ev i juli, 8 synliga
+    { slug: 'ungscenost', name: 'Ung Scen Öst', city: 'Norrköping' }, // 2 ev i juli, 2 synliga
+    { slug: 'tunapark.se', name: 'Tuna Park', city: 'Eskilstuna' }, // 2 ev i juli, 3 synliga
+    { slug: 'classicumvaxthus', name: 'Classicum Växthus AB' }, // 2 ev i juli, 3 synliga
+    { slug: 'dansofolkton', name: 'Dans & Folkton' }, // 2 ev i juli, 2 synliga
+    { slug: 'brasserietboras', name: 'Brasseriet', city: 'Borås' }, // 2 ev i juli, 4 synliga
+    { slug: 'BlaKaktus', name: 'Bluesföreningen Blå Kaktus' }, // 2 ev i juli, 6 synliga
+    { slug: 'bibliotekenisvedala', name: 'Biblioteken i Svedala' }, // 2 ev i juli, 3 synliga
+    { slug: 'angebibliotek', name: 'Biblioteken i Ånge' }, // 2 ev i juli, 5 synliga
+    { slug: 'bibliotekenilaholm', name: 'Biblioteken i Laholm', city: 'Laholm' }, // 2 ev i juli, 3 synliga
+    { slug: 'BeijersParksCafe', name: 'Beijers Parks Café' }, // 2 ev i juli, 2 synliga
+    { slug: 'mountainfilm', name: 'Banff Mountain Film Festival Scandinavia' }, // 2 ev i juli, 2 synliga
+    { slug: 'backayardbeats', name: 'Back a Yard Beats', city: 'Stockholm' }, // 2 ev i juli, 3 synliga
+    { slug: 'ABForesund', name: 'ABF Öresund', city: 'Helsingborg' }, // 2 ev i juli, 4 synliga
 ];

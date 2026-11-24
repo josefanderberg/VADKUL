@@ -115,6 +115,10 @@
       "lastRetry": "2026-11-11",
       "emptyRetries": 1
     },
+    "tickster-ort-lund-4": {
+      "since": "2026-11-24",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "tickster-ort-ostersund-2": {
       "since": "2026-11-05",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
