@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type * as maplibregl from 'maplibre-gl';
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
-    addPoiSigns, BAD_SIGN_LAYER_ID, BAD_SIGN_MIN_ZOOM, BAD_SIGN_SOURCE_ID, POI_SIGN_DEEP_MIN_ZOOM, POI_SIGN_DEEP_NAME_ZOOM, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM,
+    addPoiSigns, BAD_SIGN_LAYER_ID, BAD_SIGN_MIN_ZOOM, BAD_SIGN_SOURCE_ID, POI_SIGN_DEEP_CLOSE_MIN_ZOOM, POI_SIGN_DEEP_MIN_ZOOM, POI_SIGN_DEEP_NAME_ZOOM, POI_SIGN_DEEP_NEAR_MIN_ZOOM, POI_SIGN_LAYER_ID, POI_SIGN_MIN_ZOOM,
     POI_SIGN_NAME_ZOOM, POI_SIGNS,
     POI_SIGN_CLOSE_LAYER_ID, POI_SIGN_CLOSE_MIN_ZOOM, POI_SIGN_HIT, POI_SIGN_LABELS, POI_SIGN_LAYER_IDS, POI_SIGN_NEAR_KEYS, POI_SIGN_NEAR_LAYER_ID, POI_SIGN_NEAR_MIN_ZOOM, pickPoiSignHit, poiSignInfo, poiSignKeyForKind,
     poiSignImageId, poiSignKeyFromImageId, type PoiSignKey,
@@ -228,6 +228,23 @@ describe('skyltarna ur de djupare kaklen', () => {
         expect(POI_SIGN_DEEP_MIN_ZOOM).toBe(POI_SIGN_MIN_ZOOM - 1);
         expect((l.layout!['text-field'] as unknown[])[3]).toBe(POI_SIGN_DEEP_NAME_ZOOM);
         expect(validateStyleMin(s)).toEqual([]);
+    });
+
+    it('lekplatser från 14 och restauranger från 15 ur de djupare kaklen (#288)', () => {
+        // Josef 24/11: "så man ser lekplatser och restauranger ... 1 steg tidigare".
+        const s = medDjupKälla();
+        const near = s.layers.find(l => l.id === POI_SIGN_NEAR_LAYER_ID) as maplibregl.SymbolLayerSpecification;
+        const close = s.layers.find(l => l.id === POI_SIGN_CLOSE_LAYER_ID) as maplibregl.SymbolLayerSpecification;
+        expect(near).toMatchObject({ source: DEEP_SOURCE_ID, minzoom: POI_SIGN_DEEP_NEAR_MIN_ZOOM });
+        expect(close).toMatchObject({ source: DEEP_SOURCE_ID, minzoom: POI_SIGN_DEEP_CLOSE_MIN_ZOOM });
+        expect(POI_SIGN_DEEP_NEAR_MIN_ZOOM).toBe(14);
+        expect(POI_SIGN_DEEP_CLOSE_MIN_ZOOM).toBe(15);
+        // Källkakel z14 byggs ur z15-barnen, de första som bär lekplatser och matställen.
+        expect(Object.keys(deepLayersFor(POI_SIGN_DEEP_NEAR_MIN_ZOOM + 1))).toEqual(['pois']);
+        // Utan djup källa (baskartan) står kontraktets gränser kvar.
+        const u = färdig();
+        expect((u.layers.find(l => l.id === POI_SIGN_NEAR_LAYER_ID) as maplibregl.SymbolLayerSpecification).minzoom).toBe(POI_SIGN_NEAR_MIN_ZOOM);
+        expect((u.layers.find(l => l.id === POI_SIGN_CLOSE_LAYER_ID) as maplibregl.SymbolLayerSpecification).minzoom).toBe(POI_SIGN_CLOSE_MIN_ZOOM);
     });
 
     it('kaklen som hämtas vid skyltarnas startzoom bär platserna', () => {

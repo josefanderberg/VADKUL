@@ -14,8 +14,10 @@ import type * as maplibregl from 'maplibre-gl';
 import {
     addPoiSignLayers,
     BADPLATS_DATA_PATH,
+    POI_SIGN_CLOSE_MIN_ZOOM,
     POI_SIGN_MIN_ZOOM,
     POI_SIGN_NAME_ZOOM,
+    POI_SIGN_NEAR_MIN_ZOOM,
     type PoiSignStyle,
 } from '@vadkul/kontrakt';
 import { DEEP_NEAR_MIN_CHILD_ZOOM, DEEP_SOURCE_ID } from './deepTiles';
@@ -57,6 +59,19 @@ export {
  */
 export const POI_SIGN_DEEP_MIN_ZOOM = DEEP_NEAR_MIN_CHILD_ZOOM - 1;
 export const POI_SIGN_DEEP_NAME_ZOOM = POI_SIGN_NAME_ZOOM - 1;
+/**
+ * KVARTERETS OCH GATANS SKYLTAR ETT STEG TIDIGARE (#288, ägarbeslut 24/11,
+ * Josef: "allt kan flyttas 1 zoomsteg längre ut/bort. alltså så man ser
+ * lekplatser och restauranger, de som är på deras zoomnivå 1 steg
+ * tidigare") - Josefs svar på "sänk inte gränsen utan att fråga" i #225 och
+ * #242, för webben. Lekplats/idrott/park från 14 (var 15), restaurang/kafé
+ * från 15 (var 16). Går bara tack vare de djupare kaklen: källkakel z14
+ * byggs ur z15-barnen, som är de första som bär lekplatser och matställen,
+ * och från kartzoom 15 överzoomas samma kakel. Samma steg som appen tar i
+ * lib/kartSkyltar (#251), så webb och app tänder dem på samma zoom.
+ */
+export const POI_SIGN_DEEP_NEAR_MIN_ZOOM = POI_SIGN_NEAR_MIN_ZOOM - 1;
+export const POI_SIGN_DEEP_CLOSE_MIN_ZOOM = POI_SIGN_CLOSE_MIN_ZOOM - 1;
 
 /**
  * Lägg skyltlagret i stilen. Under ortsnamnen (de vinner en krock) och därmed
@@ -71,7 +86,10 @@ export function addPoiSigns(style: maplibregl.StyleSpecification, origin = badpl
     // där en relativ sökväg inte går att lösa.
     const badData = origin ? new URL(BADPLATS_DATA_PATH, origin).href : undefined;
     addPoiSignLayers(style as unknown as PoiSignStyle, deep
-        ? { source: DEEP_SOURCE_ID, minZoom: POI_SIGN_DEEP_MIN_ZOOM, nameZoom: POI_SIGN_DEEP_NAME_ZOOM, badData }
+        ? {
+            source: DEEP_SOURCE_ID, minZoom: POI_SIGN_DEEP_MIN_ZOOM, nameZoom: POI_SIGN_DEEP_NAME_ZOOM,
+            nearMinZoom: POI_SIGN_DEEP_NEAR_MIN_ZOOM, closeMinZoom: POI_SIGN_DEEP_CLOSE_MIN_ZOOM, badData,
+        }
         : { minZoom: POI_SIGN_MIN_ZOOM, nameZoom: POI_SIGN_NAME_ZOOM, badData });
 }
 

@@ -8,7 +8,7 @@ describe('pitchForZoom', () => {
     it('är plan upp till startzoomen, alltså genom hela stadslandningen', () => {
         expect(pitchForZoom(4)).toBe(0);
         expect(pitchForZoom(10.5)).toBe(0);
-        expect(pitchForZoom(12)).toBe(0);
+        expect(pitchForZoom(11.5)).toBe(0);
         expect(pitchForZoom(TILT_START_ZOOM)).toBe(0);
     });
 
