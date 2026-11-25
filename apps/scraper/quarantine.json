@@ -8,8 +8,8 @@
     "bjorndammens-masugn": {
       "since": "2026-10-07",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-11",
-      "emptyRetries": 5
+      "lastRetry": "2026-11-25",
+      "emptyRetries": 6
     },
     "damallsvenskan": {
       "since": "2026-11-20",
@@ -65,7 +65,9 @@
     },
     "sb-gamlalinkoping-info": {
       "since": "2026-11-16",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-11-25",
+      "emptyRetries": 1
     },
     "skordefest": {
       "since": "2026-10-31",
@@ -112,8 +114,8 @@
     "tickster-ort-linkoping-2": {
       "since": "2026-11-04",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-11",
-      "emptyRetries": 1
+      "lastRetry": "2026-11-25",
+      "emptyRetries": 2
     },
     "tickster-ort-lund-4": {
       "since": "2026-11-24",
