@@ -1,10 +1,6 @@
 {
   "version": 1,
   "sources": {
-    "almhult-cruncho": {
-      "since": "2026-11-18",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
-    },
     "bjorndammens-masugn": {
       "since": "2026-10-07",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
@@ -23,7 +19,9 @@
     },
     "elitettan": {
       "since": "2026-11-19",
-      "reason": "4 raka tomma körningar (found=0, inga skips)"
+      "reason": "4 raka tomma körningar (found=0, inga skips)",
+      "lastRetry": "2026-11-26",
+      "emptyRetries": 1
     },
     "engso-hembygds-och-intresseforening": {
       "since": "2026-08-19",
@@ -34,14 +32,14 @@
     "folk-goteborg": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-18",
-      "emptyRetries": 10
+      "lastRetry": "2026-11-26",
+      "emptyRetries": 11
     },
     "gotska-sandons-hembygdsforening": {
       "since": "2026-08-19",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-19",
-      "emptyRetries": 13
+      "lastRetry": "2026-11-26",
+      "emptyRetries": 14
     },
     "kulturen": {
       "since": "2026-11-22",
@@ -96,8 +94,8 @@
     "superettan": {
       "since": "2026-11-11",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-19",
-      "emptyRetries": 1
+      "lastRetry": "2026-11-26",
+      "emptyRetries": 2
     },
     "tickster-ort-eskilstuna-2": {
       "since": "2026-10-23",
@@ -121,11 +119,15 @@
       "since": "2026-11-24",
       "reason": "4 raka tomma körningar (found=0, inga skips)"
     },
+    "tickster-ort-orebro-4": {
+      "since": "2026-11-26",
+      "reason": "4 raka tomma körningar (found=0, inga skips)"
+    },
     "tickster-ort-ostersund-2": {
       "since": "2026-11-05",
       "reason": "4 raka tomma körningar (found=0, inga skips)",
-      "lastRetry": "2026-11-19",
-      "emptyRetries": 2
+      "lastRetry": "2026-11-26",
+      "emptyRetries": 3
     },
     "tickster-ort-uppsala-4": {
       "since": "2026-11-10",
