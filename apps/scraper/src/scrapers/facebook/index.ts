@@ -6,7 +6,7 @@ import { uploadEventImage, isOurStorageUrl } from '../../utils/storageHelper';
 import { geocodeVenueSweden, cleanVenueName, SWEDISH_GEO_CITIES, isForeignAddress, isInNordic } from '../../utils/venueCoordinates';
 import { FB_SEARCH_CITIES } from '../../utils/swedishPlaces';
 import { centroidFallbackRejection } from './centroidGuard';
-import { anchorCityOverride, addressAnchorCity } from './anchorCity';
+import { anchorCityEvidence, addressAnchorCity, preferTextHit } from './anchorCity';
 import { classifyEvent } from '../../utils/classify';
 import { normalizeDescription } from '../../utils/normalizeEvent';
 import { extractPriceFromText } from '../../utils/priceFromText';
@@ -657,22 +657,26 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                     // 25/9: "… Umeå, Väven" ur Sundsvalls-kön ankrades på
                     // Sundsvall och fick en namne där). Pekar titel/adress
                     // entydigt på en annan stad än köns — och köns stad aldrig
-                    // nämns — provas den staden FÖRST. Bara en SPECIFIK träff
-                    // (poi/gata) får vinna: en centroid-/ortsgissning där är
-                    // svagare än ordinarie kedjan nedan, som alltid står kvar
-                    // som fallback (fixen kan aldrig göra något sämre än förut;
-                    // se anchorCity.ts om bortalags-titlarna).
-                    const textCity = anchorCityOverride({
+                    // nämns — provas den staden FÖRST. En SPECIFIK träff
+                    // (poi/gata) vinner direkt. En mittpunkt där vinner bara vid
+                    // STARKT bevis (lokalnamnet nämner orten och eventet bekräftar
+                    // den, eller ett helt titelsegment är orten), och bara när köns
+                    // kedja nedan inte hittar något bättre än en mittpunkt — se
+                    // preferTextHit. #291: "Medborgarhuset i Säffle" ur Uppsala-kön
+                    // låg mitt i Uppsala. Bortalagstitlarna är svaga: anchorCity.ts.
+                    const evidence = anchorCityEvidence({
                         contextCity: city,
                         title: details.title,
                         address: extractedAddress,
                         description: details.description || details.ogDescription || '',
                     });
+                    const textCity = evidence?.city;
+                    let textHit: Awaited<ReturnType<typeof geocodeVenueSweden>> = null;
                     if (textCity) {
                         const textQuery = extractedAddress.toLowerCase().includes(textCity.toLowerCase())
                             ? extractedAddress
                             : `${extractedAddress}, ${textCity}`;
-                        const textHit = await geocodeVenueSweden(textQuery, { nearCity: textCity });
+                        textHit = await geocodeVenueSweden(textQuery, { nearCity: textCity });
                         if (textHit && (textHit[2] === 'poi' || textHit[2] === 'gata')) {
                             coords = textHit;
                             console.log(`    📍 Geocoding (stad ur eventtexten): "${textCity}" → [${textHit[0]}, ${textHit[1]}] (kön sa "${city || '–'}")`);
@@ -718,11 +722,21 @@ export async function scrapeFacebookEvents(opts: FacebookScraperOptions = {}) {
                         }
                     }
 
+                    // Textens ort mot köns: köns kedja gav bara en mittpunkt (eller
+                    // inget) — ett starkt bevis i texten tar då textens ort.
+                    if (textHit && coords !== textHit
+                        && preferTextHit(evidence, textHit, coords)) {
+                        console.log(`    📍 Geocoding (stad ur eventtexten, ${evidence?.strength} via ${evidence?.from}): "${textCity}" → [${textHit[0]}, ${textHit[1]}] ${textHit[2] ?? ''} slår köns ${coords ? `[${coords[0]}, ${coords[1]}] ${coords[2] ?? ''}` : 'miss'} (kön sa "${city || '–'}")`);
+                        coords = textHit;
+                    }
+
                     // Retry 2: stad-nivå fallback — ger åtminstone ungefärlig position.
                     // Märks som stad-centroid: positionen är en gissning, inte platsen.
+                    // Ett starkt bevis i texten slår köns stad även här (#291).
                     let cityFallbackUsed = false;
                     if (!coords) {
-                        const fallbackCity = anchor
+                        const fallbackCity = (evidence?.strength === 'stark' ? evidence.city : undefined)
+                            || anchor
                             || SWEDISH_GEO_CITIES.find(c => new RegExp(`\\b${c}\\b`, 'i').test(extractedAddress));
                         // Vakt (Sala 2026-09-11): stadssöket ger världen över-träffar
                         // när ortnamnet också är ett ord/en ort utomlands — de hamnade
