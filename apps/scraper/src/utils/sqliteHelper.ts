@@ -782,6 +782,7 @@ export function replaceTatorter(rows: { name: string; kommun: string; lan: strin
     tx();
     tatortIndex = null;
     tatortScanList = null;
+    uniqueTatortScanList = null;
 }
 
 export interface TatortRow { name: string; kommun: string | null; lat: number; lng: number; bef: number | null }
@@ -945,6 +946,14 @@ function tatortNamesForScan(): string[] {
     const rows = sqlite.prepare('SELECT DISTINCT name FROM tatorter').all() as { name: string }[];
     tatortScanList = namesEligibleForScan(rows.map(r => r.name));
     return tatortScanList;
+}
+
+/** Skanningsbara namn (se nedan) som dessutom är ENTYDIGA i registret, längsta först. */
+let uniqueTatortScanList: string[] | null = null;
+export function uniqueTatortNamesForScan(): string[] {
+    if (uniqueTatortScanList) return uniqueTatortScanList;
+    uniqueTatortScanList = tatortNamesForScan().filter(n => tatortRowsNamed(n).length === 1);
+    return uniqueTatortScanList;
 }
 
 /**
