@@ -28,6 +28,7 @@ import { listSegmentKey, splitDaysIntoRings } from '@/utils/listZoomRings';
 import { linkEventService } from '@/services/linkEventService';
 import { sheetStops, nextStopAbove, nextStopBelow, snapRelease, releaseVelocity } from '@/utils/sheetSnap';
 import { cardSelectionKind } from '@/utils/cardSelectionKind';
+import { searchEditOpensList } from '@/utils/cardSearchView';
 import { SIDE_PANEL_QUERY, SIDE_PANEL_W } from '@/utils/sidePanel';
 import { normalizeSearchQuery, splitCityFromQuery, eventSearchTier, CITY_SEARCH_RADIUS_KM, parseCategoryQuery, isFilterQuery, searchEvents, sortNearestFirst } from '@/utils/eventSearch';
 import type { CityPoint } from '@/utils/cityPoints';
@@ -2704,10 +2705,13 @@ export default function EventCard({ events, dayCount, eventsLoaded = true, event
         // Spegla termen till sidan (11/10): kartan filtreras medan man
         // skriver, och stadsträffarna (cityHits) räknas fram där.
         onSearchChange?.(value);
-        // Första tecknet: öppna listvyn så träffarna syns direkt - i kortet
+        // Ny sökterm: öppna listvyn så träffarna syns direkt - i kortet
         // full höjd som förut, i SÖKARKET bara till listhöjden (11/10,
-        // "man vill ju kanske se lite av kartan fortfarande").
-        if (value.trim() && !cardSearchQ.trim() && cardView !== 'nearby') {
+        // "man vill ju kanske se lite av kartan fortfarande"). Varje ändring
+        // räknas, inte bara första tecknet: termen ligger kvar efter ett val
+        // ur träfflistan, och då stod kortet kvar på eventet (26/11,
+        // utils/cardSearchView).
+        if (searchEditOpensList(cardSearchQ, value, cardView)) {
             if (searchOnlyRef.current) {
                 setCardView('nearby');
                 setIsAnimating(true);
