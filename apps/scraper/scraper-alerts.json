@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-26T06:04:33.009Z",
+  "generatedAt": "2026-11-27T07:00:55.605Z",
   "counts": {
     "fel": 0,
-    "varning": 50,
-    "nollkoordinatTotalt": 507
+    "varning": 48,
+    "nollkoordinatTotalt": 533
   },
   "alerts": [
     {
@@ -31,22 +31,22 @@
       "level": "varning",
       "kind": "volymras",
       "source": "allsvenskan",
-      "since": "2026-11-24",
-      "message": "ger 8 event per körning mot 26 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "since": "2026-11-25",
+      "message": "ger 8 event per körning mot 25 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "bastad",
-      "since": "2026-11-23",
+      "since": "2026-11-24",
       "message": "ger 14 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "equmenia",
-      "since": "2026-11-15",
-      "message": "ger 7 event per körning, under källans golv 20 (expectedMinEvents) — tappar tolkningen event?"
+      "since": "2026-11-21",
+      "message": "ger 4 event per körning, under källans golv 20 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
@@ -60,7 +60,7 @@
       "kind": "volymras",
       "source": "jonkoping",
       "since": "2026-11-18",
-      "message": "ger 7 event per körning mot 128 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "message": "ger 7 event per körning mot 124 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
@@ -80,8 +80,8 @@
       "level": "varning",
       "kind": "volymras",
       "source": "naturskyddsforeningen",
-      "since": "2026-11-24",
-      "message": "ger 164 event per körning mot 420 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "since": "2026-11-25",
+      "message": "ger 159 event per körning mot 420 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
@@ -115,7 +115,7 @@
       "level": "varning",
       "kind": "volymras",
       "source": "uppsala",
-      "since": "2026-11-14",
+      "since": "2026-11-20",
       "message": "ger 300 event per körning, under källans golv 608 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
@@ -127,8 +127,8 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Conventum",
-      "message": "11 av 16 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
+      "source": "Destination Uppsala",
+      "message": "160 av 207 kommande event ligger 2026-12-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -140,13 +140,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "S:t Peters klosters församling",
-      "message": "7 av 11 kommande event ligger 2026-12-02 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
-      "kind": "datumkluster",
-      "source": "Studioexpress.se",
-      "message": "6 av 10 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
+      "message": "7 av 10 kommande event ligger 2026-12-02 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -156,15 +150,9 @@
     },
     {
       "level": "varning",
-      "kind": "datumkluster",
-      "source": "Wisby Strand",
-      "message": "29 av 33 kommande event ligger 2026-11-26 — sajtvitt datum i stället för eventets?"
-    },
-    {
-      "level": "varning",
       "kind": "nollkoordinat",
-      "source": "507 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 22, Söndrum-Vapnö församling 17, ABF 13, Barnarp-Ödestugu församling 13, Värö-Stråvalla församling 12"
+      "source": "533 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 24, Söndrum-Vapnö församling 17, Barnarp-Ödestugu församling 15, ABF 13, Linde bergslags församling 12"
     },
     {
       "level": "varning",
@@ -176,7 +164,7 @@
       "level": "varning",
       "kind": "invariant",
       "source": "SHL",
-      "message": "invariant-vakten larmar (7 av 211 event på samma tidsstämpel) — se nattloggen"
+      "message": "invariant-vakten larmar (7 av 209 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
