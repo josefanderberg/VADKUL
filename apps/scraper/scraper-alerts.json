@@ -1,18 +1,11 @@
 {
-  "generatedAt": "2026-11-27T07:00:55.605Z",
+  "generatedAt": "2026-11-28T05:46:00.373Z",
   "counts": {
     "fel": 0,
-    "varning": 48,
-    "nollkoordinatTotalt": 533
+    "varning": 49,
+    "nollkoordinatTotalt": 506
   },
   "alerts": [
-    {
-      "level": "varning",
-      "kind": "tyst",
-      "source": "almhult",
-      "since": "2026-11-06",
-      "message": "gav 3 event 2026-10-31, 0 de 3 senaste körningarna — bytt URL-struktur/blockerad?"
-    },
     {
       "level": "varning",
       "kind": "tyst",
@@ -31,15 +24,15 @@
       "level": "varning",
       "kind": "volymras",
       "source": "allsvenskan",
-      "since": "2026-11-25",
+      "since": "2026-11-26",
       "message": "ger 8 event per körning mot 25 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "bastad",
-      "since": "2026-11-24",
-      "message": "ger 14 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
+      "since": "2026-11-25",
+      "message": "ger 13 event per körning, under källans golv 24 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
       "level": "varning",
@@ -59,35 +52,35 @@
       "level": "varning",
       "kind": "volymras",
       "source": "jonkoping",
-      "since": "2026-11-18",
+      "since": "2026-11-21",
       "message": "ger 7 event per körning mot 124 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "kinda-turism",
-      "since": "2026-11-19",
-      "message": "ger 7 event per körning mot 22 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "since": "2026-11-22",
+      "message": "ger 6 event per körning mot 22 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "kungliga-operan",
-      "since": "2026-11-18",
+      "since": "2026-11-21",
       "message": "ger 14 event per körning mot 49 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "naturskyddsforeningen",
-      "since": "2026-11-25",
-      "message": "ger 159 event per körning mot 420 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "since": "2026-11-26",
+      "message": "ger 152 event per körning mot 413 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
       "kind": "volymras",
       "source": "norsjo",
-      "since": "2026-11-18",
+      "since": "2026-11-21",
       "message": "ger 8 event per körning, under källans golv 23 (expectedMinEvents) — tappar tolkningen event?"
     },
     {
@@ -101,8 +94,8 @@
       "level": "varning",
       "kind": "volymras",
       "source": "sb-vemdalen-se",
-      "since": "2026-11-19",
-      "message": "ger 13 event per körning mot 250 tidigare — ändrad sajt, eller tolkningen tappar event?"
+      "since": "2026-11-22",
+      "message": "ger 15 event per körning mot 250 tidigare — ändrad sajt, eller tolkningen tappar event?"
     },
     {
       "level": "varning",
@@ -128,7 +121,7 @@
       "level": "varning",
       "kind": "datumkluster",
       "source": "Destination Uppsala",
-      "message": "160 av 207 kommande event ligger 2026-12-26 — sajtvitt datum i stället för eventets?"
+      "message": "161 av 208 kommande event ligger 2026-12-26 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
@@ -139,20 +132,26 @@
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "S:t Peters klosters församling",
-      "message": "7 av 10 kommande event ligger 2026-12-02 — sajtvitt datum i stället för eventets?"
+      "source": "Länghems församling",
+      "message": "6 av 10 kommande event ligger 2026-12-02 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "datumkluster",
-      "source": "Uppsala Danscenter",
-      "message": "19 av 22 kommande event ligger 2026-11-27 — sajtvitt datum i stället för eventets?"
+      "source": "S:t Peters klosters församling",
+      "message": "7 av 11 kommande event ligger 2026-12-02 — sajtvitt datum i stället för eventets?"
+    },
+    {
+      "level": "varning",
+      "kind": "datumkluster",
+      "source": "Vilhelmina",
+      "message": "65 av 75 kommande event ligger 2026-11-28 — sajtvitt datum i stället för eventets?"
     },
     {
       "level": "varning",
       "kind": "nollkoordinat",
-      "source": "533 event",
-      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 24, Söndrum-Vapnö församling 17, Barnarp-Ödestugu församling 15, ABF 13, Linde bergslags församling 12"
+      "source": "506 event",
+      "message": "utan koordinat (0,0), syns inte på kartan — värst: Förlösa-Kläckeberga församling 24, Söndrum-Vapnö församling 18, Barnarp-Ödestugu församling 16, ABF 13, Spånga-Kista församling 11"
     },
     {
       "level": "varning",
@@ -165,6 +164,12 @@
       "kind": "invariant",
       "source": "SHL",
       "message": "invariant-vakten larmar (7 av 209 event på samma tidsstämpel) — se nattloggen"
+    },
+    {
+      "level": "varning",
+      "kind": "invariant",
+      "source": "Vilhelmina",
+      "message": "invariant-vakten larmar (18 av 74 event på samma tidsstämpel) — se nattloggen"
     },
     {
       "level": "varning",
